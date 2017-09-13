@@ -44,7 +44,6 @@ with System.Assertions;         use System.Assertions;
 with GNATCOLL.Memory;
 with GNATCOLL.Mmap;             use GNATCOLL.Mmap;
 with GNATCOLL.Templates;
-with GNATCOLL.Terminal;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 
 package body GNATCOLL.Traces is
@@ -70,6 +69,23 @@ package body GNATCOLL.Traces is
 
    A_Zero : aliased constant String := "a" & ASCII.NUL;
    W_Zero : aliased constant String := "w" & ASCII.NUL;
+
+   Brown_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Reset_All,
+        Fg    => GNATCOLL.Terminal.Yellow,
+        Bg    => GNATCOLL.Terminal.Unchanged));
+   Cyan_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Unchanged,
+        Fg    => GNATCOLL.Terminal.Cyan,
+        Bg    => GNATCOLL.Terminal.Unchanged));
+   Purple_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Reset_All,
+        Fg    => GNATCOLL.Terminal.Magenta,
+        Bg    => GNATCOLL.Terminal.Unchanged));
+   Reset_All  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Reset_All,
+        Fg    => GNATCOLL.Terminal.Unchanged,
+        Bg    => GNATCOLL.Terminal.Unchanged));
 
    type Decorator_Array is
       array (1 .. Max_Active_Decorators) of Trace_Decorator;
@@ -986,7 +1002,26 @@ package body GNATCOLL.Traces is
      (Handle : not null access Trace_Handle_Record'Class;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
-      Color  : String := Default_Fg) is
+      Color  : String) is
+   begin
+      if Debug_Mode then
+         if Handle.With_Colors then
+            Trace (Handle, E, Color & Msg);
+         else
+            Trace (Handle, E, Msg);
+         end if;
+      end if;
+   end Trace;
+
+   -----------
+   -- Trace --
+   -----------
+
+   procedure Trace
+     (Handle : not null access Trace_Handle_Record'Class;
+      E      : Ada.Exceptions.Exception_Occurrence;
+      Msg    : String := "Unexpected exception: ";
+      Style  : Message_Style := Default_Style) is
    begin
       if Debug_Mode
         and then not Global.Finalized  --  module not terminated
@@ -994,7 +1029,7 @@ package body GNATCOLL.Traces is
          Create_Exception_Handle (Handle);
          Trace (Handle.Exception_Handle,
                 Msg & Ada.Exceptions.Exception_Information (E),
-                Color => Color);
+                Style => Style);
       end if;
    end Trace;
 
@@ -1005,7 +1040,28 @@ package body GNATCOLL.Traces is
    procedure Trace
      (Handle   : not null access Trace_Handle_Record'Class;
       Message  : String;
-      Color    : String := Default_Fg;
+      Color    : String;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
+   begin
+      if Debug_Mode then
+         if Handle.With_Colors then
+            Trace (Handle, Color & Message,
+                   Location => Location, Entity => Entity);
+         else
+            Trace (Handle, Message, Location => Location, Entity => Entity);
+         end if;
+      end if;
+   end Trace;
+
+   -----------
+   -- Trace --
+   -----------
+
+   procedure Trace
+     (Handle   : not null access Trace_Handle_Record'Class;
+      Message  : String;
+      Style    : Message_Style := Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity)
    is
@@ -1068,7 +1124,7 @@ package body GNATCOLL.Traces is
                end loop;
 
                if With_Color then
-                  Msg.Append (Color);
+                  Msg.Append (GNATCOLL.Terminal.Get_ANSI_Sequence (Style));
                end if;
 
                Msg.Append (Message (Start .. Last - 1));
@@ -1088,7 +1144,7 @@ package body GNATCOLL.Traces is
                end if;
 
                if With_Color then
-                  Msg.Append (Purple_Fg & Default_Bg);
+                  Msg.Append (Purple_Fg);
                end if;
 
                Msg.Append ('_');
@@ -1098,7 +1154,7 @@ package body GNATCOLL.Traces is
             end loop;
          else
             if With_Color then
-               Msg.Append (Color);
+               Msg.Append (GNATCOLL.Terminal.Get_ANSI_Sequence (Style));
             end if;
 
             Msg.Append (Message);
@@ -1108,7 +1164,7 @@ package body GNATCOLL.Traces is
 
          if Global.Active_Last /= 0 then
             if With_Color then
-               Msg.Append (Brown_Fg & Default_Bg);
+               Msg.Append (Brown_Fg);
             end if;
 
             Msg.Append (' ');
@@ -1139,7 +1195,7 @@ package body GNATCOLL.Traces is
          end if;
 
          if With_Color then
-            Msg.Append (Default_Fg & Default_Bg);
+            Msg.Append (Reset_All);
          end if;
 
          Msg.Append (ASCII.LF);
@@ -1184,7 +1240,7 @@ package body GNATCOLL.Traces is
                Error_Message,
                Location => Location,
                Entity   => Entity,
-               Color    => Red_Bg & Default_Fg);
+               Style    => (Bg => GNATCOLL.Terminal.Red, others => <>));
 
             if Raise_Exception then
                Raise_Assert_Failure
@@ -1205,14 +1261,13 @@ package body GNATCOLL.Traces is
    procedure Increase_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
       if Handle /= null and then Handle.Stream /= null then
          if Msg /= "" then
-            Trace (Handle, Msg, Color => Color,
-                   Location => Location, Entity => Entity);
+            Trace (Handle, Msg, Style, Location => Location, Entity => Entity);
          end if;
 
          --  ??? Should we do this when the handle is inactive ?
@@ -1227,7 +1282,7 @@ package body GNATCOLL.Traces is
    procedure Decrease_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
@@ -1242,7 +1297,7 @@ package body GNATCOLL.Traces is
          end if;
 
          if Msg /= "" then
-            Trace (Handle, Msg, Color, Location, Entity);
+            Trace (Handle, Msg, Style, Location => Location, Entity => Entity);
          end if;
       end if;
    end Decrease_Indent;
@@ -2034,21 +2089,22 @@ package body GNATCOLL.Traces is
        Message  : String := "";
        Location : String := GNAT.Source_Info.Source_Location;
        Entity   : String := GNAT.Source_Info.Enclosing_Entity;
-       Color    : String := Default_Fg)
+       Style    : Message_Style := Default_Block_Style)
       return Block_Trace_Handle is
    begin
       return Result : Block_Trace_Handle do
          if Active (Handle) then
             Result.Me := Handle;
+            Result.Style := Style;
             Result.Loc := new String'(Entity & ':' & Location);
             if Message /= "" then
                Increase_Indent
                   (Handle, "Entering " & Result.Loc.all & ' ' & Message,
-                   Color => Color, Location => "", Entity => "");
+                   Style => Style, Location => "", Entity => "");
             else
                Increase_Indent
                   (Handle, "Entering " & Result.Loc.all,
-                   Color => Color, Location => "", Entity => "");
+                   Style => Style, Location => "", Entity => "");
             end if;
          end if;
       end return;
@@ -2064,6 +2120,7 @@ package body GNATCOLL.Traces is
       if Self.Me /= null then
          Decrease_Indent
             (Self.Me, "Leaving " & Self.Loc.all,
+             Style    => Self.Style,
              Location => "",   --  avoid duplicate info in the output
              Entity   => "");
       end if;

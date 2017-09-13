@@ -55,6 +55,7 @@ private with Ada.Finalization;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Atomic;        use GNATCOLL.Atomic;
 with GNATCOLL.Strings_Impl;
+with GNATCOLL.Terminal;
 
 package GNATCOLL.Traces is
 
@@ -293,32 +294,33 @@ package GNATCOLL.Traces is
    --         Me : Logger := Create ("Generic" & Unit_Name (Self_Debug));
    --         ...
 
-   Red_Fg     : constant String := ASCII.ESC & "[31m";
-   Green_Fg   : constant String := ASCII.ESC & "[32m";
-   Brown_Fg   : constant String := ASCII.ESC & "[33m";
-   Blue_Fg    : constant String := ASCII.ESC & "[34m";
-   Purple_Fg  : constant String := ASCII.ESC & "[35m";
-   Cyan_Fg    : constant String := ASCII.ESC & "[36m";
-   Grey_Fg    : constant String := ASCII.ESC & "[37m";
-   Default_Fg : constant String := ASCII.ESC & "[39m";
+   subtype Message_Style is GNATCOLL.Terminal.Full_Style;
+   --  Styling applied to the text of a message.
+   --  This has no effect if the stream does not support colors, or if
+   --  the DEBUG.COLORS setting has not been enabled.
 
-   Red_Bg     : constant String := ASCII.ESC & "[41m";
-   Green_Bg   : constant String := ASCII.ESC & "[42m";
-   Brown_Bg   : constant String := ASCII.ESC & "[43m";
-   Blue_Bg    : constant String := ASCII.ESC & "[44m";
-   Purple_Bg  : constant String := ASCII.ESC & "[45m";
-   Cyan_Bg    : constant String := ASCII.ESC & "[46m";
-   Grey_Bg    : constant String := ASCII.ESC & "[47m";
-   Default_Bg : constant String := ASCII.ESC & "[49m";
-   --  The various colors that can be applied to text. You can combine a
-   --  foreground and a background color by concatenating the strings.
+   Default_Style : constant Message_Style :=
+      (Fg    => GNATCOLL.Terminal.Reset,
+       Bg    => GNATCOLL.Terminal.Unchanged,
+       Style => GNATCOLL.Terminal.Unchanged);
+
+   Default_Block_Style : constant Message_Style :=
+      (Fg    => GNATCOLL.Terminal.Reset,
+       Bg    => GNATCOLL.Terminal.Unchanged,
+       Style => GNATCOLL.Terminal.Dim);
 
    procedure Trace
      (Handle : not null access Trace_Handle_Record'Class;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
-      Color  : String := Default_Fg);
-   --  Extract information from the given Exception_Occurence and output it
+      Style  : Message_Style := Default_Style);
+   procedure Trace
+     (Handle : not null access Trace_Handle_Record'Class;
+      E      : Ada.Exceptions.Exception_Occurrence;
+      Msg    : String := "Unexpected exception: ";
+      Color  : String)
+     with Obsolescent;
+   --  Extract information from the given Exception_Occurrence and output it
    --  with Msg as a prefix.
    --  You can override the default color used for the stream by specifying the
    --  color parameter.
@@ -335,9 +337,16 @@ package GNATCOLL.Traces is
    procedure Trace
      (Handle   : not null access Trace_Handle_Record'Class;
       Message  : String;
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
+   procedure Trace
+     (Handle   : not null access Trace_Handle_Record'Class;
+      Message  : String;
+      Color    : String;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity)
+     with Obsolescent;
    --  Output Message to the stream associated with Handle, along with any
    --  extra information setup by the user (see the default handles below).
    --  If Handle is not active, this subprogram will do nothing.
@@ -368,26 +377,33 @@ package GNATCOLL.Traces is
       Message_If_Success : String := "";
       Raise_Exception    : Boolean := True;
       Location           : String := GNAT.Source_Info.Source_Location;
-      Entity             : String := GNAT.Source_Info.Enclosing_Entity);
-   pragma Inline (Assert);
-   --  If Condition is False, then output Error_Message to Handle.
-   --  Assertion_Error is raised if Condition is False and Raise_Exception is
-   --  True.
+      Entity             : String := GNAT.Source_Info.Enclosing_Entity)
+    with Inline;
+   --  Check that Condition is true.
+   --  This subprogram does nothing if Handle is not active.
+   --  If Condition is False:
+   --     * Error_Message is output to a handle named  Handle & ".EXCEPTIONS"
+   --       just like an exception would be. This means that in general the
+   --       message will be displayed in red.
+   --       However, do not use this procedure just to get a red message.
+   --       Instead use a standard Trace and specify the Style, or configure
+   --       Handle to have red messages by default.
+   --     * In addition, if Raise_Exception is true then an Assertion_Error
+   --       exception is raised.
    --
-   --  Condition is not tested if Handle is not active.
-   --  Message_If_Success is logged if Condition is True and the message
-   --  is not the empty string.
+   --  If Condition is True:
+   --     * Message_If_Success is output to Handle, if it isn't empty.
 
    procedure Increase_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Decrease_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    --  Change the indentation level for traces with the same output stream.
@@ -453,7 +469,7 @@ package GNATCOLL.Traces is
        Message  : String := "";
        Location : String := GNAT.Source_Info.Source_Location;
        Entity   : String := GNAT.Source_Info.Enclosing_Entity;
-       Color    : String := Default_Fg)
+       Style    : Message_Style := Default_Block_Style)
       return Block_Logger;
    --  An object used to trace execution of blocks.
    --  This is a controlled object, which you should create first in your
@@ -637,7 +653,6 @@ package GNATCOLL.Traces is
    --  the handle, current time, count,...) will be displayed in color when
    --  the stream supports them (see also the "colors" option when you
    --  declare the streams, at the top of this package).
-   --  The color of the message itself is not impacted by this setting.
 
    --  "DEBUG.ENCLOSING_ENTITY"
    --  If this handle is activated, the name of the enclosing entity at the
@@ -756,6 +771,7 @@ private
    record
       Me            : Logger;
       Loc           : GNAT.Strings.String_Access;
+      Style         : Message_Style;
    end record;
    overriding procedure Finalize (Self : in out Block_Logger);
 

@@ -140,6 +140,22 @@ package GNATCOLL.Terminal is
    --  Return the width of the terminal, or -1 if that width is either
    --  unknown or does not apply (as is the case for files for instance).
 
+   -----------
+   -- Utils --
+   -----------
+
+   type Full_Style is record
+      Fg    : ANSI_Color := Unchanged;
+      Bg    : ANSI_Color := Unchanged;
+      Style : ANSI_Style := Unchanged;
+   end record;
+   --  A convenient record to group all style-related attributes
+
+   function Get_ANSI_Sequence (Style : Full_Style) return String;
+   --  Append the ANSI escape sequence representing the style.
+   --  Note that these sequences are not supported by all terminals, see
+   --  Has_ANSI_Colors.
+
 private
    type Color_Sequence_Type is (Unsupported, ANSI_Sequences, WIN32_Sequences);
 
