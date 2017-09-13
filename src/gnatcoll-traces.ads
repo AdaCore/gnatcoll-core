@@ -22,6 +22,28 @@
 ------------------------------------------------------------------------------
 
 --  Logging framework
+--
+--  Here is an example of code:
+--
+--     with GNATCOLL.Traces;     use GNATCOLL.Traces;
+--
+--     procedure Main is
+--        Me : constant Trace_Handle := Create ("NAME");
+--     begin
+--        Parse_Config_File (".gnatdebug");  --  mandatory
+--        Trace (Me, "Message 1");
+--     end Main;
+--
+--  You would then provide an additional .gnatdebug file in the current
+--  directory, with something like
+--
+--     +
+--
+--  in it. When you run the program, you then see a message like
+--
+--     [NAME] Message 1
+--
+--  on the standard output
 
 with GNAT.Source_Info;
 with GNAT.Strings;
@@ -59,9 +81,9 @@ package GNATCOLL.Traces is
    --        process number. $D is automatically replaced by the current date.
    --        $T is automatically replaced by the current date and time.
    --        You can use >>filename instead if you want to append to the file.
-   --      - to standard output (never bufferized)
+   --      - to standard output (never buffered)
    --        >&1
-   --      - to standard error (never bufferized)
+   --      - to standard error (never buffered)
    --        >&2
    --      - to a user-defined stream (see gnat-traces-syslog.ads):
    --        >&stream
@@ -96,7 +118,7 @@ package GNATCOLL.Traces is
    --      MODULE_NAME=yes >&stream
    --    * comments
    --      -- comment
-   --    * Activate traces for all modules, unless explicitely deactivated in
+   --    * Activate traces for all modules, unless explicitly deactivated in
    --      the lines following the '+'
    --      +
    --      Note that this doesn't apply to the decorators (see below)
@@ -119,7 +141,7 @@ package GNATCOLL.Traces is
    --     +                 --  by default, show all
    --     >&2               --  defines the default stream
    --     PKG1=no           --  do not show
-   --     PKG2=yes          --  to the default stream, ie stderror
+   --     PKG2=yes          --  to the default stream, ie stderr
    --     PKG3=yes >file    --  to the file "file" in current directory
    --     PKG4=yes >&syslog --  to syslog, see gnat-traces-syslog.ads
 
@@ -130,7 +152,7 @@ package GNATCOLL.Traces is
    --  then the debug traces can be activated selectively for each module.
 
    type On_Exception_Mode is (Propagate, Ignore, Deactivate);
-   --  Behavor when an exception is raised while writing to the log stream e.g
+   --  Behavior when an exception is raised while writing to the log stream e.g
    --  because of NFS error when writing to a file.
    --    Propagate:  the exception is propagated
    --    Ignore:     the exception is silently ignored
@@ -157,7 +179,7 @@ package GNATCOLL.Traces is
    --
    --  If the file is found on the disk, or Force_Activation is True:
    --  This procedure will set the default stream. At this
-   --  stage, most loggers will start outputing information. If you do not
+   --  stage, most loggers will start outputting information. If you do not
    --  call Parse_Config_File, then most loggers will have no associated
    --  stream and therefore will not output anything. An alternative is to
    --  simply call Set_Default_Stream.
@@ -210,7 +232,7 @@ package GNATCOLL.Traces is
    --  same handle.
    --
    --  If Default is not From_Config, this forces an explicit activation
-   --  status for that handle. To change it, the user must explicitely have
+   --  status for that handle. To change it, the user must explicitly have
    --  a line for this handle in the config file, and this handle is not
    --  impacted by the use of "+" in this config file.
    --
@@ -383,9 +405,9 @@ package GNATCOLL.Traces is
    function Active
       (Handle : not null access Trace_Handle_Record'Class) return Boolean
       is (Debug_Mode and then Is_Active (Handle)) with Inline;
-   --  Return True if traces for Handle are actived.
+   --  Return True if traces for Handle are activated.
    --  This function can be used to avoid the evaluation of complex
-   --  expressions in case traces are not actived, as in the following
+   --  expressions in case traces are not active, as in the following
    --  code:
    --     if Active (Handle) then
    --        Trace (Handle, Message & Expensive_Computation);
@@ -443,9 +465,9 @@ package GNATCOLL.Traces is
    --  the compiler that the variable is unused, and is only necessary if you
    --  are compiling with -gnatwa or -gnatwm.
    --
-   --  Message can be used to display extra information. For efficiency reaons,
-   --  it is not recommended to build the string dynamically to display the
-   --  parameter of the enclosing subprograms, or perhaps as:
+   --  Message can be used to display extra information. For efficiency
+   --  reasons, it is not recommended to build the string dynamically to
+   --  display the parameter of the enclosing subprograms, or perhaps as:
    --
    --       procedure Foo (A, B, C : Integer) is
    --          Block_Me : constant Block_Logger := Create
@@ -604,7 +626,7 @@ package GNATCOLL.Traces is
    --  location of the call to Trace will be displayed.
 
    --  "DEBUG.COUNT"
-   --  If this handle is actived, two counters are associated with each output
+   --  If this handle is active, two counters are associated with each output
    --  trace: one of them is unique for the handle, the other is unique in the
    --  whole application life. These can for instance be used to set
    --  conditional breakpoints for a specific trace (break on traces.Log or
@@ -661,7 +683,7 @@ package GNATCOLL.Traces is
    --
    --  When displayed in the log, a line looks like:
    --
-   --  <prefix_decorator>[HANDLE_NAME] <precorator> MESSAGE </postdecorator>
+   --  <prefix_decorator>[HANDLE_NAME] <predecorator> MESSAGE </postdecorator>
    --
    --  The prefix decorator is in charge of displaying blank spaces to
    --  indent the line (see Increase_Indent and Decrease_Indent). But you
