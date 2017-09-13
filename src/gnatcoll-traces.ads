@@ -182,7 +182,7 @@ package GNATCOLL.Traces is
    --  stage, most loggers will start outputting information. If you do not
    --  call Parse_Config_File, then most loggers will have no associated
    --  stream and therefore will not output anything. An alternative is to
-   --  simply call Set_Default_Stream.
+   --  simply call Parse_Config below.
 
    procedure Parse_Config_File
      (Filename         : String := "";
@@ -190,6 +190,24 @@ package GNATCOLL.Traces is
       On_Exception     : On_Exception_Mode := Propagate;
       Force_Activation : Boolean := True);
    --  Same as above, using regular strings for file names.
+
+   procedure Parse_Config
+     (Config           : String;
+      On_Exception     : On_Exception_Mode := Propagate;
+      Force_Activation : Boolean := True;
+      Relative_Path_To : GNATCOLL.VFS.Virtual_File :=
+         GNATCOLL.VFS.Get_Current_Dir);
+   --  Similar to the above, but the configuration is read from a string.
+   --  This might be convenient when you distribute your application since you
+   --  do not have to provide a default config file.
+   --  You can call this procedure multiple times.
+   --
+   --  Relative_Path_To is used to resolve relative path names in the
+   --  configuration.
+   --
+   --  It is still recommended to parse Parse_Config_File afterwards so that
+   --  you can override the configuration without having to recompile your
+   --  application.
 
    type Output_Proc is access procedure (Str : String);
    procedure Show_Configuration (Output : Output_Proc);
