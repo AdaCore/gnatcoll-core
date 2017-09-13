@@ -24,9 +24,9 @@
 --  This package instantiates the GNATCOLL.SQL hierarchy for the PostgreSQL
 --  DBMS
 
-with Ada.Strings.Unbounded;
+with Ada.Calendar;        use Ada.Calendar;
 with GNATCOLL.SQL.Exec;   use GNATCOLL.SQL.Exec;
-with GNATCOLL.Strings;    use GNATCOLL.Strings;
+with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;
 with GNATCOLL.SQL.Ranges;
 
 package GNATCOLL.SQL.Postgres is
@@ -47,6 +47,19 @@ package GNATCOLL.SQL.Postgres is
    --    Prefer   => first try a SSL connection, then non-SSL if failed
    --    Require  => require a SSL connection
 
+   type Pgbouncer_Config is
+      (No_Pgbouncer,
+       Session_Pooling,
+       Transaction_Pooling,
+       Statement_Pooling);
+   --  pgbouncer (https://pgbouncer.github.io/) is a connection pooler for
+   --  postgresql. It allows you to configure postgresql to support a limited
+   --  number of connections (say 50) but have applications do a lot more
+   --  connections in practice, in particular when you have lots of
+   --  applications connecting to the same database. One of the restrictions
+   --  this introduces, though, is that when this is configured as transaction
+   --  pooling, prepared statements are not supported.
+
    function Setup
      (Database      : String;
       User          : String := "";
@@ -55,18 +68,30 @@ package GNATCOLL.SQL.Postgres is
       Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True;
-      Errors        : access Error_Reporter'Class := null)
+      Errors        : access Error_Reporter'Class := null;
+      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer;
+      Application_Name : String := "")
      return Database_Description;
    --  Return a database connection for PostgreSQL.
    --  If postgres was not detected at installation time, this function will
    --  return null.
    --  Errors (if specified) will be used to report errors and warnings to the
    --  application. Errors is never freed.
+   --  Application_Name will be visible in the postgresql logs, and might help
+   --  understand which application is doing specific queries (when multiple
+   --  applications connect to the same database).
 
    function Get_Connection_String
      (Description   : Database_Description;
       With_Password : Boolean) return String;
    --  Create a connection string from the database description
+
+   overriding function Get_Application_Name
+     (Description : not null access Postgres_Description) return String;
+   --  Return the application_name set in the call to Setup.
+   --  This could for instance be used when calling
+   --  GNATCOLL.SQL.Exec.Reset_Connection, so that the GNATCOLL traces also
+   --  show the application name.
 
    ----------------------------
    -- Postgres notifications --
@@ -88,6 +113,9 @@ package GNATCOLL.SQL.Postgres is
    --  is set to False, Message contains a valid Notification. Once a
    --  notification is returned from Notifies, it is considered handled and
    --  will be removed from the list of notifications.
+   --
+   --  This is not supported when using pgbouncer in transaction or statement
+   --  pooling.
 
    procedure Consume_Input (DB : Database_Connection);
    --  If input is available from the backend, consume it.
@@ -109,6 +137,8 @@ package GNATCOLL.SQL.Postgres is
    --  Waiting for available input and return False on timeout or True on
    --  success. No need to call Consume_Input afterward, it is already called
    --  internally on wait success.
+   --  This is not supported when using pgbouncer in transaction or statement
+   --  pooling.
 
    -------------------------
    -- Postgres extensions --
@@ -137,9 +167,10 @@ package GNATCOLL.SQL.Postgres is
    --  Generic query extensions
 
    type SQL_PG_Extension is abstract tagged private;
-   function To_String
-      (Self : SQL_PG_Extension; Format : Formatter'Class)
-      return Ada.Strings.Unbounded.Unbounded_String is abstract;
+   procedure Append_To_String
+      (Self   : SQL_PG_Extension;
+       Format : Formatter'Class;
+       Result : in out XString) is abstract;
 
    function Returning (Fields : SQL_Field_List) return SQL_PG_Extension'Class;
    --  RETURNING clause for UPDATE query
@@ -149,6 +180,130 @@ package GNATCOLL.SQL.Postgres is
       No_Wait : Boolean := False) return SQL_PG_Extension'Class;
    --  FOR UPDATE clause for SELECT query
 
+   function On_Conflict_Do_Nothing
+      (Column  : SQL_Field'Class) return SQL_PG_Extension'Class;
+   function On_Conflict_Do_Nothing
+      (Constraint_Name : String := "") return SQL_PG_Extension'Class;
+   --  When used with an INSERT clause, postgres will ignore all inserted
+   --  rows that would result in a conflict (for instance a duplicate key
+   --  or some other unique constraint violation).
+
+   function On_Conflict_Do_Update
+      (Column  : SQL_Field'Class;
+       Set     : SQL_Assignment;
+       Where   : SQL_Criteria := No_Criteria)
+      return SQL_PG_Extension'Class;
+   function On_Conflict_Do_Update
+      (Constraint_Name : String;
+       Set             : SQL_Assignment;
+       Where           : SQL_Criteria := No_Criteria)
+      return SQL_PG_Extension'Class;
+   --  When used with an INSERT clause, postgres will update existing rows
+   --  that conflict, with the new proposed values.
+   --  This is a way to implement the update-or-insert statement
+   --
+   --  This clause will come into play when you are trying to insert one or
+   --  more rows that conflict (either on Columns, for which you need to have
+   --  set a unique constraint, or on a specifically named constraint).
+   --  Postgres recommends using column names in case the constraints set on
+   --  the table evolve later on.
+   --
+   --  When a conflict is detected, the conflicting proposed row is ignored,
+   --  and instead the Set clause is used. The Set clauses can use a special
+   --  name table named EXCLUDED (case-insensitive) to reference the values in
+   --  the conflicting row, see below.
+   --
+   --  The Where clause selects a subset of the conflicting rows. It can use
+   --  the modified table's name to reference the existing, unmodified row,
+   --  and EXCLUDED to reference the conflicting row. Any conflicting row that
+   --  is not matched by the Where clause will be left unmodified (as if you
+   --  had used On_Conflict_Do_Nothing for it).
+   --
+   --  Here are some examples:
+   --
+   --  * Insert, but ignore any conflict. If there was already a row with the
+   --    same primary key Id, the old name will still be in the table.
+   --
+   --    SQL_Insert ((Table1.Id = 1) & (Table1.Name = "foo"))
+   --       & On_Conflict_Do_Nothing;
+   --
+   --  * Insert, and replace the name on conflict. Whether or not there was
+   --    already a row with Id 1, when this statement is executed there will
+   --    be one such row in the table, with "foo" as the name.
+   --
+   --    SQL_Insert ((Table1.Id = 1) & (Table1.Name = "foo"))
+   --       & On_Conflict_Do_Update
+   --          (Columns => Table1.Id,
+   --           Set     => Table1.Name = "foo");
+   --
+   --  * The above forces you to duplicate the string you are inserting.
+   --    To avoid this, we need to use a fake table named EXCLUDED, see below.
+   --    However, this is often not an issue from Ada, where the string would
+   --    be stored in a variable anyway (although remember to use Text_Param
+   --    and pass the value separately to Execute, this is more efficient and
+   --    safer). For more flexibility, we might use a fake table named
+   --    EXCLUDED, see  below.
+   --    When the value comes from the result of a SELECT, though, there is
+   --    no choice but using EXCLUDED.
+   --
+   --  * We now want to insert multiple rows, ignore the conflict for Id=1
+   --    (so preserve existing values in the table), but replace for Id=2 or
+   --    Id=3:
+   --
+   --    SQL_Insert
+   --       (Table1.Id & Table1.Name,
+   --        SQL_Values ((1 => Expression (1) & Expression ("name1"),
+   --                     2 => Expression (2) & Expression ("name2"),
+   --                     3 => Expression (3) & Expression ("name3")))
+   --       )
+   --       & On_Conflict_Do_Update
+   --          (Columns   => Table1.Id,
+   --           Set       => Table1.Name = "there was a conflict",
+   --           Where     => Table1.Id /= 1);
+   --
+   --    This example likely doesn't do what you want, since it will not
+   --    set "name2" or "name3" in case of conflict. For this, we need to
+   --    know what the expected value was, and we again need to use the
+   --    EXCLUDED table.
+   --
+   --    Assuming Table comes from one of the packages generated by
+   --    gnatcoll_db2ada, its definition looks like:
+   --       type T_Table_Type (Instance : Cst_String_Access)
+   --          is new T_Abstract_Table_Type (Ta_Table_Name, Instance, -1)
+   --          with null record;
+   --       Table : T_Table_Type (null);
+   --
+   --    We do not have to duplicate all of this here, and we can instead
+   --    do:
+   --       N_Excluded : aliased String := "EXCLUDED";
+   --       Excluded : T_Abstract_Table_Type (N_Excluded'Access, null, -1);
+   --
+   --    SQL_Insert
+   --       (Table1.Id & Table1.Name,
+   --        SQL_Values ((1 => Expression (1) & Expression ("name1"),
+   --                     2 => Expression (2) & Expression ("name2"),
+   --                     3 => Expression (3) & Expression ("name3")))
+   --       )
+   --       & On_Conflict_Do_Update
+   --          (Columns   => Table1.Id,
+   --           Set       => Table1.Name = Excluded.Name,
+   --           Where     => Table1.Id /= 1);
+   --
+   --  * Count the number of logins for a user. Assume a table with a user
+   --    id, and a count for the number of times the user logged in. This
+   --    count must be initialized to 1.
+   --
+   --    SQL_Insert
+   --       ((Logins.User_Id = 123) & (Logins.Count = 1))
+   --       & On_Conflict_Do_Update
+   --          (Columns => Logins.User_Id,
+   --           Set     => Logins.Count = Logins.Count + 1);
+   --
+   --    This nicely solves race conditions, since otherwise you would have
+   --    to do one SELECT to check whether the user exists, then an insert
+   --    or an update. But another thread might be doing the same thing in
+   --    parallel...
+
    function "&"
      (Query     : SQL_Query;
       Extension : SQL_PG_Extension'Class) return SQL_Query;
@@ -156,36 +311,37 @@ package GNATCOLL.SQL.Postgres is
    --  instance:
    --      R.Fetch (DB, SQL_Select (...) & Returning (Field1));
 
-   package DateRanges is new GNATCOLL.SQL.Ranges
+   package Date_Ranges is new GNATCOLL.SQL.Ranges
       (Base_Fields    => GNATCOLL.SQL.Date_Fields,
        SQL_Type       => "daterange",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Date_Range");
-   subtype Date_Range is DateRanges.Ada_Range;
-   subtype SQL_Field_Date_Range is DateRanges.SQL_Field_Range;
+   subtype Date_Range is Date_Ranges.Ada_Range;
+   subtype SQL_Date_Range is Date_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Date_Range is Date_Ranges.SQL_Field_Range;
 
-   package NumRanges is new GNATCOLL.SQL.Ranges
-      (Base_Fields    => GNATCOLL.SQL.Float_Fields,
+   package Num_Ranges is new GNATCOLL.SQL.Ranges
+      (Base_Fields    => GNATCOLL.SQL_Fields.Long_Float_Fields,
        SQL_Type       => "numrange",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Num_Range");
-   subtype Num_Range is NumRanges.Ada_Range;
-   type SQL_Field_Num_Range is
-      new NumRanges.SQL_Field_Range with null record;
+   subtype Num_Range is Num_Ranges.Ada_Range;
+   subtype SQL_Num_Range is Num_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Num_Range is Num_Ranges.SQL_Field_Range;
 
-   package IntegerRanges is new GNATCOLL.SQL.Ranges
+   package Integer_Ranges is new GNATCOLL.SQL.Ranges
       (Base_Fields    => GNATCOLL.SQL.Integer_Fields,
        SQL_Type       => "int4range",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Integer_Range");
-   subtype Integer_Range is IntegerRanges.Ada_Range;
-   type SQL_Field_Integer_Range is
-      new IntegerRanges.SQL_Field_Range with null record;
+   subtype Integer_Range is Integer_Ranges.Ada_Range;
+   subtype SQL_Integer_Range is Integer_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Integer_Range is Integer_Ranges.SQL_Field_Range;
 
-   package BigintRanges is new GNATCOLL.SQL.Ranges
+   package Bigint_Ranges is new GNATCOLL.SQL.Ranges
       (Base_Fields    => GNATCOLL.SQL.Bigint_Fields,
        SQL_Type       => "int8range",
        Ada_Field_Type => "GNATCOLL.SQL.Postgres.SQL_Field_Bigint_Range");
-   subtype Bigint_Range is BigintRanges.Ada_Range;
-   type SQL_Field_Bigint_Range is
-      new BigintRanges.SQL_Field_Range with null record;
+   subtype Bigint_Range is Bigint_Ranges.Ada_Range;
+   subtype SQL_Bigint_Range is Bigint_Ranges.SQL_Ada_Range;
+   subtype SQL_Field_Bigint_Range is Bigint_Ranges.SQL_Field_Range;
 
 private
    type Postgres_Description is new Database_Description_Record with record
@@ -193,8 +349,10 @@ private
       Dbname    : GNATCOLL.Strings.XString;
       User      : GNATCOLL.Strings.XString;
       Password  : GNATCOLL.Strings.XString;
+      Appname   : GNATCOLL.Strings.XString;
       SSL       : SSL_Mode := Prefer;
       Port      : Integer := -1;
+      Pgbouncer : Pgbouncer_Config := No_Pgbouncer;
    end record;
 
    type SQL_PG_Extension is abstract tagged null record;

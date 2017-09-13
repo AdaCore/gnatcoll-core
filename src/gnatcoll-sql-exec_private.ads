@@ -29,7 +29,6 @@
 --  API.
 
 with GNATCOLL.SQL.Exec;    use GNATCOLL.SQL.Exec;
-with GNATCOLL.Strings;     use GNATCOLL.Strings;
 with Interfaces.C.Strings; use Interfaces.C.Strings;
 
 private package GNATCOLL.SQL.Exec_Private is
@@ -76,36 +75,9 @@ private package GNATCOLL.SQL.Exec_Private is
    function Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return String;
-   function Unbounded_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Unbounded_String;
-   function XString_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return XString;
    function C_Value
      (Self  : DBMS_Forward_Cursor;
       Field : Field_Index) return Interfaces.C.Strings.chars_ptr is abstract;
-   function Boolean_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Boolean;
-   function Integer_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Integer;
-   function Bigint_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Long_Long_Integer;
-   function Float_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Float;
-   function Long_Float_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Long_Float;
-   function Money_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return T_Money;
-   function Time_Value
-     (Self  : DBMS_Forward_Cursor;
-      Field : Field_Index) return Ada.Calendar.Time;
    --  Default implementation is to assume the DBMS only returns strings, and
    --  we convert them to the appropriate Ada type.
 

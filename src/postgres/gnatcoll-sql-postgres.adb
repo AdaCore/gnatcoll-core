@@ -27,6 +27,7 @@ with Interfaces.C;
 with GNAT.Sockets;
 with GNATCOLL.SQL.Postgres.Builder;
 with GNATCOLL.SQL.Postgres.Gnade;
+with GNATCOLL.Strings;                use GNATCOLL.Strings;
 with GNATCOLL.Utils;                  use GNATCOLL.Utils;
 
 package body GNATCOLL.SQL.Postgres is
@@ -40,9 +41,11 @@ package body GNATCOLL.SQL.Postgres is
       Extra : SQL_PG_Extension_Access;
    end record;
    overriding procedure Free (Self : in out Query_Postgres_Contents);
-   overriding function To_String
-     (Self   : Query_Postgres_Contents;
-      Format : Formatter'Class) return Unbounded_String;
+   overriding procedure Append_To_String
+     (Self       : Query_Postgres_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean);
    overriding procedure Auto_Complete
      (Self                   : in out Query_Postgres_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -56,18 +59,40 @@ package body GNATCOLL.SQL.Postgres is
       No_Wait : Boolean := False;
       --  Set True if NO WAIT
    end record;
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_For_Update;
-      Format : Formatter'Class) return Unbounded_String;
+      Format : Formatter'Class;
+      Result : in out XString);
    --  Extensions for UPDATE
 
    type SQL_PG_Returning is new SQL_PG_Extension with record
       Returning : SQL_Field_List;
    end record;
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_Returning;
-      Format : Formatter'Class) return Unbounded_String;
+      Format : Formatter'Class;
+      Result : in out XString);
    --  Extensions for SELECT
+
+   type SQL_PG_On_Conflict (Do_Nothing : Boolean)
+      is new SQL_PG_Extension
+   with record
+      Column     : SQL_Field_Pointer;
+      Constraint : XString;
+
+      case Do_Nothing is
+         when True =>
+            null;
+         when False =>
+            Set        : SQL_Assignment;
+            Where      : SQL_Criteria;
+      end case;
+   end record;
+   overriding procedure Append_To_String
+     (Self   : SQL_PG_On_Conflict;
+      Format : Formatter'Class;
+      Result : in out XString);
+   --  Extensions for INSERT
 
    ----------
    -- Free --
@@ -81,17 +106,20 @@ package body GNATCOLL.SQL.Postgres is
       Free (Query_Contents (Self));
    end Free;
 
-   ---------------
-   -- To_String --
-   ---------------
+   ----------------------
+   -- Append_To_String --
+   ----------------------
 
-   overriding function To_String
-     (Self   : Query_Postgres_Contents;
-      Format : Formatter'Class) return Unbounded_String is
+   overriding procedure Append_To_String
+     (Self       : Query_Postgres_Contents;
+      Format     : Formatter'Class;
+      Result     : in out XString;
+      Show_Types : Boolean) is
    begin
-      return To_String (Self.Base, Format)
-          & To_String (Self.Extra.all, Format);
-   end To_String;
+      Append_To_String
+         (Self.Base, Format, Result => Result, Show_Types => Show_Types);
+      Append_To_String (Self.Extra.all, Format, Result);
+   end Append_To_String;
 
    -------------------
    -- Auto_Complete --
@@ -117,7 +145,9 @@ package body GNATCOLL.SQL.Postgres is
       Port          : Integer := -1;
       SSL           : SSL_Mode := Allow;
       Cache_Support : Boolean := True;
-      Errors        : access Error_Reporter'Class := null)
+      Errors        : access Error_Reporter'Class := null;
+      Pgbouncer     : Pgbouncer_Config := No_Pgbouncer;
+      Application_Name : String := "")
       return Database_Description
    is
       Result : Postgres_Description_Access;
@@ -134,6 +164,8 @@ package body GNATCOLL.SQL.Postgres is
       Result.Password  := To_XString (Password);
       Result.Port      := Port;
       Result.Host      := To_XString (Host);
+      Result.Pgbouncer := Pgbouncer;
+      Result.Appname   := To_XString (Application_Name);
 
       return Database_Description (Result);
    end Setup;
@@ -238,6 +270,7 @@ package body GNATCOLL.SQL.Postgres is
         (Table          => Table.Table_Name,
          Instance       => Table.Instance,
          Instance_Index => Table.Instance_Index,
+         Constraints    => <>,
          Name           => N_OID'Access);
    end OID_Field;
 
@@ -274,6 +307,68 @@ package body GNATCOLL.SQL.Postgres is
    begin
       return SQL_PG_Returning'(Returning => Fields);
    end Returning;
+
+   ----------------------------
+   -- On_Conflict_Do_Nothing --
+   ----------------------------
+
+   function On_Conflict_Do_Nothing
+      (Column  : SQL_Field'Class) return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => True,
+          Column     => +Column,
+          Constraint => Null_XString);
+   end On_Conflict_Do_Nothing;
+
+   ----------------------------
+   -- On_Conflict_Do_Nothing --
+   ----------------------------
+
+   function On_Conflict_Do_Nothing
+      (Constraint_Name : String := "") return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => True,
+          Column     => No_Field_Pointer,
+          Constraint => GNATCOLL.Strings.To_XString (Constraint_Name));
+   end On_Conflict_Do_Nothing;
+
+   ---------------------------
+   -- On_Conflict_Do_Update --
+   ---------------------------
+
+   function On_Conflict_Do_Update
+      (Column  : SQL_Field'Class;
+       Set     : SQL_Assignment;
+       Where   : SQL_Criteria := No_Criteria)
+      return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => False,
+          Column     => +Column,
+          Constraint => Null_XString,
+          Set        => Set,
+          Where      => Where);
+   end On_Conflict_Do_Update;
+
+   ---------------------------
+   -- On_Conflict_Do_Update --
+   ---------------------------
+
+   function On_Conflict_Do_Update
+      (Constraint_Name : String;
+       Set             : SQL_Assignment;
+       Where           : SQL_Criteria := No_Criteria)
+      return SQL_PG_Extension'Class is
+   begin
+      return SQL_PG_On_Conflict'
+         (Do_Nothing => False,
+          Column     => No_Field_Pointer,
+          Constraint => GNATCOLL.Strings.To_XString (Constraint_Name),
+          Set        => Set,
+          Where      => Where);
+   end On_Conflict_Do_Update;
 
    ---------
    -- "&" --
@@ -326,43 +421,79 @@ package body GNATCOLL.SQL.Postgres is
       end if;
    end "&";
 
-   ---------------
-   -- To_String --
-   ---------------
+   ----------------------
+   -- Append_To_String --
+   ----------------------
 
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_For_Update;
-      Format : Formatter'Class) return Unbounded_String
+      Format : Formatter'Class;
+      Result : in out XString)
    is
-      Result : Unbounded_String;
    begin
-      Append (Result, " FOR UPDATE");
+      Result.Append (" FOR UPDATE");
       if Self.Tables /= Empty_Table_List then
-         Append (Result, " OF ");
-         Append (Result, To_String (Self.Tables, Format));
+         Result.Append (" OF ");
+         Append_To_String (Self.Tables, Format, Result, Show_Types => False);
       end if;
 
       if Self.No_Wait then
-         Append (Result, " NO WAIT");
+         Result.Append (" NO WAIT");
       end if;
+   end Append_To_String;
 
-      return Result;
-   end To_String;
+   ----------------------
+   -- Append_To_String --
+   ----------------------
 
-   ---------------
-   -- To_String --
-   ---------------
-
-   overriding function To_String
+   overriding procedure Append_To_String
      (Self   : SQL_PG_Returning;
-      Format : Formatter'Class) return Unbounded_String
-   is
-      Result : Unbounded_String;
+      Format : Formatter'Class;
+      Result : in out XString) is
    begin
       Append (Result, " RETURNING ");
-      Append (Result, To_String (Self.Returning, Format, Long => True));
-      return Result;
-   end To_String;
+      Append_To_String
+         (Self.Returning, Format, Long => True, Result => Result,
+          Show_Types => False);
+   end Append_To_String;
+
+   ----------------------
+   -- Append_To_String --
+   ----------------------
+
+   overriding procedure Append_To_String
+     (Self   : SQL_PG_On_Conflict;
+      Format : Formatter'Class;
+      Result : in out XString)
+   is
+   begin
+      if Self.Constraint /= "" then
+         Result.Append (" ON CONFLICT ON CONSTRAINT ");
+         Result.Append (Self.Constraint);
+      elsif Self.Column /= No_Field_Pointer then
+         Result.Append (" ON CONFLICT (");
+         Append_To_String
+            (Self.Column, Format, Result => Result,
+             Long => False, Show_Types => False);
+         Result.Append (')');
+      else
+         Result.Append (" ON CONFLICT");
+      end if;
+
+      if Self.Do_Nothing then
+         Result.Append (" DO NOTHING");
+      else
+         Result.Append (" DO UPDATE SET ");
+         Append_To_String
+            (Self.Set, Format, With_Field => True, Result => Result);
+
+         if Self.Where /= No_Criteria then
+            Result.Append (" WHERE ");
+            Append_To_String
+               (Self.Where, Format, Long => True, Result => Result);
+         end if;
+      end if;
+   end Append_To_String;
 
    ---------------------------
    -- Get_Connection_String --
@@ -421,7 +552,24 @@ package body GNATCOLL.SQL.Postgres is
          when Require => Str.Append (" sslmode=require");
       end case;
 
+      if Descr.Appname /= Null_XString then
+         Str.Append (" application_name='");
+         Escape (Descr.Appname);
+         Str.Append (''');
+      end if;
+
       return Str.To_String;
    end Get_Connection_String;
+
+   --------------------------
+   -- Get_Application_Name --
+   --------------------------
+
+   overriding function Get_Application_Name
+      (Description : not null access Postgres_Description) return String
+   is
+   begin
+      return Description.Appname.To_String;
+   end Get_Application_Name;
 
 end GNATCOLL.SQL.Postgres;

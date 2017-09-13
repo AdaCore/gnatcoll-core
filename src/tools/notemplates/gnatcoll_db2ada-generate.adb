@@ -37,7 +37,9 @@ pragma Warnings (On, "no entities of * are referenced");
 
 separate (GNATCOLL_Db2Ada)
 procedure Generate
-  (Generated : String; Include_Database_Create : Boolean)
+  (Connection    : not null Database_Connection;
+   Generated     : String;
+   Include_Database_Create : Boolean)
 is
    package String_Sets is new Ada.Containers.Indefinite_Ordered_Sets
      (String, "<", "=");
@@ -45,8 +47,13 @@ is
 
    Spec_File, Body_File : File_Type;
 
-   function Capitalize (Name : XString) return String;
-   --  Make a name suitable for display
+   Seen_Withs : String_Sets.Set;
+   --  The 'with' clauses that have already been output, to avoid
+   --  duplicates.
+
+   function Cleanup (Str : String) return String;
+   --  Remove all characters that are not valid for an Ada identifier,
+   --  and capitalize the result.
 
    function Get_Namespace (T_Descr : Table_Description) return String;
    --  Return the name of the namespace for the table
@@ -118,17 +125,23 @@ is
    -----------------
 
    procedure Print_Withs (T_Descr : in out Table_Description) is
+
       procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
       procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
-         Typ : constant String :=
-            F.Get_Type.Type_To_SQL (null, For_Database => False);
+         Typ : constant String := F.Get_Actual_Type.Ada_Field_Type_Name;
       begin
          for T in reverse Typ'Range loop
             if Typ (T) = '.' then
-               Put_Line
-                  (Spec_File,
-                   "with " & Typ (Typ'First .. T - 1) & "; use "
-                   & Typ (Typ'First .. T - 1) & ";");
+               declare
+                  N : constant String := Typ (Typ'First .. T - 1);
+               begin
+                  if not Seen_Withs.Contains (N) then
+                     Put_Line
+                        (Spec_File,
+                         "with " & N & "; use " & N & ";");
+                     Seen_Withs.Include (N);
+                  end if;
+               end;
                exit;
             end if;
          end loop;
@@ -146,7 +159,7 @@ is
    begin
       for J in N'Range loop
          if N (J) = '.' then
-            return Capitalize (N (N'First .. J - 1));
+            return Cleanup (N (N'First .. J - 1));
          end if;
       end loop;
       return "";
@@ -202,21 +215,15 @@ is
 
          procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field);
          procedure For_Field (F : in out GNATCOLL.SQL.Inspect.Field) is
-            Typ : constant String :=
-               F.Get_Type.Type_To_SQL (null, For_Database => False);
+            Typ : constant String := F.Get_Actual_Type.Ada_Field_Type_Name;
          begin
             Put
                (Spec_File,
-                Indent & "   " & Capitalize (F.Name) & " : " & Typ);
-
-            if T_Descr.Is_Abstract then
-               Put (Spec_File, " (Table_Name");
-            else
-               Put (Spec_File, " (Ta_" & Capitalize (T_Descr.Name));
-            end if;
+                Indent & "   " & Cleanup (F.Name) & " : " & Typ);
 
             Put_Line (Spec_File,
-                      ", Instance, N_" & Capitalize (F.Name) & ", Index);");
+                      "(Table_Name, Instance, N_"
+                      & Cleanup (F.Name) & ", Index);");
 
             if F.Description /= "" then
                Print_Comment (Spec_File, Indent & "   ", F.Description);
@@ -234,7 +241,7 @@ is
          if T_Descr.Is_Abstract then
             Put_Line
                (Spec_File,
-                Indent & "type T_" & Capitalize (T_Descr.Name));
+                Indent & "type T_" & Cleanup (T_Descr.Name));
             Put_Line
                (Spec_File,
                 Indent & "   (Table_Name : Cst_String_Access;");
@@ -249,7 +256,7 @@ is
                 Indent & "is abstract new ");
 
             if T_Descr.Super_Table /= No_Table then
-               Put (Spec_File, "T_" & Capitalize (T_Descr.Super_Table.Name));
+               Put (Spec_File, "T_" & Cleanup (T_Descr.Super_Table.Name));
             else
                Put (Spec_File, "SQL_Table");
             end if;
@@ -259,26 +266,31 @@ is
          else
             Put_Line
                (Spec_File,
-                Indent & "type T_Abstract_" & Capitalize (T_Descr.Name));
+                Indent & "type T_Abstract_" & Cleanup (T_Descr.Name));
             Put_Line
                (Spec_File,
-                Indent & "   (Instance : Cst_String_Access;");
+                Indent &
+                "   (Table_Name : Cst_String_Access; --  Name of the table");
             Put_Line
                (Spec_File,
-                Indent & "    Index    : Integer)");
+                Indent &
+                "    Instance   : Cst_String_Access; " &
+                "--  if null, use table name");
+            Put_Line
+               (Spec_File,
+                Indent & "    Index      : Integer)  " &
+                "--  Create numbered aliases");
             Put
                (Spec_File,
-                Indent & "is abstract new ");
+                Indent & "is new ");
 
             if T_Descr.Super_Table /= No_Table then
-               Put (Spec_File, "T_" & Capitalize (T_Descr.Super_Table.Name));
+               Put (Spec_File, "T_" & Cleanup (T_Descr.Super_Table.Name));
             else
                Put (Spec_File, "SQL_Table");
             end if;
 
-            Put_Line (Spec_File,
-                      " (Ta_" & Capitalize (T_Descr.Name)
-                      & ", Instance, Index) with");
+            Put_Line (Spec_File, " (Table_Name, Instance, Index) with");
          end if;
 
          Put_Line (Spec_File, Indent & "record");
@@ -286,14 +298,22 @@ is
          Put_Line (Spec_File, Indent & "end record;");
 
          Print_Comment (Spec_File, Indent, T_Descr.Description);
+         Put_Line
+            (Spec_File,
+             "   --  Use this table directly if you use clones of this table");
+         Put_Line
+            (Spec_File,
+             "   --  in your code, for instance in a temporary table");
 
          if not T_Descr.Is_Abstract then
             New_Line (Spec_File);
-            Put_Line (Spec_File, Indent & "type T_" & Capitalize (T_Descr.Name)
+            Put_Line (Spec_File, Indent & "type T_" & Cleanup (T_Descr.Name)
                       & " (Instance : Cst_String_Access)");
             Put (Spec_File,
-                 Indent & "   is new T_Abstract_" & Capitalize (T_Descr.Name));
-            Put_Line (Spec_File, " (Instance, -1) with null record;");
+                 Indent & "   is new T_Abstract_" & Cleanup (T_Descr.Name));
+            Put_Line (Spec_File,
+               " (Ta_" & Cleanup (T_Descr.Name)
+               & ", Instance, -1) with null record;");
             Put_Line
                (Spec_File,
                 Indent & "--  To use named aliases of the table in a query");
@@ -304,11 +324,12 @@ is
             New_Line (Spec_File);
             Put_Line
                (Spec_File,
-                Indent & "type T_Numbered_" & Capitalize (T_Descr.Name)
+                Indent & "type T_Numbered_" & Cleanup (T_Descr.Name)
                 & " (Index : Integer)");
             Put (Spec_File,
-                Indent &  "   is new T_Abstract_" & Capitalize (T_Descr.Name));
-            Put_Line (Spec_File, " (null, Index) with null record;");
+                Indent &  "   is new T_Abstract_" & Cleanup (T_Descr.Name));
+            Put_Line (Spec_File, " (Ta_" & Cleanup (T_Descr.Name)
+               & ", null, Index) with null record;");
             Put_Line
                (Spec_File,
                 Indent & "--  To use aliases in the form name1, name2,...");
@@ -349,15 +370,15 @@ is
 
                   Put_Line
                     (Spec_File, Indent & "function FK (Self : T_" &
-                       Capitalize (Table.Name) &
-                       "'Class; Foreign : T_" & Capitalize (To.Get_Table.Name)
+                       Cleanup (Table.Name) &
+                       "'Class; Foreign : T_" & Cleanup (To.Get_Table.Name)
                        & "'Class) return SQL_Criteria;");
 
                   New_Line (Body_File);
                   Put_Line
                     (Body_File, Indent & "function FK (Self : T_" &
-                       Capitalize (Table.Name) &
-                       "'Class; Foreign : T_" & Capitalize (To.Get_Table.Name)
+                       Cleanup (Table.Name) &
+                       "'Class; Foreign : T_" & Cleanup (To.Get_Table.Name)
                        & "'Class) return SQL_Criteria is");
                   Put_Line (Body_File, Indent & "begin");
                   Put (Body_File, Indent & "   return Self.");
@@ -367,8 +388,8 @@ is
                end if;
 
                Put (Body_File,
-                    Capitalize (From.Name)
-                    & " = Foreign." & Capitalize (To.Name));
+                    Cleanup (From.Name)
+                    & " = Foreign." & Cleanup (To.Name));
                Prev_Id := Id;
             end if;
          end For_FK;
@@ -394,7 +415,7 @@ is
             declare
                --  The namespace's name is already part of the enclosing
                --  package, so don't duplicate it in the table's name.
-               N : constant String := Capitalize (Table.Name);
+               N : constant String := Cleanup (Table.Name);
                N2 : constant String :=
                   N (N'First
                      + (if NS'Length = 0 then 0 else NS'Length + 1)
@@ -448,14 +469,24 @@ is
       end loop;
    end Process_Tables;
 
-   ----------------
-   -- Capitalize --
-   ----------------
+   -------------
+   -- Cleanup --
+   -------------
 
-   function Capitalize (Name : XString) return String is
+   function Cleanup (Str : String) return String is
+      Result : String (Str'Range);
+      Idx    : Natural := Result'First;
    begin
-      return Capitalize (To_String (Name));
-   end Capitalize;
+      for C in Str'Range loop
+         if GNATCOLL.Utils.Is_Identifier (Str (C))
+            or else Str (C) = '.'   --  handling of namespaces
+         then
+            Result (Idx) := Str (C);
+            Idx := Idx + 1;
+         end if;
+      end loop;
+      return Capitalize (Result (Result'First .. Idx - 1));
+   end Cleanup;
 
    ----------------------------
    -- Print_String_Constants --
@@ -469,12 +500,12 @@ is
       end For_Field;
 
    begin
-      Put_Line (Spec_File, "   TC_" & Capitalize (Table.Name)
+      Put_Line (Spec_File, "   TC_" & Cleanup (Table.Name)
                 & " : aliased constant String := """
                 & Ada_Quote (Quote_Keyword (Table.Name)) & """;");
-      Put_Line (Spec_File, "   Ta_" & Capitalize (Table.Name)
+      Put_Line (Spec_File, "   Ta_" & Cleanup (Table.Name)
                 & " : constant Cst_String_Access := TC_"
-                & Capitalize (Table.Name) & "'Access;");
+                & Cleanup (Table.Name) & "'Access;");
 
       For_Each_Field (Table, For_Field'Access, True);
    end Print_String_Constants;
@@ -519,7 +550,7 @@ is
       Put (Body_File, "      DbSchema : constant String := """);
       F.File := GNATCOLL.VFS.No_File;
       Write_Schema
-        (F, Schema, Puts => Puts'Access, Align_Columns => False,
+        (F, Connection, Schema, Puts => Puts'Access, Align_Columns => False,
          Show_Comments => False);
       Put_Line (Body_File, """;");
 
@@ -534,8 +565,9 @@ is
       Put_Line (Body_File, "      Schema : DB_Schema;");
       Put_Line (Body_File, "   begin");
       Put_Line (Body_File, "      Schema := Read_Schema (F, DbSchema);");
-      Put_Line (Body_File, "      D.DB := Database_Connection (DB);");
-      Put_Line (Body_File, "      Write_Schema (D, Schema);");
+      Put_Line
+         (Body_File,
+          "      Write_Schema (D, Database_Connection (DB), Schema);");
 
       if Load_File /= GNATCOLL.VFS.No_File then
          Put_Line (Body_File, "      if DB.Success then");
@@ -553,6 +585,8 @@ is
      +To_Lower (Translate (Generated, To_Mapping (".", "-")));
 
 begin
+   Seen_Withs.Include ("GNATCOLL.SQL");
+
    --  This version creates the output via a simple list of calls to Put_Line.
    --  A more advanced version using the templates_parser is also available,
    --  but requires the installation of the latter on the machine
@@ -575,12 +609,12 @@ begin
 
       N := First (Names);
       while Has_Element (N) loop
-         Put_Line (Spec_File, "   NC_" & Capitalize (Element (N))
+         Put_Line (Spec_File, "   NC_" & Cleanup (Element (N))
                    & " : aliased constant String := """
                    & Ada_Quote (Quote_Keyword (Element (N))) & """;");
-         Put_Line (Spec_File, "   N_" & Capitalize (Element (N))
+         Put_Line (Spec_File, "   N_" & Cleanup (Element (N))
                    & " : constant Cst_String_Access := NC_"
-                   & Element (N) & "'Access;");
+                   & Cleanup (Element (N)) & "'Access;");
          Next (N);
       end loop;
 
@@ -598,8 +632,6 @@ begin
    Put_Line
      (Spec_File,
       "pragma Warnings (Off, ""no entities of * are referenced"");");
-   Put_Line
-     (Spec_File, "with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;");
    For_Each_Table (Schema, Print_Withs'Access);
    Put_Line
      (Spec_File,
@@ -651,9 +683,9 @@ begin
 
             declare
                Type_Name : constant String :=
-                 Capitalize (Enum.Type_Name);
+                 Cleanup (Enum.Type_Name.To_String);
                Base_Type : constant String :=
-                 Capitalize (Enum.Base_Type);
+                 Cleanup (Enum.Base_Type.To_String);
                Is_String : constant Boolean :=
                  Base_Type = "String";
             begin
@@ -680,8 +712,8 @@ begin
                while Has_Element (C2) loop
                   Put_Line (Spec_File,
                     "   "
-                    & Capitalize (To_String (Enum.Prefix)) & '_'
-                    & Head (Capitalize (Element (C2)), Max_Name_Len)
+                    & Cleanup (To_String (Enum.Prefix)) & '_'
+                    & Head (Cleanup (Element (C2)), Max_Name_Len)
                     & " : constant " & Type_Name & " := "
                     & (if Is_String
                        then """" & Element (C3) & """"
@@ -699,7 +731,7 @@ begin
                   Put_Line (Spec_File,
                      "   function Image_" & Type_Name);
                   Put_Line (Spec_File, "     (X : "
-                     & Capitalize (Enum.Type_Name) & ") return String");
+                     & Cleanup (Enum.Type_Name.To_String) & ") return String");
                   Put_Line (Spec_File, "   is (case X is");
 
                   C2 := First (Enum.Names);
@@ -735,7 +767,7 @@ begin
 
          while Has_Element (C4) loop
             Put_Line
-              (Spec_File, "   " & Capitalize (Element (C4).Name)
+              (Spec_File, "   " & Cleanup (Element (C4).Name.To_String)
                & " : constant := " & To_String (Element (C4).Value) & ";");
             Print_Comment (Spec_File, "   ", To_String (Element (C4).Comment));
             Next (C4);

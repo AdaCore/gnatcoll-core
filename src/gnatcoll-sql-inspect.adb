@@ -33,6 +33,7 @@ with Ada.Unchecked_Deallocation;
 with GNAT.Strings;                use GNAT.Strings;
 with GNATCOLL.Mmap;               use GNATCOLL.Mmap;
 with GNATCOLL.Traces;             use GNATCOLL.Traces;
+with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;                use GNATCOLL.VFS;
 
 package body GNATCOLL.SQL.Inspect is
@@ -41,15 +42,6 @@ package body GNATCOLL.SQL.Inspect is
    use Tables_Maps, Field_Lists, Foreign_Refs;
    use Foreign_Keys, Pair_Lists, Tables_Lists;
    use String_Lists, String_Sets;
-
-   package Field_Mapping_Vectors is new Ada.Containers.Indefinite_Vectors
-     (Positive, Field_Mapping'Class);
-   All_Field_Mappings : Field_Mapping_Vectors.Vector;
-   --  When you create new field types, they should be registered in this list.
-   --  Put an uninitialized instance of the field type in the list. A copy of
-   --  it will be used to call Type_From_SQL when parsing the database schema.
-
-   Invalid_Schema : exception;
 
    Keywords : String_Sets.Set;
 
@@ -68,7 +60,7 @@ package body GNATCOLL.SQL.Inspect is
    --  and should be ignored.
 
    procedure Parse_Table
-     (Self        : DB_Schema_IO'Class;
+     (DB          : not null Database_Connection;
       Table       : Table_Description;
       Attributes  : in out Field_List);
    --  Get the attributes of the specified table
@@ -104,51 +96,24 @@ package body GNATCOLL.SQL.Inspect is
    --  This translates boolean values "true" and "false" as appropriate for
    --  the backend.
 
-   ----------------------------
-   -- Register_Field_Mapping --
-   ----------------------------
+   --------------------------
+   -- Autoincrement fields --
+   --------------------------
 
-   procedure Register_Field_Mapping (Self : Field_Mapping'Class) is
-   begin
-      All_Field_Mappings.Append (Self);
-   end Register_Field_Mapping;
-
-   ---------------------------
-   -- Simple_Field_Mappings --
-   ---------------------------
-
-   package body Simple_Field_Mappings is
-
-      --------------------
-      -- Parameter_Type --
-      --------------------
-
-      overriding function Parameter_Type
-        (Self : Simple_Field_Mapping) return SQL_Parameter_Type'Class
-      is
-         pragma Unreferenced (Self);
-         Dummy : Param_Type;
-         --  intentionally uninitialized, only the specific type is relevant
-         --  as return value
-      begin
-         return Dummy;
-      end Parameter_Type;
-
-   begin
-      Register_Field_Mapping
-         (Simple_Field_Mapping'(Field_Mapping with null record));
-   end Simple_Field_Mappings;
-
-   package Bigint_Mappings is new Simple_Field_Mappings
-     ("bigint", "SQL_Field_Bigint", SQL_Parameter_Bigint);
-   package Boolean_Mappings is new GNATCOLL.SQL.Inspect.Simple_Field_Mappings
-     ("boolean", "SQL_Field_Boolean", SQL_Parameter_Boolean);
-   package Time_Mappings is new Simple_Field_Mappings
-     ("time", "SQL_Field_Time", SQL_Parameter_Time);
-   package Date_Mappings is new Simple_Field_Mappings
-     ("date", "SQL_Field_Date", SQL_Parameter_Date);
-   pragma Unreferenced (Bigint_Mappings, Time_Mappings, Date_Mappings);
-   --  The side effect is to register the mappings
+   type Autoincrement_Mapping is new Field_Mapping with null record;
+   overriding function SQL_Type_Name
+      (Self   : Autoincrement_Mapping;
+       Format : not null access Formatter'Class) return String
+      is (Format.Field_Type_Autoincrement);
+   overriding function Ada_Field_Type_Name
+      (Self : Autoincrement_Mapping) return String
+      is ("GNATCOLL.SQL.SQL_Field_Integer");
+   overriding function Maps_Schema_Type
+      (Self : in out Autoincrement_Mapping; Schema : String) return Boolean
+      is (Schema = "autoincrement");
+   --  These types are always mapped to an integer in all DBMS,
+   --  even though they might be created with a different name like
+   --  "SERIAL" and "INTEGER AUTOINCREMENT".
 
    ---------
    -- EOW --
@@ -215,28 +180,28 @@ package body GNATCOLL.SQL.Inspect is
       return R;
    end Get_Table;
 
-   --------------
-   -- Get_Type --
-   --------------
+   ---------------------
+   -- Get_Actual_Type --
+   ---------------------
 
-   function Get_Type (Self : Field) return Field_Mapping_Access is
+   function Get_Actual_Type (Self : Field) return Field_Mapping_Access is
       FK : constant Field := Self.Is_FK;
       T  : Field_Mapping_Access;
    begin
       if FK = No_Field then
          return Self.Get.Typ;
       else
-         T := Get_Type (FK);
-         if T.all in Field_Mapping_Autoincrement'Class then
+         T := Get_Actual_Type (FK);
+         if T.all in Autoincrement_Mapping'Class then
             --  Do not return T itself, or the table would end up with two
             --  primary keys (since autoincrement fields are only used for
             --  primary keys).
-            return new Field_Mapping_Integer;   --   ??? memory leak
+            return new Integer_Fields.Mapping;   --   ??? memory leak
          else
             return T;
          end if;
       end if;
-   end Get_Type;
+   end Get_Actual_Type;
 
    ----------------
    -- Set_Active --
@@ -600,130 +565,12 @@ package body GNATCOLL.SQL.Inspect is
       end loop;
    end For_Each_FK;
 
-   -------------------
-   -- Type_From_SQL --
-   -------------------
-
-   overriding function Type_From_SQL
-      (Self : in out Field_Mapping_Text; Str : String) return Boolean
-   is
-   begin
-      if Str = "text"
-         or else Str = "varchar"
-         or else (Str'Length >= 10    --  "character varying(...)"
-                  and then Str (Str'First .. Str'First + 9) = "character ")
-      then
-         Self.Max_Length := Integer'Last;
-         return True;
-
-      elsif Str'Length >= 8
-         and then Str (Str'First .. Str'First + 7) = "varchar("
-      then
-         begin
-            Self.Max_Length := Integer'Value
-               (Str (Str'First + 8 .. Str'Last - 1));
-            return  True;
-         exception
-            when Constraint_Error =>
-               Put_Line ("Missing max length after 'varchar' in " & Str);
-               raise Invalid_Schema;
-         end;
-
-      elsif Str'Length >= 10
-        and then Str (Str'First .. Str'First + 9) = "character("
-      then
-         begin
-            Self.Max_Length :=
-               Integer'Value (Str (Str'First + 10 .. Str'Last - 1));
-            return True;
-         exception
-            when Constraint_Error =>
-               Put_Line ("Missing max length after 'Character' in " & Str);
-               raise Invalid_Schema;
-         end;
-
-      else
-         return False;
-      end if;
-   end Type_From_SQL;
-
-   -------------------
-   -- Type_From_SQL --
-   -------------------
-
-   overriding function Type_From_SQL
-      (Self : in out Field_Mapping_Integer; Str : String) return Boolean
-   is
-      pragma Unreferenced (Self);
-   begin
-      if Str = "integer" or else Str = "smallint" or else Str = "oid" then
-         return True;
-
-      elsif Str'Length >= 7
-         and then Str (Str'First .. Str'First + 6) = "numeric"
-      then
-         --  Check the scale
-         for Comma in reverse Str'Range loop
-            if Str (Comma) = ',' then
-               return Str (Comma + 1 .. Str'Last - 1) = "0";
-            end if;
-         end loop;
-         return True;
-
-      else
-         return False;
-      end if;
-   end Type_From_SQL;
-
-   -------------------
-   -- Type_From_SQL --
-   -------------------
-
-   overriding function Type_From_SQL
-      (Self : in out Field_Mapping_Float; Str : String) return Boolean
-   is
-      pragma Unreferenced (Self);
-   begin
-      if Str = "float" then
-         return True;
-
-      elsif Str'Length >= 7
-         and then Str (Str'First .. Str'First + 6) = "numeric"
-      then
-         --  Check the scale
-         for Comma in reverse Str'Range loop
-            if Str (Comma) = ',' then
-               return Str (Comma + 1 .. Str'Last - 1) /= "0";
-            end if;
-         end loop;
-      end if;
-
-      return False;
-   end Type_From_SQL;
-
-   --------------
-   -- From_SQL --
-   --------------
-
-   function From_SQL (SQL_Type : String) return Field_Mapping_Access is
-      T     : constant String := To_Lower (SQL_Type);
-   begin
-      --  Go into reverse order, so that custom fields take precedence
-      --  over the predefined fields
-      for F of reverse All_Field_Mappings loop
-         if F.Type_From_SQL (T) then
-            return new Field_Mapping'Class'(F);
-         end if;
-      end loop;
-      return null;
-   end From_SQL;
-
    -----------------
    -- Parse_Table --
    -----------------
 
    procedure Parse_Table
-     (Self        : DB_Schema_IO'Class;
+     (DB          : not null Database_Connection;
       Table       : Table_Description;
       Attributes  : in out Field_List)
    is
@@ -748,7 +595,7 @@ package body GNATCOLL.SQL.Inspect is
       is
          Descr : Field_Description;
          Ref   : Field;
-         T     : constant Field_Mapping_Access := From_SQL (Typ);
+         T     : constant Field_Mapping_Access := Mapping_From_Schema (Typ);
       begin
          if T = null then
             Put_Line
@@ -783,7 +630,7 @@ package body GNATCOLL.SQL.Inspect is
 
    begin
       Foreach_Field
-        (Self.DB,
+        (DB,
          Table_Name => Table.Name,
          Callback   => On_Field'Access);
    end Parse_Table;
@@ -793,7 +640,8 @@ package body GNATCOLL.SQL.Inspect is
    -----------------
 
    overriding function Read_Schema
-     (Self : DB_Schema_IO) return DB_Schema
+     (Self : DB_Schema_IO;
+      DB   : not null Database_Connection) return DB_Schema
    is
       Schema : DB_Schema;
       T : Natural := 0;
@@ -831,7 +679,7 @@ package body GNATCOLL.SQL.Inspect is
          Descr.Description := new String'(Description);
          Ref.Set (Descr);
 
-         Parse_Table (Self, Ref, TDR (Ref.Unchecked_Get).Fields);
+         Parse_Table (DB, Ref, TDR (Ref.Unchecked_Get).Fields);
 
          Insert (Schema.Tables, Name, Ref);
          Schema.Ordered_Tables.Append (Name);
@@ -915,7 +763,7 @@ package body GNATCOLL.SQL.Inspect is
 
       begin
          Foreach_Foreign_Key
-           (Self.DB,
+           (DB,
             Table_Name => Name,
             Callback   => On_Key'Access);
 
@@ -928,7 +776,7 @@ package body GNATCOLL.SQL.Inspect is
       C : Tables_Maps.Cursor;
 
    begin
-      Foreach_Table (Self.DB, On_Table'Access);
+      Foreach_Table (DB, On_Table'Access);
 
       C := First (Schema.Tables);
       while Has_Element (C) loop
@@ -1002,7 +850,7 @@ package body GNATCOLL.SQL.Inspect is
       V : constant String := To_Lower (Value);
       B : Boolean;
    begin
-      if Typ in Boolean_Mappings.Simple_Field_Mapping'Class then
+      if Typ in Boolean_Fields.Mapping'Class then
          if V = "true" or else V = "false" then
             B := Boolean'Value (Value);
             Val := new String'(Boolean_Image (DB.all, B));
@@ -1028,18 +876,19 @@ package body GNATCOLL.SQL.Inspect is
             Param := Null_Parameter;
          end if;
 
-      elsif Typ in Field_Mapping_Integer'Class then
+      elsif Typ in Integer_Fields.Mapping'Class then
          Val := new String'(Value);
          Param := +Val;
 
-      elsif Typ in Field_Mapping_Money'Class then
+      elsif Typ in Money_Fields.Mapping'Class then
          Param := +T_Money'Value (Value);
          Val := new String'(Param.Get.Image (DB.all));
 
       else
          if Has_Xref then
             Val := new String'
-              (String_To_SQL (DB.all, Value, Quote => True));
+              (String_To_SQL
+                 (DB.all, To_Stored_String (Value), Quote => True));
          else
             Val := new String'(Value);
          end if;
@@ -1330,7 +1179,7 @@ package body GNATCOLL.SQL.Inspect is
                      Att.Get.FK := True;
 
                   else
-                     Att.Get.Typ := From_SQL (Typ);
+                     Att.Get.Typ := Mapping_From_Schema (Typ);
                      if Att.Get.Typ = null then
                         Put_Line ("Error: unknown field type """ & Typ & '"');
                         raise Invalid_Type;
@@ -1459,6 +1308,14 @@ package body GNATCOLL.SQL.Inspect is
                      when Parsing_Properties    =>
                         Parse_Table_Properties (Line (2).all);
                   end case;
+
+               else
+                  Put_Line (Standard_Error,
+                            Self.File.Display_Full_Name
+                            & ":" & Image (Line_Number, Min_Width => 1)
+                            & " Expecting ""ABSTRACT TABLE"","
+                            & " ""TABLE"" or ""VIEW""");
+                  raise Invalid_File;
                end if;
             else
                First := EOL (Data (First .. Data'Last)) + 1;
@@ -1521,8 +1378,10 @@ package body GNATCOLL.SQL.Inspect is
    -----------------
 
    overriding function Read_Schema
-     (Self : File_Schema_IO) return DB_Schema
+     (Self : File_Schema_IO;
+      DB   : not null Database_Connection) return DB_Schema
    is
+      pragma Unreferenced (DB);
       Str    : GNAT.Strings.String_Access := Self.File.Read_File;
       Schema : DB_Schema;
    begin
@@ -1545,8 +1404,12 @@ package body GNATCOLL.SQL.Inspect is
    ------------------
 
    overriding procedure Write_Schema
-     (Self : DB_Schema_IO; Schema : DB_Schema)
+     (Self   : DB_Schema_IO;
+      DB     : not null Database_Connection;
+      Schema : DB_Schema)
    is
+      pragma Unreferenced (Self);
+
       Created : String_Lists.Vector;
       --  List of tables that have been created. When a table has already been
       --  created, we set the foreign key constraints to it immediately,
@@ -1583,10 +1446,10 @@ package body GNATCOLL.SQL.Inspect is
       procedure Do_Statement (SQL : String) is
       begin
          if SQL /= "" then
-            if Self.DB = null then
+            if DB = null then
                Put_Line (SQL & ";");
             else
-               Execute (Self.DB, SQL);
+               Execute (DB, SQL);
             end if;
          end if;
       end Do_Statement;
@@ -1658,14 +1521,14 @@ package body GNATCOLL.SQL.Inspect is
       ---------------
 
       procedure For_Table (Table : in out Table_Description) is
-         SQL : Unbounded_String;
+         SQL : XString;
          --  The statement to execute
 
          TNS : constant Namespaced_Name := Quoted (Table.Name);
          Table_Name : constant String := To_String (TNS.Full_Name);
          New_NS : Boolean;
 
-         SQL_PK : Unbounded_String;
+         SQL_PK : XString;
          --  The SQL to create the primary key
 
          Is_First_Attribute : Boolean := True;
@@ -1677,7 +1540,7 @@ package body GNATCOLL.SQL.Inspect is
 
          procedure Get_Field_Def
            (F    : Field;
-            Stmt : out Unbounded_String;
+            Stmt : out XString;
             Can_Be_Not_Null : Boolean := True;
             FK_Table : String := "");
          --  Set Stmt to the definition for the field F.
@@ -1745,10 +1608,10 @@ package body GNATCOLL.SQL.Inspect is
          --------------
 
          procedure Print_FK (Table : Table_Description) is
-            Stmt2 : Unbounded_String;
+            Stmt2 : XString;
             --  The deferred statement to execute
 
-            Stmt_FK, Stmt_References : Unbounded_String;
+            Stmt_FK, Stmt_References : XString;
             P : Pair_Lists.Cursor;
             Is_First : Boolean;
             Table_To : XString;
@@ -1758,7 +1621,7 @@ package body GNATCOLL.SQL.Inspect is
 
                Table_To := Quoted (R.To_Table.Name).Full_Name;
 
-               Stmt_FK := To_Unbounded_String (" FOREIGN KEY (");
+               Stmt_FK := To_XString (" FOREIGN KEY (");
                Is_First := True;
                P := R.Get.Fields.First;
                while Has_Element (P) loop
@@ -1771,7 +1634,7 @@ package body GNATCOLL.SQL.Inspect is
                end loop;
                Append (Stmt_FK, ")");
 
-               Stmt_References := To_Unbounded_String
+               Stmt_References := To_XString
                  (" REFERENCES " & To_String (Table_To) & " (");
                Is_First := True;
                P := R.Get.Fields.First;
@@ -1799,15 +1662,15 @@ package body GNATCOLL.SQL.Inspect is
                --  efficient (a single SQL statement).
 
                if Created.Contains (To_String (Table_To)) then
-                  Append (SQL, "," & ASCII.LF & Stmt_FK);
+                  SQL.Append ("," & ASCII.LF);
+                  SQL.Append (Stmt_FK);
 
-               elsif Self.DB.Can_Alter_Table_Constraints then
-                  Append
-                    (Deferred,
-                     To_String
-                       ("ALTER TABLE " & Table_Name & " ADD CONSTRAINT "
-                        & Element (R.Get.Fields.First).From.Name
-                        & "_fk" & Stmt_FK));
+               elsif DB.Can_Alter_Table_Constraints then
+                  Deferred.Append
+                    (String'(
+                       "ALTER TABLE " & Table_Name & " ADD CONSTRAINT "
+                       & Element (R.Get.Fields.First).From.Name
+                       & "_fk" & Stmt_FK.To_String));
 
                else
                   P := R.Get.Fields.First;
@@ -1819,9 +1682,10 @@ package body GNATCOLL.SQL.Inspect is
                      Get_Field_Def (Element (P).From, Stmt2,
                                     Can_Be_Not_Null => False,
                                     FK_Table => To_String (Table_To));
-                     Stmt2 := "ALTER TABLE " & Table_Name & " ADD COLUMN "
-                       & Stmt2 & Stmt_References;
-                     Append (Deferred, To_String (Stmt2));
+                     Deferred.Append
+                        (String'(
+                           "ALTER TABLE " & Table_Name & " ADD COLUMN "
+                           & Stmt2.To_String & Stmt_References.To_String));
                      Next (P);
                   end loop;
                end if;
@@ -1856,18 +1720,17 @@ package body GNATCOLL.SQL.Inspect is
 
          procedure Get_Field_Def
            (F    : Field;
-            Stmt : out Unbounded_String;
+            Stmt : out XString;
             Can_Be_Not_Null : Boolean := True;
             FK_Table : String := "")
          is
             Val : GNAT.Strings.String_Access;
             Val_Param : SQL_Parameter;
          begin
-            Stmt := Null_Unbounded_String;
+            Stmt := Null_XString;
 
             Append (Stmt, " """ & F.Name & """ "
-                    & Get_Type (F).Type_To_SQL
-                       (Self.DB, For_Database => True));
+                    & Get_Actual_Type (F).SQL_Type_Name (DB));
 
             if not F.Can_Be_Null then
                if not Can_Be_Not_Null then
@@ -1893,7 +1756,8 @@ package body GNATCOLL.SQL.Inspect is
 
             if F.Default /= "" then
                Format_Field
-                 (Self.DB, F.Default, Get_Type (F).all, Val, Val_Param, False);
+                 (DB, F.Default, Get_Actual_Type (F).all,
+                  Val, Val_Param, False);
                Append (Stmt, " DEFAULT " & Val.all);
                Free (Val);
 
@@ -1930,14 +1794,14 @@ package body GNATCOLL.SQL.Inspect is
          ----------------------
 
          procedure Add_Field_To_SQL (F : in out Field) is
-            Tmp : Unbounded_String;
+            Tmp : XString;
          begin
             --  When a field is a FK to a table that hasn't been created yet,
             --  we need to alter the table later to set the constraint. But in
             --  some cases (sqlite3), this isn't possible, so we will create
             --  the field later altogether.
 
-            if not Self.DB.Can_Alter_Table_Constraints
+            if not DB.Can_Alter_Table_Constraints
               and then F.Is_FK /= No_Field
               and then not Created.Contains
                 (To_String (Quoted (F.Is_FK.Get_Table.Name).Full_Name))
@@ -1972,9 +1836,10 @@ package body GNATCOLL.SQL.Inspect is
             --  Auto increment fields were already setup as primary keys
             --  via Field_Mapping_Autoincrement primitive operation.
             if F.Is_PK
-              and then F.Get_Type.all not in Field_Mapping_Autoincrement'Class
+              and then F.Get_Actual_Type.all
+                 not in Autoincrement_Mapping'Class
             then
-               if SQL_PK = Null_Unbounded_String then
+               if SQL_PK = Null_XString then
                   Append (SQL_PK, '"' & F.Name & '"');
                else
                   Append (SQL_PK, ",""" & F.Name & '"');
@@ -1983,7 +1848,7 @@ package body GNATCOLL.SQL.Inspect is
          end Print_PK;
 
       begin -- For_Table
-         if Self.DB.Success and then not Table.Is_Abstract then
+         if DB.Success and then not Table.Is_Abstract then
             if TNS.Namespace /= Null_XString then
                Namespaces.Insert (TNS.Namespace, Dummy, New_NS);
 
@@ -2004,10 +1869,12 @@ package body GNATCOLL.SQL.Inspect is
                     (Table, Add_Field_To_SQL'Access,
                      Include_Inherited => True);
 
-                  SQL_PK := Null_Unbounded_String;
+                  SQL_PK := Null_XString;
                   For_Each_Field (Table, Print_PK'Access, True);
                   if SQL_PK /= "" then
-                     Append (SQL, ", PRIMARY KEY (" & SQL_PK & ")");
+                     SQL.Append (", PRIMARY KEY (");
+                     SQL.Append (SQL_PK);
+                     SQL.Append (')');
                   end if;
 
                   Print_Uniques;
@@ -2028,7 +1895,7 @@ package body GNATCOLL.SQL.Inspect is
    begin
       For_Each_Table (Schema, For_Table'Access, Alphabetical => False);
 
-      if Self.DB.Success then
+      if DB.Success then
          S := First (Deferred);
          while Has_Element (S) loop
             Do_Statement (Element (S));
@@ -2042,21 +1909,21 @@ package body GNATCOLL.SQL.Inspect is
          end loop;
       end if;
 
-      if Self.DB /= null then
-         if Self.DB.Automatic_Transactions then
-            Commit_Or_Rollback (Self.DB);
+      if DB /= null then
+         if DB.Automatic_Transactions then
+            Commit_Or_Rollback (DB);
          end if;
 
-         if not Self.DB.Success then
+         if not DB.Success then
             Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
          end if;
       end if;
 
    exception
       when Invalid_Schema =>
-         Self.DB.Set_Failure;
-         if Self.DB.Automatic_Transactions then
-            Rollback (Self.DB);
+         DB.Set_Failure;
+         if DB.Automatic_Transactions then
+            Rollback (DB);
          end if;
          Ada.Command_Line.Set_Exit_Status (Ada.Command_Line.Failure);
    end Write_Schema;
@@ -2066,10 +1933,12 @@ package body GNATCOLL.SQL.Inspect is
    ------------------
 
    overriding procedure Write_Schema
-     (Self : File_Schema_IO; Schema : DB_Schema)
+     (Self   : File_Schema_IO;
+      DB     : not null Database_Connection;
+      Schema : DB_Schema)
    is
    begin
-      Write_Schema (Self, Schema, Ada.Text_IO.Put'Access);
+      Write_Schema (Self, DB, Schema, Ada.Text_IO.Put'Access);
    end Write_Schema;
 
    ------------------
@@ -2078,6 +1947,7 @@ package body GNATCOLL.SQL.Inspect is
 
    procedure Write_Schema
      (Self   : File_Schema_IO;
+      DB     : not null Database_Connection;
       Schema : DB_Schema;
       Puts   : access procedure (S : String);
       Align_Columns : Boolean := True;
@@ -2090,7 +1960,7 @@ package body GNATCOLL.SQL.Inspect is
       Column_Widths : array (1 .. 4) of Natural;
       --  The maximum width of all columns
 
-      function SQL_Type (Attr : Field) return String;
+      function Schema_Type (Attr : Field) return String;
       --  Return the type to use for Attr. This includes foreign keys when
       --  appropriate
 
@@ -2119,24 +1989,25 @@ package body GNATCOLL.SQL.Inspect is
          return Name (Dot + 1 .. Name'Last);
       end Omit_Schema;
 
-      --------------
-      -- SQL_Type --
-      --------------
+      -----------------
+      -- Schema_Type --
+      -----------------
 
-      function SQL_Type (Attr : Field) return String is
+      function Schema_Type (Attr : Field) return String is
          FK : constant Field := Attr.Is_FK;
       begin
          if FK = No_Field then
-            if Attr.Get_Type.all in Field_Mapping_Autoincrement'Class then
+            if Attr.Get_Actual_Type.all
+               in Autoincrement_Mapping'Class
+            then
                return "AUTOINCREMENT";
             else
-               return Attr.Get_Type.Type_To_SQL
-                 (Self.DB, For_Database => True);
+               return Attr.Get_Actual_Type.SQL_Type_Name (DB);
             end if;
          else
             return "FK " & Omit_Schema (FK.Get_Table.Name);
          end if;
-      end SQL_Type;
+      end Schema_Type;
 
       ---------------
       -- For_Field --
@@ -2150,7 +2021,7 @@ package body GNATCOLL.SQL.Inspect is
            ("|" & Name & (1 .. Column_Widths (1) - Name'Length => ' ') & "|");
 
          declare
-            Typ : constant String := SQL_Type (F);
+            Typ : constant String := Schema_Type (F);
          begin
             Put (Typ & (1 .. Column_Widths (2) - Typ'Length => ' ') & "|");
          end;
@@ -2227,7 +2098,7 @@ package body GNATCOLL.SQL.Inspect is
                Column_Widths (1) := Integer'Max
                  (Column_Widths (1), A.Name'Length);
                Column_Widths (2) := Integer'Max
-                 (Column_Widths (2), SQL_Type (A)'Length);
+                 (Column_Widths (2), Schema_Type (A)'Length);
                Column_Widths (4) := Integer'Max
                  (Column_Widths (4), A.Default'Length);
             end loop;
@@ -2377,11 +2248,11 @@ package body GNATCOLL.SQL.Inspect is
 
             if Replace_Newline then
                declare
-                  S : Unbounded_String :=
-                    To_Unbounded_String (Data (First .. Tmp));
+                  S : constant XString := Join
+                     (ASCII.LF,
+                      To_XString (Data (First .. Tmp))
+                      .Split ("\n"));
                begin
-                  Replace
-                    (S, Pattern => "\n", Replacement => "" & ASCII.LF);
                   Append (Line, Fields_Count, To_String (S));
                end;
 
@@ -2530,7 +2401,7 @@ package body GNATCOLL.SQL.Inspect is
                begin
                   for L in DB_Fields'First .. DB_Fields_Count loop
                      if DB_Fields (L).all = N then
-                        DB_Field_Mappings (L) := F.Get_Type;
+                        DB_Field_Mappings (L) := F.Get_Actual_Type;
                         return;
                      end if;
                   end loop;
@@ -2548,10 +2419,11 @@ package body GNATCOLL.SQL.Inspect is
                exit when Line (L).all = "";
 
                declare
-                  Param : constant SQL_Parameter_Type'Class :=
-                    DB_Field_Mappings (L).Parameter_Type;
                   P     : constant String :=
-                    Param.Type_String (Index => L, Format => DB.all);
+                    DB.Parameter_String
+                       (Index => L,
+                        Type_Descr =>
+                           DB_Field_Mappings (L).SQL_Type_Name (DB));
 
                begin
                   if Is_Xref (Tmp_DB_Fields_Count + 1) then
@@ -2730,12 +2602,10 @@ package body GNATCOLL.SQL.Inspect is
    -- New_Schema_IO --
    -------------------
 
-   function New_Schema_IO
-     (DB : Database_Connection) return DB_Schema_IO'Class is
+   function New_Schema_IO return DB_Schema_IO'Class is
+      Result : DB_Schema_IO;
    begin
-      return Result : DB_Schema_IO do
-         Result.DB := DB;
-      end return;
+      return Result;
    end New_Schema_IO;
 
    -------------------
@@ -2743,6 +2613,7 @@ package body GNATCOLL.SQL.Inspect is
    -------------------
 
    function Quote_Keyword (Str : String) return String is
+      Need_Quoting : Boolean := False;
    begin
       if Keywords.Is_Empty then
          --  For each keyword (from the postgreSQL documentation):
@@ -3286,9 +3157,24 @@ package body GNATCOLL.SQL.Inspect is
       --  we get an error when creating an index saying that the field does
       --  not exist). So we always convert to lower case.
 
-      if Keywords.Contains (Str)
-        or else To_Lower (Str) /= Str
-      then
+      Need_Quoting :=  Keywords.Contains (Str)
+        or else To_Lower (Str) /= Str;
+
+      --  We also need to quote any name that contains non-letters, to
+      --  prevent sql injection in some cases.
+
+      if not Need_Quoting then
+         for C of Str loop
+            if C /= '.'
+               and then not GNATCOLL.Utils.Is_Identifier (C)
+            then
+               Need_Quoting := True;
+               exit;
+            end if;
+         end loop;
+      end if;
+
+      if Need_Quoting then
          --  Insert two '"' at start and end, since these names will be quoted
          --  in the generated files.
 
@@ -3308,10 +3194,5 @@ package body GNATCOLL.SQL.Inspect is
    end Free_Dispatch;
 
 begin
-   Register_Field_Mapping (Field_Mapping_Text'(others => <>));
-   Register_Field_Mapping (Field_Mapping_Integer'(null record));
-   Register_Field_Mapping (Field_Mapping_Autoincrement'(null record));
-   Register_Field_Mapping (Field_Mapping_Timestamp'(null record));
-   Register_Field_Mapping (Field_Mapping_Float'(null record));
-   Register_Field_Mapping (Field_Mapping_Money'(null record));
+   Register_Field_Mapping (Autoincrement_Mapping'(null record));
 end GNATCOLL.SQL.Inspect;

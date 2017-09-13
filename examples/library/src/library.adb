@@ -48,7 +48,7 @@ begin
    --  Since we are using "&" references, we need to load the schema too
    Load_Data
       (DB, Create ("fixture.txt"),
-       Schema => New_Schema_IO (Create ("dbschema.txt")).Read_Schema);
+       Schema => New_Schema_IO (Create ("dbschema.txt")).Read_Schema (DB));
    DB.Commit;
 
    ---------------------------------------------------
