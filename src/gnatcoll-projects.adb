@@ -5259,7 +5259,7 @@ package body GNATCOLL.Projects is
               (Get_String (File.Display_Base_Name)),
             Source_Lang  => Get_String (Language),
             Source_Prj   => Project.Data.View,
-            Pkg_Name     => Get_String (In_Pkg),
+            Pkg_Name     => Get_String (To_Lower (In_Pkg)),
             Project_Tree => Project.Data.Tree.View,
             Value        => Val,
             Is_Default   => Is_Default_Value);
