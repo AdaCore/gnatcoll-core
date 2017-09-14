@@ -22,7 +22,10 @@
 ------------------------------------------------------------------------------
 
 --  Logging framework
---
+
+--  Usage in the code
+--  =================
+
 --  Here is an example of code:
 --
 --     with GNATCOLL.Traces;     use GNATCOLL.Traces;
@@ -35,15 +38,202 @@
 --     end Main;
 --
 --  You would then provide an additional .gnatdebug file in the current
---  directory, with something like
+--  directory, see below for its format.
+
+--  Configuration
+--  ==============
 --
---     +
+--  The format of the configuration file is the following:
+
+--    * activating or deactivating a specific module:
 --
---  in it. When you run the program, you then see a message like
+--      MODULE_NAME=yes
+--      MODULE_NAME                -- same as "=yes"
+--      MODULE_NAME=no             -- default, unless you used "+"
+--      MODULE_NAME=yes  :option1:option2
 --
---     [NAME] Message 1
+--      where the options are generally given as key=value. The valid
+--      options are:
 --
---  on the standard output
+--         fg=color     # where color is red|black|green|yellow|blue|
+--                      #                magenta|cyan|gray
+--         bg=color     # Same colors as for fg
+--         style=style  # where style is bright|dim|normal
+--
+--      These options configure the default color of the messages in
+--      this stream. The colors are ignored unless you also enable
+--      DEBUG.COLORS (see below). The exact color that is output depends
+--      on the configuration of your terminal (see GNATCOLL.Terminal for
+--      more information).
+
+--    * redirecting a specific module to a file
+--
+--      MODULE_NAME=yes >filename
+--      MODULE_NAME=yes >&stream
+
+--    * Activate all modules, except those with an explicit "=no" line,
+--      and those that are created with "Create (..., Default => Off)" in
+--      the code. This command does not apply to decorators like
+--      DEBUG.COLORS (see below).
+--
+--      +
+
+--    * redirecting all modules to a different stream:
+--      - to a file:
+--
+--        >filename
+--
+--        If filename is a relative path, it is relative to the location of
+--        the configuration file. $$ is automatically replaced by the
+--        process number. $D is automatically replaced by the current date.
+--        $T is automatically replaced by the current date and time.
+--        You can use >>filename instead if you want to append to the file.
+--
+--      - to standard output
+--
+--        >&1
+--
+--      - to standard error
+--
+--        >&2
+--
+--      - to a user-defined stream (see gnat-traces-syslog.ads):
+--
+--        >&stream
+--
+--      In all the cases above, the name of the stream can be followed by
+--      one or more options, for instance:
+--        >filename:buffer_size=0
+--        >&1:colors=on
+--        >&stream:option1:option2
+--
+--      The list of options is given below. They do not necessarily apply
+--      to all streams (for instance controlling the buffer size is not
+--      supported for standard output or standard error, and syslog does
+--      not support colors).
+--
+--        * "buffer_size": the size of the buffer. The logs are
+--          synchronized with the disk when this buffer is full.
+--          Setting this to 0 means that synchronization appears after
+--          every output line, which is slow but might help when
+--          debugging a crashing application.
+--
+--        * "colors": whether to allow colors on this stream.
+--          This combines with the DEBUG.COLORS settings.
+--          Setting this to "on" or "true" forces color output, to
+--          "off" or "false" disables colors, and "auto" will try and
+--          autodetect whether the terminal supports colors.
+--          For Windows users, note that colors are only supported via
+--          the use of ANSI sequences (see gnatcoll-terminal.ads)
+
+--    * comments
+--      -- comment
+
+--  Wildcards
+--  =========
+
+--  It is also possible to substitute a module name with a '*', to configure
+--  a whole set of modules with a single line. For instance:
+--
+--    *  *.EXCEPTIONS=yes >&stdout
+--       will always display a stream whose name ends with ".EXCEPTIONS" to
+--       stdout.
+--
+--    *  MODULE_NAME.*=no
+--       Disables all streams starting with "MODULE_NAME" (including
+--       MODULE_NAME itself). The star can only be used to substitute the
+--       whole first or last name. If the configuration file also contains
+--       a line like "MODULE_NAME.FOO" anywhere (before or after), then this
+--       specific stream is not disabled.
+--
+--    *  *.ERROR=yes  :fg=red
+--       Enable all modules ending with "ERROR", and display their messages
+--       in red by default.
+
+--  Decorators
+--  ==========
+
+--  All messages are output with decorators, which can add extra information
+--  like timestamp, colors, message count,... Those decorators are
+--  configured like modules (see above), but have reserved names. It is
+--  possible to create your own decorators, but all of the predefined
+--  decorators start with "DEBUG.". Here is the extensive list:
+
+--  "DEBUG.ABSOLUTE_TIME"
+--  If this handle is activated, then the absolute time will be added to the
+--  output, if the stream supports it (syslog does not)
+
+--  "DEBUG.MICRO_TIME"
+--  If this handle is activated, the absolute time will be displayed using
+--  micro-seconds resolution, instead of just seconds.
+
+--  "DEBUG.ABSOLUTE_DATE"
+--  If this handle is activated, then the absolute date will be added to the
+--  output, if the stream supports it (syslog does not)
+
+--  "DEBUG.ELAPSED_TIME"
+--  If this handle is activated, then the elapsed time since the last
+--  call to Trace for this handler will be displayed.
+
+--  "DEBUG.STACK_TRACE"
+--  If this handle is activated, then the stack trace will be displayed.
+
+--  "DEBUG.LOCATION"
+--  If this is activated, then the location of the call to Trace is
+--  displayed. Note that, contrary to DEBUG.STACK_TRACE, this works on
+--  all targets, and even if the executable wasn't compiled with debug
+--  information.
+
+--  "DEBUG.COLORS"
+--  When this config is enabled, then other decorators (like the name of
+--  the handle, current time, count,...) will be displayed in color when
+--  the stream supports them (see also the "colors" option when you
+--  declare the streams, at the top of this package).
+
+--  "DEBUG.ENCLOSING_ENTITY"
+--  If this handle is activated, the name of the enclosing entity at the
+--  location of the call to Trace will be displayed.
+
+--  "DEBUG.COUNT"
+--  If this handle is active, two counters are associated with each output
+--  trace: one of them is unique for the handle, the other is unique in the
+--  whole application life. These can for instance be used to set
+--  conditional breakpoints for a specific trace (break on traces.Log or
+--  traces.Trace, and check the value of Handle.Count
+
+--  "DEBUG.MEMORY"
+--  This decorator will show the size of resident memory for the
+--  application, as well as the peek size. This takes into account memory
+--  allocated from any language, C, Ada,.. and is queries from the
+--  operating system).
+--  It also shows a ">" or "<" to indicate whether memory use increased or
+--  not.
+
+--  "DEBUG.ADA_MEMORY"
+--  This is similar to DEBUG.MEMORY, but only displays memory allocated
+--  from Ada (provided you have setup GNATCOLL.Memory to become the default
+--  allocator for your application).
+
+--  "DEBUG.FINALIZE_TRACES"   (default: active)
+--  If deactivated, the trace handles will never be freed when the program
+--  is finalized by the compiler. This is mostly for debugging purposes.
+
+--  "DEBUG.SPLIT_LINES"  (default: true)
+--  Whether long messages should be split at each ASCII.LF character. When
+--  we do this, the trace handle name and decorators are replicated at the
+--  beginning of each followup line. This results in a slow down.
+
+--  Example
+--  =======
+
+--  Here is a short example of configuration file:
+--     +                 --  by default, show all
+--     >&2               --  defines the default stream
+--     DEBUG.COLORS=yes  --  enable colors
+--     PKG1=no           --  do not show
+--     PKG2=yes          --  to the default stream, ie stderr
+--     PKG3=yes >file    --  to the file "file" in current directory
+--     PKG4=yes >&syslog --  to syslog, see gnat-traces-syslog.ads
 
 with GNAT.Source_Info;
 with GNAT.Strings;
@@ -67,84 +257,6 @@ package GNATCOLL.Traces is
    --  overridden by the environment variable Config_File_Environment, which
    --  should be an absolute name (or relative to the current directory). If
    --  this variable is set, the standard file is never searched.
-   --
-   --  The format of the configuration file is the following:
-   --    * activating a module:
-   --      MODULE_NAME=yes
-   --      MODULE_NAME
-   --    * deactivating a module (default)
-   --      MODULE_NAME=no
-   --    * redirecting all modules to a different stream:
-   --      - to a file:
-   --        >filename
-   --        If filename is a relative path, it is relative to the location of
-   --        the configuration file. $$ is automatically replaced by the
-   --        process number. $D is automatically replaced by the current date.
-   --        $T is automatically replaced by the current date and time.
-   --        You can use >>filename instead if you want to append to the file.
-   --      - to standard output (never buffered)
-   --        >&1
-   --      - to standard error (never buffered)
-   --        >&2
-   --      - to a user-defined stream (see gnat-traces-syslog.ads):
-   --        >&stream
-   --
-   --      In all the cases above, the name of the stream can be followed by
-   --      one or more options, for instance:
-   --        >filename:buffer_size=0
-   --        >&1:colors=on
-   --        >&stream:option1:option2
-   --
-   --      The list of options is given below. They do not necessarily apply
-   --      to all streams (for instance controlling the buffer size is not
-   --      supported for standard output or standard error, and syslog does
-   --      not support colors).
-   --
-   --        * "buffer_size": the size of the buffer. The logs are
-   --          synchronized with the disk when this buffer is full.
-   --          Setting this to 0 means that synchronization appears after
-   --          every output line, which is slow but might help when
-   --          debugging a crashing application.
-   --
-   --        * "colors": whether to allow colors on this stream.
-   --          This combines with the DEBUG.COLORS settings.
-   --          Setting this to "on" or "true" forces color output, to
-   --          "off" or "false" disables colors, and "auto" will try and
-   --          autodetect whether the terminal supports colors.
-   --          For Windows users, note that colors are only supported via
-   --          the use of ANSI sequences (see gnatcoll-terminal.ads)
-   --
-   --    * redirecting a specific module to a file
-   --      MODULE_NAME=yes >filename
-   --      MODULE_NAME=yes >&stream
-   --    * comments
-   --      -- comment
-   --    * Activate traces for all modules, unless explicitly deactivated in
-   --      the lines following the '+'
-   --      +
-   --      Note that this doesn't apply to the decorators (see below)
-   --
-   --  It is also possible to substitute a module name with a '*', to configure
-   --  a whole set of modules with a single line. For instance:
-   --
-   --    *  *.EXCEPTIONS=yes >&stdout
-   --       will always display a stream whose name ends with ".EXCEPTIONS" to
-   --       stdout.
-   --
-   --    *  MODULE_NAME.*=no
-   --       Disables all streams starting with "MODULE_NAME" (including
-   --       MODULE_NAME itself). The star can only be used to substitute the
-   --       whole first or last name. If the configuration file also contains
-   --       a line like "MODULE_NAME.FOO" anywhere (before or after), then this
-   --       specific stream is not disabled.
-   --
-   --  Here is a short example of configuration file:
-   --     +                 --  by default, show all
-   --     >&2               --  defines the default stream
-   --     PKG1=no           --  do not show
-   --     PKG2=yes          --  to the default stream, ie stderr
-   --     PKG3=yes >file    --  to the file "file" in current directory
-   --     PKG4=yes >&syslog --  to syslog, see gnat-traces-syslog.ads
 
    Debug_Mode : constant Boolean := True;
    --  Set the global activation status for the debug traces. If this is set to
@@ -619,73 +731,6 @@ package GNATCOLL.Traces is
    ----------------
    -- Decorators --
    ----------------
-   --  The following decorators are predefined.
-   --  They are used to output additional information with each log message,
-   --  and can be activated through the configuration file as usual.
-   --
-   --  "DEBUG.ABSOLUTE_TIME"
-   --  If this handle is activated, then the absolute time will be added to the
-   --  output, if the stream supports it (syslog does not)
-
-   --  "DEBUG.MICRO_TIME"
-   --  If this handle is activated, the absolute time will be displayed using
-   --  micro-seconds resolution, instead of just seconds.
-
-   --  "DEBUG.ABSOLUTE_DATE"
-   --  If this handle is activated, then the absolute date will be added to the
-   --  output, if the stream supports it (syslog does not)
-
-   --  "DEBUG.ELAPSED_TIME"
-   --  If this handle is activated, then the elapsed time since the last
-   --  call to Trace for this handler will be displayed.
-
-   --  "DEBUG.STACK_TRACE"
-   --  If this handle is activated, then the stack trace will be displayed.
-
-   --  "DEBUG.LOCATION"
-   --  If this is activated, then the location of the call to Trace is
-   --  displayed. Note that, contrary to DEBUG.STACK_TRACE, this works on
-   --  all targets, and even if the executable wasn't compiled with debug
-   --  information.
-
-   --  "DEBUG.COLORS"
-   --  When this config is enabled, then other decorators (like the name of
-   --  the handle, current time, count,...) will be displayed in color when
-   --  the stream supports them (see also the "colors" option when you
-   --  declare the streams, at the top of this package).
-
-   --  "DEBUG.ENCLOSING_ENTITY"
-   --  If this handle is activated, the name of the enclosing entity at the
-   --  location of the call to Trace will be displayed.
-
-   --  "DEBUG.COUNT"
-   --  If this handle is active, two counters are associated with each output
-   --  trace: one of them is unique for the handle, the other is unique in the
-   --  whole application life. These can for instance be used to set
-   --  conditional breakpoints for a specific trace (break on traces.Log or
-   --  traces.Trace, and check the value of Handle.Count
-
-   --  "DEBUG.MEMORY"
-   --  This decorator will show the size of resident memory for the
-   --  application, as well as the peek size. This takes into account memory
-   --  allocated from any language, C, Ada,.. and is queries from the
-   --  operating system).
-   --  It also shows a ">" or "<" to indicate whether memory use increased or
-   --  not.
-
-   --  "DEBUG.ADA_MEMORY"
-   --  This is similar to DEBUG.MEMORY, but only displays memory allocated
-   --  from Ada (provided you have setup GNATCOLL.Memory to become the default
-   --  allocator for your application).
-
-   --  "DEBUG.FINALIZE_TRACES"   (default: active)
-   --  If deactivated, the trace handles will never be freed when the program
-   --  is finalized by the compiler. This is mostly for debugging purposes.
-
-   --  "DEBUG.SPLIT_LINES"  (default: true)
-   --  Whether long messages should be split at each ASCII.LF character. When
-   --  we do this, the trace handle name and decorators are replicated at the
-   --  beginning of each followup line. This results in a slow down.
 
    type Trace_Decorator_Record is new Trace_Handle_Record with private;
    type Trace_Decorator is access all Trace_Decorator_Record'Class;
