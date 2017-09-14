@@ -30,9 +30,6 @@ with GNATCOLL.SQL.Exec;        use GNATCOLL.SQL.Exec;
 with GNAT.Source_Info;
 
 generic
-   --  type Ada_Type is private;   --  definite type
-   --  with package Base_Fields is new Field_Types
-   --     (Ada_Type => Ada_Type, others => <>);
    with package Base_Fields is new Field_Types (others => <>);
    --  A range is a tuple of two instances of this type, for instance:
    --      [0.0, 10.0]
@@ -51,119 +48,40 @@ generic
    --  It should include the package name, which will be used to add proper
    --  with clauses in the generated files.
 
-   Schema_Type : String := SQL_Type;
-   --  How this type is described in a schema definition file
-
-   with function "<" (V1, V2 : Base_Fields.Ada_Type) return Boolean is <>;
-   with function "<=" (V1, V2 : Base_Fields.Ada_Type) return Boolean is <>;
-
 package GNATCOLL.SQL.Ranges is
-   subtype Ada_Type is Base_Fields.Ada_Type;
-
-   ----------------
-   -- Ada ranges --
-   ----------------
-   --  These types are actually independent of SQL, and can be used in any
-   --  context.
-
-   type Ada_Range is private;
-   --  A range whose bounds are explicit Ada values.
-
-   function Create_Range
-      (Min, Max    : Ada_Type;
-       Min_Included : Boolean := True;
-       Max_Included : Boolean := True) return Ada_Range;
-   --  A range [min,max], (min,max], (min,max) or [min,max).
-
-   function Create_Min_Unbounded_Range
-      (Max          : Ada_Type;
-       Max_Included : Boolean := True) return Ada_Range;
-   --  An unbounded range:  [,max] or [,max)
-
-   function Create_Max_Unbounded_Range
-      (Min          : Ada_Type;
-       Min_Included : Boolean := True) return Ada_Range;
-   --  An unbounded range:  [min,] or (min,]
-
-   function Lower (Self : Ada_Range) return Ada_Type;
-   function Upper (Self : Ada_Range) return Ada_Type;
-   --  Returns the lower or upper bound (whether included or not).
-   --  If Self is the empty range or infinite on that side, the
-   --  Constraint_Error exception is raised.
-
-   function Is_Empty (Self : Ada_Range) return Boolean;
-   --  True if Self is the empty range
-
-   function Lower_Is_Included (Self : Ada_Range) return Boolean;
-   function Upper_Is_Included (Self : Ada_Range) return Boolean;
-   --  Whether the bounds are included or not in the range
-
-   function Lower_Is_Unbounded (Self : Ada_Range) return Boolean;
-   function Upper_Is_Unbounded (Self : Ada_Range) return Boolean;
-   --  Whether the range is unbounded on either side. If true, you should
-   --  not call Lower or Upper respectively.
-
-   function Contains (Self : Ada_Range; Value : Ada_Type) return Boolean;
-   --  Whether Value is part of the range
-
-   Doubly_Unbounded_Range : constant Ada_Range;  --  (-infinity,+infinity)
-   Empty_Range : constant Ada_Range;
-
-   function Range_From_SQL
-     (Self : Formatter'Class; Value : String) return Ada_Range;
-   --  Parse a string output by postgresql
-
-   --------------------
-   -- SQL Ada ranges --
-   --------------------
 
    package Impl is
-      type SQL_Ada_Range is private;
-      --  A range whose bounds will only be computed on the SQL DBMS.
-      --  For instance, they could be computed from the result of some SQL
-      --  function, or as the value of another fields read from the database.
-      --  Such types cannot be manipulated much on the Ada side (for instance
-      --  you cannot query the actual bounds values).
+      type Ada_Range is private;
 
       function Create_Range
          (Min, Max     : Base_Fields.Field'Class;
           Min_Included : Boolean := True;
-          Max_Included : Boolean := True) return SQL_Ada_Range;
+          Max_Included : Boolean := True) return Ada_Range;
       --  A range [min,max], (min,max], (min,max) or [min,max).
       --  Passing Base_Files.Null_Field for either Min or Max (or both), will
       --  generated an unbounded range, similar to what the subprograms below
       --  do.
-      --  By taking a Base_Fields.Field for min and max, this function allows
-      --  callers to build a range whose bounds are the result of SQL
-      --  functions.
 
       function Create_Min_Unbounded_Range
          (Max          : Base_Fields.Field'Class;
-          Max_Included : Boolean := True) return SQL_Ada_Range;
+          Max_Included : Boolean := True) return Ada_Range;
       --  An unbounded range:  [,max] or [,max)
 
       function Create_Max_Unbounded_Range
          (Min          : Base_Fields.Field'Class;
-          Min_Included : Boolean := True) return SQL_Ada_Range;
+          Min_Included : Boolean := True) return Ada_Range;
       --  An unbounded range:  [min,] or (min,]
 
-      function Convert (Value : Ada_Range) return SQL_Ada_Range;
-      --  Convert a static range to a form suitable for writing SQL queries.
+      Doubly_Unbounded_Range : constant Ada_Range;
+      Empty_Range : constant Ada_Range;
 
       function Range_To_SQL
-        (Self : Formatter'Class; Value : SQL_Ada_Range; Quote : Boolean)
+        (Self : Formatter'Class; Value : Ada_Range; Quote : Boolean)
         return String;
-      function Range_From_SQL
-        (Self : Formatter'Class; Value : String) return SQL_Ada_Range
-        is (raise Program_Error
-            with "Use version returning an Ada_Range instead");
       --  Convert the Value to a string suitable for SQL queries
 
-      Doubly_Unbounded_SQL_Range : constant SQL_Ada_Range;
-      Empty_SQL_Range : constant SQL_Ada_Range;
-
    private
-      type SQL_Ada_Range is record
+      type Ada_Range is record
          Min, Max      : GNATCOLL.SQL.SQL_Field_Pointer;
          Min_Included  : Boolean := True;
          Max_Included  : Boolean := True;
@@ -171,78 +89,66 @@ package GNATCOLL.SQL.Ranges is
          --  with the empty range where these are set to False.
       end record;
 
-      Doubly_Unbounded_SQL_Range : constant SQL_Ada_Range :=
-         (Min => GNATCOLL.SQL_Impl.No_Field_Pointer,
-          Max => GNATCOLL.SQL_Impl.No_Field_Pointer,
-          Min_Included => True,
-          Max_Included => True);
-      Empty_SQL_Range : constant SQL_Ada_Range :=
-         (Min => GNATCOLL.SQL_Impl.No_Field_Pointer,
-          Max => GNATCOLL.SQL_Impl.No_Field_Pointer,
-          Min_Included => False,
-          Max_Included => False);
+      Doubly_Unbounded_Range : constant Ada_Range :=
+         (Min           => GNATCOLL.SQL_Impl.No_Field_Pointer,
+          Max           => GNATCOLL.SQL_Impl.No_Field_Pointer,
+          Min_Included  => True,
+          Max_Included  => True);
+
+      Empty_Range : constant Ada_Range :=
+         (Min           => GNATCOLL.SQL_Impl.No_Field_Pointer,
+          Max           => GNATCOLL.SQL_Impl.No_Field_Pointer,
+          Min_Included  => False,
+          Max_Included  => False);
    end Impl;
 
-   subtype SQL_Ada_Range is Impl.SQL_Ada_Range;
+   subtype Ada_Range is Impl.Ada_Range;
 
-   Doubly_Unbounded_SQL_Range : constant SQL_Ada_Range :=
-      Impl.Doubly_Unbounded_SQL_Range;
-   Empty_SQL_Range : constant SQL_Ada_Range := Impl.Empty_SQL_Range;
+   Doubly_Unbounded_Range : constant Ada_Range := Impl.Doubly_Unbounded_Range;
+   Empty_Range : constant Ada_Range := Impl.Empty_Range;
 
    function Create_Range
       (Min, Max     : Base_Fields.Field'Class;
        Min_Included : Boolean := True;
-       Max_Included : Boolean := True) return SQL_Ada_Range
+       Max_Included : Boolean := True) return Ada_Range
       renames Impl.Create_Range;
    --  The Ada representation for a range. Bounds can be inclusive or
    --  exclusive.
 
    function Create_Min_Unbounded_Range
       (Max          : Base_Fields.Field'Class;
-       Max_Included : Boolean := True) return SQL_Ada_Range
+       Max_Included : Boolean := True) return Ada_Range
       renames Impl.Create_Min_Unbounded_Range;
    --  An unbounded range:  [,max] or [,max)
 
    function Create_Max_Unbounded_Range
       (Min          : Base_Fields.Field'Class;
-       Min_Included : Boolean := True) return SQL_Ada_Range
+       Min_Included : Boolean := True) return Ada_Range
       renames Impl.Create_Max_Unbounded_Range;
    --  An unbounded range:  [min,] or (min,]
 
-   function Identity (Value : SQL_Ada_Range) return SQL_Ada_Range is (Value);
-   function Maps_Range (Schema : String; Data : out Null_Record) return Boolean
-      is (Schema = Schema_Type);
-   function Range_SQL_Type (Data : Null_Record) return String is (SQL_Type);
-   package Fields is new Field_Types
-     (Ada_Type          => SQL_Ada_Range,
-      To_SQL            => Impl.Range_To_SQL,
-      From_SQL          => Impl.Range_From_SQL,
-      Stored_Ada_Type   => SQL_Ada_Range,
-      Stored_To_Ada     => Identity,
-      Ada_To_Stored     => Identity,
-      Field_Data        => Null_Record,
-      SQL_Type          => Range_SQL_Type,
-      Ada_Field_Type    => Ada_Field_Type,
-      Schema_Type_Check => Maps_Range);
-   subtype SQL_Parameter_Range is Fields.Parameter;
-   type SQL_Field_Range is new Fields.Field with null record;
+   package Range_Parameters is new Scalar_Parameters
+      (Ada_Range, SQL_Type, Impl.Range_To_SQL);
+   subtype SQL_Parameter_Range is Range_Parameters.SQL_Parameter;
+
+   package Range_Field_Mappings is new Simple_Field_Mappings
+     (SQL_Type, Ada_Field_Type, SQL_Parameter_Range);
+
+   package Range_Fields is new Field_Types
+     (Ada_Type    => Ada_Range,
+      To_SQL      => Impl.Range_To_SQL,
+      Param_Type  => SQL_Parameter_Range);
+   type SQL_Field_Range is new Range_Fields.Field with null record;
    Null_Field_Range : constant SQL_Field_Range;
 
-   function Range_Param (Index : Positive) return Fields.Field'Class
-     renames Fields.Param;
-   function As_Param (Value : Ada_Range) return SQL_Parameter;
+   function Range_Param (Index : Positive) return Range_Fields.Field'Class
+     renames Range_Fields.Param;
    --  A field whose value will be provided independently when executing the
    --  query.
 
-   function Expression (Value : SQL_Ada_Range) return Fields.Field'Class
-      renames Fields.Expression;
-   function Expression (Value : Ada_Range) return Fields.Field'Class
-      is (Fields.Expression (Impl.Convert (Value)));
-   --  Include a static range in SQL expression
-
    function Range_Value
      (Self  : Forward_Cursor'Class; Field : Field_Index) return Ada_Range;
-   --  Retrieve a range value from the output of a SQL query.
+   --  Retrieve a range value from the output of a SQL query
 
    Str_Contains          : aliased constant String := "@>";
    Str_Is_Contained      : aliased constant String := "<@";
@@ -257,92 +163,57 @@ package GNATCOLL.SQL.Ranges is
 
    function Contains (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Contains'Access));
-   function Contains
-      (R : SQL_Field_Range; V : SQL_Ada_Range) return SQL_Criteria
-      is (Compare (R, Fields.Expression (V), Str_Contains'Access));
    function Contains (R : SQL_Field_Range; V : Ada_Range) return SQL_Criteria
-      is (Compare (R, Expression (V), Str_Contains'Access));
+      is (Compare (R, Range_Fields.Expression (V), Str_Contains'Access));
    --  For instance:  [2,4] @> [2,3]  => true
 
    function Is_Contained (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Is_Contained'Access));
    function Is_Contained
-      (V : SQL_Ada_Range; R : SQL_Field_Range) return SQL_Criteria
-      is (Compare (Fields.Expression (V), R, Str_Is_Contained'Access));
-   function Is_Contained
       (V : Ada_Range; R : SQL_Field_Range) return SQL_Criteria
-      is (Compare (Expression (V), R, Str_Is_Contained'Access));
+      is (Compare (Range_Fields.Expression (V), R, Str_Is_Contained'Access));
    --  For instance:  [2,4] <@  [1,7]  => true
 
    function Overlap (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Overlap'Access));
-   function Overlap (R1 : SQL_Field_Range; R2 : SQL_Ada_Range)
-      return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Overlap'Access));
-   function Overlap (R1 : SQL_Field_Range; R2 : Ada_Range) return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Overlap'Access));
    --  For instance:  [3,7] && [4,12]  => true
 
    function Strictly_Left_Of (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Left_Of'Access));
-   function Strictly_Left_Of (R1 : SQL_Field_Range; R2 : SQL_Ada_Range)
-      return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Left_Of'Access));
-   function Strictly_Left_Of (R1 : SQL_Field_Range; R2 : Ada_Range)
-      return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Left_Of'Access));
    --  For instance: [1,10] << [100,110]   => true
 
    function Strictly_Right_Of (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Right_Of'Access));
-   function Strictly_Right_Of (R1 : SQL_Field_Range; R2 : SQL_Ada_Range)
-      return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Right_Of'Access));
-   function Strictly_Right_Of (R1 : SQL_Field_Range; R2 : Ada_Range)
-      return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Right_Of'Access));
    --  For instance: [50,60] >> [20,30]  => true
 
    function Not_Extend_To_Right_Of
       (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Not_Extend_Right'Access));
-   function Not_Extend_To_Right_Of
-      (R1 : SQL_Field_Range; R2 : SQL_Ada_Range) return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Not_Extend_Right'Access));
-   function Not_Extend_To_Right_Of
-      (R1 : SQL_Field_Range; R2 : Ada_Range) return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Not_Extend_Right'Access));
    --  For instance: [1,20] &< [18,20]  => true
 
    function Not_Extend_To_Left_Of
       (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Not_Extend_Left'Access));
-   function Not_Extend_To_Left_Of
-      (R1 : SQL_Field_Range; R2 : SQL_Ada_Range) return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Not_Extend_Left'Access));
-   function Not_Extend_To_Left_Of
-      (R1 : SQL_Field_Range; R2 : Ada_Range) return SQL_Criteria
-      is (Compare (R1, Expression (R2), Str_Not_Extend_Left'Access));
    --  For instance: [7,20] &> [5,10]  => true
 
    function Adjacent_To (R1, R2 : SQL_Field_Range) return SQL_Criteria
       is (Compare (R1, R2, Str_Adjacent'Access));
    --  For instance: [1.1, 2.2]  -|-  [2.2, 3.3]  => true
 
-   function Union is new Fields.Operator ("+");
+   function Union is new Range_Fields.Operator ("+");
    --  For instance, [5,15] + [10,20] = [5,20]
 
-   function Intersection is new Fields.Operator ("*");
+   function Intersection is new Range_Fields.Operator ("*");
    --  For instance, [5,15] * [10,20] = [10,15]
 
-   function Difference is new Fields.Operator ("-");
+   function Difference is new Range_Fields.Operator ("-");
    --  For instance, [5,15] - [10,20] = [5,10]
 
    function Is_Empty (R1 : SQL_Field_Range) return SQL_Criteria
      is (Compare1 (R1, Str_Is_Empty'Access, Str_Close_Parenthesis'Access));
    --  isempty(R1)
 
-   function Merge is new Fields.Apply_Function2
+   function Merge is new Range_Fields.Apply_Function2
       (Argument1_Type => SQL_Field_Range,
        Argument2_Type => SQL_Field_Range,
        Name           => "range_merge(");
@@ -360,43 +231,6 @@ package GNATCOLL.SQL.Ranges is
    --  Upper bound of the range
 
 private
-   subtype Stored_Ada is Base_Fields.Stored_Ada_Type;
-
-   type Bound_Type is (Included, Excluded, Infinite, Zero);
-   type Range_Bound (Kind : Bound_Type := Zero) is record
-      case Kind is
-         when Infinite | Zero     => null;
-         when Included | Excluded => Value : Stored_Ada;
-      end case;
-   end record;
-
-   type Ada_Range is record
-      Min : Range_Bound;
-      Max : Range_Bound;
-   end record;
-
-   Doubly_Unbounded_Range : constant Ada_Range :=
-      (Min => Range_Bound'(Kind => Infinite),
-       Max => Range_Bound'(Kind => Infinite));
-   Empty_Range : constant Ada_Range :=
-      (Min => Range_Bound'(Kind => Zero),
-       Max => Range_Bound'(Kind => Zero));
-
-   function Lower (Self : Ada_Range) return Ada_Type
-      is (Base_Fields.Stored_To_Ada (Self.Min.Value));
-   function Upper (Self : Ada_Range) return Ada_Type
-      is (Base_Fields.Stored_To_Ada (Self.Max.Value));
-   function Is_Empty (Self : Ada_Range) return Boolean
-      is (Self.Min.Kind = Zero);
-   function Lower_Is_Included (Self : Ada_Range) return Boolean
-      is (Self.Min.Kind = Included);
-   function Upper_Is_Included (Self : Ada_Range) return Boolean
-      is (Self.Max.Kind = Included);
-   function Lower_Is_Unbounded (Self : Ada_Range) return Boolean
-      is (Self.Min.Kind = Infinite);
-   function Upper_Is_Unbounded (Self : Ada_Range) return Boolean
-      is (Self.Max.Kind = Infinite);
-
    Null_Field_Range : constant SQL_Field_Range :=
-      (Fields.Null_Field with null record);
+     (Range_Fields.Null_Field with null record);
 end GNATCOLL.SQL.Ranges;

@@ -27,7 +27,6 @@
 pragma Ada_2012;
 
 with Ada.Calendar.Time_Zones; use Ada.Calendar;
-with Ada.Characters.Handling;
 with Ada.Strings.Unbounded;
 with GNAT.Calendar;
 with GNAT.Expect;
@@ -211,31 +210,6 @@ package GNATCOLL.Utils is
    --  enabled (for systems that share dos files).
    --  CR/LF sequences are replaced by LF chars.
 
-   function Predicate
-      (Text : String;
-        Predicate : access function (Item : Character) return Boolean)
-      return Boolean
-      is (for all C of Text => Predicate (C));
-   --  Whether all characters in Text match Predicate.
-   --  This can be used with the various utilities in Ada.Characters.Handling,
-   --  for instance to check whether a string is made up of only lower case
-   --  characters.
-
-   function Is_Alphanumeric (Text : String) return Boolean
-     is (Predicate (Text, Ada.Characters.Handling.Is_Alphanumeric'Access));
-   function Is_Lower (Text : String) return Boolean
-     is (Predicate (Text, Ada.Characters.Handling.Is_Lower'Access));
-   function Is_Upper (Text : String) return Boolean
-     is (Predicate (Text, Ada.Characters.Handling.Is_Upper'Access));
-
-   function Is_Identifier (C : Character) return Boolean
-      is (C = '_' or else Ada.Characters.Handling.Is_Alphanumeric (C));
-   function Is_Identifier (Text : String) return Boolean
-      is (Predicate (Text, Is_Identifier'Access));
-   --  Whether C is a valid character for an identifier (in most programming
-   --  languages). It doesn't check whether the identifier starts with an
-   --  underscore for instance, just whether the characters would be valid.
-
    ------------
    -- Expect --
    ------------
@@ -277,13 +251,6 @@ package GNATCOLL.Utils is
    --  The input date is assumed to be in UTC unless a timezone is specified
    --  as hours with a final "[+-]\d\d", or as hours and minutes with
    --  "[+-]\d\d\d\d" or "[+-]\d\d:\d\d"
-   --
-   --  The output date is always returned for the UTC time zone.
-   --  So if you are in GMT+12 and you parse "2017-01-01T11:00:00", the
-   --  result date will be:  year=2016, month=12, day=31, time=23:00:00.
-   --  If you want to spit the resulting time to extract the components,
-   --  you should use:
-   --     Ada.Calendar.Formatting.Split (.., Time_Zone => 0);
 
    function Truncate
      (Date : Time; Time_Zone : Time_Zones.Time_Offset := 0) return Time;

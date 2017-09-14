@@ -11,7 +11,6 @@
 --  operations of the managers
 
 with Ada.Calendar;
-with Ada.Strings.Unbounded;    use Ada.Strings.Unbounded;
 
 package GNATCOLL.SQL.Orm.Impl is
 

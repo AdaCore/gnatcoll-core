@@ -152,6 +152,12 @@ package body GNATCOLL.SQL.Exec.Tasking is
    overriding function Value
      (Self : Task_Cursor; Field : Field_Index) return String;
 
+   overriding function XString_Value
+     (Self : Task_Cursor; Field : Field_Index) return XString;
+
+   overriding function Boolean_Value
+     (Self : Task_Cursor; Field : Field_Index) return Boolean;
+
    type Task_Cursor_Access is access all Task_Cursor;
 
    ----------
@@ -176,6 +182,21 @@ package body GNATCOLL.SQL.Exec.Tasking is
         "Should not be used, because all data in Ada strings already";
       return Null_Ptr;
    end C_Value;
+
+   -------------------
+   -- Boolean_Value --
+   -------------------
+
+   overriding function Boolean_Value
+     (Self : Task_Cursor; Field : Field_Index) return Boolean
+   is
+      Value : constant String := Self.Value (Field);
+   begin
+      return Value'Length > 0
+             and then (Value (Value'First) = 't'
+                       or else Value (Value'First) = 'T'
+                       or else Value (Value'First) in '1' .. '9');
+   end Boolean_Value;
 
    -------------
    -- Last_Id --
@@ -268,6 +289,16 @@ package body GNATCOLL.SQL.Exec.Tasking is
    begin
       return To_String (Self.Data.Get.Table (Self.Position) (Field).Element);
    end Value;
+
+   -------------------
+   -- XString_Value --
+   -------------------
+
+   overriding function XString_Value
+     (Self : Task_Cursor; Field : Field_Index) return XString is
+   begin
+      return Self.Data.Get.Table (Self.Position) (Field).Element;
+   end XString_Value;
 
    ------------------------
    -- Task_Safe_Instance --
@@ -377,8 +408,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
          return Direct_Cursor (Source);
       end if;
 
-      return (Ada.Finalization.Controlled with
-              Res => Target, Format => Source.Format);
+      return (Ada.Finalization.Controlled with Res => Target);
    end Task_Safe_Instance;
 
    ---------------------
@@ -396,7 +426,6 @@ package body GNATCOLL.SQL.Exec.Tasking is
       end if;
 
       return (Ada.Finalization.Controlled with
-              Format => Source.Format,
               Res => new Task_Cursor'
                            (Abstract_DBMS_Forward_Cursor with
                             Position => 1, Data => Data));

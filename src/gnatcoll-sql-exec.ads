@@ -102,11 +102,12 @@
 pragma Ada_2012;
 
 with Ada.Calendar;
-with Ada.Strings.Unbounded;         use Ada.Strings.Unbounded;
 with System;
 private with Ada.Finalization;
 private with GNATCOLL.Refcount;
+with GNAT.Strings;
 with GNATCOLL.SQL_Impl;
+with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 package GNATCOLL.SQL.Exec is
 
@@ -140,13 +141,6 @@ package GNATCOLL.SQL.Exec is
    --  In practice, DBMS-specific backends will derive from
    --  gnatcoll-sql-exec-dbms_cursor, which defines the required primitive ops
 
-   function Get_Formatter
-      (Self : Forward_Cursor) return access Formatter'Class
-      with Inline;
-   --  The formatter used to build the query. This should only be
-   --  used to dispatch to appropriate DBMS-specific subprograms, but
-   --  not to execute further queries.
-
    ----------------
    -- Parameters --
    ----------------
@@ -160,7 +154,7 @@ package GNATCOLL.SQL.Exec is
    --  Such queries are created in GNATCOLL through the use of
    --  GNATCOLL.SQL.Text_Param, GNATCOLL.SQL.Integer_Param,...
 
-   subtype SQL_Parameter is GNATCOLL.SQL_Impl.SQL_Parameter_Ptr;
+   type SQL_Parameter is new SQL_Impl.SQL_Parameter_Base with null record;
    Null_Parameter : constant SQL_Parameter;
 
    function "+" (Value : access constant String) return SQL_Parameter;
@@ -169,24 +163,16 @@ package GNATCOLL.SQL.Exec is
    --  it might be needed after the query executes. This has no effect on
    --  PostgreSQL, which already systematically does this copy
 
-   function "+" (Value : String) return SQL_Parameter
-      renames Text_Fields.As_Param;
-   function "+" (Value : XString) return SQL_Parameter;
-   function "+" (Value : Character) return SQL_Parameter
-      is (+(1 => Value));
+   function "+" (Value : String) return SQL_Parameter;
    function "+" (Value : Unbounded_String) return SQL_Parameter;
-   function "+" (Value : Integer) return SQL_Parameter
-      renames Integer_Fields.As_Param;
-   function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter
-      renames Bigint_Fields.As_Param;
-   function "+" (Value : Boolean) return SQL_Parameter
-      renames Boolean_Fields.As_Param;
-   function "+" (Value : Float) return SQL_Parameter
-      renames Float_Fields.As_Param;
-   function "+" (Time : Ada.Calendar.Time) return SQL_Parameter
-      renames Time_Fields.As_Param;
-   function "+" (Value : T_Money) return SQL_Parameter
-      renames Money_Fields.As_Param;
+   function "+" (Value : Integer) return SQL_Parameter;
+   function As_Bigint (Value : Long_Long_Integer) return SQL_Parameter;
+   function "+" (Value : Boolean) return SQL_Parameter;
+   function "+" (Value : Float) return SQL_Parameter;
+   function As_Long_Float (Value : Long_Float) return SQL_Parameter;
+   function "+" (Value : Character) return SQL_Parameter;
+   function "+" (Time : Ada.Calendar.Time) return SQL_Parameter;
+   function "+" (Value : T_Money) return SQL_Parameter;
 
    type SQL_Parameters is array (Positive range <>) of SQL_Parameter;
    No_Parameters : constant SQL_Parameters;
@@ -255,12 +241,6 @@ package GNATCOLL.SQL.Exec is
    --  This should only be called when the last database connection was closed,
    --  since each connection keeps a handle on the description
 
-   function Get_Application_Name
-      (Self : not null access Database_Description_Record)
-      return String is ("");
-   --  The application name, as registered when Self was created.
-   --  This can be used as a parameter to Reset_Connection.
-
    --------------------
    -- Error_Reporter --
    --------------------
@@ -299,20 +279,20 @@ package GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Forward_Cursor;
-      Connection : not null access Database_Connection_Record'Class;
+      Connection : access Database_Connection_Record'Class;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters);
    procedure Fetch
      (Result     : out Forward_Cursor;
-      Connection : not null access Database_Connection_Record'Class;
+      Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
       Params     : SQL_Parameters := No_Parameters);
    procedure Execute
-     (Connection : not null access Database_Connection_Record'Class;
+     (Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
       Params     : SQL_Parameters := No_Parameters);
    procedure Execute
-     (Connection : not null access Database_Connection_Record'Class;
+     (Connection : access Database_Connection_Record'Class;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters);
    --  Submit a query to the database, log it and wait for the result.
@@ -341,12 +321,12 @@ package GNATCOLL.SQL.Exec is
    --  might have will also be reset
 
    function Insert_And_Get_PK
-     (Connection : not null access Database_Connection_Record'Class;
+     (Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer;
    function Insert_And_Get_PK
-     (Connection : not null access Database_Connection_Record;
+     (Connection : access Database_Connection_Record;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer;
@@ -387,7 +367,7 @@ package GNATCOLL.SQL.Exec is
    --  that would not be executed anyway.
 
    procedure Set_Failure
-     (Connection : not null access Database_Connection_Record'Class;
+     (Connection : access Database_Connection_Record'Class;
       Error_Msg  : String := "");
    --  Mark the transaction as failed. In general, this does not need to be
    --  done, but is needed when you expect for instance a SELECT to return at
@@ -397,7 +377,7 @@ package GNATCOLL.SQL.Exec is
    --  an error, and use that one instead.
 
    procedure Rollback
-     (Connection : not null access Database_Connection_Record'Class;
+     (Connection : access Database_Connection_Record'Class;
       Error_Msg  : String := "");
    --  This command emits a "ROLLBACK" of the current transaction.
    --  When automatic transactions are enabled, it does nothing if no
@@ -432,7 +412,7 @@ package GNATCOLL.SQL.Exec is
    --  connection, not while executing SQL statements.
 
    function Start_Transaction
-     (Connection : not null access Database_Connection_Record'Class)
+     (Connection : access Database_Connection_Record'Class)
       return Boolean;
    --  This command emits a "BEGIN" to start a new transaction.
    --  When automatic transactions are enabled, it does nothing if a
@@ -454,9 +434,9 @@ package GNATCOLL.SQL.Exec is
    --  ROLLBACK'd.
 
    procedure Commit_Or_Rollback
-     (Connection : not null access Database_Connection_Record'Class);
+     (Connection : access Database_Connection_Record'Class);
    procedure Commit
-     (Connection : not null access Database_Connection_Record'Class)
+     (Connection : access Database_Connection_Record'Class)
       renames Commit_Or_Rollback;
    --  Commit or rollback the current transaction, depending on whether we had
    --  an error. This does not affect the result of Success (unless COMMIT
@@ -501,8 +481,7 @@ package GNATCOLL.SQL.Exec is
    --  as the user used to log in the database (typically, the username would
    --  be set to a unique identifier for the current application user, for
    --  instance the login name, whereas the application would always use a
-   --  common user/password to log in the database).
-   --  One possible value is Connection.Get_Description.Get_Application_Name.
+   --  common user/password to log in the database)
 
    function Get_Description
      (Connection : access Database_Connection_Record'Class)
@@ -579,65 +558,65 @@ package GNATCOLL.SQL.Exec is
    --  Index of the current row. The first row is always numbered 1
 
    function Value (Self : Forward_Cursor; Field : Field_Index) return String;
+   --  Gets the field value as a string
+
    function Unbounded_Value
-     (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String
-     is (To_Unbounded_String (Value (Self, Field)));
+     (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String;
+   --  Gets the field value as an Unbounded_String
+
    function XString_Value
-     (Self : Forward_Cursor; Field : Field_Index) return XString
-     is (To_XString (Value (Self, Field)));
+     (Self : Forward_Cursor; Field : Field_Index) return XString;
+   --  Gets the field value as an XString
+
    function Boolean_Value
-     (Self : Forward_Cursor; Field : Field_Index) return Boolean
-     is (Boolean_Fields.Parse_From_SQL
-        (Self.Get_Formatter.all, Value (Self, Field)));
+     (Self : Forward_Cursor; Field : Field_Index) return Boolean;
+
    function Integer_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
       Default : Integer) return Integer;
    function Integer_Value
      (Self    : Forward_Cursor;
-      Field   : Field_Index) return Integer
-     is (Integer_Fields.Parse_From_SQL
-        (Self.Get_Formatter.all, Value (Self, Field)));
+      Field   : Field_Index) return Integer;
+   --  Reads a value as an integer. The second version might raise a
+   --  Constraint_Error if the field is null or does not contain an integer.
+   --  The first version will return the default instead.
+
    function Bigint_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
       Default : Long_Long_Integer) return Long_Long_Integer;
    function Bigint_Value
      (Self    : Forward_Cursor;
-      Field   : Field_Index) return Long_Long_Integer
-     is (Bigint_Fields.Parse_From_SQL
-        (Self.Get_Formatter.all, Value (Self, Field)));
+      Field   : Field_Index) return Long_Long_Integer;
+   --  Reads a value as a bigint.
+
    function Float_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
       Default : Float) return Float;
    function Float_Value
-     (Self : Forward_Cursor; Field : Field_Index) return Float
-     is (Float_Fields.Parse_From_SQL
-        (Self.Get_Formatter.all, Value (Self, Field)));
-   function Long_Long_Float_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Float;
+   --  Reads a value as a float. The second version might raise a
+   --  Constraint_Error if the field is null or does not contain a float.
+   --  The first version will return the default instead.
+
+   function Long_Float_Value
      (Self    : Forward_Cursor;
       Field   : Field_Index;
-      Default : Long_Long_Float) return Long_Long_Float;
-   function Long_Long_Float_Value
-     (Self : Forward_Cursor; Field : Field_Index) return Long_Long_Float;
+      Default : Long_Float) return Long_Float;
+   function Long_Float_Value
+     (Self : Forward_Cursor; Field : Field_Index) return Long_Float;
+   --  Reads a value as a long float. The second version might raise a
+   --  Constraint_Error if the field is null or does not contain a long float.
+   --  The first version will return the default instead.
+
    function Money_Value
-     (Self : Forward_Cursor; Field : Field_Index) return T_Money
-     is (Money_Fields.Parse_From_SQL
-        (Self.Get_Formatter.all, Value (Self, Field)));
+     (Self : Forward_Cursor; Field : Field_Index)
+     return T_Money;
    function Time_Value
-     (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time
-     is (Time_Fields.Parse_From_SQL
-        (Self.Get_Formatter.all, Value (Self, Field)));
-   --  Retrieve a specific column of the current row.
-   --  The first column is at index 0.
-   --  These functions will raise a Constraint_Error if the column is null or
-   --  do not contain the appropriate type, unless a Default is specified.
-   --  This default is returned instead of raising an exception.
-   --  The type conversion is done using the fields packages's From_SQL
-   --  functions (Float_Fields, Integer_Fields,...). So if you create custom
-   --  fields by instantiating GNATCOLL.SQL_Impl.Field_Types, you can easily
-   --  also create the equivalent *_Value function.
+     (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
+   --  Return a specific cell, converted to the appropriate format
 
    function Is_Null
      (Self  : Forward_Cursor; Field : Field_Index) return Boolean;
@@ -678,14 +657,11 @@ package GNATCOLL.SQL.Exec is
    --      auto-completion might be time consuming. This preparation is only
    --      client side and does not involve the DBMS.
    --
-   --    * DBMS systems have a way to prepare statements (on the server
+   --    * DBMS systems all have a way to prepare statements (on the server
    --      this time). This involves optimizing the query and how it should be
    --      executed. Such prepared statements, however, are only valid while
    --      the connection to the database lasts (or until you explicitly close
    --      the prepared statement.
-   --      In some cases (for instance when using pgbouncer as a connection
-   --      pooler for postgreSQL) such prepared statements should not be used,
-   --      and GNATCOLL will automatically do nothing in this case.
    --
    --    * GNATCOLL.SQL.Exec is also able to cache (on the client) the result
    --      of some queries. This way, you avoid communication with the DBMS
@@ -729,8 +705,7 @@ package GNATCOLL.SQL.Exec is
    --
    --  Preparing statements on the server
    --------------------------------------
-   --  If On_Server is true, and the DBMS supports it, then a
-   --  connection-specific preparation is also
+   --  If On_Server is true, then a connection-specific preparation is also
    --  done on the server, for further optimization. Otherwise, the
    --  result of this call is to generate the string representation (and auto
    --  completion) of the query only once, and reuse that later on (that still
@@ -740,7 +715,7 @@ package GNATCOLL.SQL.Exec is
    --  parameters (since otherwise it is too specialized to be worth keeping
    --  in memory).
    --
-   --  There is little gain in having both Use_Cache and On_Server: the
+   --  There is little gain in having both Use_Cache and On_Server be true: the
    --  query is executed only once (until the cache expires) on the server
    --  anyway.
    --
@@ -764,11 +739,6 @@ package GNATCOLL.SQL.Exec is
    --  A precomputed SQL statement, on the client side.
    --  This type is reference counted and will automatically free memory or
    --  release DBMS resources when it goes out of scope.
-
-   function Is_Prepared_On_Server_Supported
-     (Connection : not null access Database_Connection_Record) return Boolean
-     is (True);
-   --  True if Prepared supported on the server for this connection.
 
    function Prepare
      (Query         : SQL_Query;
@@ -796,11 +766,11 @@ package GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Forward_Cursor;
-      Connection : not null access Database_Connection_Record'Class;
+      Connection : access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters := No_Parameters);
    procedure Execute
-     (Connection : not null access Database_Connection_Record'Class;
+     (Connection : access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters := No_Parameters);
    --  Execute a prepared statement on the connection.
@@ -821,7 +791,7 @@ package GNATCOLL.SQL.Exec is
    function To_String
       (Connection : access Database_Connection_Record;
        Stmt       : Prepared_Statement'Class)
-      return XString;
+      return String;
    --  Return the SQL statement for Stmt.
 
    -----------------------------------------
@@ -862,18 +832,18 @@ package GNATCOLL.SQL.Exec is
 
    procedure Fetch
      (Result     : out Direct_Cursor;
-      Connection : not null access Database_Connection_Record'Class;
+      Connection : access Database_Connection_Record'Class;
       Stmt       : Prepared_Statement'Class;
       Params     : SQL_Parameters := No_Parameters);
 
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
-      Connection : not null access Database_Connection_Record'Class;
+      Connection : access Database_Connection_Record'Class;
       Query      : String;
       Params     : SQL_Parameters := No_Parameters);
    overriding procedure Fetch
      (Result     : out Direct_Cursor;
-      Connection : not null access Database_Connection_Record'Class;
+      Connection : access Database_Connection_Record'Class;
       Query      : GNATCOLL.SQL.SQL_Query;
       Params     : SQL_Parameters := No_Parameters);
    --  Execute the query, and get all results in memory.
@@ -945,71 +915,6 @@ package GNATCOLL.SQL.Exec is
    procedure Report_Database_Corrupted
      (Connection : access Database_Connection_Record'Class);
    --  Print a warning or message to the appropriate GNATCOLL.Traces stream.
-
-   --------------------------------------------
-   -- Retrieving results with a for..of loop --
-   --------------------------------------------
-   --  This is another way to parse the result of a query.
-   --  The loop over the rows is written as:
-   --
-   --      for Row of DB.Fetch (Query) loop
-   --         V1 := Row.Value (0);   --  first column of current row
-   --      end loop;
-   --
-   --  In this loop, a Row is actually an access to Forward_Cursor, so you
-   --  can also move it forward explicitly if you want to skip rows.
-
-   package Iterable_Impl is
-      --  Defined in a nested package so that we do not declare additional
-      --  primitives of Forward_Cursor.
-
-      type Result (<>) is private
-         with Iterable => (First       => First_Row,
-                           Has_Element => Has_Row,
-                           Next        => Next,
-                           Element     => Element);
-      type Cursor is null record;
-      --  The Result itself is the cursor in practice.
-
-      function First_Row (Self : Result) return Cursor;
-      function Has_Row (Self : Result; Current : Cursor) return Boolean
-         with Inline;
-      function Next (Self : Result; Current : Cursor) return Cursor;
-      function Element
-         (Self : Result; Current : Cursor)
-         return not null access Forward_Cursor
-         with Inline;
-
-      function Fetch
-        (Connection : not null access Database_Connection_Record;
-         Query      : GNATCOLL.SQL.SQL_Query;
-         Params     : SQL_Parameters := No_Parameters)
-        return Result;
-      function Fetch
-        (Connection : not null access Database_Connection_Record;
-         Stmt       : Prepared_Statement'Class;
-         Params     : SQL_Parameters := No_Parameters)
-        return Result;
-      --  Retrieve results from the database.
-
-   private
-      type Result is record
-         Cursor : aliased Forward_Cursor;
-      end record;
-   end Iterable_Impl;
-
-   function Fetch
-     (Connection : not null access Database_Connection_Record;
-      Query      : GNATCOLL.SQL.SQL_Query;
-      Params     : SQL_Parameters := No_Parameters)
-     return Iterable_Impl.Result
-     renames Iterable_Impl.Fetch;
-   function Fetch
-     (Connection : not null access Database_Connection_Record;
-      Stmt       : Prepared_Statement'Class;
-      Params     : SQL_Parameters := No_Parameters)
-     return Iterable_Impl.Result
-     renames Iterable_Impl.Fetch;
 
    -------------------------
    -- Private subprograms --
@@ -1086,6 +991,10 @@ package GNATCOLL.SQL.Exec is
    --  Mark the connection as success or failure depending on R.
    --  Logs the query
 
+   function Is_Prepared_On_Server_Supported
+     (Connection : access Database_Connection_Record) return Boolean;
+   --  True if Prepared supported on the server for this connection
+
 private
 
    type Error_Reporter is abstract tagged null record;
@@ -1118,15 +1027,10 @@ private
    end record;
 
    type Forward_Cursor is new Ada.Finalization.Controlled with record
-      Format : access Formatter'Class;
-      Res    : Abstract_Cursor_Access;
+      Res : Abstract_Cursor_Access;
    end record;
    overriding procedure Adjust   (Self : in out Forward_Cursor);
    overriding procedure Finalize (Self : in out Forward_Cursor);
-
-   function Get_Formatter
-     (Self : Forward_Cursor) return access Formatter'Class
-     is (Self.Format);
 
    type Direct_Cursor is new Forward_Cursor with null record;
    --  The contents is of type Abstract_DBMS_Direct_Cursor, defined in
@@ -1134,9 +1038,9 @@ private
    --  primitive ops forward to this contents
 
    No_Element : constant Forward_Cursor :=
-     (Ada.Finalization.Controlled with Format => null, Res => null);
+     (Ada.Finalization.Controlled with null);
    No_Direct_Element : constant Direct_Cursor :=
-     (Ada.Finalization.Controlled with Format => null, Res => null);
+     (Ada.Finalization.Controlled with null);
 
    Null_Parameter : constant SQL_Parameter :=
       (Parameters.Null_Ref with null record);
@@ -1168,7 +1072,7 @@ private
 
    type Prepared_Statement_Data is record
       Query      : SQL_Query;   --  Reset to null once prepared
-      Query_Str  : GNATCOLL.Strings.XString;
+      Query_Str  : GNAT.Strings.String_Access;
       Name       : GNATCOLL.Strings.XString;
       Prepared   : Prepared_In_Session_List;
 

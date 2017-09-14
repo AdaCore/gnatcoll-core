@@ -26,79 +26,62 @@
 with GNATCOLL.SQL_Impl;    use GNATCOLL.SQL_Impl;
 with GNATCOLL.SQL.Inspect; use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Exec;    use GNATCOLL.SQL.Exec;
-with GNATCOLL.Strings;     use GNATCOLL.Strings;
 
 package GNATCOLL.SQL_Fields is
 
    ----------------------
    -- Double precision --
    ----------------------
-   --  maps sql types to Ada long_float. This includes
-   --  "double precision", "float", "numeric", "numeric(position,scale>0)"
 
    function Long_Float_To_SQL is new Any_Float_To_SQL (Long_Long_Float);
-   function Long_Float_From_SQL is new Any_Float_Value (Long_Long_Float);
-   function Identity (Val : Long_Long_Float) return Long_Long_Float
-      with Inline;
-   function Maps_Long_Float
-      (Schema : String; Value : out Null_Record) return Boolean;
-   function Float_SQL_Type (Data : Null_Record) return String
-      is ("double precision");
-   package Long_Float_Fields is new Field_Types
-      (Ada_Type          => Long_Long_Float,
-       To_SQL            => Long_Float_To_SQL,
-       From_SQL          => Long_Float_From_SQL,
-       Stored_Ada_Type   => Long_Long_Float,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       SQL_Type          => Float_SQL_Type,
-       Ada_Field_Type    => "GNATCOLL.SQL_Fields.SQL_Field_Long_Float",
-       Schema_Type_Check => Maps_Long_Float);
-   subtype SQL_Parameter_Long_Float is Long_Float_Fields.Parameter;
-   type SQL_Field_Long_Float is new Long_Float_Fields.Field with null record;
-   Null_Field_Long_Float : constant SQL_Field_Long_Float;
 
+   package Long_Float_Parameters is new Scalar_Parameters
+      (Long_Long_Float, "double precision", Long_Float_To_SQL);
+   subtype SQL_Parameter_Long_Float is Long_Float_Parameters.SQL_Parameter;
+
+   package Long_Float_Field_Mappings is new Simple_Field_Mappings
+      ("double precision",
+       "GNATCOLL.SQL_Fields.SQL_Field_Long_Float",
+       SQL_Parameter_Long_Float);
+
+   package Long_Float_Fields is new Field_Types
+     (Long_Long_Float, Long_Float_To_SQL, SQL_Parameter_Long_Float);
+
+   type SQL_Field_Long_Float is new Long_Float_Fields.Field with null record;
+   Null_Field_Long_Float : constant SQL_Field_Long_Float :=
+     (Long_Float_Fields.Null_Field with null record);
    function Long_Float_Param (Index : Positive)
       return Long_Float_Fields.Field'Class
       renames Long_Float_Fields.Param;
-   function Expression
-     (Value : Long_Long_Float) return Long_Float_Fields.Field'Class
-      renames Long_Float_Fields.Expression;
-
-   function As_Long_Float (Value : Long_Long_Float) return SQL_Parameter
-      renames Long_Float_Fields.As_Param;
-   --  Set the value of a parameter in a SQL query.
-   --  Used when executing the query.
 
    -----------------
    -- JSON fields --
    -----------------
-   --  maps to "json" sql type, only supported by some DBMS systems.
 
    function Json_To_SQL
-     (Self : Formatter'Class; Value : XString; Quote : Boolean) return String;
-   function Json_From_SQL
-      (Self : Formatter'Class; Value : String) return String is (Value);
-   function Maps_JSON (Schema : String; Value : out Null_Record) return Boolean
-      is (Schema = "json");
-   function JSON_SQL_Type (Data : Null_Record) return String
-      is ("json");
-   package Json_Fields is new Field_Types
-      (Ada_Type          => String,
-       To_SQL            => Json_To_SQL,
-       From_SQL          => Json_From_SQL,
-       Stored_Ada_Type   => XString,
-       Stored_To_Ada     => GNATCOLL.Strings.To_String,
-       Ada_To_Stored     => GNATCOLL.Strings.To_XString,
-       SQL_Type          => JSON_SQL_Type,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL_Fields.SQL_Field_Json",
-       Schema_Type_Check => Maps_JSON);
-   subtype SQL_Parameter_Json is Json_Fields.Parameter;
-   type SQL_Field_Json is new Json_Fields.Field with null record;
-   Null_Field_Json : constant SQL_Field_Json;
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String;
 
+   type SQL_Parameter_Json is new SQL_Parameter_Text with null record;
+   overriding function Type_String
+     (Self   : SQL_Parameter_Json;
+      Index  : Positive;
+      Format : Formatter'Class) return String
+     is (Format.Parameter_String (Index, "json"));
+   overriding function Image
+     (Self   : SQL_Parameter_Json;
+      Format : Formatter'Class) return String
+     is (Json_To_SQL (Format, To_String (Self), Quote => False));
+
+   package JSON_Field_Mappings is new Simple_Field_Mappings
+      ("json",
+       "GNATCOLL.SQL_Fields.SQL_Field_Json",
+       SQL_Parameter_Json);
+
+   package Json_Fields is new Field_Types
+     (String, Json_To_SQL, SQL_Parameter_Json);
+   type SQL_Field_Json is new Json_Fields.Field with null record;
+   Null_Field_Json : constant SQL_Field_Json :=
+     (Json_Fields.Null_Field with null record);
    function Json_Param (Index : Positive) return Json_Fields.Field'Class
      renames Json_Fields.Param;
 
@@ -109,41 +92,36 @@ package GNATCOLL.SQL_Fields is
    ----------------
    -- XML fields --
    ----------------
-   --  maps to the sql "xml" type, only supported by some DBMS systems.
 
    function XML_To_SQL
-     (Self : Formatter'Class; Value : XString; Quote : Boolean) return String;
-   function XML_From_SQL
-      (Self : Formatter'Class; Value : String) return String is (Value);
-   function Maps_XML (Schema : String; Value : out Null_Record) return Boolean
-      is (Schema = "xml");
-   function XML_SQL_Type (Data : Null_Record) return String is ("xml");
-   package XML_Fields is new Field_Types
-      (Ada_Type          => String,
-       To_SQL            => XML_To_SQL,
-       From_SQL          => XML_From_SQL,
-       Stored_Ada_Type   => XString,
-       Stored_To_Ada     => GNATCOLL.Strings.To_String,
-       Ada_To_Stored     => GNATCOLL.Strings.To_XString,
-       SQL_Type          => XML_SQL_Type,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL_Fields.SQL_Field_XML",
-       Schema_Type_Check => Maps_XML);
-   subtype SQL_Parameter_XML is XML_Fields.Parameter;
-   type SQL_Field_XML is new XML_Fields.Field with null record;
-   Null_Field_XML : constant SQL_Field_XML;
+     (Self : Formatter'Class; Value : String; Quote : Boolean) return String;
 
+   type SQL_Parameter_XML is new SQL_Parameter_Text with null record;
+   overriding function Type_String
+     (Self   : SQL_Parameter_XML;
+      Index  : Positive;
+      Format : Formatter'Class) return String
+     is (Format.Parameter_String (Index, "xml"));
+   overriding function Image
+     (Self   : SQL_Parameter_XML;
+      Format : Formatter'Class) return String
+     is (XML_To_SQL (Format, To_String (Self), Quote => False));
+
+   package XML_Field_Mappings is new Simple_Field_Mappings
+      ("xml",
+       "GNATCOLL.SQL_Fields.SQL_Field_XML",
+       SQL_Parameter_XML);
+
+   package XML_Fields is new Field_Types
+     (String, XML_To_SQL, SQL_Parameter_XML);
+   type SQL_Field_XML is new XML_Fields.Field with null record;
+   Null_Field_XML : constant SQL_Field_XML :=
+     (XML_Fields.Null_Field with null record);
    function XML_Param (Index : Positive) return XML_Fields.Field'Class
                        renames XML_Fields.Param;
+
    function XML_Text_Value
      (Self  : Forward_Cursor'Class; Field : Field_Index) return String
      is (Self.Value (Field));
 
-private
-   Null_Field_Long_Float : constant SQL_Field_Long_Float :=
-       (Long_Float_Fields.Null_Field with null record);
-   Null_Field_Json : constant SQL_Field_Json :=
-      (Json_Fields.Null_Field with null record);
-   Null_Field_XML : constant SQL_Field_XML :=
-      (XML_Fields.Null_Field with null record);
 end GNATCOLL.SQL_Fields;

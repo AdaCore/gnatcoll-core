@@ -1,0 +1,75 @@
+----------------------------------------------------------------------------
+--                        Copyright (C) 2003-2008, AdaCore                --
+----------------------------------------------------------------------------
+--  This package was auto-generated.
+--  Please do not modify manually.
+--  In order to re-generate this package, use the Ada script gnatcoll_db2ada.
+
+with GNATCOLL.SQL; use GNATCOLL.SQL;
+package Database is
+   pragma Style_Checks (Off);
+
+   @@TABLE@@
+   subtype @_CAPITALIZE:TYPE_NAMES_@ is @_CAPITALIZE:TYPES_@;
+     @@TABLE@@
+       @@IF@@ @_EXIST:IDS_@
+@@INLINE(   )()()@@
+   @_CAPITALIZE:REPLACE_ALL(__/_):REPLACE_ALL([ -\/]/_):REPLACE_ALL([+]/p):REPLACE_ALL([?]/Unknown):NAMES_@ : constant @_CAPITALIZE:TYPE_NAMES'UP_LEVEL_@ :=
+   @@IF@@ @_CAPITALIZE:TYPES'UP_LEVEL_@ = "String"
+"@_IDS_@";
+   @@ELSE@@
+@_IDS_@;
+   @@END_IF@@
+@@END_INLINE@@
+       @@END_IF@@
+     @@END_TABLE@@
+
+   @@END_TABLE@@
+   @@TABLE@@
+   @_CAPITALIZE:VAR_NAMES_@ : constant := @_VAR_VALUES_@;
+   --  @_VAR_COMMENTS_@
+   @@END_TABLE@@ 
+
+  @@TABLE@@
+   Ta_@_CAPITALIZE:TABLE_NAME_@ : aliased constant String := "@_TABLE_NAME_@";
+  @@END_TABLE@@
+
+  @@TABLE@@
+   ---@_REPLACE_ALL(./-):TABLE_NAME_@---
+   -- @_CAPITALIZE:TABLE_NAME_@ --
+   ---@_REPLACE_ALL(./-):TABLE_NAME_@---
+
+   package T_@_CAPITALIZE:TABLE_NAME_@ is
+     @@TABLE@@
+       @@IF@@ @_EXIST:FIELD_NAME_@ AND NOT @_MATCH(Slony):FIELD_NAME_@
+      N_@_CAPITALIZE:FIELD_NAME_@ : aliased constant String := "@_FIELD_NAME_@";
+       @@END_IF@@
+     @@END_TABLE@@
+
+      type Table (Instance : Cst_String_Access)
+         is new SQL_Table (Ta_@_CAPITALIZE:TABLE_NAME_@'Access, Instance) with
+      record
+     @@TABLE@@
+       @@IF@@ @_EXIST:FIELD_NAME_@ AND NOT @_MATCH(Slony):FIELD_NAME_@
+         @_CAPITALIZE:FIELD_NAME_@ : SQL_Field_@_FIELD_TYPE_@
+            (Ta_@_CAPITALIZE:TABLE_NAME'UP_LEVEL_@'Access, Instance, N_@_CAPITALIZE:FIELD_NAME_@'Access);
+         @@IF@@ @_EXIST:FIELD_DESCR_@
+         --  @_REPLACE_ALL(\n/\n         --  ):FIELD_DESCR_@
+
+         @@END_IF@@
+       @@END_IF@@
+     @@END_TABLE@@
+      end record;
+     @@IF@@ @_EXIST:DESCRIPTION_@
+      --  @_REPLACE_ALL(\n/\n      --  ):DESCRIPTION_@
+
+     @@END_IF@@
+   @@IF@@ @_EXIST:REFERENCED_TABLE_@
+      overriding function FK (Self : Table; Foreign : SQL_Table'Class) return SQL_Criteria;
+   @@END_IF@@
+   end T_@_CAPITALIZE:TABLE_NAME_@;
+
+   @_CAPITALIZE:TABLE_NAME_@ : T_@_CAPITALIZE:TABLE_NAME_@.Table (null);
+
+  @@END_TABLE@@
+end Database;

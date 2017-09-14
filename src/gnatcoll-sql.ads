@@ -87,37 +87,22 @@
 --  instances (in the example above, if another table was called Field1, and we
 --  weren't using a package, we would have a naming conflict).
 --
---  Table aliases
---  =============
---
 --  This way, a user might write a query with two instances of the table with
 --  the following code (which uses the Ada2005 dotted notation, although this
 --  isn't mandatory):
---
---      N_Foo : aliased constant String := "foo";
---      AI : T_Sales_Entity.Table := T_Sales_Entity.Table (N_Foo'Access);
+--      AI : T_Sales_Entity.Table := T_Sales_Entity.Table
+--        (Rename (Sales_Entity, "foo"));
 --      SQL_Select
 --        (Fields => AI.Field1 & Action_Item.Field1,
 --         From   => AI & Action_Item,
 --         Where  => AI.FK (Action_Item))
---
---  This results in:
---
---      select ai.field1, action_item.field1 from action_item ai, action_item
---          where ai.id=action_item.id;
---
---  NOTE: a current restriction though is that such a renamed table cannot be
---  used in a SQL_Delete or SQL_Insert, since that results in something like:
---     delete from action_item ai where ...
---  instead of:
---     delete from ai where ...
 
 with Ada.Calendar;
+with Ada.Containers.Vectors;
 with Ada.Containers.Indefinite_Vectors;
+with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with GNATCOLL.Refcount;
-with GNATCOLL.Strings;       use GNATCOLL.Strings;
 with GNATCOLL.SQL_Impl;      use GNATCOLL.SQL_Impl;
-with GNATCOLL.Utils;
 
 package GNATCOLL.SQL is
    --  Work around issue with the Ada containers: the tampering checks
@@ -126,6 +111,25 @@ package GNATCOLL.SQL is
    --     pragma Suppress (Tampering_Check);
 
    subtype SQL_Criteria is GNATCOLL.SQL_Impl.SQL_Criteria;
+
+   type SQL_Criteria_Type is (Criteria_And,
+                              Criteria_Or,
+                              Criteria_In,
+                              Criteria_Not_In,
+                              Criteria_Exists,
+                              Criteria_Between,
+                              Criteria_Not_Between,
+                              Criteria_Null,
+                              Criteria_Not_Null,
+                              Criteria_Not);
+
+   subtype Criteria_Combine
+     is SQL_Criteria_Type range Criteria_And .. Criteria_Or;
+
+   package Criteria_Lists is new Ada.Containers.Vectors
+     (Positive, SQL_Criteria);
+
+   subtype Criteria_List is Criteria_Lists.Vector;
 
    type SQL_Query is tagged private;
    --  A tagged type representing a query. This is a tagged type so that you
@@ -145,20 +149,16 @@ package GNATCOLL.SQL is
    --  Any type of table, or result of join between several tables. Such a
    --  table can have fields
 
-   subtype SQL_Table_List is GNATCOLL.SQL_Impl.SQL_Table_List;
-   Empty_Table_List : constant SQL_Table_List :=
-      GNATCOLL.SQL_Impl.Empty_Table_List;
+   type SQL_Table_List is new SQL_Table_Or_List with private;
+   Empty_Table_List : constant SQL_Table_List;
    --  A list of tables, as used in a SELECT query ("a, b")
 
    type SQL_Table (Table_Name, Instance : GNATCOLL.SQL_Impl.Cst_String_Access;
                    Instance_Index : Integer)
       is abstract new SQL_Single_Table with private;
-
-   overriding procedure Append_To_String
-     (Self       : SQL_Table;
-      Format     : Formatter'Class;
-      Result     : in out XString;
-      Show_Types : Boolean);
+   function To_String (Self : SQL_Table'Class) return String;
+   overriding function To_String
+     (Self : SQL_Table; Format : Formatter'Class) return String;
    --  A table representing a field of a specific table.
    --  If Instance is specified (i.e. not null), the FROM clause will include:
    --        SELECT ... FROM Table_Name Instance, ...
@@ -194,17 +194,13 @@ package GNATCOLL.SQL is
    procedure Free (A : in out SQL_Table_Access);
    --  Needs to be freed explicitely
 
-   function "&" (Left, Right : SQL_Table_List) return SQL_Table_List
-      renames GNATCOLL.SQL_Impl."&";
-   function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List
-      renames GNATCOLL.SQL_Impl."&";
+   function "&" (Left, Right : SQL_Table_List) return SQL_Table_List;
+   function "&" (Left, Right : SQL_Single_Table'Class) return SQL_Table_List;
    function "&" (Left : SQL_Table_List; Right : SQL_Single_Table'Class)
-                 return SQL_Table_List
-      renames GNATCOLL.SQL_Impl."&";
-   function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List
-      renames GNATCOLL.SQL_Impl."+";
+                 return SQL_Table_List;
+   function "+" (Left : SQL_Single_Table'Class) return SQL_Table_List;
    --  Create a list of tables, suitable for use in a SELECT query.
-   --  Note the operator "+" to create a list with a single element.
+   --  Note the operator "+" to create a list with a single element
    --  For efficiency reasons, these operators try to reuse one of the lists
    --  passed in parameter, append to it, and return it. That limits the number
    --  of copies to be done, and thus the number of system calls to malloc.
@@ -232,236 +228,65 @@ package GNATCOLL.SQL is
    --  Specify a specific sort order. This is only used in the Order_By clause
    --  of a Select statement
 
-   --------------------
-   -- Integer fields --
-   --------------------
-   --  Mapping for "integer", "smallint", "oid", "numeric(*,0)", "numeric(*)"
-
-   function Identity (Value : Integer) return Integer is (Value);
-   function Integer_To_SQL
-      (Self : Formatter'Class; Value : Integer; Quote : Boolean) return String
-      is (GNATCOLL.Utils.Image (Value, Min_Width => 0));
-   function Maps_Integer (Schema : String; V : out Null_Record) return Boolean;
-   function Integer_SQL_Type (Data : Null_Record) return String is ("integer");
-   function Integer_From_SQL
-      (Format : Formatter'Class; Value : String) return Integer
-      is (Integer'Value (Value));
+   package Integer_Parameters is new Scalar_Parameters
+      (Integer, "integer", Integer_To_SQL);
+   subtype SQL_Parameter_Integer is Integer_Parameters.SQL_Parameter;
    package Integer_Fields is new Field_Types
-      (Ada_Type          => Integer,
-       To_SQL            => Integer_To_SQL,
-       From_SQL          => Integer_From_SQL,
-       Stored_Ada_Type   => Integer,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Integer",
-       Schema_Type_Check => Maps_Integer,
-       SQL_Type          => Integer_SQL_Type);
-   subtype SQL_Parameter_Integer is Integer_Fields.Parameter;
+     (Integer, Integer_To_SQL, SQL_Parameter_Integer);
    type SQL_Field_Integer is new Integer_Fields.Field with null record;
    Null_Field_Integer : constant SQL_Field_Integer;
-   --  We must declare an explicit type here, so that operators are visible
-   --  without "use Integer_Fields" in user code.
-
    function Integer_Param (Index : Positive) return Integer_Fields.Field'Class
-      renames Integer_Fields.Param;
-   function Expression (Value : Integer) return Integer_Fields.Field'Class
-      renames Integer_Fields.Expression;
-   --  Create constant fields (for a select statement for instance). The
-   --  expression is surrounded by quotes, and special characters are
-   --  escaped as needed
+                           renames Integer_Fields.Param;
 
-   function "-" is new Integer_Fields.Scalar_Operator (Integer, "-");
-   function "+" is new Integer_Fields.Scalar_Operator (Integer, "+");
-   function "*" is new Integer_Fields.Scalar_Operator (Integer, "*");
-   function "/" is new Integer_Fields.Scalar_Operator (Integer, "/");
-
-   function Absolute
-     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
-
-   function Cast_To_Integer
-     (Field : SQL_Field'Class) return Integer_Fields.Field'Class
-     renames Integer_Fields.Cast;
-   --  Convert any field to an integer, as in "CAST (field as integer)"
-
-   -------------------
-   -- Bigint fields --
-   -------------------
-
-   function Identity (Value : Long_Long_Integer) return Long_Long_Integer
-      is (Value);
-   function Bigint_To_SQL
-      (Self : Formatter'Class; Value : Long_Long_Integer; Quote : Boolean)
-      return String
-      is (Long_Long_Integer'Image (Value));
-   function Bigint_From_SQL
-      (Format : Formatter'Class; Value : String) return Long_Long_Integer
-      is (Long_Long_Integer'Value (Value));
-   function Maps_Bigint (Schema : String; D : out Null_Record) return Boolean
-      is (Schema = "bigint");
-   function Bigint_SQL_Type (Data : Null_Record) return String is ("bigint");
+   package Bigint_Parameters is new Scalar_Parameters
+      (Long_Long_Integer, "bigint", Bigint_To_SQL);
+   subtype SQL_Parameter_Bigint is Bigint_Parameters.SQL_Parameter;
    package Bigint_Fields is new Field_Types
-      (Ada_Type          => Long_Long_Integer,
-       To_SQL            => Bigint_To_SQL,
-       From_SQL          => Bigint_From_SQL,
-       Stored_Ada_Type   => Long_Long_Integer,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Bigint",
-       Schema_Type_Check => Maps_Bigint,
-       SQL_Type          => Bigint_SQL_Type);
-   subtype SQL_Parameter_Bigint is Bigint_Fields.Parameter;
+     (Long_Long_Integer, Bigint_To_SQL, SQL_Parameter_Bigint);
    type SQL_Field_Bigint is new Bigint_Fields.Field with null record;
    Null_Field_Bigint : constant SQL_Field_Bigint;
-
    function Bigint_Param (Index : Positive) return Bigint_Fields.Field'Class
-      renames Bigint_Fields.Param;
+                           renames Bigint_Fields.Param;
 
-   -----------------
-   -- Text fields --
-   -----------------
-
-   type Stored_String is record
-      Str_Ptr : access constant String;  --  avoid extra copy if possible
-      Str_Val : XString;
-      Make_Copy : Boolean := False;
-      --  If set this forces SQL engine to make a copy of Str_Ptr.all
-   end record;
-   type Field_Text_Data is record
-      Max_Length : Integer := Integer'Last;
-   end record;
-   function Maps_Text
-      (Schema : String; Value : out Field_Text_Data) return Boolean;
-   function Text_SQL_Type (Data : Field_Text_Data) return String
-     is (if Data.Max_Length = Integer'Last
-         then "text"
-         else "character(" & GNATCOLL.Utils.Image (Data.Max_Length, 1) & ')');
-   function To_String (Value  : Stored_String) return String
-      is (if Value.Str_Ptr /= null
-          then Value.Str_Ptr.all
-          else To_String (Value.Str_Val));
-   function To_Stored_String (Value : String) return Stored_String
-      is ((Str_Val => To_XString (Value),
-           Make_Copy => False,
-           Str_Ptr => null));
-   function String_To_SQL
-      (Self : Formatter'Class; Value : Stored_String; Quote : Boolean)
-      return String
-      is (Self.String_Image (To_String (Value), Quote));
-   function Text_From_SQL
-      (Format : Formatter'Class; Value : String) return String is (Value);
    package Text_Fields is new Field_Types
-      (Ada_Type          => String,
-       Stored_Ada_Type   => Stored_String,
-       Stored_To_Ada     => To_String,
-       To_SQL            => String_To_SQL,
-       From_SQL          => Text_From_SQL,
-       Ada_To_Stored     => To_Stored_String,
-       Field_Data        => Field_Text_Data,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Text",
-       Schema_Type_Check => Maps_Text,
-       SQL_Type          => Text_SQL_Type);
-   subtype SQL_Parameter_Text is Text_Fields.Parameter;
-   type  SQL_Field_Text is new Text_Fields.Field with null record;
+     (String, String_To_SQL, SQL_Parameter_Text);
+   type SQL_Field_Text is new Text_Fields.Field with null record;
    Null_Field_Text : constant SQL_Field_Text;
-
    function Text_Param (Index : Positive) return Text_Fields.Field'Class
-      renames Text_Fields.Param;
-   function Expression (Value : String) return Text_Fields.Field'Class
-      renames Text_Fields.Expression;
+                        renames Text_Fields.Param;
 
-   function Cast_To_String
-     (Field : SQL_Field'Class) return Text_Fields.Field'Class
-     renames Text_Fields.Cast;
-   --  Convert any field to an integer, as in "CAST (field as text)"
-
-   function Expression_Or_Null (Value : String) return Text_Fields.Field'Class;
-   --  Same as above but if the Value is "NULL", returns NULL instead of 'NULL'
-
-   function Lower
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
-   function Upper
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
-   function Initcap
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
-   --  Return the corresponding SQL function applied on Field
-
-   --------------------
-   -- Boolean fields --
-   --------------------
-
-   function Identity (Value : Boolean) return Boolean is (Value);
-   function Boolean_To_SQL
-      (Self : Formatter'Class; Value : Boolean; Quote : Boolean) return String
-      is (Self.Boolean_Image (Value));
-   function Boolean_From_SQL
-      (Format : Formatter'Class; Value : String) return Boolean
-      is (Format.Boolean_Value (Value));
-   function Maps_Boolean (Schema : String; D : out Null_Record) return Boolean
-      is (Schema = "boolean");
-   function Boolean_SQL_Type (Data : Null_Record) return String is ("boolean");
+   package Boolean_Parameters is new Scalar_Parameters
+      (Boolean, "boolean", Boolean_To_SQL);
+   subtype SQL_Parameter_Boolean is Boolean_Parameters.SQL_Parameter;
    package Boolean_Fields is new Field_Types
-      (Ada_Type          => Boolean,
-       To_SQL            => Boolean_To_SQL,
-       From_SQL          => Boolean_From_SQL,
-       Stored_Ada_Type   => Boolean,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Boolean",
-       Schema_Type_Check => Maps_Boolean,
-       SQL_Type          => Boolean_SQL_Type);
-   subtype SQL_Parameter_Boolean is Boolean_Fields.Parameter;
+     (Boolean, Boolean_To_SQL, SQL_Parameter_Boolean);
    type SQL_Field_Boolean is new Boolean_Fields.Field with null record;
    Null_Field_Boolean : constant SQL_Field_Boolean;
-
    function Boolean_Param (Index : Positive) return Boolean_Fields.Field'Class
-      renames Boolean_Fields.Param;
-   function Expression (Value : Boolean) return Boolean_Fields.Field'Class
-      renames Boolean_Fields.Expression;
+                           renames Boolean_Fields.Param;
 
-   ------------------
-   -- Float fields --
-   ------------------
-   --  A "real" SQL type is mapped to Ada's Float type.
-   --  If you need better precision, consider using a "double precision"
-   --  SQL (for historical reasons we also support "float"), which are
-   --  mapped to an Ada Long_Long_Float.
-   --  A "numeric" or "numeric(position,scale)" with scale greater than 0
-   --  are also mapped to Ada's Long_Long_Float.
-   --  See GNATCOLL.SQL_Fields for the declaration of SQL_Field_Long_Float.
-
-   function Identity (Value : Float) return Float is (Value);
    function Float_To_SQL is new Any_Float_To_SQL (Float);
-   function Float_From_SQL is new Any_Float_Value (Float);
-   function Maps_Float (Schema : String; V : out Null_Record) return Boolean
-      is (Schema = "real");
-   function Float_SQL_Type (Data : Null_Record) return String
-     is ("real");
+   package Float_Parameters is new Scalar_Parameters
+      (Float, "real", Float_To_SQL);
+   subtype SQL_Parameter_Float is Float_Parameters.SQL_Parameter;
    package Float_Fields is new Field_Types
-      (Ada_Type          => Float,
-       To_SQL            => Float_To_SQL,
-       From_SQL          => Float_From_SQL,
-       Stored_Ada_Type   => Float,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Float",
-       Schema_Type_Check => Maps_Float,
-       SQL_Type          => Float_SQL_Type);
-   subtype SQL_Parameter_Float is Float_Fields.Parameter;
+     (Float, Float_To_SQL, SQL_Parameter_Float);
    type SQL_Field_Float is new Float_Fields.Field with null record;
    Null_Field_Float : constant SQL_Field_Float;
-
    function Float_Param (Index : Positive) return Float_Fields.Field'Class
-      renames Float_Fields.Param;
-   function Expression (Value : Float) return Float_Fields.Field'Class
-      renames Float_Fields.Expression;
+                         renames Float_Fields.Param;
 
-   ------------------
-   -- Money fields --
-   ------------------
+   function Long_Float_To_SQL is new Any_Float_To_SQL (Long_Float);
+   package Long_Float_Parameters is new Scalar_Parameters
+      (Long_Float, "float", Long_Float_To_SQL);
+   subtype SQL_Parameter_Long_Float is Long_Float_Parameters.SQL_Parameter;
+   package Long_Float_Fields is new Field_Types
+     (Long_Float, Long_Float_To_SQL, SQL_Parameter_Long_Float);
+   type SQL_Field_Long_Float is new Long_Float_Fields.Field with null record;
+   Null_Field_Long_Float : constant SQL_Field_Long_Float;
+   function Long_Float_Param
+     (Index : Positive) return Long_Float_Fields.Field'Class
+      renames Long_Float_Fields.Param;
 
    subtype T_Money is GNATCOLL.SQL_Impl.T_Money;
    function "=" (T1, T2 : T_Money) return Boolean
@@ -481,185 +306,38 @@ package GNATCOLL.SQL is
    --  Make this type visible here, so that users do not have to explicitly
    --  'with' GNATCOLL.SQL_Impl.
 
-   function Identity (Value : T_Money) return T_Money is (Value);
-   function Money_To_SQL
-      (Self : Formatter'Class; Value : T_Money; Quote : Boolean) return String
-      is (Self.Money_Image (Value));
-   function Money_From_SQL
-      (Format : Formatter'Class; Value : String) return T_Money
-      is (Format.Money_Value (Value));
-   function Maps_Money (Schema : String; V : out Null_Record) return Boolean
-      is (Schema = "money");
-   function Money_SQL_Type (Data : Null_Record) return String
-     is ("numeric");
+   package Money_Parameters is new Scalar_Parameters
+      (T_Money, "numeric", Money_To_SQL);
+   subtype SQL_Parameter_Money is Money_Parameters.SQL_Parameter;
    package Money_Fields is new Field_Types
-      (Ada_Type          => T_Money,
-       To_SQL            => Money_To_SQL,
-       From_SQL          => Money_From_SQL,
-       Stored_Ada_Type   => T_Money,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Money",
-       Schema_Type_Check => Maps_Money,
-       SQL_Type          => Money_SQL_Type);
-   subtype SQL_Parameter_Money is Money_Fields.Parameter;
+     (T_Money, Money_To_SQL, SQL_Parameter_Money);
    type SQL_Field_Money is new Money_Fields.Field with null record;
    Null_Field_Money : constant SQL_Field_Money;
    function Money_Param (Index : Positive) return Money_Fields.Field'Class
-      renames Money_Fields.Param;
+                         renames Money_Fields.Param;
 
-   ----------------------
-   -- Timestamp fields --
-   ----------------------
-   --  A timestamp, ie date + time
-
-   function Identity (Value : Ada.Calendar.Time) return Ada.Calendar.Time
-      is (Value);
-   function Time_To_SQL
-      (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
-      return String;
-   function Time_From_SQL
-      (Format : Formatter'Class; Value : String) return Ada.Calendar.Time;
-   function Maps_Time (Schema : String; V : out Null_Record) return Boolean
-      is (Schema in "timestamp without time zone" |
-                    "timestamp with time zone" |
-                    "timestamp" |
-                    "time");
-   function Timestamp_SQL_Type (Data : Null_Record) return String
-     is ("timestamp with time zone");
+   package Time_Parameters is new Scalar_Parameters
+      (Ada.Calendar.Time, "timestamp", Time_To_SQL);
+   subtype SQL_Parameter_Time is Time_Parameters.SQL_Parameter;
    package Time_Fields is new Field_Types
-      (Ada_Type          => Ada.Calendar.Time,
-       To_SQL            => Time_To_SQL,
-       From_SQL          => Time_From_SQL,
-       Stored_Ada_Type   => Ada.Calendar.Time,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Time",
-       Schema_Type_Check => Maps_Time,
-       SQL_Type          => Timestamp_SQL_Type);
-   subtype SQL_Parameter_Time is Time_Fields.Parameter;
+     (Ada.Calendar.Time, Time_To_SQL, SQL_Parameter_Time);
    type SQL_Field_Time is new Time_Fields.Field with null record;
    Null_Field_Time : constant SQL_Field_Time;
-
    function Time_Param (Index : Positive) return Time_Fields.Field'Class
-       renames Time_Fields.Param;
-   function Expression
-     (Value : Ada.Calendar.Time) return Time_Fields.Field'Class
-     renames Time_Fields.Expression;
+                        renames Time_Fields.Param;
+   --  A timestamp, ie date + time
 
-   function As_Days
-     (Count : Natural) return Time_Fields.Field'Class;
-   --  An expression representing a number of days
-
-   function "-" is new Time_Fields.Operator ("-");
-   function "+" is new Time_Fields.Operator ("+");
-
-   function Current_Timestamp
-      is new Time_Fields.SQL_Function ("current_timestamp");
-   --  Returns start of transaction timestamp with timezone
-
-   function Current_Time
-      is new Time_Fields.SQL_Function ("current_time");
-   --  Returns current time (without date) with timezone
-
-   function Local_Timestamp
-      is new Time_Fields.SQL_Function ("localtimestamp");
-   --  Returns start of transaction timestamp without timezone
-
-   function Local_Time
-      is new Time_Fields.SQL_Function ("localtime");
-   --  Returns current time (without date) in local timezone without timezone
-
-   function Clock_Timestamp
-      is new Time_Fields.SQL_Function ("clock_timestamp()");
-   --  Returns current timestamp with timezone
-
-   function Cast_To_Time
-     (Field : SQL_Field'Class) return Time_Fields.Field'Class
-     renames Time_Fields.Cast;
-   --  Convert a field to a date or a time ("CAST (field as timestamp)")
-   --  To use these in your code, you will need something like:
-   --
-   --      use Date_Fields;
-   --      Q : constant SQL_Query := SQL_Select
-   --         (Where => Cast_To_Date (Table1.Field1) =
-   --             Date_Fields.Expression (Ada.Calendar.Clock));
-
-   function At_Time_Zone
-     (Field : Time_Fields.Field'Class; TZ : String)
-      return Time_Fields.Field'Class;
-   --  Convert a 'timestamp with time zone' expression to another time zone
-
-   function To_Char
-     (Field : Time_Fields.Field'Class; Format : String)
-      return Text_Fields.Field'Class;
-   --  Format a date field, as in "to_char (field, "format")"
-
-   function Extract
-     (Field : Time_Fields.Field'Class; Attribute : String)
-      return Time_Fields.Field'Class;
-   --  Return the result of "extract (attribute from field)"
-
-   -----------------
-   -- Date fields --
-   -----------------
-   --  Only includes the date, not the time. Note: the date taken into account
-   --  is that of the Time value when interpreted in UT.
-   --  When reading back a date from the DBMS, the time component is always
-   --  set to 00:00:00
-
-   function Date_To_SQL
-      (Self : Formatter'Class; Value : Ada.Calendar.Time; Quote : Boolean)
-      return String;
-   function Maps_Date (Schema : String; D : out Null_Record) return Boolean
-      is (Schema = "date");
-   function Date_SQL_Type (Data : Null_Record) return String is ("date");
-   function Date_From_SQL
-      (Format : Formatter'Class; Value : String) return Ada.Calendar.Time;
+   package Date_Parameters is new Scalar_Parameters
+      (Ada.Calendar.Time, "date", Date_To_SQL);
+   subtype SQL_Parameter_Date is Date_Parameters.SQL_Parameter;
    package Date_Fields is new Field_Types
-      (Ada_Type          => Ada.Calendar.Time,
-       To_SQL            => Date_To_SQL,
-       From_SQL          => Date_From_SQL,
-       Stored_Ada_Type   => Ada.Calendar.Time,
-       Stored_To_Ada     => Identity,
-       Ada_To_Stored     => Identity,
-       Field_Data        => Null_Record,
-       Ada_Field_Type    => "GNATCOLL.SQL.SQL_Field_Date",
-       Schema_Type_Check => Maps_Date,
-       SQL_Type          => Date_SQL_Type);
-   subtype SQL_Parameter_Date is Date_Fields.Parameter;
+     (Ada.Calendar.Time, Date_To_SQL, SQL_Parameter_Date);
    type SQL_Field_Date is new Date_Fields.Field with null record;
    Null_Field_Date : constant SQL_Field_Date;
-
    function Date_Param (Index : Positive) return Date_Fields.Field'Class
-      renames Date_Fields.Param;
-   function Expression
-     (Value : Ada.Calendar.Time) return Date_Fields.Field'Class
-     renames Date_Fields.Expression;
-   function Cast_To_Date
-     (Field : SQL_Field'Class) return Date_Fields.Field'Class
-     renames Date_Fields.Cast;
-
-   function As_Days
-     (Count : Natural) return Date_Fields.Field'Class;
-   --  An expression representing a number of days
-
-   function "-" is new Date_Fields.Operator ("-");
-   function "+" is new Date_Fields.Operator ("+");
-
-   function Extract
-     (Field : Date_Fields.Field'Class; Attribute : String)
-      return Date_Fields.Field'Class;
-   --  Return the result of "extract (attribute from field)"
-
-   function Current_Date is new Date_Fields.SQL_Function ("current_date");
-   --  Returns current date
-
-   -----------------
-   -- Misc fields --
-   -----------------
+                        renames Date_Fields.Param;
+   --  Only includes the date, not the time. Note: the date taken into account
+   --  is that of the Time value when interpreted in UT.
 
    function From_String
      (Expression : String) return Text_Fields.Field'Class
@@ -667,13 +345,40 @@ package GNATCOLL.SQL is
    --  Create a field from sql core. Expression is an SQL statement, no check
    --  is done though.
 
-   function As_Boolean
-      (Criteria : SQL_Criteria) return SQL_Field'Class;
-   --  A SQL criteria used as a field
+   function Expression
+     (Value : String) return Text_Fields.Field'Class
+      renames Text_Fields.Expression;
+   function Expression
+     (Value : Integer) return Integer_Fields.Field'Class
+      renames Integer_Fields.Expression;
+   function Expression
+     (Value : Boolean) return Boolean_Fields.Field'Class
+      renames Boolean_Fields.Expression;
+   function Expression
+     (Value : Float) return Float_Fields.Field'Class
+      renames Float_Fields.Expression;
+   function Expression
+     (Value : Long_Float) return Long_Float_Fields.Field'Class
+      renames Long_Float_Fields.Expression;
+   function Expression
+     (Value : Ada.Calendar.Time) return Time_Fields.Field'Class
+     renames Time_Fields.Expression;
+   function Expression
+     (Value : Ada.Calendar.Time) return Date_Fields.Field'Class
+     renames Date_Fields.Expression;
+   --  Create constant fields (for a select statement for instance). The
+   --  expression is surrounded by quotes, and special characters are
+   --  escaped as needed
 
-   --------------------
-   -- List of fields --
-   --------------------
+   function As_Days
+     (Count : Natural) return Time_Fields.Field'Class;
+   function As_Days
+     (Count : Natural) return Date_Fields.Field'Class;
+   --  An expression representing a number of days
+
+   function Expression_Or_Null
+     (Value : String) return Text_Fields.Field'Class;
+   --  Same as above but if the Value is "NULL", returns NULL instead of 'NULL'
 
    procedure Append (List : in out SQL_Field_List; Field : SQL_Field'Class)
       renames GNATCOLL.SQL_Impl.Append;
@@ -716,6 +421,84 @@ package GNATCOLL.SQL is
    function "&" (Value : Boolean; List : SQL_Field'Class) return SQL_Field_List
                  renames Boolean_Fields."&";
    --  Create a list of fields, suitable for use in a SELECT query
+
+   function "-" is new Time_Fields.Operator ("-");
+   function "+" is new Time_Fields.Operator ("+");
+
+   function "-" is new Date_Fields.Operator ("-");
+   function "+" is new Date_Fields.Operator ("+");
+
+   function "-" is new Integer_Fields.Scalar_Operator (Integer, "-");
+   function "+" is new Integer_Fields.Scalar_Operator (Integer, "+");
+   function "*" is new Integer_Fields.Scalar_Operator (Integer, "*");
+   function "/" is new Integer_Fields.Scalar_Operator (Integer, "/");
+
+   function Current_Date is new Date_Fields.SQL_Function ("current_date");
+   --  Returns current date
+
+   function Current_Timestamp
+      is new Time_Fields.SQL_Function ("current_timestamp");
+   --  Returns start of transaction timestamp with timezone
+
+   function Current_Time
+      is new Time_Fields.SQL_Function ("current_time");
+   --  Returns current time (without date) with timezone
+
+   function Local_Timestamp
+      is new Time_Fields.SQL_Function ("localtimestamp");
+   --  Returns start of transaction timestamp without timezone
+
+   function Local_Time
+      is new Time_Fields.SQL_Function ("localtime");
+   --  Returns current time (without date) in local timezone without timezone
+
+   function Clock_Timestamp
+      is new Time_Fields.SQL_Function ("clock_timestamp()");
+   --  Returns current timestamp with timezone
+
+   function Absolute
+     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
+   function Lower
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+   function Upper
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+   function Initcap
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+   --  Return the corresponding SQL function applied on Field
+
+   function Cast_To_String
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class;
+   --  Convert any field type to a text field
+
+   function Cast_To_Date
+     (Field : SQL_Field'Class) return Date_Fields.Field'Class;
+   --  Convert a field to a date
+
+   function Cast_To_Integer
+     (Field : SQL_Field'Class) return Integer_Fields.Field'Class;
+   --  Convert a field to an integer
+
+   function At_Time_Zone
+     (Field : Time_Fields.Field'Class; TZ : String)
+      return Time_Fields.Field'Class;
+   --  Convert a 'timestamp with time zone' expression to another time zone
+
+   function To_Char
+     (Field : Time_Fields.Field'Class; Format : String)
+      return Text_Fields.Field'Class;
+   --  Format a date field, as in "to_char (field, "format")"
+
+   function Extract
+     (Field : Time_Fields.Field'Class; Attribute : String)
+      return Time_Fields.Field'Class;
+   function Extract
+     (Field : Date_Fields.Field'Class; Attribute : String)
+      return Date_Fields.Field'Class;
+   --  Return the result of "extract (attribute from field)"
+
+   function As_Boolean
+      (Criteria : SQL_Criteria) return SQL_Field'Class;
+   --  A SQL criteria used as a field
 
    -------------------------
    -- Aggregate functions --
@@ -833,7 +616,7 @@ package GNATCOLL.SQL is
                  renames GNATCOLL.SQL_Impl."+";
    --  Create a new pointer. Memory will be deallocated automatically
 
-   subtype SQL_Field_Array is GNATCOLL.SQL_Impl.SQL_Field_Array;
+   type SQL_Field_Array is array (Natural range <>) of SQL_Field_Pointer;
 
    function To_List (Fields : SQL_Field_Array) return SQL_Field_List;
    --  Convert the array into a list
@@ -868,6 +651,10 @@ package GNATCOLL.SQL is
    function Is_And (Self : SQL_Criteria) return Boolean;
    --  Returns true if the Self is criteria delimited by the AND operator on
    --  the upper level.
+
+   function Combine
+     (List : Criteria_List; Op : Criteria_Combine) return SQL_Criteria;
+   --  Returns SQL_Criteria combined from List with a specific operator
 
    function Greater_Than
      (Left : SQL_Field'Class; Right : Integer) return SQL_Criteria
@@ -927,30 +714,23 @@ package GNATCOLL.SQL is
      (Self, Left, Right : SQL_Field'Class) return SQL_Criteria;
 
    function Any
-     (Self, Str : Text_Fields.Field'Class) return SQL_Criteria
-     is (Compare (Self, Str, Op_Any'Access, Op_Parenthesis'Access));
+     (Self, Str : Text_Fields.Field'Class) return SQL_Criteria;
    --  "Self = ANY (Str)"
 
    function Ilike
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
-     is (Compare (Self, Expression (Str), Op_Ilike'Access));
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
    function Ilike
      (Self : Text_Fields.Field'Class; Field : SQL_Field'Class)
-      return SQL_Criteria
-     is (Compare (Self, Field, Op_Ilike'Access));
+      return SQL_Criteria;
    function Like
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
-     is (Compare (Self, Expression (Str), Op_Like'Access));
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
    function Like
      (Self : Text_Fields.Field'Class; Field : Text_Fields.Field'Class)
-      return SQL_Criteria
-     is (Compare (Self, Field, Op_Like'Access));
+      return SQL_Criteria;
    function Not_Ilike
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
-     is (Compare (Self, Expression (Str), Op_Not_Ilike'Access));
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
    function Not_Like
-     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria
-     is (Compare (Self, Expression (Str), Op_Not_Like'Access));
+     (Self : Text_Fields.Field'Class; Str : String) return SQL_Criteria;
    --  Return a resp. case-insensitive or case-sensitive pattern matching.
    --  Right is automatically quoted. However, you are responsible for
    --  putting the meta-character % at the right places in Right.
@@ -960,7 +740,6 @@ package GNATCOLL.SQL is
    --  Test whether a field is null or not (ie unset or set)
 
    function Overlaps (Left, Right : SQL_Field'Class) return SQL_Criteria
-      is (Compare (Left, Right, Op_Overlaps'Access))
       with Obsolescent => "See GNATCOLL.SQL.Ranges.Overlap instead";
    --  Whether the range specified in Left overlaps the range specified in
    --  Right.
@@ -970,24 +749,6 @@ package GNATCOLL.SQL is
    function Exists (Subquery : SQL_Query) return SQL_Criteria;
    --  "EXISTS (subquery)"
    --  Returns True if the subquery returns at least one row.
-
-   function "=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
-      is (Row_Compare (Row1, Row2, Op_Equal'Access));
-   function "/=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
-      is (Row_Compare (Row1, Row2, Op_Not_Equal'Access));
-   function "<" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
-      is (Row_Compare (Row1, Row2, Op_Less'Access));
-   function "<=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
-      is (Row_Compare (Row1, Row2, Op_Less_Equal'Access));
-   function ">" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
-      is (Row_Compare (Row1, Row2, Op_Greater'Access));
-   function ">=" (Row1, Row2 : SQL_Single_Table'Class) return SQL_Criteria
-      is (Row_Compare (Row1, Row2, Op_Greater_Equal'Access));
-   --  Row comparison.
-   --  These operators are part of the SQL standard, but are not supported
-   --  by sqlite.
-   --  The semantics is that they compare all fields of the rows, from left
-   --  to right.
 
    -----------------
    -- Assignments --
@@ -1041,45 +802,20 @@ package GNATCOLL.SQL is
    --  Join the two tables
 
    function SQL_Select
-     (Fields        : SQL_Field_Or_List'Class;
-      From          : SQL_Table_Or_List'Class := Empty_Table_List;
-      Where         : SQL_Criteria := No_Criteria;
-      Group_By      : SQL_Field_Or_List'Class := Empty_Field_List;
-      Having        : SQL_Criteria := No_Criteria;
-      Order_By      : SQL_Field_Or_List'Class := Empty_Field_List;
-      Limit         : Integer := -1;
-      Offset        : Integer := -1;
-      Distinct      : Boolean := False;
-      Distinct_On   : SQL_Field_Or_List'Class := Empty_Field_List;
+     (Fields   : SQL_Field_Or_List'Class;
+      From     : SQL_Table_Or_List'Class := Empty_Table_List;
+      Where    : SQL_Criteria := No_Criteria;
+      Group_By : SQL_Field_Or_List'Class := Empty_Field_List;
+      Having   : SQL_Criteria := No_Criteria;
+      Order_By : SQL_Field_Or_List'Class := Empty_Field_List;
+      Limit    : Integer := -1;
+      Offset   : Integer := -1;
+      Distinct : Boolean := False;
       Auto_Complete : Boolean := False) return SQL_Query;
    --  Select one or more fields from one or more tables
-   --
-   --  Distinct indicates whether duplicate rows should be eliminated from the
-   --  result of the query (that is rows where all columns have the same
-   --  value.
-   --  Postgresql provides an extension (Distinct_On) that lets you compare
-   --  only a subset of fields, and only keeps the first row of each set of
-   --  rows that matches on those columns. To fully specify "first row", you
-   --  should in general also be using an Order_By clause.
-   --  For instance:
-   --     SQL_Select (Weather.Location & Weather.Time & Weather.Report,
-   --                 From => Weather,
-   --                 Distinct => True);
-   --          might report (Paris, 01:00:00, 'sunny') and
-   --                       (Paris, 04:00:00, 'rainy').
-   --
-   --  but SQL_SELECT (Weather.Location & Weather.Time & Weather.Report,
-   --                  From => Weather,
-   --                  Distinct_On => Weather.Location,
-   --                  Order_By    => Desc (Weather.Time));
-   --          would only report (Paris, 04:00:00, 'rainy').
-   --
-   --  Only one of Distinct or Distinct_On should be specified. If both are
-   --  specified, Distinct_On has priority.
-   --
    --  If Auto_Complete is true, the resulting query is auto-completed just as
    --  if you had called the Auto_Complete subprogram. This is put here so that
-   --  you can have global SQL_Query constants, pre-completed.
+   --  you can have global SQL_Query constants, pre-completed
 
    function SQL_Union
      (Query1, Query2 : SQL_Query;
@@ -1102,13 +838,9 @@ package GNATCOLL.SQL is
    --  the assignments. All these left-hand side fields must belong to the same
    --  table, or the query is ambiguous and will raise a Program_Error.
    --  The right-hand side of the assignments, though, can either be constants
-   --  or fields from other tables.
-   --
-   --  When other tables are referenced, the insert statement is transformed
-   --  into an INSERT with a subquery (see below), and WHERE is used as the
-   --  WHERE clause for that subquery.
-   --  The WHERE clause is ignored when all assignments do not refer to at
-   --  least one other table.
+   --  or fields from other tables. When other tables are referenced, the
+   --  insert statement is transformed into an INSERT with a subquery (see
+   --  below), and WHERE is used as the WHERE claused for that subquery.
    --
    --  Qualifier is inserted just after the "INSERT" keyword, in the query. It
    --  can be used for DBMS-specific queries, like "INSERT OR IGNORE" in
@@ -1117,22 +849,8 @@ package GNATCOLL.SQL is
    function SQL_Insert
      (Fields    : SQL_Field_Or_List'Class;
       Values    : SQL_Query;
-      Qualifier : String := ""
-   ) return SQL_Query;
-   --  Insert one or more new rows in the table.
-   --
-   --  The table that is modified is the one to which all the fields apply
-   --  (they must apply to the same table).
-   --
-   --  The list of values come from a subquery. This can also be used to do
-   --  bulk inserts. For instance, if you have a table with two columns you
-   --  can add multiple rows with static values by using:
-   --
-   --     Q := SQL_Insert
-   --        (Table.Field1 & Table.Field2,
-   --         SQL_Values
-   --            ((1 => Expression (1) & Expression ("str"),
-   --              2 => Expression (2) & Expression ("str2"))));
+      Qualifier : String := "") return SQL_Query;
+   --  Insert a new row in the table. The list of values come from a subquery
 
    function SQL_Insert_Default_Values
      (Table : SQL_Table'Class) return SQL_Query;
@@ -1155,101 +873,13 @@ package GNATCOLL.SQL is
 
    type Temp_Table_Behavior is (Preserve_Rows, Delete_Rows, Drop);
 
-   type Cst_String_List is array (Natural range <>) of Cst_String_Access;
-
    function SQL_Create_Table
-     (Name          : String;
-      As            : SQL_Query;
-      Temp          : Boolean := False;
-      On_Commit     : Temp_Table_Behavior := Preserve_Rows;
-      Columns       : Cst_String_List := (1 .. 0 => null);
-      If_Not_Exists : Boolean := False;
-      With_No_Data  : Boolean := False)
-     return SQL_Query;
+     (Name      : String;
+      As        : SQL_Query;
+      Temp      : Boolean := False;
+      On_Commit : Temp_Table_Behavior := Preserve_Rows) return SQL_Query;
    --  CREATE [TEMP] TABLE AS
-   --  This creates a new table and fills it with the result of the `as`
-   --  query (which could be a SQL_Select or a SQL_Values for instance).
-   --
-   --  Postgresql-specific:
-   --  By default, the name and types of the columns in the new table are
-   --  computed from the query result. However, you can override the names
-   --  by specifying the name parameter. The names are properly quoted, as
-   --  needed, to avoid keywords and risks.
-   --
-   --  If Temp is true, a temporary table is created.
-   --  Postgresql-specific:
-   --  This table will be drop or cleared when the current transaction is
-   --  committed, depending on the On_Commit parameter.
-   --
-   --  If a table by this name already exists, an error is returned unless
-   --  If_Not_Exists is true, in which case nothing happens (and the table
-   --  is not re-created).
-   --
-   --  Postgresql-specific:
-   --  If With_No_Data is True, then only the structure of the table is
-   --  copied, not the actual data. A workaround, for sqlite, is to add
-   --  a "Limit=>0" to the SQL_Select query given to `As`.
-   --
-   --  Examples:
-   --  * To create a temp table with two columns, extracted from another
-   --    table, you could do the following:
-   --
-   --       Q = SQL_Create_Table
-   --          (Name => "tmp",
-   --           Temp => True,
-   --           As   => SQL_Select
-   --              (Table.Field1 & Table.Field2,
-   --               From  => Table));
-   --
-   --   * You could also create a temp table with explicit values and two
-   --     rows:
-   --
-   --       Q := SQL_Create_Table
-   --          (Name => "tmp",
-   --           Temp => True,
-   --           As   => SQL_Values
-   --              ((1 => Expression (1) & Expression ("string"),
-   --                2 => Expression (2) & Expression ("string2"))));
-   --
-   --     The drawback here is that the resulting table has unknown names for
-   --     the columns (postgresql uses "column1" and "column2", and
-   --     sqlite uses blank names).
-   --     In the case of Postgresql, we can do better by specifying explicit
-   --     names, as in the following. This code has a memory leak though so
-   --     you need to free the allocated memory for the name of columns.
-   --
-   --       Q := SQL_Create_Table
-   --          (Name    => "tmp",
-   --           Temp    => True,
-   --           Columns => (new String'("col1"), new String'("col2")),
-   --           As => SQL_Values ((1 => Expression (1) & Expression ("str"))));
-   --
-   --     This is still not ideal, because the resulting table cannot easily
-   --     be used in queries. For this, we need to declare it. This is done
-   --     with the more complex:
-   --
-   --       T_Name : aliased constant String := "tmp";
-   --       T_C1   : aliased constant String := "col1";
-   --       T_C2   : aliased constant String := "col2";
-   --       type T_Tmp (Instance : Cst_String_Access; Index : Integer) is
-   --          new SQL_Table (T_Name'Access, Instance, Index) with record
-   --             F1 : SQL_Field_Integer
-   --                (T_Name'Access, Instance, T_C1'Access, Index);
-   --             F2 : SQL_Field_Text
-   --                (T_Name'Access, Instance, T_C2'Access, Index);
-   --          end record;
-   --       Tmp : T_Tmp (null, -1);
-   --
-   --       Q := SQL_Create_Table
-   --          (Name    => T_Name,
-   --           Temp    => True,
-   --           Columns => (Tmp.F1.Name, Tmp.F2.Name),
-   --           As      => SQL_Values
-   --              ((1 => Expression (1) & Expression ("string"))));
-   --
-   --       The advantage here is that Tmp can now be used like all other
-   --       tables to write queries. There is also no need to free memory
-   --       for the field names.
+   --  "as" could be the result of a SQL_Select, or SQL_Values for instance.
 
    type Field_List_Array is array (Natural range <>) of SQL_Field_List;
    function SQL_Values (Val : Field_List_Array) return SQL_Query;
@@ -1260,7 +890,7 @@ package GNATCOLL.SQL is
    --  For instance:
    --      Q := SQL_Create_Table
    --        (Name => "tmp", Temp => True, On_Commit => Drop,
-   --         As => SQL_Values
+   --         As => Values
    --             ((1 => Expression (1) & Expression ("name1"),
    --               2 => Expression (2) & Expression ("name2"))));
    --
@@ -1349,32 +979,16 @@ package GNATCOLL.SQL is
    --  See the various inherited Field subprograms to reference specific fields
    --  from the result of the query.
 
-   overriding procedure Append_To_String
-     (Self       : Subquery_Table;
-      Format     : Formatter'Class;
-      Result     : in out XString;
-      Show_Types : Boolean);
+   overriding function To_String
+     (Self : Subquery_Table; Format : Formatter'Class) return String;
 
    ---------------------------
    -- Conversion to strings --
    ---------------------------
 
    function To_String
-      (Self       : SQL_Query;
-       Format     : Formatter'Class;
-       Show_Types : Boolean := False)
-      return String;
-   procedure Append_To_String
-      (Self       : SQL_Query;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
-   --  Transform Self into a valid SQL string.
-   --
-   --  If Show_Types is true, static values will have a type indication
-   --  (as in '1::integer') for databases where this is meaningful. This
-   --  is used to help the databsae infer types, for instance when creating
-   --  a temporary table based on a query.
+     (Self : SQL_Query; Format : Formatter'Class) return Unbounded_String;
+   --  Transform Self into a valid SQL string
 
 private
 
@@ -1388,6 +1002,35 @@ private
      SQL_Single_Table (Instance, Instance_Index) with null record;
    overriding procedure Append_Tables
      (Self : SQL_Table; To : in out Table_Sets.Set);
+
+   ------------------
+   -- Tables lists --
+   ------------------
+
+   package Table_List is new Ada.Containers.Indefinite_Vectors
+     (Natural, SQL_Single_Table'Class);
+
+   package Table_List_Pointers is
+     new Refcount.Shared_Pointers (Table_List.Vector);
+   --  Store the actual data for a SQL_Table_List in a different block (using
+   --  a smart pointer for reference counting), since otherwise all the calls
+   --  to "&" result in a copy of the list (per design of the Ada05 containers)
+   --  which shows up as up to 20% of the number of calls to malloc on the
+   --  testsuite).
+
+   subtype Table_List_Data is Table_List_Pointers.Ref;
+
+   type SQL_Table_List is new SQL_Table_Or_List with record
+      Data : Table_List_Data;
+   end record;
+   overriding function To_String
+     (Self : SQL_Table_List; Format : Formatter'Class)  return String;
+   overriding procedure Append_Tables
+     (Self : SQL_Table_List; To : in out Table_Sets.Set);
+   --  Append all the tables referenced in Self to To
+
+   Empty_Table_List : constant SQL_Table_List :=
+     (SQL_Table_Or_List with Data => Table_List_Pointers.Null_Ref);
 
    -----------
    -- Field --
@@ -1403,6 +1046,52 @@ private
       Is_Aggregate : in out Boolean);
    --  Append all fields referenced in Self to To, if Self is not the result of
    --  an aggregate function
+
+   --------------
+   -- Criteria --
+   --------------
+
+   subtype Null_Criteria
+     is SQL_Criteria_Type range Criteria_Null .. Criteria_Not_Null;
+
+   type SQL_Criteria_Data (Op : SQL_Criteria_Type) is
+      new GNATCOLL.SQL_Impl.SQL_Criteria_Data with record
+      case Op is
+         when Criteria_Combine =>
+            Criterias : Criteria_List;
+
+         when Criteria_In | Criteria_Not_In =>
+            Arg       : SQL_Field_Pointer;
+            List      : SQL_Field_List;
+            Subquery  : SQL_Query;
+            In_String : Ada.Strings.Unbounded.Unbounded_String;
+
+         when Criteria_Exists =>
+            Subquery2 : SQL_Query;
+
+         when Criteria_Between | Criteria_Not_Between =>
+            Arg2  : SQL_Field_Pointer;
+            Left  : SQL_Field_Pointer;
+            Right : SQL_Field_Pointer;
+
+         when Null_Criteria =>
+            Arg3 : SQL_Field_Pointer;
+
+         when Criteria_Not =>
+            Criteria : SQL_Criteria;
+      end case;
+   end record;
+
+   overriding function To_String
+     (Self   : SQL_Criteria_Data;
+      Format : Formatter'Class;
+      Long   : Boolean := True) return String;
+   overriding procedure Append_Tables
+     (Self : SQL_Criteria_Data; To : in out Table_Sets.Set);
+   overriding procedure Append_If_Not_Aggregate
+     (Self         : SQL_Criteria_Data;
+      To           : in out SQL_Field_List'Class;
+      Is_Aggregate : in out Boolean);
 
    ----------------------
    --  Case statements --
@@ -1424,12 +1113,10 @@ private
       Else_Clause : SQL_Field_Pointer;
    end record;
    type Case_Stmt_Internal_Access is access all Case_Stmt_Internal'Class;
-   overriding procedure Append_To_String
-     (Self       : Case_Stmt_Internal;
-      Format     : Formatter'Class;
-      Result     : in out XString;
-      Long       : Boolean;
-      Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Case_Stmt_Internal;
+      Format : Formatter'Class;
+      Long   : Boolean) return String;
    overriding procedure Append_Tables
      (Self : Case_Stmt_Internal; To : in out Table_Sets.Set);
    overriding procedure Append_If_Not_Aggregate
@@ -1461,11 +1148,8 @@ private
       Data : Join_Table_Data;
    end record;
 
-   overriding procedure Append_To_String
-     (Self       : SQL_Left_Join_Table;
-      Format     : Formatter'Class;
-      Result     : in out XString;
-      Show_Types : Boolean);
+   overriding function To_String
+     (Self : SQL_Left_Join_Table; Format : Formatter'Class) return String;
    overriding procedure Append_Tables
      (Self : SQL_Left_Join_Table; To : in out Table_Sets.Set);
 
@@ -1482,15 +1166,9 @@ private
 
    type Query_Contents is abstract new GNATCOLL.Refcount.Refcounted
       with null record;
-
-   procedure Append_To_String
-      (Self       : Query_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean) is abstract;
-   --  Append the string representation of Self to Result.
-   --  See documentation for SQL_Query.Append_To_String for Show_Types
-
+   function To_String
+     (Self   : Query_Contents;
+      Format : Formatter'Class) return Unbounded_String is abstract;
    procedure Auto_Complete
      (Self                   : in out Query_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1512,13 +1190,10 @@ private
       Limit        : Integer;
       Offset       : Integer;
       Distinct     : Boolean;
-      Distinct_On  : SQL_Field_List;
    end record;
-   overriding procedure Append_To_String
-      (Self       : Query_Select_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Query_Select_Contents;
+      Format : Formatter'Class) return Unbounded_String;
    overriding procedure Auto_Complete
      (Self                   : in out Query_Select_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1531,27 +1206,23 @@ private
       Offset       : Integer;
       Distinct     : Boolean;
    end record;
-   overriding procedure Append_To_String
-      (Self       : Query_Union_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Query_Union_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    type Query_Insert_Contents is new Query_Contents with record
       Into           : Table_Names := No_Names;
       Default_Values : Boolean := False;
-      Qualifier      : XString;
+      Qualifier      : Unbounded_String;
       Fields         : SQL_Field_List;
       Values         : SQL_Assignment;
       Where          : SQL_Criteria;
       Limit          : Integer := -1;
       Subquery       : SQL_Query := No_Query;
    end record;
-   overriding procedure Append_To_String
-      (Self       : Query_Insert_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Query_Insert_Contents;
+      Format : Formatter'Class) return Unbounded_String;
    overriding procedure Auto_Complete
      (Self                   : in out Query_Insert_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1564,11 +1235,9 @@ private
       From       : SQL_Table_List;
       Extra_From : Table_Sets.Set; --  from auto complete
    end record;
-   overriding procedure Append_To_String
-      (Self       : Query_Update_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Query_Update_Contents;
+      Format : Formatter'Class) return Unbounded_String;
    overriding procedure Auto_Complete
      (Self                   : in out Query_Update_Contents;
       Auto_Complete_From     : Boolean := True;
@@ -1578,46 +1247,35 @@ private
       Table : SQL_Table_List;
       Where : SQL_Criteria;
    end record;
-   overriding procedure Append_To_String
-      (Self       : Query_Delete_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Query_Delete_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    type Query_Create_Table_As_Contents is new Query_Contents with record
-      Name          : GNATCOLL.Strings.XString;
-      Columns       : GNATCOLL.Strings.XString;
-      On_Commit     : Temp_Table_Behavior;
-      As            : SQL_Query;
-      Temp          : Boolean;
-      If_Not_Exists : Boolean;
-      With_No_Data  : Boolean;
+      Name      : Ada.Strings.Unbounded.Unbounded_String;
+      Temp      : Boolean;
+      On_Commit : Temp_Table_Behavior;
+      As        : SQL_Query;
    end record;
-   overriding procedure Append_To_String
-      (Self       : Query_Create_Table_As_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Query_Create_Table_As_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    type Query_Values_Contents
      (Size : Natural) is new Query_Contents
    with record
       Values    : Field_List_Array (1 .. Size);
    end record;
-   overriding procedure Append_To_String
-      (Self       : Query_Values_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Query_Values_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    type Simple_Query_Contents is new Query_Contents with record
-      Command : XString;
+      Command : Ada.Strings.Unbounded.Unbounded_String;
    end record;
-   overriding procedure Append_To_String
-      (Self       : Simple_Query_Contents;
-       Format     : Formatter'Class;
-       Result     : in out XString;
-       Show_Types : Boolean);
+   overriding function To_String
+     (Self   : Simple_Query_Contents;
+      Format : Formatter'Class) return Unbounded_String;
 
    ---------------------
    -- Subquery tables --
@@ -1631,21 +1289,25 @@ private
    --  Null field deferred constants --
    ------------------------------------
 
-   Null_Field_Date : constant SQL_Field_Date :=
-      (Date_Fields.Null_Field with null record);
-   Null_Field_Time : constant SQL_Field_Time :=
-      (Time_Fields.Null_Field with null record);
-   Null_Field_Money : constant SQL_Field_Money :=
-      (Money_Fields.Null_Field with null record);
+   Null_String : aliased constant String := "NULL";
+
    Null_Field_Integer : constant SQL_Field_Integer :=
-      (Integer_Fields.Null_Field with null record);
+     (Integer_Fields.Null_Field with null record);
+   Null_Field_Text : constant SQL_Field_Text :=
+     (Text_Fields.Null_Field with null record);
+   Null_Field_Boolean : constant SQL_Field_Boolean :=
+     (Boolean_Fields.Null_Field with null record);
+   Null_Field_Float : constant SQL_Field_Float :=
+     (Float_Fields.Null_Field with null record);
+   Null_Field_Long_Float : constant SQL_Field_Long_Float :=
+     (Long_Float_Fields.Null_Field with null record);
+   Null_Field_Money : constant SQL_Field_Money :=
+     (Money_Fields.Null_Field with null record);
+   Null_Field_Time : constant SQL_Field_Time :=
+     (Time_Fields.Null_Field with null record);
+   Null_Field_Date : constant SQL_Field_Date :=
+     (Date_Fields.Null_Field with null record);
    Null_Field_Bigint : constant SQL_Field_Bigint :=
       (Bigint_Fields.Null_Field with null record);
-   Null_Field_Text : constant SQL_Field_Text :=
-      (Text_Fields.Null_Field with null record);
-   Null_Field_Boolean : constant SQL_Field_Boolean :=
-      (Boolean_Fields.Null_Field with null record);
-   Null_Field_Float : constant SQL_Field_Float :=
-      (Float_Fields.Null_Field with null record);
 
 end GNATCOLL.SQL;

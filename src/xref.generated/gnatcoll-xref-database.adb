@@ -48,14 +48,14 @@ package body GNATCOLL.Xref.Database is
    is
       DbSchema : constant String := "|TABLE| files" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
-         & "|path|text|NOT NULL,INDEX,NOCASE||" & ASCII.LF
+         & "|path|Text|NOT NULL,INDEX,NOCASE||" & ASCII.LF
          & "|stamp|timestamp with time zone|||" & ASCII.LF
-         & "|language|text|NOT NULL||" & ASCII.LF
+         & "|language|Text|NOT NULL||" & ASCII.LF
          & "|project|FK files|||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| f2f_kind" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
-         & "|name|text|NOT NULL||" & ASCII.LF
+         & "|name|Text|NOT NULL||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| f2f" & ASCII.LF
          & "|fromFile|FK files|PK,NOINDEX||" & ASCII.LF
@@ -63,8 +63,8 @@ package body GNATCOLL.Xref.Database is
          & "|kind|FK f2f_kind|PK,NOINDEX||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| entity_kinds" & ASCII.LF
-         & "|id|character(1)|PK||" & ASCII.LF
-         & "|display|text|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|id|Character(1)|PK||" & ASCII.LF
+         & "|display|Text|NOT NULL,NOINDEX||" & ASCII.LF
          & "|is_subprogram|boolean|,NOINDEX|false|" & ASCII.LF
          & "|is_container|boolean|,NOINDEX|false|" & ASCII.LF
          & "|body_is_full_declaration|boolean|,NOINDEX|false|" & ASCII.LF
@@ -78,13 +78,13 @@ package body GNATCOLL.Xref.Database is
          & "" & ASCII.LF
          & "|TABLE| entities" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
-         & "|name|text|NOT NULL,NOINDEX,NOCASE||" & ASCII.LF
+         & "|name|Text|NOT NULL,NOINDEX,NOCASE||" & ASCII.LF
          & "|kind|FK entity_kinds|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_file|FK files|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|decl_line|integer|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|decl_column|integer|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|decl_line|Integer|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|decl_column|Integer|NOT NULL,NOINDEX||" & ASCII.LF
          & "|decl_caller|FK entities|,NOINDEX||" & ASCII.LF
-         & "|mangled_name|text|||" & ASCII.LF
+         & "|mangled_name|Text|||" & ASCII.LF
          & "|exported|boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|is_global|boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
          & "|is_static_local|boolean|NOT NULL,NOINDEX|false|" & ASCII.LF
@@ -93,19 +93,19 @@ package body GNATCOLL.Xref.Database is
          & "" & ASCII.LF
          & "|TABLE| e2e_kind" & ASCII.LF
          & "|id|AUTOINCREMENT|PK||" & ASCII.LF
-         & "|name|text|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|name|Text|NOT NULL,NOINDEX||" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| e2e" & ASCII.LF
          & "|fromEntity|FK entities|PK,NOINDEX||" & ASCII.LF
          & "|toEntity|FK entities|PK,NOINDEX||" & ASCII.LF
          & "|kind|FK e2e_kind|PK,NOINDEX||" & ASCII.LF
-         & "|order_by|integer|NOT NULL,NOINDEX|1|" & ASCII.LF
+         & "|order_by|Integer|NOT NULL,NOINDEX|1|" & ASCII.LF
          & "|INDEX:|""fromEntity""|e2e_from" & ASCII.LF
          & "|INDEX:|""toEntity""|e2e_to" & ASCII.LF
          & "" & ASCII.LF
          & "|TABLE| reference_kinds" & ASCII.LF
-         & "|id|character(1)|PK||" & ASCII.LF
-         & "|display|text|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|id|Character(1)|PK||" & ASCII.LF
+         & "|display|Text|NOT NULL,NOINDEX||" & ASCII.LF
          & "|is_real|boolean|,NOINDEX|true|" & ASCII.LF
          & "|is_read|boolean|,NOINDEX|false|" & ASCII.LF
          & "|is_write|boolean|,NOINDEX|false|" & ASCII.LF
@@ -117,11 +117,11 @@ package body GNATCOLL.Xref.Database is
          & "|TABLE| entity_refs" & ASCII.LF
          & "|entity|FK entities|NOT NULL,NOINDEX||" & ASCII.LF
          & "|file|FK files|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|line|integer|NOT NULL,NOINDEX||" & ASCII.LF
-         & "|column|integer|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|line|Integer|NOT NULL,NOINDEX||" & ASCII.LF
+         & "|column|Integer|NOT NULL,NOINDEX||" & ASCII.LF
          & "|kind|FK reference_kinds|NOT NULL,NOINDEX||" & ASCII.LF
          & "|caller|FK entities|,NOINDEX||" & ASCII.LF
-         & "|from_instantiation|text|,NOINDEX||" & ASCII.LF
+         & "|from_instantiation|Text|,NOINDEX||" & ASCII.LF
          & "|INDEX:|""file""|entity_refs_file" & ASCII.LF
          & "|INDEX:|""entity""|entity_refs_entity" & ASCII.LF
          & "|INDEX:|line,""column""|entity_refs_loc" & ASCII.LF
@@ -276,7 +276,8 @@ package body GNATCOLL.Xref.Database is
       Schema : DB_Schema;
    begin
       Schema := Read_Schema (F, DbSchema);
-      Write_Schema (D, Database_Connection (DB), Schema);
+      D.DB := Database_Connection (DB);
+      Write_Schema (D, Schema);
       if DB.Success then
          Load_Data (DB, Data, Schema);
       end if;

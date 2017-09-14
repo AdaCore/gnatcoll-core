@@ -35,12 +35,6 @@ with GNAT.Regexp;                use GNAT.Regexp;
 with GNAT.Strings;
 with GNATCOLL.Arg_Lists;         use GNATCOLL.Arg_Lists;
 with GNATCOLL.SQL.Exec;          use GNATCOLL.SQL, GNATCOLL.SQL.Exec;
-
-with GNATCOLL.SQL_Fields;
-pragma Unreferenced (GNATCOLL.SQL_Fields);
---  Ensure that extra types like "double precision", "json" or "xml"
---  are supported.
-
 with GNATCOLL.SQL.Inspect;       use GNATCOLL.SQL.Inspect;
 with GNATCOLL.SQL.Postgres;
 with GNATCOLL.SQL.Sqlite;
@@ -150,13 +144,9 @@ procedure GNATCOLL_Db2Ada is
    --  when they are renamed we will be forced to change the Ada code.
 
    procedure Generate
-     (Connection : not null Database_Connection;
-      Generated  : String;
-      Include_Database_Create : Boolean);
+     (Generated : String; Include_Database_Create : Boolean);
    procedure Generate
-     (Connection : not null Database_Connection;
-      Generated  : String;
-      Include_Database_Create : Boolean) is separate;
+     (Generated : String; Include_Database_Create : Boolean) is separate;
    --  Generate the actual output. This can be implemented either through
    --  Ada.Text_IO or using the templates parser
    --  If Include_Database_Create is true, an additional subprogram is
@@ -489,48 +479,52 @@ procedure GNATCOLL_Db2Ada is
          end if;
       end loop;
 
-      --  We always need a database formatter, so that we can create DBMS
-      --  specific types. However, we often do not need to connect to an
-      --  actual database.
+      if DB_Name.all /= "" then
+         --  If the user specified the name of a database, we connect to it.
+         --  This might be to read the schema, or to create the database
 
-      if DB_Type.all = "postgresql" then
-         Descr := GNATCOLL.SQL.Postgres.Setup
-           (Database      => DB_Name.all,
-            User          => DB_User.all,
-            Host          => DB_Host.all,
-            Password      => DB_Passwd.all,
-            Port          => DB_Port,
-            Cache_Support => False);
-      elsif DB_Type.all = "sqlite" then
-         Descr := GNATCOLL.SQL.Sqlite.Setup
-           (Database      => DB_Name.all,
-            Cache_Support => False);
-      else
-         Ada.Text_IO.Put_Line ("Unknown dbtype: " & DB_Type.all);
-         Set_Exit_Status (Failure);
-         return;
-      end if;
-
-      if Descr = null then
-         Ada.Text_IO.Put_Line ("Database not supported: " & DB_Type.all);
-         Set_Exit_Status (Failure);
-         return;
-      end if;
-
-      Connection := Descr.Build_Connection;
-      DB_IO.Filter := DB_Filter;
-
-      --  If we should read the model from the database
-
-      if DB_Model = null then
-         if Need_Schema then
-            Schema := DB_IO.Read_Schema (DB => Connection);
+         if DB_Type.all = "postgresql" then
+            Descr := GNATCOLL.SQL.Postgres.Setup
+              (Database      => DB_Name.all,
+               User          => DB_User.all,
+               Host          => DB_Host.all,
+               Password      => DB_Passwd.all,
+               Port          => DB_Port,
+               Cache_Support => False);
+         elsif DB_Type.all = "sqlite" then
+            Descr := GNATCOLL.SQL.Sqlite.Setup
+              (Database      => DB_Name.all,
+               Cache_Support => False);
+         else
+            Ada.Text_IO.Put_Line ("Unknown dbtype: " & DB_Type.all);
+            Set_Exit_Status (Failure);
+            return;
          end if;
-      elsif DB_Model /= null then
+
+         if Descr = null then
+            Ada.Text_IO.Put_Line ("Database not supported: " & DB_Type.all);
+            Set_Exit_Status (Failure);
+            return;
+         end if;
+
+         Connection := Descr.Build_Connection;
+         DB_IO.DB := Connection;
+         DB_IO.Filter := DB_Filter;
+
+         --  If we should read the model from the database
+
+         if DB_Model = null then
+            if Need_Schema then
+               Schema := DB_IO.Read_Schema;
+            end if;
+         end if;
+      end if;
+
+      if DB_Model /= null then
          File_IO.File := GNATCOLL.VFS.Create (+DB_Model.all);
 
          if Need_Schema then
-            Schema := File_IO.Read_Schema (DB => Connection);
+            Schema := File_IO.Read_Schema;
          end if;
       end if;
 
@@ -554,15 +548,15 @@ procedure GNATCOLL_Db2Ada is
       --  specified on the command line
 
       if Output (Output_Createdb) then
-         DB_IO.Write_Schema (Connection, Schema);
+         DB_IO.Write_Schema (Schema);
       end if;
 
       if Output (Output_Load) then
          Load_Data
-           (DB     => Connection,
+           (DB     => DB_IO.DB,
             File   => Load_File,
             Schema => Schema);
-         Connection.Commit;
+         DB_IO.DB.Commit;
       end if;
 
       if Output (Output_Ada_Specs)
@@ -570,13 +564,12 @@ procedure GNATCOLL_Db2Ada is
         or else Output (Output_Adacreate)
       then
          Dump_Tables (Connection, Enums, Vars);
-         Generate (Connection,
-                   Generated.all,
+         Generate (Generated.all,
                    Include_Database_Create => Output (Output_Adacreate));
       end if;
 
       if Output (Output_Text) then
-         File_IO.Write_Schema (Connection, Schema);
+         File_IO.Write_Schema (Schema);
       end if;
 
       if Output (Output_Orm) then
@@ -779,9 +772,6 @@ exception
    when E : Invalid_Type =>
       Ada.Text_IO.Put_Line
         (Ada.Text_IO.Standard_Error, Exception_Message (E));
-      Set_Exit_Status (Failure);
-
-   when GNATCOLL.SQL.Inspect.Invalid_File =>
       Set_Exit_Status (Failure);
 
    when E : others =>

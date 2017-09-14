@@ -82,21 +82,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Connected_On      : Ada.Calendar.Time := GNAT.Calendar.No_Time;
       end record;
    type Postgresql_Connection is access all Postgresql_Connection_Record'Class;
-   overriding function Is_Prepared_On_Server_Supported
-     (Connection : not null access Postgresql_Connection_Record) return Boolean
-     is (Postgres_Description_Access (Connection.Descr).Pgbouncer
-         in No_Pgbouncer | Session_Pooling);
    overriding procedure Close
      (Connection : access Postgresql_Connection_Record);
    overriding function Parameter_String
      (Self       : Postgresql_Connection_Record;
       Index      : Positive;
       Type_Descr : String) return String;
-   overriding procedure Append_To_String_And_Cast
-     (Self       : Postgresql_Connection_Record;
-      Field      : String;
-      Result     : in out XString;
-      SQL_Type   : String);
    overriding function Can_Alter_Table_Constraints
      (Self : access Postgresql_Connection_Record) return Boolean;
    overriding function Has_Pragmas
@@ -174,9 +165,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
    overriding procedure Finalize
      (Connection : access Postgresql_Connection_Record;
       Prepared   : DBMS_Stmt);
-   overriding function Boolean_Value
-     (Self : Postgresql_Connection_Record; Value : String) return Boolean
-     is (Value = "t");
    --  Reset:
    --  The prepared statement is "DECLARE ... CURSOR" so there is nothing to
    --  reset. The cursor itself is created as part of the iteration
@@ -211,6 +199,8 @@ package body GNATCOLL.SQL.Postgres.Builder is
       overriding function C_Value
         (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index)
          return chars_ptr;
+      overriding function Boolean_Value
+        (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
       overriding function Is_Null
         (Self  : Cursor; Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean;
       overriding function Last_Id
@@ -271,6 +261,15 @@ package body GNATCOLL.SQL.Postgres.Builder is
            (Self.Res, Self.Current,
             GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
       end C_Value;
+
+      overriding function Boolean_Value
+        (Self  : Cursor;
+         Field : GNATCOLL.SQL.Exec.Field_Index) return Boolean is
+      begin
+         return Boolean_Value
+           (Self.Res, Self.Current,
+            GNATCOLL.SQL.Postgres.Gnade.Field_Index (Field));
+      end Boolean_Value;
 
       overriding function Is_Null
         (Self  : Cursor;
@@ -802,7 +801,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
    is
       R : Forward_Cursor;
       Last : Natural := Query'Last;
-      P    : XString;
    begin
       --  Make sure the command does not end with a semicolon
       while Last >= Query'First
@@ -811,12 +809,9 @@ package body GNATCOLL.SQL.Postgres.Builder is
          Last := Last - 1;
       end loop;
 
-      PK.Append_To_String
-         (Connection.all, Result => P, Long => True, Show_Types => False);
-
       R.Fetch (Connection,
                Query (Query'First .. Last)
-               & " RETURNING " & P.To_String,
+               & " RETURNING " & PK.To_String (Connection.all),
                Params);
       if not Connection.Success or else Is_Null (R, 0) then
          return -1;
@@ -835,21 +830,12 @@ package body GNATCOLL.SQL.Postgres.Builder is
       Params     : SQL_Parameters := No_Parameters;
       PK         : SQL_Field_Integer) return Integer
    is
-      Str : constant XString := To_String (Connection, Stmt);
-      Result : Integer;
-
-      procedure Do_Get (S : String);
-      procedure Do_Get (S : String) is
-      begin
-         Result := Insert_And_Get_PK (Connection, S, Params, PK);
-      end Do_Get;
-
+      Str : constant String := To_String (Connection, Stmt);
    begin
       --  We cannot use the prepared statement here, since we need to modify
       --  it on the fly to add a " RETURNING " suffix
 
-      Str.Access_String (Do_Get'Access);
-      return Result;
+      return Insert_And_Get_PK (Connection, Str, Params, PK);
    end Insert_And_Get_PK;
 
    -------------------------
@@ -1375,24 +1361,6 @@ package body GNATCOLL.SQL.Postgres.Builder is
          return '$' & Image (Index, 0) & "::" & Type_Descr;
       end if;
    end Parameter_String;
-
-   -------------------------------
-   -- Append_To_String_And_Cast --
-   -------------------------------
-
-   overriding procedure Append_To_String_And_Cast
-     (Self       : Postgresql_Connection_Record;
-      Field      : String;
-      Result     : in out XString;
-      SQL_Type   : String)
-   is
-      pragma Unreferenced (Self);
-   begin
-      Result.Append (Field);
-      if SQL_Type /= "" then
-         Result.Append ("::" & SQL_Type);
-      end if;
-   end Append_To_String_And_Cast;
 
    ------------------------------
    -- Field_Type_Autoincrement --

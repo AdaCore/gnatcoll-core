@@ -40,7 +40,9 @@ with Ada.Containers.Indefinite_Hashed_Sets;
 with Ada.Strings.Equal_Case_Insensitive;
 with Ada.Strings.Hash_Case_Insensitive;
 with GNATCOLL.SQL.Exec;           use GNATCOLL.SQL.Exec;
+with GNATCOLL.Utils;              use GNATCOLL.Utils;
 with GNATCOLL.VFS;
+with GNATCOLL.Strings;            use GNATCOLL.Strings;
 with GNAT.Regexp;                 use GNAT.Regexp;
 private with GNATCOLL.Refcount;
 private with GNAT.Strings;
@@ -55,13 +57,173 @@ package GNATCOLL.SQL.Inspect is
    type Field is tagged private;
    type Field_List is tagged private;
 
+   type Field_Mapping is abstract tagged null record;
+   type Field_Mapping_Access is access all Field_Mapping'Class;
+   --  A Field_Mapping describes how a SQL type (found in a database schema)
+   --  is mapped to an Ada field type (given as a string, since the
+   --  purpose is to generate code) and to parameter types.
+
    package String_Sets is new Ada.Containers.Indefinite_Hashed_Sets
      (String, Ada.Strings.Hash_Case_Insensitive,
       Ada.Strings.Equal_Case_Insensitive,
       Ada.Strings.Equal_Case_Insensitive);
 
+   function Type_To_SQL
+     (Self         : Field_Mapping;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+      is abstract;
+   --  How this field type should be encoded in the schema description.
+   --
+   --  If For_Database is True, the returned value can be used in a "CREATE
+   --  TABLE" statement. Otherwise, it is the name of the Ada field type,
+   --  possibly qualified with the package name.
+   --
+   --  Format is not needed when For_Database is False
+
+   function Type_From_SQL
+     (Self : in out Field_Mapping; Str : String) return Boolean
+     is abstract;
+   --  If Str is a possible string representation of Self, initialize Self
+   --  and set Matched to True.
+   --  Str is always lower cased.
+
+   function Parameter_Type
+     (Self : Field_Mapping) return SQL_Parameter_Type'Class is abstract;
+   --  Return the type of parameters for fields of type.
+   --  This returns an uninitialized value, which is only used to pass a
+   --  valid encoding string to the database, as in "?1" or "$1::integer".
+
+   procedure Register_Field_Mapping (Self : Field_Mapping'Class);
+   --  Register a new field type, so that users can create their own field
+   --  types.
+
+   type Field_Mapping_Text is new Field_Mapping with record
+      Max_Length : Integer := Integer'Last;
+   end record;
+   overriding function Type_To_SQL
+     (Self         : Field_Mapping_Text;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if not For_Database
+         then "SQL_Field_Text"
+         elsif Self.Max_Length = Integer'Last
+         then "Text"
+         else "Character(" & Image (Self.Max_Length, 1) & ')');
+   overriding function Type_From_SQL
+     (Self : in out Field_Mapping_Text; Str : String) return Boolean;
+   overriding function Parameter_Type
+     (Self : Field_Mapping_Text) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Text'(others => <>));
+
+   generic
+      SQL_Type       : String;
+      Ada_Field_Mapping : String;
+      type Param_Type is new SQL_Parameter_Type with private;
+   package Simple_Field_Mappings is
+      --  Helper to create simple field types.
+      --  When the database schema contains the given SQL_Type, it is mapped
+      --  to field of type Ada_Field_Mapping in the generated code.
+      --
+      --  You do not need to call Register_Field_Mapping for types defined via
+      --  this package.
+      --
+      --  These assume they map to a single SQL type. If this isn't the case
+      --  you should override Type_From_SQL.
+
+      type Simple_Field_Mapping is new Field_Mapping with null record;
+      overriding function Type_To_SQL
+        (Self         : Simple_Field_Mapping;
+         Format       : access Formatter'Class := null;
+         For_Database : Boolean := True) return String
+        is (if For_Database then SQL_Type else Ada_Field_Mapping);
+      overriding function Type_From_SQL
+        (Self : in out Simple_Field_Mapping; Str : String) return Boolean
+        is (Str = SQL_Type);
+      overriding function Parameter_Type
+        (Self : Simple_Field_Mapping) return SQL_Parameter_Type'Class;
+   end Simple_Field_Mappings;
+
+   type Field_Mapping_Integer is new Field_Mapping with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Mapping_Integer;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if For_Database then "Integer" else "SQL_Field_Integer");
+   overriding function Type_From_SQL
+     (Self : in out Field_Mapping_Integer; Str : String) return Boolean;
+   overriding function Parameter_Type
+     (Self : Field_Mapping_Integer) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Integer'(others => <>));
+
+   type Field_Mapping_Autoincrement is
+      new Field_Mapping_Integer with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Mapping_Autoincrement;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if For_Database
+         then Format.Field_Type_Autoincrement
+         else "SQL_Field_Integer");
+   overriding function Type_From_SQL
+     (Self : in out Field_Mapping_Autoincrement; Str : String) return Boolean
+     is (Str = "autoincrement");
+   --  These types are always mapped to an integer in all DBMS,
+   --  even though they might be created with a different name like
+   --  "SERIAL" and "INTEGER AUTOINCREMENT".
+
+   type Field_Mapping_Timestamp is new Field_Mapping with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Mapping_Timestamp;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True)
+     return String
+     is (if For_Database
+         then "timestamp with time zone"
+         else "SQL_Field_Time");
+   overriding function Type_From_SQL
+     (Self : in out Field_Mapping_Timestamp; Str : String) return Boolean
+     is (Str = "timestamp without time zone"
+         or else Str = "timestamp with time zone"
+         or else Str = "timestamp");
+   overriding function Parameter_Type
+     (Self : Field_Mapping_Timestamp) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Time'(others => <>));
+
+   type Field_Mapping_Float is new Field_Mapping with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Mapping_Float;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if For_Database
+         then "Float"
+         else "SQL_Field_Float");
+   overriding function Type_From_SQL
+     (Self : in out Field_Mapping_Float; Str : String) return Boolean;
+   overriding function Parameter_Type
+     (Self : Field_Mapping_Float) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Float'(others => <>));
+
+   type Field_Mapping_Money is new Field_Mapping with null record;
+   overriding function Type_To_SQL
+     (Self         : Field_Mapping_Money;
+      Format       : access Formatter'Class := null;
+      For_Database : Boolean := True) return String
+     is (if For_Database
+         then Format.Field_Type_Money
+         else "SQL_Field_Money");
+   overriding function Type_From_SQL
+     (Self : in out Field_Mapping_Money; Str : String) return Boolean
+     is (Str = "money");
+   overriding function Parameter_Type
+     (Self : Field_Mapping_Money) return SQL_Parameter_Type'Class
+     is (SQL_Parameter_Money'(others => <>));
+
    Invalid_Type : exception;
    --  Raise by Read_Schema when some unknown type is used.
+
+   function From_SQL (SQL_Type : String) return Field_Mapping_Access;
+   --  Convert a SQL type to a field type, or raise Invalid_Type
 
    function Quote_Keyword (Str : String) return String;
    --  If Str is a keyword (or special token) for the DBMS, surround it with
@@ -87,7 +249,7 @@ package GNATCOLL.SQL.Inspect is
    function Get_Table (Self : Field) return Table_Description'Class;
    --  The table to which the field belongs
 
-   function Get_Actual_Type (Self : Field) return Field_Mapping_Access;
+   function Get_Type (Self : Field) return Field_Mapping_Access;
    --  The type of the field.
    --  If the field is a foreign key, this returns the type of the field it
    --  points to, unless a specific type was set.
@@ -245,48 +407,35 @@ package GNATCOLL.SQL.Inspect is
    type Schema_IO is abstract tagged null record;
    --  An object to read and write a schema to various media
 
-   function Read_Schema
-      (Self : Schema_IO;
-       DB   : not null Database_Connection) return DB_Schema is abstract;
+   function Read_Schema (Self : Schema_IO) return DB_Schema is abstract;
    --  Retrieve the database schema
 
-   procedure Write_Schema
-      (Self   : Schema_IO;
-       DB     : not null Database_Connection;
-       Schema : DB_Schema) is abstract;
+   procedure Write_Schema (Self : Schema_IO; Schema : DB_Schema) is abstract;
    --  Write the schema
 
    type DB_Schema_IO is new Schema_IO with record
-      Filter : Regexp := GNAT.Regexp.Compile (".*");
+      DB : Database_Connection;
+      Filter : Regexp;
    end record;
-   overriding function Read_Schema
-      (Self : DB_Schema_IO;
-       DB   : not null Database_Connection) return DB_Schema;
+   overriding function Read_Schema (Self : DB_Schema_IO) return DB_Schema;
    overriding procedure Write_Schema
-     (Self   : DB_Schema_IO;
-      DB     : not null Database_Connection;
-      Schema : DB_Schema);
+     (Self : DB_Schema_IO; Schema : DB_Schema);
    --  Read or write the schema to a live database.
    --  "Writing" to the database means creating the appropriate tables and
-   --  views (if DB is set, otherwise output statements to stdout).
-   --  Only tables matching Filter are output.
+   --  views (if DB is set, otherwise output statements to stdout)
 
    type File_Schema_IO is new Schema_IO with record
+      DB   : Database_Connection;
       File : GNATCOLL.VFS.Virtual_File;
       Omit_Schema : String_Sets.Set;
    end record;
-   overriding function Read_Schema
-      (Self : File_Schema_IO;
-       DB   : not null Database_Connection) return DB_Schema;
+   overriding function Read_Schema (Self : File_Schema_IO) return DB_Schema;
    function Read_Schema
      (Self : File_Schema_IO; Data : String) return DB_Schema;
    overriding procedure Write_Schema
-     (Self   : File_Schema_IO;
-      DB     : not null Database_Connection;
-      Schema : DB_Schema);
+     (Self : File_Schema_IO; Schema : DB_Schema);
    procedure Write_Schema
      (Self   : File_Schema_IO;
-      DB     : not null Database_Connection;
       Schema : DB_Schema;
       Puts   : access procedure (S : String);
       Align_Columns : Boolean := True;
@@ -297,9 +446,9 @@ package GNATCOLL.SQL.Inspect is
 
    function New_Schema_IO
      (File : GNATCOLL.VFS.Virtual_File) return File_Schema_IO'Class;
-   function New_Schema_IO return DB_Schema_IO'Class;
+   function New_Schema_IO (DB : Database_Connection) return DB_Schema_IO'Class;
    --  Return a new schema io. This is similar to creating a variable and
-   --  assigning its File field, but is easier to use:
+   --  assigning its File or DB field, but is easier to use:
    --      Schema := New_Schema_IO (Create ("file.txt")).Read_Schema;
 
    Invalid_File : exception;
