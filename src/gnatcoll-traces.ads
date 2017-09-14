@@ -70,6 +70,7 @@
 --
 --      MODULE_NAME=yes >filename
 --      MODULE_NAME=yes >&stream
+--      MODULE_NAME=yes :option1:option2 >filename
 
 --    * Activate all modules, except those with an explicit "=no" line,
 --      and those that are created with "Create (..., Default => Off)" in
@@ -411,13 +412,15 @@ package GNATCOLL.Traces is
    --  This has no effect if the stream does not support colors, or if
    --  the DEBUG.COLORS setting has not been enabled.
 
-   Default_Style : constant Message_Style :=
-      (Fg    => GNATCOLL.Terminal.Reset,
+   Use_Default_Style : constant Message_Style :=
+      (Fg    => GNATCOLL.Terminal.Unchanged,
        Bg    => GNATCOLL.Terminal.Unchanged,
        Style => GNATCOLL.Terminal.Unchanged);
+   --  Messages will use the default style declared for the handle, no
+   --  overriding takes place
 
    Default_Block_Style : constant Message_Style :=
-      (Fg    => GNATCOLL.Terminal.Reset,
+      (Fg    => GNATCOLL.Terminal.Unchanged,
        Bg    => GNATCOLL.Terminal.Unchanged,
        Style => GNATCOLL.Terminal.Dim);
 
@@ -425,7 +428,7 @@ package GNATCOLL.Traces is
      (Handle : not null access Trace_Handle_Record'Class;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
-      Style  : Message_Style := Default_Style);
+      Style  : Message_Style := Use_Default_Style);
    procedure Trace
      (Handle : not null access Trace_Handle_Record'Class;
       E      : Ada.Exceptions.Exception_Occurrence;
@@ -449,7 +452,7 @@ package GNATCOLL.Traces is
    procedure Trace
      (Handle   : not null access Trace_Handle_Record'Class;
       Message  : String;
-      Style    : Message_Style := Default_Style;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Trace
@@ -509,13 +512,13 @@ package GNATCOLL.Traces is
    procedure Increase_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Style    : Message_Style := Default_Style;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Decrease_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Style    : Message_Style := Default_Style;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    --  Change the indentation level for traces with the same output stream.
@@ -832,6 +835,9 @@ private
       --  the first time it is needed.
 
       Count             : aliased Atomic_Counter;
+
+      Default_Style     : Message_Style;
+
       Finalize          : Boolean;
       Active            : Boolean;
       Forced_Active     : Boolean;
