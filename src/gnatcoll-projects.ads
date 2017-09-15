@@ -1561,6 +1561,7 @@ package GNATCOLL.Projects is
    --  that prevent its edition (use of variables for instance).
    --  Project is also not editable if package IDE contains
    --     for Read_Only use "true";
+   --  or file containing the project is write protected.
 
    procedure Set_Modified (Project : Project_Type; Modified : Boolean);
    function Modified

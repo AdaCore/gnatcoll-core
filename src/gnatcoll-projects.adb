@@ -8633,7 +8633,9 @@ package body GNATCOLL.Projects is
       Att : constant Attribute_Pkg_String :=
         Build ("IDE", "Read_Only");
    begin
-      return not Project.Data.Uses_Variables
+      return (Project.Project_Path.Is_Writable
+              or else not Project.Project_Path.Is_Regular_File)
+        and then not Project.Data.Uses_Variables
         and then not Project.Data.Tree.Root.Is_Aggregate_Project
         and then Project.Data.View_Is_Complete
         and then (not Project.Has_Attribute (Att)
