@@ -84,6 +84,8 @@ testsuite/traces/traces4/traces4.out2
 testsuite/traces/wildcard/wildcard.out
 testsuite/traces/wildcard/wildcard.out2
 testsuite/traces/traces2/outfile
+testsuite/traces/config/file.txt
+testsuite/traces/config/sub/file2.txt
 testsuite/projects/K926-026/main
 testsuite/projects/KB30-016/test_it
 testsuite/projects/objects/objects

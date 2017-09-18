@@ -34,7 +34,6 @@ with Ada.IO_Exceptions;
 with Ada.Unchecked_Deallocation;
 
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
-with GNAT.Directory_Operations; use GNAT.Directory_Operations;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
 with GNAT.Traceback;            use GNAT.Traceback;
 
@@ -50,6 +49,8 @@ with GNATCOLL.Utils;            use GNATCOLL.Utils;
 package body GNATCOLL.Traces is
 
    use type FILEs, size_t;
+   use type GNATCOLL.Terminal.ANSI_Color, GNATCOLL.Terminal.ANSI_Style;
+   use type GNATCOLL.Terminal.Full_Style;
 
    Max_Active_Decorators : constant := 40;
    --  Maximum number of active iterators
@@ -70,6 +71,38 @@ package body GNATCOLL.Traces is
 
    A_Zero : aliased constant String := "a" & ASCII.NUL;
    W_Zero : aliased constant String := "w" & ASCII.NUL;
+
+   Brown_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Reset_All,
+        Fg    => GNATCOLL.Terminal.Yellow,
+        Bg    => GNATCOLL.Terminal.Unchanged));
+   Cyan_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Unchanged,
+        Fg    => GNATCOLL.Terminal.Cyan,
+        Bg    => GNATCOLL.Terminal.Unchanged));
+   Purple_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Reset_All,
+        Fg    => GNATCOLL.Terminal.Magenta,
+        Bg    => GNATCOLL.Terminal.Unchanged));
+   Reset_All  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
+      ((Style => GNATCOLL.Terminal.Reset_All,
+        Fg    => GNATCOLL.Terminal.Unchanged,
+        Bg    => GNATCOLL.Terminal.Unchanged));
+
+   Default_Style : constant Message_Style :=
+      (Fg    => GNATCOLL.Terminal.Reset,
+       Bg    => GNATCOLL.Terminal.Unchanged,
+       Style => GNATCOLL.Terminal.Unchanged);
+   --  The default style used for handles. This uses the terminal's
+   --  default foreground.
+
+   Default_Exception_Style : constant Message_Style :=
+      (Fg    => GNATCOLL.Terminal.Unchanged,
+       Bg    => GNATCOLL.Terminal.Red,
+       Style => GNATCOLL.Terminal.Unchanged);
+   --  Use the foreground of the handle, but highlight with a red background.
+   --  This is used to report unexpected exceptions when an exception
+   --  occurrence is passed to Trace.
 
    type Decorator_Array is
       array (1 .. Max_Active_Decorators) of Trace_Decorator;
@@ -215,7 +248,7 @@ package body GNATCOLL.Traces is
 
    function Find_Stream
      (Stream_Name      : String;
-      Config_File_Name : String;
+      Relative_Path_To : Virtual_File;
       Append           : Boolean) return Trace_Stream;
    --  Return the stream associated with that name (either an existing one or
    --  one created by a factory), or null if the default stream should be
@@ -249,6 +282,7 @@ package body GNATCOLL.Traces is
       Stream    : Trace_Stream;
       Factory   : Handle_Factory := null;
       Finalize  : Boolean := True;
+      Style     : Message_Style;
       From_Config_File : Boolean) return Trace_Handle;
    --  Internal version of Create
 
@@ -259,11 +293,15 @@ package body GNATCOLL.Traces is
    type File_Stream_Record is new Trace_Stream_Record with record
       File : FILEs := NULL_Stream;
       Lock : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
+      Colors_Support : Boolean;
    end record;
    overriding procedure Put
       (Stream     : in out File_Stream_Record;
        Str        : Msg_Strings.XString);
    overriding procedure Close (Stream : in out File_Stream_Record);
+   overriding function Supports_Color
+      (Self : File_Stream_Record) return Boolean
+      is (Self.Colors_Support);
    --  Logs to a file
 
    procedure Cache_Settings (Handle : not null Trace_Handle);
@@ -419,7 +457,7 @@ package body GNATCOLL.Traces is
 
    function Find_Stream
      (Stream_Name      : String;
-      Config_File_Name : String;
+      Relative_Path_To : Virtual_File;
       Append           : Boolean) return Trace_Stream
    is
       procedure Add_To_Streams (Tmp : Trace_Stream);
@@ -452,7 +490,12 @@ package body GNATCOLL.Traces is
       Tmp   : Trace_Stream;
       Colon : Natural;
       TmpF  : Stream_Factories_List;
+      Default_Colors : GNATCOLL.Terminal.Supports_Color :=
+         GNATCOLL.Terminal.Auto;
+      Term  : GNATCOLL.Terminal.Terminal_Info;
+
       Supports_Buffer : Boolean := True;
+      Buf_Size : size_t := 2**10;
 
    begin
       if Name = "" then
@@ -471,26 +514,62 @@ package body GNATCOLL.Traces is
          Tmp := Tmp.Next;
       end loop;
 
+      --  Parse stream options
+
       Colon := Index (Name, ":");
       if Colon < Name'First then
          Colon := Name'Last + 1;
       end if;
 
+      declare
+         Args  : String_List_Access := Split (Name, ':');
+      begin
+         for A of Args (Args'First + 1 .. Args'Last) loop
+            if Starts_With (A.all, "buffer_size=") then
+               begin
+                  Buf_Size := size_t'Value (A (A'First + 12 .. A'Last));
+               exception
+                  when others =>
+                     Buf_Size := 2**10;
+               end;
+
+            elsif Starts_With (A.all, "colors=") then
+               declare
+                  V : constant String := To_Lower (A (A'First + 7 .. A'Last));
+               begin
+                  if V = "on" or else V = "true" then
+                     Default_Colors := GNATCOLL.Terminal.Yes;
+                  elsif V = "off" or else V = "false" then
+                     Default_Colors := GNATCOLL.Terminal.No;
+                  else
+                     Default_Colors := GNATCOLL.Terminal.Auto;
+                  end if;
+               end;
+            end if;
+         end loop;
+
+         Free (Args);
+      end;
+
       --  Do we have a matching factory (if we start with "&")?
 
       if Name (Name'First .. Colon - 1) = "&1" then
+         Term.Init_For_Stdout (Colors => Default_Colors);
          Tmp := new File_Stream_Record'
-           (Name => new String'(Name),
-            File => stdout,
-            others => <>);
+           (Name           => new String'(Name),
+            File           => stdout,
+            Colors_Support => Term.Has_ANSI_Colors,
+            others         => <>);
          Add_To_Streams (Tmp);
          Supports_Buffer := False;
 
       elsif Name (Name'First .. Colon - 1) = "&2" then
+         Term.Init_For_Stderr (Colors => Default_Colors);
          Tmp := new File_Stream_Record'
-           (Name => new String'(Name),
-            File => stderr,
-            others => <>);
+           (Name           => new String'(Name),
+            File           => stderr,
+            Colors_Support => Term.Has_ANSI_Colors,
+            others         => <>);
          Add_To_Streams (Tmp);
          Supports_Buffer := False;
 
@@ -567,9 +646,9 @@ package body GNATCOLL.Traces is
                   Substrings => Predef_Substitutions,
                   Callback   => Substitute_Cb'Unrestricted_Access,
                   Delimiter  => '$'),
-               Dir_Name (Config_File_Name));
+               +Relative_Path_To.Full_Name.all);
             N_Zero : aliased constant String := N & ASCII.NUL;
-            F     : FILEs;
+            F      : FILEs;
          begin
             if Append then
                F := fopen (N_Zero'Address, mode => A_Zero'Address);
@@ -581,43 +660,32 @@ package body GNATCOLL.Traces is
                F := stderr;
             end if;
 
+            Term.Init_For_File (Colors => Default_Colors);
+
             Tmp := new File_Stream_Record'
-              (Name   => new String'(Name),
-               File   => F,
-               others => <>);
+              (Name           => new String'(Name),
+               File           => F,
+               Colors_Support => Term.Has_ANSI_Colors,
+               others         => <>);
             Add_To_Streams (Tmp);
          end;
       end if;
 
-      if Tmp /= null and then Tmp.all in File_Stream_Record'Class then
+      if Tmp /= null
+         and then Tmp.all in File_Stream_Record'Class
+         and then Supports_Buffer
+      then
          declare
-            Args  : String_List_Access := Split (Name, ':');
             Dummy : int;
-            Buf_Size : size_t := 2**10;
          begin
-            for A of Args (Args'First + 1 .. Args'Last) loop
-               if Starts_With (A.all, "buffer_size=") then
-                  begin
-                     Buf_Size := size_t'Value (A (A'First + 12 .. A'Last));
-                  exception
-                     when others =>
-                        Buf_Size := 2**10;
-                  end;
-               end if;
-            end loop;
-
-            if Supports_Buffer then
-               Dummy := setvbuf
-                 (File_Stream_Record (Tmp.all).File,
-                  System.Null_Address,
-                  (case Buf_Size is
-                      when 0      => IONBF,  -- unbuffered
-                      when 1      => IOLBF,  -- line buffered
-                      when others => IOFBF), -- full buffered
-                  Buf_Size);
-            end if;
-
-            Free (Args);
+            Dummy := setvbuf
+              (File_Stream_Record (Tmp.all).File,
+               System.Null_Address,
+               (case Buf_Size is
+                   when 0      => IONBF,  -- unbuffered
+                   when 1      => IOLBF,  -- line buffered
+                   when others => IOFBF), -- full buffered
+               Buf_Size);
          end;
       end if;
 
@@ -641,8 +709,9 @@ package body GNATCOLL.Traces is
          (From_Config_File => False,
           Unit_Name        => Unit_Name,
           Default          => Default,
-          Stream           => Find_Stream (Stream, "", Append => False),
+          Stream           => Find_Stream (Stream, No_File, Append => False),
           Factory          => Factory,
+          Style            => Default_Style,
           Finalize         => Finalize);
    end Create;
 
@@ -656,6 +725,7 @@ package body GNATCOLL.Traces is
       Stream    : Trace_Stream;
       Factory   : Handle_Factory := null;
       Finalize  : Boolean := True;
+      Style     : Message_Style;
       From_Config_File : Boolean) return Trace_Handle
    is
       Is_Star    : constant Boolean := Starts_With (Unit_Name, "*.")
@@ -776,6 +846,12 @@ package body GNATCOLL.Traces is
 
                Set_Active (Tmp2, Handle.Active);
 
+               if Style /= Use_Default_Style
+                  and then Tmp2.Default_Style = Default_Style
+               then
+                  Tmp2.Default_Style := Style;
+               end if;
+
                if Tmp2.Stream_Is_Default and then Handle.Stream /= null then
                   Tmp2.Stream := Handle.Stream;
                   Tmp2.Stream_Is_Default := Handle.Stream_Is_Default;
@@ -784,6 +860,10 @@ package body GNATCOLL.Traces is
 
             Tmp2 := Tmp2.Next;
          end loop;
+      end if;
+
+      if Style /= Use_Default_Style then
+         Handle.Default_Style := Style;
       end if;
 
       Cache_Settings (Handle);
@@ -938,7 +1018,8 @@ package body GNATCOLL.Traces is
            (Unit_Name => Handle.Name.all & ".EXCEPTIONS",
             From_Config_File => False,
             Stream    => S,
-            Default   => (if Handle.Active then On else Off));
+            Default   => (if Handle.Active then On else Off),
+            Style     => Default_Exception_Style);
 
          Cache_Settings (Handle.Exception_Handle);
       end if;
@@ -952,7 +1033,26 @@ package body GNATCOLL.Traces is
      (Handle : not null access Trace_Handle_Record'Class;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
-      Color  : String := Default_Fg) is
+      Color  : String) is
+   begin
+      if Debug_Mode then
+         if Handle.With_Colors then
+            Trace (Handle, E, Color & Msg);
+         else
+            Trace (Handle, E, Msg);
+         end if;
+      end if;
+   end Trace;
+
+   -----------
+   -- Trace --
+   -----------
+
+   procedure Trace
+     (Handle : not null access Trace_Handle_Record'Class;
+      E      : Ada.Exceptions.Exception_Occurrence;
+      Msg    : String := "Unexpected exception: ";
+      Style  : Message_Style := Use_Default_Style) is
    begin
       if Debug_Mode
         and then not Global.Finalized  --  module not terminated
@@ -960,7 +1060,7 @@ package body GNATCOLL.Traces is
          Create_Exception_Handle (Handle);
          Trace (Handle.Exception_Handle,
                 Msg & Ada.Exceptions.Exception_Information (E),
-                Color => Color);
+                Style => Style);
       end if;
    end Trace;
 
@@ -971,7 +1071,28 @@ package body GNATCOLL.Traces is
    procedure Trace
      (Handle   : not null access Trace_Handle_Record'Class;
       Message  : String;
-      Color    : String := Default_Fg;
+      Color    : String;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
+   begin
+      if Debug_Mode then
+         if Handle.With_Colors then
+            Trace (Handle, Color & Message,
+                   Location => Location, Entity => Entity);
+         else
+            Trace (Handle, Message, Location => Location, Entity => Entity);
+         end if;
+      end if;
+   end Trace;
+
+   -----------
+   -- Trace --
+   -----------
+
+   procedure Trace
+     (Handle   : not null access Trace_Handle_Record'Class;
+      Message  : String;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity)
    is
@@ -979,6 +1100,8 @@ package body GNATCOLL.Traces is
       --  in single-threaded applications and sometimes 1% for multi-threaded
       --  apps.
       pragma Suppress (All_Checks);
+
+      Merged_Style : Message_Style;
 
    begin
       --  Do not output anything until we have called Parse_Config_File,
@@ -1007,6 +1130,20 @@ package body GNATCOLL.Traces is
          end if;
 
          if With_Color then
+            Merged_Style := Handle.Default_Style;
+
+            if Style.Fg /= GNATCOLL.Terminal.Unchanged then
+               Merged_Style.Fg := Style.Fg;
+            end if;
+
+            if Style.Bg /= GNATCOLL.Terminal.Unchanged then
+               Merged_Style.Bg := Style.Bg;
+            end if;
+
+            if Style.Style /= GNATCOLL.Terminal.Unchanged then
+               Merged_Style.Style := Style.Style;
+            end if;
+
             Msg.Append (Cyan_Fg);
          end if;
 
@@ -1034,7 +1171,8 @@ package body GNATCOLL.Traces is
                end loop;
 
                if With_Color then
-                  Msg.Append (Color);
+                  Msg.Append
+                     (GNATCOLL.Terminal.Get_ANSI_Sequence (Merged_Style));
                end if;
 
                Msg.Append (Message (Start .. Last - 1));
@@ -1054,7 +1192,7 @@ package body GNATCOLL.Traces is
                end if;
 
                if With_Color then
-                  Msg.Append (Purple_Fg & Default_Bg);
+                  Msg.Append (Purple_Fg);
                end if;
 
                Msg.Append ('_');
@@ -1064,7 +1202,8 @@ package body GNATCOLL.Traces is
             end loop;
          else
             if With_Color then
-               Msg.Append (Color);
+               Msg.Append
+                  (GNATCOLL.Terminal.Get_ANSI_Sequence (Merged_Style));
             end if;
 
             Msg.Append (Message);
@@ -1074,7 +1213,7 @@ package body GNATCOLL.Traces is
 
          if Global.Active_Last /= 0 then
             if With_Color then
-               Msg.Append (Brown_Fg & Default_Bg);
+               Msg.Append (Brown_Fg);
             end if;
 
             Msg.Append (' ');
@@ -1105,7 +1244,7 @@ package body GNATCOLL.Traces is
          end if;
 
          if With_Color then
-            Msg.Append (Default_Fg & Default_Bg);
+            Msg.Append (Reset_All);
          end if;
 
          Msg.Append (ASCII.LF);
@@ -1149,8 +1288,7 @@ package body GNATCOLL.Traces is
               (Handle.Exception_Handle,
                Error_Message,
                Location => Location,
-               Entity   => Entity,
-               Color    => Red_Bg & Default_Fg);
+               Entity   => Entity);
 
             if Raise_Exception then
                Raise_Assert_Failure
@@ -1171,14 +1309,13 @@ package body GNATCOLL.Traces is
    procedure Increase_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
       if Handle /= null and then Handle.Stream /= null then
          if Msg /= "" then
-            Trace (Handle, Msg, Color => Color,
-                   Location => Location, Entity => Entity);
+            Trace (Handle, Msg, Style, Location => Location, Entity => Entity);
          end if;
 
          --  ??? Should we do this when the handle is inactive ?
@@ -1193,7 +1330,7 @@ package body GNATCOLL.Traces is
    procedure Decrease_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity) is
    begin
@@ -1208,7 +1345,7 @@ package body GNATCOLL.Traces is
          end if;
 
          if Msg /= "" then
-            Trace (Handle, Msg, Color, Location, Entity);
+            Trace (Handle, Msg, Style, Location => Location, Entity => Entity);
          end if;
       end if;
    end Decrease_Indent;
@@ -1516,23 +1653,20 @@ package body GNATCOLL.Traces is
       Close (Trace_Stream_Record (Stream));
    end Close;
 
-   -----------------------
-   -- Parse_Config_File --
-   -----------------------
+   ------------------
+   -- Parse_Config --
+   ------------------
 
-   procedure Parse_Config_File
-     (Filename         : Virtual_File;
-      Default          : Virtual_File := No_File;
+   procedure Parse_Config
+     (Config           : String;
       On_Exception     : On_Exception_Mode := Propagate;
-      Force_Activation : Boolean := True)
+      Force_Activation : Boolean := True;
+      Relative_Path_To : GNATCOLL.VFS.Virtual_File :=
+         GNATCOLL.VFS.Get_Current_Dir)
    is
-      File_Name : constant Virtual_File := Config_File (Filename, Default);
-
-      Buffer            : Str_Access;
-      File              : Mapped_File;
-      Index, First, Max : Natural;
-      Handle            : Trace_Handle;
-      Dec               : Trace_Decorator;
+      Index  : Natural;
+      Handle : Trace_Handle;
+      Dec    : Trace_Decorator;
 
       procedure Skip_Spaces (Skip_Newline : Boolean := True);
       --  Skip the spaces (including possibly newline), and leave Index on the
@@ -1551,12 +1685,12 @@ package body GNATCOLL.Traces is
 
       procedure Skip_Spaces (Skip_Newline : Boolean := True) is
       begin
-         while Index <= Last (File)
-           and then (Buffer (Index) = ' '
-                     or else (Buffer (Index) = ASCII.LF
+         while Index <= Config'Last
+           and then (Config (Index) = ' '
+                     or else (Config (Index) = ASCII.LF
                               and then Skip_Newline)
-                     or else Buffer (Index) = ASCII.CR
-                     or else Buffer (Index) = ASCII.HT)
+                     or else Config (Index) = ASCII.CR
+                     or else Config (Index) = ASCII.HT)
          loop
             Index := Index + 1;
          end loop;
@@ -1568,11 +1702,11 @@ package body GNATCOLL.Traces is
 
       procedure Skip_To_Newline (Stop_At_First_Blank : Boolean := False) is
       begin
-         while Index <= Last (File)
-           and then Buffer (Index) /= ASCII.LF
+         while Index <= Config'Last
+           and then Config (Index) /= ASCII.LF
            and then (not Stop_At_First_Blank
-                     or else (Buffer (Index) /= ' '
-                              and then Buffer (Index) /= ASCII.HT))
+                     or else (Config (Index) /= ' '
+                              and then Config (Index) /= ASCII.HT))
          loop
             Index := Index + 1;
          end loop;
@@ -1645,56 +1779,37 @@ package body GNATCOLL.Traces is
 
       GNATCOLL.Traces.On_Exception := On_Exception;
 
-      --  If this is the first time we call Parse_Config_File, we initialize
-      --  the package at the same time.
-
-      if File_Name = No_File then
-         if Force_Activation then
-            Create_Decorators;
-         end if;
-
-      else
-         begin
-            File := Open_Read (+File_Name.Full_Name);
-         exception
-            when Ada.IO_Exceptions.Name_Error =>
-               if Force_Activation then
-                  Create_Decorators;
-               end if;
-               return;
-         end;
-
+      if Force_Activation or else Config /= "" then
          Create_Decorators;
+      end if;
 
-         Read (File);
-         Buffer := Data (File);
-
-         Index := 1;
+      if Config /= "" then
+         Index := Config'First;
 
          loop
             Skip_Spaces;
-            exit when Index > Last (File);
+            exit when Index > Config'Last;
 
-            if Index + 1 <= Last (File)
-              and then String (Buffer (Index .. Index + 1)) = "--"
+            if Index + 1 <= Config'Last
+              and then String (Config (Index .. Index + 1)) = "--"
             then
                Skip_To_Newline;
 
             else
-               case Buffer (Index) is
+               case Config (Index) is
                   when '>' =>
                      declare
                         Save   : constant Integer := Index;
                      begin
                         Skip_To_Newline;
-                        if Buffer (Index - 1) = ASCII.CR then
+                        if Config (Index - 1) = ASCII.CR then
                            Set_Default_Stream
-                              (String (Buffer (Save .. Index - 2)),
-                               Config_File => File_Name);
+                              (Config (Save .. Index - 2),
+                               Config_File => Relative_Path_To);
                         else
                            Set_Default_Stream
-                              (String (Buffer (Save .. Index - 1)),
-                               Config_File => File_Name);
+                              (Config (Save .. Index - 1),
+                               Config_File => Relative_Path_To);
                         end if;
                      end;
 
@@ -1714,95 +1829,193 @@ package body GNATCOLL.Traces is
                      end loop;
 
                   when others =>
-                     First := Index;
-                     while Index <= Last (File)
-                       and then Buffer (Index) /= '='
-                       and then Buffer (Index) /= '>'
-                       and then Buffer (Index) /= '-'
-                       and then Buffer (Index) /= ASCII.LF
-                       and then Buffer (Index) /= ASCII.CR
-                     loop
-                        Index := Index + 1;
-                     end loop;
-
-                     Max := Index - 1;
-                     while Max >= 1
-                       and then (Buffer (Max) = ' '
-                                 or else Buffer (Max) = ASCII.HT)
-                     loop
-                        Max := Max - 1;
-                     end loop;
+                     --  Declaring a handle:
+                     --      NAME=yes :option1:option2 >stream  -- comment
 
                      declare
+                        Bol           : constant Natural := Index;
+                        Name_End      : Natural := 0;
+                        Options_Start : Natural := 0;
+                        Options_End   : Natural := 0;
+                        Stream_Start  : Natural := 0;
+                        Stream_End    : Natural := 0;
                         Active : Default_Activation_Status := From_Config;
                         Stream : Trace_Stream := null;
+                        Style  : Message_Style := Default_Style;
                      begin
+                        loop
+                           --  End of line/file, or start of comment ?
+                           if Index > Config'Last
+                              or else (Config (Index) = '-'
+                                 and then Index < Config'Last
+                                 and then Config (Index + 1) = '-')
+                              or else Config (Index) = ASCII.LF
+                              or else Config (Index) = ASCII.CR
+                           then
+                              if Stream_Start /= 0 then
+                                 Stream_End := Index - 1;
+                              elsif Options_Start /= 0 then
+                                 Options_End := Index - 1;
+                              elsif Name_End = 0 then
+                                 Name_End := Index - 1;
+                              end if;
+
+                              Skip_To_Newline;
+                              exit;
+
+                           --  end of group (name, options, streams)
+                           elsif Config (Index) = ' '
+                              or else Config (Index) = ASCII.HT
+                           then
+                              if Stream_Start /= 0 then
+                                 Stream_End := Index - 1;
+                              elsif Options_Start /= 0 then
+                                 Options_End := Index - 1;
+                              elsif Name_End = 0 then
+                                 Name_End := Index - 1;
+                              end if;
+
+                           --  end of name, start of handle options
+                           elsif Config (Index) = ':'
+                              and then Stream_Start = 0
+                              and then Options_Start = 0
+                           then
+                              if Name_End = 0 then
+                                 Name_End := Index - 1;
+                              end if;
+
+                              Options_Start := Index + 1;
+
+                           --  end of options, start of stream
+                           elsif Config (Index) = '>'
+                              and then Stream_Start = 0
+                           then
+                              if Name_End = 0 then
+                                 Name_End := Index - 1;
+                              elsif Options_End = 0 then
+                                 Options_End := Index - 1;
+                              end if;
+
+                              Stream_Start := Index;
+                           end if;
+
+                           Index := Index + 1;
+                        end loop;
+
                         --  Is this active ?
 
-                        if Index > Last (File)
-                          or else Buffer (Index) /= '='
-                        then
-                           Active := On;
-                        else
-                           Index := Index + 1;
-                           Skip_Spaces;
-                           if Index + 1 > Last (File) or else
-                             String (Buffer (Index .. Index + 1)) /= "no"
-                           then
-                              Active := On;
-                           else
-                              Active := Off;
+                        Active := On;
+                        for J in Bol .. Name_End loop
+                           if Config (J) = '=' then
+                              Active := (
+                                 if Config (J + 1 .. Name_End) /= "no" then
+                                    On
+                                 else
+                                    Off);
+                              Name_End := J - 1;
+                              exit;
                            end if;
+                        end loop;
+
+                        --  Do we have options for this handle ?
+
+                        if Options_Start /= 0 then
+                           declare
+                              use GNATCOLL.Terminal;
+                              Options : String_List_Access := Split
+                                 (Config (Options_Start .. Options_End), ':');
+                           begin
+                              for Opt of Options.all loop
+                                 if Starts_With (Opt.all, "fg=") then
+                                    Style.Fg := ANSI_Color'Value
+                                       (Opt (Opt'First + 3 .. Opt'Last));
+                                 elsif Starts_With (Opt.all, "bg=") then
+                                    Style.Bg := ANSI_Color'Value
+                                       (Opt (Opt'First + 3 .. Opt'Last));
+                                 elsif Starts_With (Opt.all, "style=") then
+                                    Style.Style := ANSI_Style'Value
+                                       (Opt (Opt'First + 6 .. Opt'Last));
+                                 end if;
+                              end loop;
+
+                              Free (Options);
+                           end;
                         end if;
 
                         --  What stream is this sent to ?
 
-                        while Index <= Last (File)
-                          and then Buffer (Index) /= '>'
-                          and then Buffer (Index) /= ASCII.LF
-                          and then Buffer (Index) /= ASCII.CR
-                        loop
-                           Index := Index + 1;
-                        end loop;
-
-                        if Index <= Last (File)
-                          and then Buffer (Index) = '>'
-                        then
+                        if Stream_Start /= 0 then
                            declare
-                              Save : Integer := Index + 1;
-                              Append : constant Boolean :=
-                                Buffer (Index + 1) = '>';
+                              Save   : Integer := Stream_Start + 1;
+                              Append : Boolean := False;
                            begin
-                              if Append then
-                                 Save := Index + 2;
+                              if Stream_Start + 1 <= Stream_End
+                                 and then Config (Stream_Start + 1) = '>'
+                              then
+                                 Append := True;
+                                 Save := Stream_Start + 2;
                               end if;
 
-                              Skip_To_Newline;
-
-                              if Buffer (Index - 1) = ASCII.CR then
-                                 Stream := Find_Stream
-                                   (String (Buffer (Save .. Index - 2)),
-                                    +File_Name.Full_Name, Append);
-                              else
-                                 Stream := Find_Stream
-                                   (String (Buffer (Save .. Index - 1)),
-                                    +File_Name.Full_Name, Append);
-                              end if;
+                              Stream := Find_Stream
+                                (Config (Save .. Stream_End),
+                                 Relative_Path_To, Append);
                            end;
-                        else
-                           Skip_To_Newline;
                         end if;
 
                         Handle := Create_Internal
-                           (String (Buffer (First .. Max)),
+                           (Config (Bol .. Name_End),
                             From_Config_File => True,
                             Default          => Active,
+                            Style            => Style,
                             Stream           => Stream);
                      end;
                end case;
             end if;
          end loop;
+      end if;
+   end Parse_Config;
 
+   -----------------------
+   -- Parse_Config_File --
+   -----------------------
+
+   procedure Parse_Config_File
+     (Filename         : Virtual_File;
+      Default          : Virtual_File := No_File;
+      On_Exception     : On_Exception_Mode := Propagate;
+      Force_Activation : Boolean := True)
+   is
+      File_Name : constant Virtual_File := Config_File (Filename, Default);
+      Buffer    : Str_Access;
+      File      : Mapped_File;
+   begin
+      if not Debug_Mode then
+         return;
+      end if;
+
+      GNATCOLL.Traces.On_Exception := On_Exception;
+
+      if File_Name = No_File then
+         Parse_Config
+            ("", On_Exception, Force_Activation => Force_Activation);
+      else
+         begin
+            File := Open_Read (+File_Name.Full_Name);
+         exception
+            when Ada.IO_Exceptions.Name_Error =>
+               Parse_Config
+                  ("", On_Exception, Force_Activation => Force_Activation);
+               return;
+         end;
+
+         Read (File);
+         Buffer := Data (File);
+
+         Parse_Config
+            (Config           => String (Buffer (1 .. Last (File))),
+             On_Exception     => On_Exception,
+             Force_Activation => Force_Activation,
+             Relative_Path_To => File_Name.Dir);
          Close (File);
       end if;
    end Parse_Config_File;
@@ -1919,15 +2132,13 @@ package body GNATCOLL.Traces is
       then
          S := Find_Stream
            (Name (Name'First + 2 .. Name'Last),
-            +Config_File.Full_Name.all, Append => True);
+            Config_File.Dir, Append => True);
       elsif Name (Name'First) = '>' then
          S := Find_Stream
             (Name (Name'First + 1 .. Name'Last),
-             +Config_File.Full_Name.all, Append => False);
+             Config_File.Dir, Append => False);
       else
-         S := Find_Stream
-            (Name,
-             +Config_File.Full_Name.all, Append => False);
+         S := Find_Stream (Name, Config_File.Dir, Append => False);
       end if;
 
       if S /= null then
@@ -1981,21 +2192,22 @@ package body GNATCOLL.Traces is
        Message  : String := "";
        Location : String := GNAT.Source_Info.Source_Location;
        Entity   : String := GNAT.Source_Info.Enclosing_Entity;
-       Color    : String := Default_Fg)
+       Style    : Message_Style := Default_Block_Style)
       return Block_Trace_Handle is
    begin
       return Result : Block_Trace_Handle do
          if Active (Handle) then
             Result.Me := Handle;
+            Result.Style := Style;
             Result.Loc := new String'(Entity & ':' & Location);
             if Message /= "" then
                Increase_Indent
                   (Handle, "Entering " & Result.Loc.all & ' ' & Message,
-                   Color => Color, Location => "", Entity => "");
+                   Style => Style, Location => "", Entity => "");
             else
                Increase_Indent
                   (Handle, "Entering " & Result.Loc.all,
-                   Color => Color, Location => "", Entity => "");
+                   Style => Style, Location => "", Entity => "");
             end if;
          end if;
       end return;
@@ -2011,6 +2223,7 @@ package body GNATCOLL.Traces is
       if Self.Me /= null then
          Decrease_Indent
             (Self.Me, "Leaving " & Self.Loc.all,
+             Style    => Self.Style,
              Location => "",   --  avoid duplicate info in the output
              Entity   => "");
       end if;

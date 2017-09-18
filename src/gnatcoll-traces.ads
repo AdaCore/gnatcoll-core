@@ -23,6 +23,219 @@
 
 --  Logging framework
 
+--  Usage in the code
+--  =================
+
+--  Here is an example of code:
+--
+--     with GNATCOLL.Traces;     use GNATCOLL.Traces;
+--
+--     procedure Main is
+--        Me : constant Trace_Handle := Create ("NAME");
+--     begin
+--        Parse_Config_File (".gnatdebug");  --  mandatory
+--        Trace (Me, "Message 1");
+--     end Main;
+--
+--  You would then provide an additional .gnatdebug file in the current
+--  directory, see below for its format.
+
+--  Configuration
+--  ==============
+--
+--  The format of the configuration file is the following:
+
+--    * activating or deactivating a specific module:
+--
+--      MODULE_NAME=yes
+--      MODULE_NAME                -- same as "=yes"
+--      MODULE_NAME=no             -- default, unless you used "+"
+--      MODULE_NAME=yes  :option1:option2
+--
+--      where the options are generally given as key=value. The valid
+--      options are:
+--
+--         fg=color     # where color is red|black|green|yellow|blue|
+--                      #                magenta|cyan|gray
+--         bg=color     # Same colors as for fg
+--         style=style  # where style is bright|dim|normal
+--
+--      These options configure the default color of the messages in
+--      this stream. The colors are ignored unless you also enable
+--      DEBUG.COLORS (see below). The exact color that is output depends
+--      on the configuration of your terminal (see GNATCOLL.Terminal for
+--      more information).
+
+--    * redirecting a specific module to a file
+--
+--      MODULE_NAME=yes >filename
+--      MODULE_NAME=yes >&stream
+--      MODULE_NAME=yes :option1:option2 >filename
+
+--    * Activate all modules, except those with an explicit "=no" line,
+--      and those that are created with "Create (..., Default => Off)" in
+--      the code. This command does not apply to decorators like
+--      DEBUG.COLORS (see below).
+--
+--      +
+
+--    * redirecting all modules to a different stream:
+--      - to a file:
+--
+--        >filename
+--
+--        If filename is a relative path, it is relative to the location of
+--        the configuration file. $$ is automatically replaced by the
+--        process number. $D is automatically replaced by the current date.
+--        $T is automatically replaced by the current date and time.
+--        You can use >>filename instead if you want to append to the file.
+--
+--      - to standard output
+--
+--        >&1
+--
+--      - to standard error
+--
+--        >&2
+--
+--      - to a user-defined stream (see gnat-traces-syslog.ads):
+--
+--        >&stream
+--
+--      In all the cases above, the name of the stream can be followed by
+--      one or more options, for instance:
+--        >filename:buffer_size=0
+--        >&1:colors=on
+--        >&stream:option1:option2
+--
+--      The list of options is given below. They do not necessarily apply
+--      to all streams (for instance controlling the buffer size is not
+--      supported for standard output or standard error, and syslog does
+--      not support colors).
+--
+--        * "buffer_size": the size of the buffer. The logs are
+--          synchronized with the disk when this buffer is full.
+--          Setting this to 0 means that synchronization appears after
+--          every output line, which is slow but might help when
+--          debugging a crashing application.
+--
+--        * "colors": whether to allow colors on this stream.
+--          This combines with the DEBUG.COLORS settings.
+--          Setting this to "on" or "true" forces color output, to
+--          "off" or "false" disables colors, and "auto" will try and
+--          autodetect whether the terminal supports colors.
+--          For Windows users, note that colors are only supported via
+--          the use of ANSI sequences (see gnatcoll-terminal.ads)
+
+--    * comments
+--      -- comment
+
+--  Wildcards
+--  =========
+
+--  It is also possible to substitute a module name with a '*', to configure
+--  a whole set of modules with a single line. For instance:
+--
+--    *  *.EXCEPTIONS=yes >&stdout
+--       will always display a stream whose name ends with ".EXCEPTIONS" to
+--       stdout.
+--
+--    *  MODULE_NAME.*=no
+--       Disables all streams starting with "MODULE_NAME" (including
+--       MODULE_NAME itself). The star can only be used to substitute the
+--       whole first or last name. If the configuration file also contains
+--       a line like "MODULE_NAME.FOO" anywhere (before or after), then this
+--       specific stream is not disabled.
+--
+--    *  *.ERROR=yes  :fg=red
+--       Enable all modules ending with "ERROR", and display their messages
+--       in red by default.
+
+--  Decorators
+--  ==========
+
+--  All messages are output with decorators, which can add extra information
+--  like timestamp, colors, message count,... Those decorators are
+--  configured like modules (see above), but have reserved names. It is
+--  possible to create your own decorators, but all of the predefined
+--  decorators start with "DEBUG.". Here is the extensive list:
+
+--  "DEBUG.ABSOLUTE_TIME"
+--  If this handle is activated, then the absolute time will be added to the
+--  output, if the stream supports it (syslog does not)
+
+--  "DEBUG.MICRO_TIME"
+--  If this handle is activated, the absolute time will be displayed using
+--  micro-seconds resolution, instead of just seconds.
+
+--  "DEBUG.ABSOLUTE_DATE"
+--  If this handle is activated, then the absolute date will be added to the
+--  output, if the stream supports it (syslog does not)
+
+--  "DEBUG.ELAPSED_TIME"
+--  If this handle is activated, then the elapsed time since the last
+--  call to Trace for this handler will be displayed.
+
+--  "DEBUG.STACK_TRACE"
+--  If this handle is activated, then the stack trace will be displayed.
+
+--  "DEBUG.LOCATION"
+--  If this is activated, then the location of the call to Trace is
+--  displayed. Note that, contrary to DEBUG.STACK_TRACE, this works on
+--  all targets, and even if the executable wasn't compiled with debug
+--  information.
+
+--  "DEBUG.COLORS"
+--  When this config is enabled, then other decorators (like the name of
+--  the handle, current time, count,...) will be displayed in color when
+--  the stream supports them (see also the "colors" option when you
+--  declare the streams, at the top of this package).
+
+--  "DEBUG.ENCLOSING_ENTITY"
+--  If this handle is activated, the name of the enclosing entity at the
+--  location of the call to Trace will be displayed.
+
+--  "DEBUG.COUNT"
+--  If this handle is active, two counters are associated with each output
+--  trace: one of them is unique for the handle, the other is unique in the
+--  whole application life. These can for instance be used to set
+--  conditional breakpoints for a specific trace (break on traces.Log or
+--  traces.Trace, and check the value of Handle.Count
+
+--  "DEBUG.MEMORY"
+--  This decorator will show the size of resident memory for the
+--  application, as well as the peek size. This takes into account memory
+--  allocated from any language, C, Ada,.. and is queries from the
+--  operating system).
+--  It also shows a ">" or "<" to indicate whether memory use increased or
+--  not.
+
+--  "DEBUG.ADA_MEMORY"
+--  This is similar to DEBUG.MEMORY, but only displays memory allocated
+--  from Ada (provided you have setup GNATCOLL.Memory to become the default
+--  allocator for your application).
+
+--  "DEBUG.FINALIZE_TRACES"   (default: active)
+--  If deactivated, the trace handles will never be freed when the program
+--  is finalized by the compiler. This is mostly for debugging purposes.
+
+--  "DEBUG.SPLIT_LINES"  (default: true)
+--  Whether long messages should be split at each ASCII.LF character. When
+--  we do this, the trace handle name and decorators are replicated at the
+--  beginning of each followup line. This results in a slow down.
+
+--  Example
+--  =======
+
+--  Here is a short example of configuration file:
+--     +                 --  by default, show all
+--     >&2               --  defines the default stream
+--     DEBUG.COLORS=yes  --  enable colors
+--     PKG1=no           --  do not show
+--     PKG2=yes          --  to the default stream, ie stderr
+--     PKG3=yes >file    --  to the file "file" in current directory
+--     PKG4=yes >&syslog --  to syslog, see gnat-traces-syslog.ads
+
 with GNAT.Source_Info;
 with GNAT.Strings;
 with Ada.Calendar;
@@ -33,6 +246,7 @@ private with Ada.Finalization;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Atomic;        use GNATCOLL.Atomic;
 with GNATCOLL.Strings_Impl;
+with GNATCOLL.Terminal;
 
 package GNATCOLL.Traces is
 
@@ -44,68 +258,6 @@ package GNATCOLL.Traces is
    --  overridden by the environment variable Config_File_Environment, which
    --  should be an absolute name (or relative to the current directory). If
    --  this variable is set, the standard file is never searched.
-   --
-   --  The format of the configuration file is the following:
-   --    * activating a module:
-   --      MODULE_NAME=yes
-   --      MODULE_NAME
-   --    * deactivating a module (default)
-   --      MODULE_NAME=no
-   --    * redirecting all modules to a different stream:
-   --      - to a file:
-   --        >filename
-   --        If filename is a relative path, it is relative to the location of
-   --        the configuration file. $$ is automatically replaced by the
-   --        process number. $D is automatically replaced by the current date.
-   --        $T is automatically replaced by the current date and time.
-   --        You can use >>filename instead if you want to append to the file.
-   --      - to a file, with specific options:
-   --        >filename:buffer_size=0
-   --        The options are separated from the filename with a ':', and can
-   --        be any of:
-   --            * "buffer_size": the size of the buffer. The logs are
-   --              synchronized with the disk when this buffer is full.
-   --              Setting this to 0 means that synchronization appears after
-   --              every output line, which is slow but might help when
-   --              debugging a crashing application.
-   --      - to standard output (never bufferized)
-   --        >&1
-   --      - to standard error (never bufferized)
-   --        >&2
-   --      - to a user-defined stream (see gnat-traces-syslog.ads):
-   --        >&stream
-   --        >&stream:option1:option2
-   --    * redirecting a specific module to a file
-   --      MODULE_NAME=yes >filename
-   --      MODULE_NAME=yes >&stream
-   --    * comments
-   --      -- comment
-   --    * Activate traces for all modules, unless explicitely deactivated in
-   --      the lines following the '+'
-   --      +
-   --      Note that this doesn't apply to the decorators (see below)
-   --
-   --  It is also possible to substitute a module name with a '*', to configure
-   --  a whole set of modules with a single line. For instance:
-   --
-   --    *  *.EXCEPTIONS=yes >&stdout
-   --       will always display a stream whose name ends with ".EXCEPTIONS" to
-   --       stdout.
-   --
-   --    *  MODULE_NAME.*=no
-   --       Disables all streams starting with "MODULE_NAME" (including
-   --       MODULE_NAME itself). The star can only be used to substitute the
-   --       whole first or last name. If the configuration file also contains
-   --       a line like "MODULE_NAME.FOO" anywhere (before or after), then this
-   --       specific stream is not disabled.
-   --
-   --  Here is a short example of configuration file:
-   --     +                 --  by default, show all
-   --     >&2               --  defines the default stream
-   --     PKG1=no           --  do not show
-   --     PKG2=yes          --  to the default stream, ie stderror
-   --     PKG3=yes >file    --  to the file "file" in current directory
-   --     PKG4=yes >&syslog --  to syslog, see gnat-traces-syslog.ads
 
    Debug_Mode : constant Boolean := True;
    --  Set the global activation status for the debug traces. If this is set to
@@ -114,7 +266,7 @@ package GNATCOLL.Traces is
    --  then the debug traces can be activated selectively for each module.
 
    type On_Exception_Mode is (Propagate, Ignore, Deactivate);
-   --  Behavor when an exception is raised while writing to the log stream e.g
+   --  Behavior when an exception is raised while writing to the log stream e.g
    --  because of NFS error when writing to a file.
    --    Propagate:  the exception is propagated
    --    Ignore:     the exception is silently ignored
@@ -141,10 +293,10 @@ package GNATCOLL.Traces is
    --
    --  If the file is found on the disk, or Force_Activation is True:
    --  This procedure will set the default stream. At this
-   --  stage, most loggers will start outputing information. If you do not
+   --  stage, most loggers will start outputting information. If you do not
    --  call Parse_Config_File, then most loggers will have no associated
    --  stream and therefore will not output anything. An alternative is to
-   --  simply call Set_Default_Stream.
+   --  simply call Parse_Config below.
 
    procedure Parse_Config_File
      (Filename         : String := "";
@@ -152,6 +304,24 @@ package GNATCOLL.Traces is
       On_Exception     : On_Exception_Mode := Propagate;
       Force_Activation : Boolean := True);
    --  Same as above, using regular strings for file names.
+
+   procedure Parse_Config
+     (Config           : String;
+      On_Exception     : On_Exception_Mode := Propagate;
+      Force_Activation : Boolean := True;
+      Relative_Path_To : GNATCOLL.VFS.Virtual_File :=
+         GNATCOLL.VFS.Get_Current_Dir);
+   --  Similar to the above, but the configuration is read from a string.
+   --  This might be convenient when you distribute your application since you
+   --  do not have to provide a default config file.
+   --  You can call this procedure multiple times.
+   --
+   --  Relative_Path_To is used to resolve relative path names in the
+   --  configuration.
+   --
+   --  It is still recommended to parse Parse_Config_File afterwards so that
+   --  you can override the configuration without having to recompile your
+   --  application.
 
    type Output_Proc is access procedure (Str : String);
    procedure Show_Configuration (Output : Output_Proc);
@@ -194,7 +364,7 @@ package GNATCOLL.Traces is
    --  same handle.
    --
    --  If Default is not From_Config, this forces an explicit activation
-   --  status for that handle. To change it, the user must explicitely have
+   --  status for that handle. To change it, the user must explicitly have
    --  a line for this handle in the config file, and this handle is not
    --  impacted by the use of "+" in this config file.
    --
@@ -237,32 +407,35 @@ package GNATCOLL.Traces is
    --         Me : Logger := Create ("Generic" & Unit_Name (Self_Debug));
    --         ...
 
-   Red_Fg     : constant String := ASCII.ESC & "[31m";
-   Green_Fg   : constant String := ASCII.ESC & "[32m";
-   Brown_Fg   : constant String := ASCII.ESC & "[33m";
-   Blue_Fg    : constant String := ASCII.ESC & "[34m";
-   Purple_Fg  : constant String := ASCII.ESC & "[35m";
-   Cyan_Fg    : constant String := ASCII.ESC & "[36m";
-   Grey_Fg    : constant String := ASCII.ESC & "[37m";
-   Default_Fg : constant String := ASCII.ESC & "[39m";
+   subtype Message_Style is GNATCOLL.Terminal.Full_Style;
+   --  Styling applied to the text of a message.
+   --  This has no effect if the stream does not support colors, or if
+   --  the DEBUG.COLORS setting has not been enabled.
 
-   Red_Bg     : constant String := ASCII.ESC & "[41m";
-   Green_Bg   : constant String := ASCII.ESC & "[42m";
-   Brown_Bg   : constant String := ASCII.ESC & "[43m";
-   Blue_Bg    : constant String := ASCII.ESC & "[44m";
-   Purple_Bg  : constant String := ASCII.ESC & "[45m";
-   Cyan_Bg    : constant String := ASCII.ESC & "[46m";
-   Grey_Bg    : constant String := ASCII.ESC & "[47m";
-   Default_Bg : constant String := ASCII.ESC & "[49m";
-   --  The various colors that can be applied to text. You can combine a
-   --  foreground and a background color by concatenating the strings.
+   Use_Default_Style : constant Message_Style :=
+      (Fg    => GNATCOLL.Terminal.Unchanged,
+       Bg    => GNATCOLL.Terminal.Unchanged,
+       Style => GNATCOLL.Terminal.Unchanged);
+   --  Messages will use the default style declared for the handle, no
+   --  overriding takes place
+
+   Default_Block_Style : constant Message_Style :=
+      (Fg    => GNATCOLL.Terminal.Unchanged,
+       Bg    => GNATCOLL.Terminal.Unchanged,
+       Style => GNATCOLL.Terminal.Dim);
 
    procedure Trace
      (Handle : not null access Trace_Handle_Record'Class;
       E      : Ada.Exceptions.Exception_Occurrence;
       Msg    : String := "Unexpected exception: ";
-      Color  : String := Default_Fg);
-   --  Extract information from the given Exception_Occurence and output it
+      Style  : Message_Style := Use_Default_Style);
+   procedure Trace
+     (Handle : not null access Trace_Handle_Record'Class;
+      E      : Ada.Exceptions.Exception_Occurrence;
+      Msg    : String := "Unexpected exception: ";
+      Color  : String)
+     with Obsolescent;
+   --  Extract information from the given Exception_Occurrence and output it
    --  with Msg as a prefix.
    --  You can override the default color used for the stream by specifying the
    --  color parameter.
@@ -279,9 +452,16 @@ package GNATCOLL.Traces is
    procedure Trace
      (Handle   : not null access Trace_Handle_Record'Class;
       Message  : String;
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
+   procedure Trace
+     (Handle   : not null access Trace_Handle_Record'Class;
+      Message  : String;
+      Color    : String;
+      Location : String := GNAT.Source_Info.Source_Location;
+      Entity   : String := GNAT.Source_Info.Enclosing_Entity)
+     with Obsolescent;
    --  Output Message to the stream associated with Handle, along with any
    --  extra information setup by the user (see the default handles below).
    --  If Handle is not active, this subprogram will do nothing.
@@ -312,26 +492,33 @@ package GNATCOLL.Traces is
       Message_If_Success : String := "";
       Raise_Exception    : Boolean := True;
       Location           : String := GNAT.Source_Info.Source_Location;
-      Entity             : String := GNAT.Source_Info.Enclosing_Entity);
-   pragma Inline (Assert);
-   --  If Condition is False, then output Error_Message to Handle.
-   --  Assertion_Error is raised if Condition is False and Raise_Exception is
-   --  True.
+      Entity             : String := GNAT.Source_Info.Enclosing_Entity)
+    with Inline;
+   --  Check that Condition is true.
+   --  This subprogram does nothing if Handle is not active.
+   --  If Condition is False:
+   --     * Error_Message is output to a handle named  Handle & ".EXCEPTIONS"
+   --       just like an exception would be. This means that in general the
+   --       message will be displayed in red.
+   --       However, do not use this procedure just to get a red message.
+   --       Instead use a standard Trace and specify the Style, or configure
+   --       Handle to have red messages by default.
+   --     * In addition, if Raise_Exception is true then an Assertion_Error
+   --       exception is raised.
    --
-   --  Condition is not tested if Handle is not active.
-   --  Message_If_Success is logged if Condition is True and the message
-   --  is not the empty string.
+   --  If Condition is True:
+   --     * Message_If_Success is output to Handle, if it isn't empty.
 
    procedure Increase_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    procedure Decrease_Indent
      (Handle   : access Trace_Handle_Record'Class := null;
       Msg      : String := "";
-      Color    : String := Default_Fg;
+      Style    : Message_Style := Use_Default_Style;
       Location : String := GNAT.Source_Info.Source_Location;
       Entity   : String := GNAT.Source_Info.Enclosing_Entity);
    --  Change the indentation level for traces with the same output stream.
@@ -367,9 +554,9 @@ package GNATCOLL.Traces is
    function Active
       (Handle : not null access Trace_Handle_Record'Class) return Boolean
       is (Debug_Mode and then Is_Active (Handle)) with Inline;
-   --  Return True if traces for Handle are actived.
+   --  Return True if traces for Handle are activated.
    --  This function can be used to avoid the evaluation of complex
-   --  expressions in case traces are not actived, as in the following
+   --  expressions in case traces are not active, as in the following
    --  code:
    --     if Active (Handle) then
    --        Trace (Handle, Message & Expensive_Computation);
@@ -397,7 +584,7 @@ package GNATCOLL.Traces is
        Message  : String := "";
        Location : String := GNAT.Source_Info.Source_Location;
        Entity   : String := GNAT.Source_Info.Enclosing_Entity;
-       Color    : String := Default_Fg)
+       Style    : Message_Style := Default_Block_Style)
       return Block_Logger;
    --  An object used to trace execution of blocks.
    --  This is a controlled object, which you should create first in your
@@ -427,9 +614,9 @@ package GNATCOLL.Traces is
    --  the compiler that the variable is unused, and is only necessary if you
    --  are compiling with -gnatwa or -gnatwm.
    --
-   --  Message can be used to display extra information. For efficiency reaons,
-   --  it is not recommended to build the string dynamically to display the
-   --  parameter of the enclosing subprograms, or perhaps as:
+   --  Message can be used to display extra information. For efficiency
+   --  reasons, it is not recommended to build the string dynamically to
+   --  display the parameter of the enclosing subprograms, or perhaps as:
    --
    --       procedure Foo (A, B, C : Integer) is
    --          Block_Me : constant Block_Logger := Create
@@ -547,72 +734,6 @@ package GNATCOLL.Traces is
    ----------------
    -- Decorators --
    ----------------
-   --  The following decorators are predefined.
-   --  They are used to output additional information with each log message,
-   --  and can be activated through the configuration file as usual.
-   --
-   --  "DEBUG.ABSOLUTE_TIME"
-   --  If this handle is activated, then the absolute time will be added to the
-   --  output, if the stream supports it (syslog does not)
-
-   --  "DEBUG.MICRO_TIME"
-   --  If this handle is activated, the absolute time will be displayed using
-   --  micro-seconds resolution, instead of just seconds.
-
-   --  "DEBUG.ABSOLUTE_DATE"
-   --  If this handle is activated, then the absolute date will be added to the
-   --  output, if the stream supports it (syslog does not)
-
-   --  "DEBUG.ELAPSED_TIME"
-   --  If this handle is activated, then the elapsed time since the last
-   --  call to Trace for this handler will be displayed.
-
-   --  "DEBUG.STACK_TRACE"
-   --  If this handle is activated, then the stack trace will be displayed.
-
-   --  "DEBUG.LOCATION"
-   --  If this is activated, then the location of the call to Trace is
-   --  displayed. Note that, contrary to DEBUG.STACK_TRACE, this works on
-   --  all targets, and even if the executable wasn't compiled with debug
-   --  information.
-
-   --  "DEBUG.COLORS"
-   --  If this handle is activated, then the messages will use colors to
-   --  separate the actual message from the information output in the
-   --  stream, if the latter supports color output
-
-   --  "DEBUG.ENCLOSING_ENTITY"
-   --  If this handle is activated, the name of the enclosing entity at the
-   --  location of the call to Trace will be displayed.
-
-   --  "DEBUG.COUNT"
-   --  If this handle is actived, two counters are associated with each output
-   --  trace: one of them is unique for the handle, the other is unique in the
-   --  whole application life. These can for instance be used to set
-   --  conditional breakpoints for a specific trace (break on traces.Log or
-   --  traces.Trace, and check the value of Handle.Count
-
-   --  "DEBUG.MEMORY"
-   --  This decorator will show the size of resident memory for the
-   --  application, as well as the peek size. This takes into account memory
-   --  allocated from any language, C, Ada,.. and is queries from the
-   --  operating system).
-   --  It also shows a ">" or "<" to indicate whether memory use increased or
-   --  not.
-
-   --  "DEBUG.ADA_MEMORY"
-   --  This is similar to DEBUG.MEMORY, but only displays memory allocated
-   --  from Ada (provided you have setup GNATCOLL.Memory to become the default
-   --  allocator for your application).
-
-   --  "DEBUG.FINALIZE_TRACES"   (default: active)
-   --  If deactivated, the trace handles will never be freed when the program
-   --  is finalized by the compiler. This is mostly for debugging purposes.
-
-   --  "DEBUG.SPLIT_LINES"  (default: true)
-   --  Whether long messages should be split at each ASCII.LF character. When
-   --  we do this, the trace handle name and decorators are replicated at the
-   --  beginning of each followup line. This results in a slow down.
 
    type Trace_Decorator_Record is new Trace_Handle_Record with private;
    type Trace_Decorator is access all Trace_Decorator_Record'Class;
@@ -643,7 +764,7 @@ package GNATCOLL.Traces is
    --
    --  When displayed in the log, a line looks like:
    --
-   --  <prefix_decorator>[HANDLE_NAME] <precorator> MESSAGE </postdecorator>
+   --  <prefix_decorator>[HANDLE_NAME] <predecorator> MESSAGE </postdecorator>
    --
    --  The prefix decorator is in charge of displaying blank spaces to
    --  indent the line (see Increase_Indent and Decrease_Indent). But you
@@ -698,6 +819,7 @@ private
    record
       Me            : Logger;
       Loc           : GNAT.Strings.String_Access;
+      Style         : Message_Style;
    end record;
    overriding procedure Finalize (Self : in out Block_Logger);
 
@@ -713,6 +835,9 @@ private
       --  the first time it is needed.
 
       Count             : aliased Atomic_Counter;
+
+      Default_Style     : Message_Style;
+
       Finalize          : Boolean;
       Active            : Boolean;
       Forced_Active     : Boolean;

@@ -237,6 +237,15 @@ package body GNATCOLL.Terminal is
    end Has_Colors;
 
    ---------------------
+   -- Has_ANSI_Colors --
+   ---------------------
+
+   function Has_ANSI_Colors (Self : Terminal_Info) return Boolean is
+   begin
+      return Self.Colors = ANSI_Sequences;
+   end Has_ANSI_Colors;
+
+   ---------------------
    -- Win_Set_Console --
    ---------------------
 
@@ -290,6 +299,46 @@ package body GNATCOLL.Terminal is
       Set_Color (Self, Term, Unchanged, Unchanged, Style);
    end Set_Style;
 
+   -----------------------
+   -- Get_ANSI_Sequence --
+   -----------------------
+
+   function Get_ANSI_Sequence (Style : Full_Style) return String is
+   begin
+      return
+         (case Style.Style is
+             when Unchanged => "",
+             when Bright    => ASCII.ESC & "[1m",
+             when Dim       => ASCII.ESC & "[2m",
+             when Normal    => ASCII.ESC & "[22m",
+             when Reset_All => ASCII.ESC & "[0m"
+         ) &
+         (case Style.Fg is
+             when Unchanged => "",
+             when Black     => ASCII.ESC & "[30m",
+             when Red       => ASCII.ESC & "[31m",
+             when Green     => ASCII.ESC & "[32m",
+             when Yellow    => ASCII.ESC & "[33m",
+             when Blue      => ASCII.ESC & "[34m",
+             when Magenta   => ASCII.ESC & "[35m",
+             when Cyan      => ASCII.ESC & "[36m",
+             when Grey      => ASCII.ESC & "[37m",
+             when Reset     => ASCII.ESC & "[39m"
+         ) &
+         (case Style.Bg is
+             when Unchanged => "",
+             when Black     => ASCII.ESC & "[40m",
+             when Red       => ASCII.ESC & "[41m",
+             when Green     => ASCII.ESC & "[42m",
+             when Yellow    => ASCII.ESC & "[43m",
+             when Blue      => ASCII.ESC & "[44m",
+             when Magenta   => ASCII.ESC & "[45m",
+             when Cyan      => ASCII.ESC & "[46m",
+             when Grey      => ASCII.ESC & "[47m",
+             when Reset     => ASCII.ESC & "[49m"
+          );
+   end Get_ANSI_Sequence;
+
    ---------------
    -- Set_Color --
    ---------------
@@ -308,39 +357,9 @@ package body GNATCOLL.Terminal is
             null;
 
          when ANSI_Sequences =>
-            case Style is
-               when Unchanged => null;
-               when Bright    => Put (Term, ASCII.ESC & "[1m");
-               when Dim       => Put (Term, ASCII.ESC & "[2m");
-               when Normal    => Put (Term, ASCII.ESC & "[22m");
-               when Reset_All => Put (Term, ASCII.ESC & "[0m");
-            end case;
-
-            case Foreground is
-               when Unchanged => null;
-               when Black     => Put (Term, ASCII.ESC & "[30m");
-               when Red       => Put (Term, ASCII.ESC & "[31m");
-               when Green     => Put (Term, ASCII.ESC & "[32m");
-               when Yellow    => Put (Term, ASCII.ESC & "[33m");
-               when Blue      => Put (Term, ASCII.ESC & "[34m");
-               when Magenta   => Put (Term, ASCII.ESC & "[35m");
-               when Cyan      => Put (Term, ASCII.ESC & "[36m");
-               when Grey      => Put (Term, ASCII.ESC & "[37m");
-               when Reset     => Put (Term, ASCII.ESC & "[39m");
-            end case;
-
-            case Background is
-               when Unchanged => null;
-               when Black     => Put (Term, ASCII.ESC & "[40m");
-               when Red       => Put (Term, ASCII.ESC & "[41m");
-               when Green     => Put (Term, ASCII.ESC & "[42m");
-               when Yellow    => Put (Term, ASCII.ESC & "[43m");
-               when Blue      => Put (Term, ASCII.ESC & "[44m");
-               when Magenta   => Put (Term, ASCII.ESC & "[45m");
-               when Cyan      => Put (Term, ASCII.ESC & "[46m");
-               when Grey      => Put (Term, ASCII.ESC & "[47m");
-               when Reset     => Put (Term, ASCII.ESC & "[49m");
-            end case;
+            Put (Term,
+                 Get_ANSI_Sequence
+                    ((Fg => Foreground, Bg => Background, Style => Style)));
 
          when WIN32_Sequences =>
             if Style = Reset_All then
