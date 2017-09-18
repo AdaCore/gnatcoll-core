@@ -599,11 +599,17 @@ begin
      (Spec_File,
       "pragma Warnings (Off, ""no entities of * are referenced"");");
    Put_Line
+     (Spec_File,
+      "pragma Warnings (Off, ""use clause for package * has no effect"");");
+   Put_Line
      (Spec_File, "with GNATCOLL.SQL_Fields; use GNATCOLL.SQL_Fields;");
    For_Each_Table (Schema, Print_Withs'Access);
    Put_Line
      (Spec_File,
       "pragma Warnings (On, ""no entities of * are referenced"");");
+   Put_Line
+     (Spec_File,
+      "pragma Warnings (On, ""use clause for package * has no effect"");");
 
    if Include_Database_Create then
       Put_Line (Spec_File, "with GNATCOLL.SQL.Exec;");
