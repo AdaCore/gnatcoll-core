@@ -523,7 +523,7 @@ package body GNATCOLL.SQL.Exec is
    begin
       for P in Params'Range loop
          Append (Result, ", ");
-         Append (Result, Params (P).Get.Image (Format));
+         Append (Result, Params (P).Image (Format));
       end loop;
 
       return To_String (Result);

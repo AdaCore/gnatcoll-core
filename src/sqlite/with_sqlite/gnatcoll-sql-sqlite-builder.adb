@@ -594,7 +594,7 @@ package body GNATCOLL.SQL.Sqlite.Builder is
 
          else
             Tmp_Data (P) := new String'
-              (Params (P).Get.Image (Connection.all));
+              (Params (P).Image (Connection.all));
             Need_Free (P) := True;
             Bind_Text (Stmt, P, Tmp_Data (P).all'Address, Tmp_Data (P)'Length);
          end if;

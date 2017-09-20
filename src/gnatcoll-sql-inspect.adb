@@ -1034,7 +1034,7 @@ package body GNATCOLL.SQL.Inspect is
 
       elsif Typ in Field_Mapping_Money'Class then
          Param := +T_Money'Value (Value);
-         Val := new String'(Param.Get.Image (DB.all));
+         Val := new String'(Param.Image (DB.all));
 
       else
          if Has_Xref then

@@ -243,7 +243,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          begin
             for P in Params'Range loop
                Vals (size_t (P - Params'First)) :=
-                 CS.New_String (Params (P).Get.Image (Format));
+                 CS.New_String (Params (P).Image (Format));
             end loop;
 
             R := PQexecParams
@@ -323,7 +323,7 @@ package body GNATCOLL.SQL.Postgres.Gnade is
          begin
             for P in Vals'Range loop
                Vals (P) := CS.New_String
-                 (Params (Integer (P) + Params'First).Get.Image (Format));
+                 (Params (Integer (P) + Params'First).Image (Format));
             end loop;
 
             R := PQexecPrepared

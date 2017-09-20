@@ -160,7 +160,7 @@ package GNATCOLL.SQL_Impl is
    --  In general, this will be done via a call to Format.Parameter_String
    --  unless you do not need to support multiple DBMS.
 
-   function Image
+   function Internal_Image
       (Self   : SQL_Parameter_Type;
        Format : Formatter'Class) return String is ("<none>");
    --  Marshall the parameter to a string, to pass it to the DBMS.
@@ -169,7 +169,14 @@ package GNATCOLL.SQL_Impl is
    procedure Free_Dispatch (Self : in out SQL_Parameter_Type'Class);
    package Parameters is new GNATCOLL.Refcount.Shared_Pointers
       (SQL_Parameter_Type'Class, Free_Dispatch);
-   subtype SQL_Parameter_Base is Parameters.Ref;
+   type SQL_Parameter_Base is new Parameters.Ref with null record;
+
+   function Image
+      (Self   : SQL_Parameter_Base;
+       Format : Formatter'Class) return String
+   is (if Self.Is_Null then "NULL" else Internal_Image (Self.Get, Format));
+   --  Marshall the parameter to a string, to pass it to the DBMS.
+   --  Null parameter show as NULL to avoid Constraint_Error.
 
    generic
       type Ada_Type is private;
@@ -190,7 +197,7 @@ package GNATCOLL.SQL_Impl is
           Index  : Positive;
           Format : Formatter'Class) return String
          is (Format.Parameter_String (Index, SQL_Type));
-      overriding function Image
+      overriding function Internal_Image
          (Self   : SQL_Parameter;
           Format : Formatter'Class) return String
          is (Image (Format, Self.Val, Quote => False));
@@ -219,7 +226,7 @@ package GNATCOLL.SQL_Impl is
        Index  : Positive;
        Format : Formatter'Class) return String
       is (Format.Parameter_String (Index, "text"));
-   overriding function Image
+   overriding function Internal_Image
       (Self   : SQL_Parameter_Text;
        Format : Formatter'Class) return String
       is (To_String (Self));
@@ -232,7 +239,7 @@ package GNATCOLL.SQL_Impl is
        Index  : Positive;
        Format : Formatter'Class) return String
       is (Format.Parameter_String (Index, "text"));
-   overriding function Image
+   overriding function Internal_Image
       (Self   : SQL_Parameter_Character;
        Format : Formatter'Class) return String
       is (String'(1 .. 1 => Self.Char_Val));

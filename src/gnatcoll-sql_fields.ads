@@ -67,7 +67,7 @@ package GNATCOLL.SQL_Fields is
       Index  : Positive;
       Format : Formatter'Class) return String
      is (Format.Parameter_String (Index, "json"));
-   overriding function Image
+   overriding function Internal_Image
      (Self   : SQL_Parameter_Json;
       Format : Formatter'Class) return String
      is (Json_To_SQL (Format, To_String (Self), Quote => False));
@@ -102,7 +102,7 @@ package GNATCOLL.SQL_Fields is
       Index  : Positive;
       Format : Formatter'Class) return String
      is (Format.Parameter_String (Index, "xml"));
-   overriding function Image
+   overriding function Internal_Image
      (Self   : SQL_Parameter_XML;
       Format : Formatter'Class) return String
      is (XML_To_SQL (Format, To_String (Self), Quote => False));
