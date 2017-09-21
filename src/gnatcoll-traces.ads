@@ -784,13 +784,13 @@ package GNATCOLL.Traces is
    --  Register a global decorator that will apply to all existing
    --  Trace_Handle. The decorator only has an effect when it is active.
    --  Here is an example:
-   --     type My_Decorator is new Trace_Handle_Record with null record;
+   --     type My_Decorator is new Trace_Decorator_Record with null record;
    --     overriding procedure Before_Message
    --        (Self    : in out My_Decorator;
    --         Handle  : not null Logger;
    --         Message : in out Msg_Strings.XString)  is
    --     begin
-   --        Append (Message, "Some info");
+   --        Msg_Strings.Append (Message, "Some info");
    --     end Before_Message;
    --
    --     Add_Global_Decorator (new My_Decorator, "MY_DECO");
