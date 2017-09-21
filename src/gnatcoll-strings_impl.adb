@@ -489,6 +489,10 @@ package body GNATCOLL.Strings_Impl is
          New_Size : constant Natural := Current + Str'Length;
          F        : Natural;
       begin
+         if Str'Length = 0 then
+            return;
+         end if;
+
          --  Make sure we have enough space, possibly by moving
          --  characters back to position 1, or by converting to
          --  a big string, or resizing the current buffer.
@@ -549,8 +553,15 @@ package body GNATCOLL.Strings_Impl is
          B : Char_Array;
          L : Natural;
       begin
-         Get_String (Str, B, L);
-         Self.Append (Char_String (B (1 .. L)));
+         if Self.Length = 0 then
+            --  Share the string instead of malloc+copy
+            Self := Str;
+         else
+            Get_String (Str, B, L);
+            if L /= 0 then
+               Self.Append (Char_String (B (1 .. L)));
+            end if;
+         end if;
       end Append;
 
       ---------
