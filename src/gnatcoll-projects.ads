@@ -1452,7 +1452,8 @@ package GNATCOLL.Projects is
      (Package_Name, Attribute_Name : String) return Attribute_Pkg_String;
    function Build
      (Package_Name, Attribute_Name : String) return Attribute_Pkg_List;
-   --  Build an attribute reference
+   --  Build an attribute reference. To get a top-level attribute reference,
+   --  Package_Name should be an empty string.
 
    Builder_Package  : constant String;
    Compiler_Package : constant String;
