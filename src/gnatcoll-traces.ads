@@ -407,22 +407,88 @@ package GNATCOLL.Traces is
    --         Me : Logger := Create ("Generic" & Unit_Name (Self_Debug));
    --         ...
 
+   Red_Fg    : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Red,
+       Bg    => Terminal.Unchanged));
+   Green_Fg  : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Green,
+       Bg    => Terminal.Unchanged));
+   Brown_Fg  : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Yellow,
+       Bg    => Terminal.Unchanged));
+   Blue_Fg   : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Blue,
+       Bg    => Terminal.Unchanged));
+   Purple_Fg : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Magenta,
+       Bg    => Terminal.Unchanged));
+   Cyan_Fg   : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Unchanged,
+       Fg    => Terminal.Cyan,
+       Bg    => Terminal.Unchanged));
+   Grey_Fg   : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Grey,
+       Bg    => Terminal.Unchanged));
+   Default_Fg   : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Unchanged,
+       Fg    => Terminal.Reset,
+       Bg    => Terminal.Unchanged));
+
+   Red_Bg    : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Unchanged,
+       Bg    => Terminal.Red));
+   Green_Bg  : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Unchanged,
+       Bg    => Terminal.Green));
+   Brown_Bg  : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Unchanged,
+       Bg    => Terminal.Yellow));
+   Blue_Bg   : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Unchanged,
+       Bg    => Terminal.Blue));
+   Purple_Bg : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Unchanged,
+       Bg    => Terminal.Magenta));
+   Cyan_Bg   : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Unchanged,
+       Bg    => Terminal.Cyan));
+   Grey_Bg   : constant String := Terminal.Get_ANSI_Sequence
+     ((Style => Terminal.Reset_All,
+       Fg    => Terminal.Unchanged,
+       Bg    => Terminal.Grey));
+   --  The various colors that can be applied to text. You can combine a
+   --  foreground and a background color by concatenating the strings.
+   --  !!! This constants provided for backward compartibility. Use Style
+   --  parameter instead in new applications.
+
    subtype Message_Style is GNATCOLL.Terminal.Full_Style;
    --  Styling applied to the text of a message.
    --  This has no effect if the stream does not support colors, or if
    --  the DEBUG.COLORS setting has not been enabled.
 
    Use_Default_Style : constant Message_Style :=
-      (Fg    => GNATCOLL.Terminal.Unchanged,
-       Bg    => GNATCOLL.Terminal.Unchanged,
-       Style => GNATCOLL.Terminal.Unchanged);
+     (Fg    => GNATCOLL.Terminal.Unchanged,
+      Bg    => GNATCOLL.Terminal.Unchanged,
+      Style => GNATCOLL.Terminal.Unchanged);
    --  Messages will use the default style declared for the handle, no
    --  overriding takes place
 
    Default_Block_Style : constant Message_Style :=
-      (Fg    => GNATCOLL.Terminal.Unchanged,
-       Bg    => GNATCOLL.Terminal.Unchanged,
-       Style => GNATCOLL.Terminal.Dim);
+     (Fg    => GNATCOLL.Terminal.Unchanged,
+      Bg    => GNATCOLL.Terminal.Unchanged,
+      Style => GNATCOLL.Terminal.Dim);
 
    procedure Trace
      (Handle : not null access Trace_Handle_Record'Class;

@@ -73,18 +73,6 @@ package body GNATCOLL.Traces is
    A_Zero : aliased constant String := "a" & ASCII.NUL;
    W_Zero : aliased constant String := "w" & ASCII.NUL;
 
-   Brown_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
-      ((Style => GNATCOLL.Terminal.Reset_All,
-        Fg    => GNATCOLL.Terminal.Yellow,
-        Bg    => GNATCOLL.Terminal.Unchanged));
-   Cyan_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
-      ((Style => GNATCOLL.Terminal.Unchanged,
-        Fg    => GNATCOLL.Terminal.Cyan,
-        Bg    => GNATCOLL.Terminal.Unchanged));
-   Purple_Fg  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
-      ((Style => GNATCOLL.Terminal.Reset_All,
-        Fg    => GNATCOLL.Terminal.Magenta,
-        Bg    => GNATCOLL.Terminal.Unchanged));
    Reset_All  : constant String := GNATCOLL.Terminal.Get_ANSI_Sequence
       ((Style => GNATCOLL.Terminal.Reset_All,
         Fg    => GNATCOLL.Terminal.Unchanged,
