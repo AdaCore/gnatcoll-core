@@ -35,6 +35,7 @@ with Ada.Unchecked_Deallocation;
 
 with GNAT.Calendar.Time_IO;     use GNAT.Calendar.Time_IO;
 with GNAT.OS_Lib;               use GNAT.OS_Lib;
+with GNAT.Regpat;               use GNAT.Regpat;
 with GNAT.Traceback;            use GNAT.Traceback;
 
 with Interfaces.C_Streams;      use Interfaces.C_Streams;
@@ -1668,49 +1669,8 @@ package body GNATCOLL.Traces is
       Handle : Trace_Handle;
       Dec    : Trace_Decorator;
 
-      procedure Skip_Spaces (Skip_Newline : Boolean := True);
-      --  Skip the spaces (including possibly newline), and leave Index on the
-      --  first non blank character.
-
-      procedure Skip_To_Newline (Stop_At_First_Blank : Boolean := False);
-      --  Set Index after the last significant character on the line (either
-      --  the ASCII.LF or after the last character in the buffer).
-
       procedure Create_Decorators;
       --  Create all default decorators, if not done yet
-
-      -----------------
-      -- Skip_Spaces --
-      -----------------
-
-      procedure Skip_Spaces (Skip_Newline : Boolean := True) is
-      begin
-         while Index <= Config'Last
-           and then (Config (Index) = ' '
-                     or else (Config (Index) = ASCII.LF
-                              and then Skip_Newline)
-                     or else Config (Index) = ASCII.CR
-                     or else Config (Index) = ASCII.HT)
-         loop
-            Index := Index + 1;
-         end loop;
-      end Skip_Spaces;
-
-      ---------------------
-      -- Skip_To_Newline --
-      ---------------------
-
-      procedure Skip_To_Newline (Stop_At_First_Blank : Boolean := False) is
-      begin
-         while Index <= Config'Last
-           and then Config (Index) /= ASCII.LF
-           and then (not Stop_At_First_Blank
-                     or else (Config (Index) /= ' '
-                              and then Config (Index) /= ASCII.HT))
-         loop
-            Index := Index + 1;
-         end loop;
-      end Skip_To_Newline;
 
       -----------------------
       -- Create_Decorators --
@@ -1772,6 +1732,35 @@ package body GNATCOLL.Traces is
          end if;
       end Create_Decorators;
 
+      S : constant String := "[ \t]*";
+
+      Line_Re : constant GNAT.Regpat.Pattern_Matcher := GNAT.Regpat.Compile
+         ("^(?:"
+
+          & "([^\s=:>+-]+)" & S           --  1 = name
+          & "(?:=" & S & "(yes|no))?" & S --  2 = active?
+          & "(:[^\s>]+)?" & S             --  3 = options
+          & "(?:>" & S & "(\S+))?" & S    --  4 = stream
+
+          & "|"
+          & "(>\S+)?" & S                 --  5 = default stream
+
+          & "|"
+          & "(\+)" & S                    --  6 = "+"
+
+          & ")?"                          --  line can be empty
+          & S & "(?:--.*)?"               --  end of line comments
+          & "$",
+          Multiple_Lines);
+      Group_Name            : constant := 1;
+      Group_Active          : constant := 2;
+      Group_Options         : constant := 3;
+      Group_Stream          : constant := 4;
+      Group_Default_Stream  : constant := 5;
+      Group_All             : constant := 6;
+
+      M : GNAT.Regpat.Match_Array (0 .. 6);
+
    begin
       if not Debug_Mode then
          return;
@@ -1786,190 +1775,99 @@ package body GNATCOLL.Traces is
       if Config /= "" then
          Index := Config'First;
 
-         loop
-            Skip_Spaces;
-            exit when Index > Config'Last;
+         while Index <= Config'Last loop
+            Match (Line_Re, Config, Data_First => Index, Matches => M);
+            exit when M (0) = No_Match;
+            Index := M (0).Last + 1;
 
-            if Index + 1 <= Config'Last
-              and then String (Config (Index .. Index + 1)) = "--"
-            then
-               Skip_To_Newline;
+            if M (0).Last < M (0).First then
+               Index := M (0).First + 1;
 
-            else
-               case Config (Index) is
-                  when '>' =>
+            elsif M (Group_All) /= No_Match then
+               Global.Default_Activation := True;
+               Handle := Global.Handles_List;
+               while Handle /= null loop
+                  if not Handle.Forced_Active then
+                     Set_Active (Handle, True);
+
+                     --  A later declaration of the stream in the code
+                     --  should not be allowed to reset Active to False
+                     Handle.Forced_Active := True;
+                  end if;
+                  Handle := Handle.Next;
+               end loop;
+
+            elsif M (Group_Default_Stream) /= No_Match then
+               Set_Default_Stream
+                  (Config (M (Group_Default_Stream).First ..
+                           M (Group_Default_Stream).Last),
+                   Config_File => Relative_Path_To);
+
+            elsif M (Group_Name) /= No_Match then
+               declare
+                  Active : constant Default_Activation_Status :=
+                     (if M (Group_Active) = No_Match
+                        or else Config (M (Group_Active).First ..
+                                        M (Group_Active).Last) /= "no"
+                      then On
+                      else Off);
+                  Stream : Trace_Stream := null;
+                  Style  : Message_Style := Default_Style;
+               begin
+                  --  Do we have options for this handle ?
+
+                  if M (Group_Options) /= No_Match then
                      declare
-                        Save   : constant Integer := Index;
+                        use GNATCOLL.Terminal;
+                        Options : String_List_Access := Split
+                           (Config (M (Group_Options).First ..
+                                    M (Group_Options).Last),
+                            ':');
                      begin
-                        Skip_To_Newline;
-                        if Config (Index - 1) = ASCII.CR then
-                           Set_Default_Stream
-                              (Config (Save .. Index - 2),
-                               Config_File => Relative_Path_To);
-                        else
-                           Set_Default_Stream
-                              (Config (Save .. Index - 1),
-                               Config_File => Relative_Path_To);
-                        end if;
-                     end;
-
-                  when '+' =>
-                     Global.Default_Activation := True;
-                     Skip_To_Newline;
-                     Handle := Global.Handles_List;
-                     while Handle /= null loop
-                        if not Handle.Forced_Active then
-                           Set_Active (Handle, True);
-
-                           --  A later declaration of the stream in the code
-                           --  should not be allowed to reset Active to False
-                           Handle.Forced_Active := True;
-                        end if;
-                        Handle := Handle.Next;
-                     end loop;
-
-                  when others =>
-                     --  Declaring a handle:
-                     --      NAME=yes :option1:option2 >stream  -- comment
-
-                     declare
-                        Bol           : constant Natural := Index;
-                        Name_End      : Natural := 0;
-                        Options_Start : Natural := 0;
-                        Options_End   : Natural := 0;
-                        Stream_Start  : Natural := 0;
-                        Stream_End    : Natural := 0;
-                        Active : Default_Activation_Status := From_Config;
-                        Stream : Trace_Stream := null;
-                        Style  : Message_Style := Default_Style;
-                     begin
-                        loop
-                           --  End of line/file, or start of comment ?
-                           if Index > Config'Last
-                              or else (Config (Index) = '-'
-                                 and then Index < Config'Last
-                                 and then Config (Index + 1) = '-')
-                              or else Config (Index) = ASCII.LF
-                              or else Config (Index) = ASCII.CR
-                           then
-                              if Stream_Start /= 0 then
-                                 Stream_End := Index - 1;
-                              elsif Options_Start /= 0 then
-                                 Options_End := Index - 1;
-                              elsif Name_End = 0 then
-                                 Name_End := Index - 1;
-                              end if;
-
-                              Skip_To_Newline;
-                              exit;
-
-                           --  end of group (name, options, streams)
-                           elsif Config (Index) = ' '
-                              or else Config (Index) = ASCII.HT
-                           then
-                              if Stream_Start /= 0 then
-                                 Stream_End := Index - 1;
-                              elsif Options_Start /= 0 then
-                                 Options_End := Index - 1;
-                              elsif Name_End = 0 then
-                                 Name_End := Index - 1;
-                              end if;
-
-                           --  end of name, start of handle options
-                           elsif Config (Index) = ':'
-                              and then Stream_Start = 0
-                              and then Options_Start = 0
-                           then
-                              if Name_End = 0 then
-                                 Name_End := Index - 1;
-                              end if;
-
-                              Options_Start := Index + 1;
-
-                           --  end of options, start of stream
-                           elsif Config (Index) = '>'
-                              and then Stream_Start = 0
-                           then
-                              if Name_End = 0 then
-                                 Name_End := Index - 1;
-                              elsif Options_End = 0 then
-                                 Options_End := Index - 1;
-                              end if;
-
-                              Stream_Start := Index;
-                           end if;
-
-                           Index := Index + 1;
-                        end loop;
-
-                        --  Is this active ?
-
-                        Active := On;
-                        for J in Bol .. Name_End loop
-                           if Config (J) = '=' then
-                              Active := (
-                                 if Config (J + 1 .. Name_End) /= "no" then
-                                    On
-                                 else
-                                    Off);
-                              Name_End := J - 1;
-                              exit;
+                        for Opt of Options.all loop
+                           if Starts_With (Opt.all, "fg=") then
+                              Style.Fg := ANSI_Color'Value
+                                 (Opt (Opt'First + 3 .. Opt'Last));
+                           elsif Starts_With (Opt.all, "bg=") then
+                              Style.Bg := ANSI_Color'Value
+                                 (Opt (Opt'First + 3 .. Opt'Last));
+                           elsif Starts_With (Opt.all, "style=") then
+                              Style.Style := ANSI_Style'Value
+                                 (Opt (Opt'First + 6 .. Opt'Last));
                            end if;
                         end loop;
 
-                        --  Do we have options for this handle ?
-
-                        if Options_Start /= 0 then
-                           declare
-                              use GNATCOLL.Terminal;
-                              Options : String_List_Access := Split
-                                 (Config (Options_Start .. Options_End), ':');
-                           begin
-                              for Opt of Options.all loop
-                                 if Starts_With (Opt.all, "fg=") then
-                                    Style.Fg := ANSI_Color'Value
-                                       (Opt (Opt'First + 3 .. Opt'Last));
-                                 elsif Starts_With (Opt.all, "bg=") then
-                                    Style.Bg := ANSI_Color'Value
-                                       (Opt (Opt'First + 3 .. Opt'Last));
-                                 elsif Starts_With (Opt.all, "style=") then
-                                    Style.Style := ANSI_Style'Value
-                                       (Opt (Opt'First + 6 .. Opt'Last));
-                                 end if;
-                              end loop;
-
-                              Free (Options);
-                           end;
-                        end if;
-
-                        --  What stream is this sent to ?
-
-                        if Stream_Start /= 0 then
-                           declare
-                              Save   : Integer := Stream_Start + 1;
-                              Append : Boolean := False;
-                           begin
-                              if Stream_Start + 1 <= Stream_End
-                                 and then Config (Stream_Start + 1) = '>'
-                              then
-                                 Append := True;
-                                 Save := Stream_Start + 2;
-                              end if;
-
-                              Stream := Find_Stream
-                                (Config (Save .. Stream_End),
-                                 Relative_Path_To, Append);
-                           end;
-                        end if;
-
-                        Handle := Create_Internal
-                           (Config (Bol .. Name_End),
-                            From_Config_File => True,
-                            Default          => Active,
-                            Style            => Style,
-                            Stream           => Stream);
+                        Free (Options);
                      end;
-               end case;
+                  end if;
+
+                  --  What stream is this sent to ?
+
+                  if M (Group_Stream) /= No_Match then
+                     declare
+                        Save   : Integer := M (Group_Stream).First;
+                        Append : Boolean := False;
+                     begin
+                        if Save + 1 <= M (Group_Stream).Last
+                           and then Config (Save) = '>'
+                        then
+                           Append := True;
+                           Save := Save + 1;
+                        end if;
+
+                        Stream := Find_Stream
+                          (Config (Save .. M (Group_Stream).Last),
+                           Relative_Path_To, Append);
+                     end;
+                  end if;
+
+                  Handle := Create_Internal
+                     (Config (M (Group_Name).First .. M (Group_Name).Last),
+                      From_Config_File => True,
+                      Default          => Active,
+                      Style            => Style,
+                      Stream           => Stream);
+               end;
             end if;
          end loop;
       end if;
