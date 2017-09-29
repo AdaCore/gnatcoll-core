@@ -319,6 +319,10 @@ package GNATCOLL.Strings_Impl is
       pragma Preelaborable_Initialization (XString);
 
       Null_XString : constant XString;
+      --  This Null_XString is always equal to an empty string. So you
+      --  can use either
+      --       if Str = "" then
+      --  or   if Str = Null_Xstring then
 
       type Unconstrained_Char_Array is
          array (1 .. Natural'Last) of aliased Char_Type;
