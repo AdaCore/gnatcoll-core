@@ -131,47 +131,45 @@ package body GNATCOLL.Terminal is
        Support : Supports_Color)
    is
       Env : String_Access;
+
+      procedure Set_Color_Support;
+      --  Set appropriate color support depend on environment
+
+      -----------------------
+      -- Set_Color_Support --
+      -----------------------
+
+      procedure Set_Color_Support is
+      begin
+         if On_Windows then
+            Env := Getenv ("ANSICON");
+            if Env = null or else Env.all = "" then
+               Self.Colors := WIN32_Sequences;
+            else
+               Self.Colors := ANSI_Sequences;
+            end if;
+            Free (Env);
+         else
+            Self.Colors := ANSI_Sequences;
+         end if;
+      end Set_Color_Support;
+
    begin
       case Support is
          when No =>
             Self.Colors := Unsupported;
 
          when Yes =>
-            if On_Windows then
-               Env := Getenv ("ANSICON");
-               if Env = null or else Env.all = "" then
-                  Self.Colors := WIN32_Sequences;
-               else
-                  Self.Colors := ANSI_Sequences;
-               end if;
-               Free (Env);
-            else
-               Self.Colors := ANSI_Sequences;
-            end if;
+            Set_Color_Support;
 
          when Auto =>
-            if On_Windows then
-               --  This procedure is only called for stdout or stderr
-               Env := Getenv ("ANSICON");
-               if Env = null or else Env.all = "" then
-                  Self.Colors := WIN32_Sequences;
-               else
-                  Self.Colors := ANSI_Sequences;
-               end if;
-               Free (Env);
-
+            if (Self.FD = Stdout and then terminal_has_colors (Standout) /= 0)
+              or else
+               (Self.FD = Stderr and then terminal_has_colors (Standerr) /= 0)
+            then
+               Set_Color_Support;
             else
-               if Self.FD = Stdout
-                  and then terminal_has_colors (Standout) /= 0
-               then
-                  Self.Colors := ANSI_Sequences;
-               elsif Self.FD = Stderr
-                  and then terminal_has_colors (Standerr) /= 0
-               then
-                  Self.Colors := ANSI_Sequences;
-               else
-                  Self.Colors := Unsupported;
-               end if;
+               Self.Colors := Unsupported;
             end if;
       end case;
    end Auto_Detect_Colors;

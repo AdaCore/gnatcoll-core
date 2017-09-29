@@ -18,6 +18,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <wincon.h>
+#include <io.h>
 #else
 #include <unistd.h>
 
@@ -52,7 +53,7 @@ void gnatcoll_set_console_text_attribute(int forStderr, int attrs) {
 
 int gnatcoll_terminal_has_colors(int fd) {
 #ifdef _WIN32
-   return 0;  //  Unix only
+   return _isatty(fd);
 #else
    //  Ideally, we should check the terminfo database and check the
    //  max_colors fields (from the command line, this is done with
