@@ -33,8 +33,6 @@ with GNAT.Strings;               use GNAT.Strings;
 
 package body GNATCOLL.Utils is
 
-   use Ada.Calendar.Time_Zones;
-
    OpenVMS_Host : Boolean := False;
 
    function Count_For_Split
