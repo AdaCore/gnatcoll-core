@@ -421,14 +421,23 @@ package body GNATCOLL.Scripts.Projects is
                Set_Return_Value (Data, Object (J).Full_Name);
             end loop;
          end;
+
       elsif Command = "exec_dir" then
          declare
             Exec_Dir : constant Virtual_File := Project.Executables_Directory;
          begin
             Set_Return_Value (Data, Exec_Dir.Full_Name);
          end;
+
       elsif Command = "target" then
          Data.Set_Return_Value (Project.Get_Target (Default_To_Host => False));
+
+      elsif Command = "artifacts_dir" then
+         declare
+            Dir : constant Virtual_File := Project.Artifacts_Dir;
+         begin
+            Set_Return_Value (Data, Dir.Full_Name);
+         end;
       end if;
    end Project_Queries;
 
@@ -562,6 +571,10 @@ package body GNATCOLL.Scripts.Projects is
         (Repo, "target",
          Class  => Get_Project_Class (Repo),
          Getter => Project_Queries'Access);
+      Register_Command
+        (Repo, "artifacts_dir",
+         Class   => Get_Project_Class (Repo),
+         Handler => Project_Queries'Access);
    end Register_Commands;
 
    ---------------------------------
