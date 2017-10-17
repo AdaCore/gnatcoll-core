@@ -1738,7 +1738,7 @@ package body GNATCOLL.Traces is
 
           & ")?"                          --  line can be empty
           & S & "(?:--.*)?"               --  end of line comments
-          & "$",
+          & "\r?$",
           Multiple_Lines);
       Group_Name            : constant := 1;
       Group_Active          : constant := 2;
