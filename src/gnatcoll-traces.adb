@@ -1633,7 +1633,7 @@ package body GNATCOLL.Traces is
    -- Close --
    -----------
 
-   procedure Close (Stream : in out File_Stream_Record) is
+   overriding procedure Close (Stream : in out File_Stream_Record) is
       Status : int;
       pragma Unreferenced (Status);
    begin
