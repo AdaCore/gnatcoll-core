@@ -741,7 +741,7 @@ package body GNATCOLL.Strings_Impl is
       -- "=" --
       ---------
 
-      function "=" (Left, Right : XString) return Boolean is
+      overriding function "=" (Left, Right : XString) return Boolean is
          B1, B2 : Char_Array;
          L1, L2 : Natural;
       begin

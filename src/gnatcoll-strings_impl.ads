@@ -525,7 +525,7 @@ package GNATCOLL.Strings_Impl is
       ---------------
 
       function "=" (Left : XString;      Right : Char_String) return Boolean;
-      function "=" (Left : XString;      Right : XString) return Boolean;
+      overriding function "=" (Left : XString; Right : XString) return Boolean;
       function "=" (Left : Char_String;  Right : XString) return Boolean
          is (Right = Left);
 
