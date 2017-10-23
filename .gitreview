@@ -1,5 +1,5 @@
 [gerrit]
 host = git.adacore.com
 port = 29418
-project = gnatcoll
+project = gnatcoll-core
 defaultbranch = master
