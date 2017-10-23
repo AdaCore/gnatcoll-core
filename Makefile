@@ -1,164 +1,174 @@
-.PHONY: all examples test clean docs install generate_sources static relocatable shared
+##############################################################################
+##                                                                          ##
+##                              GNATCOLL LIBRARY                            ##
+##                                                                          ##
+##                         Copyright (C) 2017, AdaCore.                     ##
+##                                                                          ##
+## This library is free software;  you can redistribute it and/or modify it ##
+## under terms of the  GNU General Public License  as published by the Free ##
+## Software  Foundation;  either version 3,  or (at your  option) any later ##
+## version. This library is distributed in the hope that it will be useful, ##
+## but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN# ##
+## TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            ##
+##                                                                          ##
+## As a special exception under Section 7 of GPL version 3, you are granted ##
+## additional permissions described in the GCC Runtime Library Exception,   ##
+## version 3.1, as published by the Free Software Foundation.               ##
+##                                                                          ##
+## You should have received a copy of the GNU General Public License and    ##
+## a copy of the GCC Runtime Library Exception along with this program;     ##
+## see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    ##
+## <http://www.gnu.org/licenses/>.                                          ##
+##                                                                          ##
+##############################################################################
 
-## Put this first so that it is the default make target
-all:
+# Makefile targets
+# ----------------
+#
+# Setup:                   make [VAR=VALUE] setup (see below)
+# Build:                   make
+# Install:                 make install
 
-include Makefile.conf
+# Variables which can be set:
+#
+# General:
+#
+#   prefix        : root install directory
+#   ENABLE_SHARED : yes / no (or empty)
+#   BUILD         : DEBUG PROD
+#   PROCESSORS    : nb parallel compilations (0 to use all cores)
+#   TARGET        : target triplet for cross-compilation
+#
+# Project specific:
+#
+#   GNATCOLL_MMAP    : whether MMAP is supported (yes/no)
+#                      default is "yes"; has no effect on Windows
+#   GNATCOLL_MADVISE : whether MADVISE is supported (yes/no)
+#                      default is "yes"; has no effect on Windows
+#   GNATCOLL_ATOMICS : atomic model (intrinsic/mutex)
+#                      default is "intrinsic"
 
-ifeq (${BUILDS_SHARED},yes)
-# Additional targets. Builds relocatble first so that the tools are
-# preferably linked statically.
-all: relocatable static tools
-install:  install-clean install_static \
-		install_library_type/relocatable    \
-		install_tools \
-                install_gps_plugin
+# check for out-of-tree build
+SOURCE_DIR := $(dir $(MAKEFILE_LIST))
+ifeq ($(SOURCE_DIR),./)
+  RBD=
+  GNATCOLL_GPR=gnatcoll.gpr
+  MAKEPREFIX=
 else
-all: static tools
-install:  install-clean install_static \
-          install_tools \
-          install_gps_plugin
+  RBD=--relocate-build-tree
+  GNATCOLL_GPR=$(SOURCE_DIR)/gnatcoll.gpr
+  MAKEPREFIX=$(SOURCE_DIR)/
 endif
 
-#######################################################################
-#  build
+HOST   := $(shell gcc -dumpmachine)
+TARGET := $(shell gcc -dumpmachine)
 
-## Builds explicitly the shared or the static libraries
+GNATCOLL_OS := $(if $(findstring darwin,$(TARGET)),osx,unix)
 
-static-pic: build_library_type/static-pic
-
-tools: build_tools/static
-install_tools: install_tools/static
-
-ifeq (${BUILDS_STATIC_PIC},yes)
-static: build_library_type/static build_library_type/static-pic
-install_static: install_library_type/static \
-                install_library_type/static-pic
+ifneq (,$(filter $(findstring mingw,$(TARGET))$(findstring windows,$(TARGET)),mingw windows))
+  prefix := $(dir $(shell cmd /c where gnatls))..
+  GNATCOLL_MMAP := yes
+  GNATCOLL_MADVISE := no
+  GNATCOLL_VERSION := $(shell cmd /c type version_information.)
+  GNATCOLL_OS := windows
 else
-static: build_library_type/static
-install_static: install_library_type/static
+  prefix := $(dir $(shell which gnatls))..
+  GNATCOLL_MMAP := yes
+  GNATCOLL_MADVISE := yes
+  GNATCOLL_VERSION := $(shell cat version_information)))
 endif
 
-shared relocatable: build_library_type/relocatable
+GNATCOLL_ATOMICS := intrinsic
 
-# Build either type of library. The argument (%) is the type of library to build
+BUILD         = PROD
+PROCESSORS    = 0
+BUILD_DIR     =
+ENABLE_SHARED := "yes"
 
-GPRBLD_OPTS=-p -m -j${PROCESSORS} -XLIBRARY_TYPE=$(@F) -XGnatcoll_Build=${Gnatcoll_Build} -XXMLADA_BUILD=$(@F)
+all: build
 
-build_library_type/%: generate_sources
-	@${RM} src/gnatcoll-atomic.adb
+# Load current setup if any
+-include makefile.setup
 
-	@echo "====== Building $(@F) libraries ======"
-	${GPRBUILD} ${GPRBLD_OPTS} -Pgnatcoll_full
-
-build_tools/%: build_library_type/%
-	@echo "====== Building $(@F) tools ======"
-	@# Build the tools (the list is the project\'s Main attribute)
-	@# They are not build as part of the above because only the Main from
-	@# gnatcoll_full.gpr are build. We could use aggregate projects to
-	@# speed things up.
-	${GPRBUILD} ${GPRBLD_OPTS} -q -Psrc/gnatcoll_tools
-
-#######################################################################
-#  install
-
-gprdir=lib/gnat
-GPRINST_OPTS=-p -f --prefix=${prefix} --install-name=gnatcoll \
-	--exec-subdir=${bindir} --project-subdir=${gprdir} -XXMLADA_BUILD=$(@F) \
-	--build-var=LIBRARY_TYPE --build-name=$(@F) -XLIBRARY_TYPE=$(@F)
-
-install-clean:
-ifneq (,$(wildcard $(prefix)/${gprdir}/manifests/gnatcoll))
-	-$(GPRINSTALL) --uninstall -f \
-		--prefix=$(prefix) --project-subdir=${gprdir} gnatcoll
-endif
-
-
-install_library_type/%:
-	@echo "====== Installing $(@F) libraries ======"
-	${GPRINSTALL} -r ${GPRINST_OPTS} -Pgnatcoll_full
-
-install_tools/%:
-	@echo "====== Installing $(@F) tools ======"
-	${GPRINSTALL} --mode=usage ${GPRINST_OPTS} -Psrc/gnatcoll_tools
-
-install_gps_plugin: force
-	mkdir -p $(prefix)/share/gps/plug-ins
-	-(cd distrib/ ; python ./gen_gps.py)
-	(cd distrib/; tar cf - gnatcoll) | \
-          (cd $(prefix)/share/gps/plug-ins ; tar xf -)
-
-# Regenerate part of the sources. Unfortunately, this can be run only after
-# we have build GNATCOLL, and then its tools, even though GNATCOLL itself
-# relies on those generated sources.
-# So this target simply does nothing if gnatcoll_db2ada is not found, in which
-# case we use the checked in sources (which means that changing the dbschema
-# requires to have already built GNATCOLL once before).
-
-generate_sources:
-	-@if [ -f src/obj/gnatcoll_db2ada${EXE} ]; then \
-	   src/obj/gnatcoll_db2ada${EXE} -dbtype=sqlite -dbname=:memory: \
-		-output src/xref.generated \
-		-dbmodel=src/dbschema.txt \
-		-createdb \
-		-adacreate \
-		-api GNATCOLL.Xref.Database \
-		-load=src/initialdata.txt \
-		-enum "f2f_kind,id,name,F2F,Integer" \
-		-enum "e2e_kind,id,name,E2E,Integer"; \
-	   for f in src/xref.generated/*.ad?; do \
-	      tr -d '\r' < $$f > $$f.tmp && mv $$f.tmp $$f; \
-	   done; \
-	fi
-
-examples:
-	${MAKE} -C examples all
-
-SQLITE_DIR=src/sqlite/amalgamation
-sqlite3_shell: $(SQLITE_DIR)/sqlite3_for_gps
-$(SQLITE_DIR)/sqlite3_for_gps: $(SQLITE_DIR)/shell.c $(SQLITE_DIR)/sqlite3.c
-ifeq ($(OS),Windows_NT)
-	-cd $(SQLITE_DIR); gcc -O2 -DSQLITE_OMIT_LOAD_EXTENSION -D__EXTENSIONS__ -o sqlite3_for_gps shell.c sqlite3.c
+# target options for cross-build
+ifeq ($(HOST),$(TARGET))
+  GTARGET=
 else
-	# If we fail to compile, never mind. Some tests will simply be disabled
-	-cd $(SQLITE_DIR); gcc -O2 -DSQLITE_OMIT_LOAD_EXTENSION -D__EXTENSIONS__ -o sqlite3_for_gps shell.c sqlite3.c -lpthread -ldl
+  GTARGET=--target=$(TARGET)
 endif
 
-## Only works after installation, so we should install to a local directory
-## first, so as not to break the users's environment, but still test the
-## actual installation process.
-## However, we do not force a recompilation here for now, so that we can still
-## run the tests on the current binaries, even if we are doing some modifs
-## that are not yet compilable
-test_names=
+ifeq ($(ENABLE_SHARED), yes)
+   LIBRARY_TYPES=static relocatable static-pic
+else
+   LIBRARY_TYPES=static
+endif
 
-local_install: force
-	@${MAKE} prefix=${shell pwd}/local_install install >/dev/null
+GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
+	 -XGNATCOLL_MADVISE=$(GNATCOLL_MADVISE) \
+	 -XGNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS) \
+	 -XGNATCOLL_VERSION=$(GNATCOLL_VERSION) \
+	 -XGNATCOLL_OS=$(GNATCOLL_OS) \
+	 -XBUILD=$(BUILD)
 
-test: sqlite3_shell local_install
-	@${MAKE} test_names="${test_names}" -C testsuite
+# Used to pass extra options to GPRBUILD, like -d for instance
+GPRBUILD_OPTIONS=
 
-test_verbose: local_install
-	@${MAKE} test_names="${test_names}" -C testsuite verbose
+BUILDER=gprbuild -p -m $(GTARGET) $(RBD) -j$(PROCESSORS) $(GPR_VARS) \
+	$(GPRBUILD_OPTIONS)
+INSTALLER=gprinstall -p -f --target=$(TARGET) $(GPR_VARS) \
+	$(RBD) --prefix=$(prefix)
+CLEANER=gprclean -q $(RBD)
+UNINSTALLER=$(INSTALLER) -p -f --install-name=gnatcoll --uninstall
 
-#######################################################################
-#  clean
+#########
+# build #
+#########
 
-## Clean either type of library, based on the value of (%)
+build: $(LIBRARY_TYPES:%=build-%)
 
-GPRCLN_OPTS=-r -q -XLIBRARY_TYPE=$(@F) -XXMLADA_BUILD=$(@F)
+build-%:
+	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* $(GPR_VARS) $(GNATCOLL_GPR)
 
-clean_library/%:
-	-gprclean ${GPRCLN_OPTS} -Pgnatcoll_full
-	@# Separate pass to also remove the Main
-	-gprclean ${GPRCLN_OPTS} -Psrc/gnatcoll_tools
+###########
+# Install #
+###########
 
-clean: clean_library/static clean_library/static-pic clean_library/relocatable
-	-${MAKE} -C testsuite $@
-	-${MAKE} -C docs $@
-	-${MAKE} -C examples $@
+uninstall:
+ifneq (,$(wildcard $(prefix)/share/gpr/manifests/gnatcoll))
+	$(UNINSTALLER) $(GNATCOLL_GPR)
+endif
 
-docs:
-	${MAKE} -C docs html latexpdf
+install: uninstall $(LIBRARY_TYPES:%=install-%)
 
-force:
+install-%:
+	$(INSTALLER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* \
+		--build-name=$* --build-var=LIBRARY_TYPE $(GPR_VARS) $(GNATCOLL_GPR)
+
+###########
+# Cleanup #
+###########
+
+clean: $(LIBRARY_TYPES:%=clean-%)
+
+clean-%:
+	-$(CLEANER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* $(GPR_VARS) $(GNATCOLL_GPR)
+
+#########
+# setup #
+#########
+
+.SILENT: setup
+
+setup:
+	echo "prefix=$(prefix)" > makefile.setup
+	echo "ENABLE_SHARED=$(ENABLE_SHARED)" >> makefile.setup
+	echo "BUILD=$(BUILD)" >> makefile.setup
+	echo "PROCESSORS=$(PROCESSORS)" >> makefile.setup
+	echo "TARGET=$(TARGET)" >> makefile.setup
+	echo "SOURCE_DIR=$(SOURCE_DIR)" >> makefile.setup
+	echo "GNATCOLL_OS=$(GNATCOLL_OS)" >> makefile.setup
+	echo "GNATCOLL_VERSION=$(GNATCOLL_VERSION)" >> makefile.setup
+	echo "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
+	echo "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
+	echo "GNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS)" >> makefile.setup
+

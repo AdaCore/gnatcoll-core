@@ -1,8 +1,0 @@
-with "gnatcoll_gmp";
-
-project GMP_Examples is
-   for Main use ("square_triangular_numbers.adb", "isprime.adb");
-   for Object_Dir use "../obj";
-   for Exec_Dir use ".";
-end GMP_Examples;
-
