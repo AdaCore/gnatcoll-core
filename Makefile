@@ -75,7 +75,7 @@ else
   prefix := $(dir $(shell which gnatls))..
   GNATCOLL_MMAP := yes
   GNATCOLL_MADVISE := yes
-  GNATCOLL_VERSION := $(shell cat version_information)))
+  GNATCOLL_VERSION := $(shell cat version_information)
 endif
 
 GNATCOLL_ATOMICS := intrinsic
