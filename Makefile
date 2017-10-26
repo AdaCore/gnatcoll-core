@@ -48,6 +48,11 @@
 #   GNATCOLL_ATOMICS : atomic model (intrinsic/mutex)
 #                      default is "intrinsic"
 
+# helper programs
+CAT := cat
+ECHO  := echo
+WHICH := which
+
 # check for out-of-tree build
 SOURCE_DIR := $(dir $(MAKEFILE_LIST))
 ifeq ($(SOURCE_DIR),./)
@@ -66,18 +71,16 @@ TARGET := $(shell gcc -dumpmachine)
 GNATCOLL_OS := $(if $(findstring darwin,$(TARGET)),osx,unix)
 
 ifneq (,$(filter $(findstring mingw,$(TARGET))$(findstring windows,$(TARGET)),mingw windows))
-  prefix := $(dir $(shell cmd /c where gnatls))..
   GNATCOLL_MMAP := yes
   GNATCOLL_MADVISE := no
-  GNATCOLL_VERSION := $(shell cmd /c type version_information.)
   GNATCOLL_OS := windows
 else
-  prefix := $(dir $(shell which gnatls))..
   GNATCOLL_MMAP := yes
   GNATCOLL_MADVISE := yes
-  GNATCOLL_VERSION := $(shell cat version_information)
 endif
 
+prefix := $(dir $(shell $(WHICH) gnatls))..
+GNATCOLL_VERSION := $(shell $(CAT) version_information)
 GNATCOLL_ATOMICS := intrinsic
 
 BUILD         = PROD
@@ -160,15 +163,15 @@ clean-%:
 .SILENT: setup
 
 setup:
-	echo "prefix=$(prefix)" > makefile.setup
-	echo "ENABLE_SHARED=$(ENABLE_SHARED)" >> makefile.setup
-	echo "BUILD=$(BUILD)" >> makefile.setup
-	echo "PROCESSORS=$(PROCESSORS)" >> makefile.setup
-	echo "TARGET=$(TARGET)" >> makefile.setup
-	echo "SOURCE_DIR=$(SOURCE_DIR)" >> makefile.setup
-	echo "GNATCOLL_OS=$(GNATCOLL_OS)" >> makefile.setup
-	echo "GNATCOLL_VERSION=$(GNATCOLL_VERSION)" >> makefile.setup
-	echo "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
-	echo "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
-	echo "GNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS)" >> makefile.setup
+	$(ECHO) "prefix=$(prefix)" > makefile.setup
+	$(ECHO) "ENABLE_SHARED=$(ENABLE_SHARED)" >> makefile.setup
+	$(ECHO) "BUILD=$(BUILD)" >> makefile.setup
+	$(ECHO) "PROCESSORS=$(PROCESSORS)" >> makefile.setup
+	$(ECHO) "TARGET=$(TARGET)" >> makefile.setup
+	$(ECHO) "SOURCE_DIR=$(SOURCE_DIR)" >> makefile.setup
+	$(ECHO) "GNATCOLL_OS=$(GNATCOLL_OS)" >> makefile.setup
+	$(ECHO) "GNATCOLL_VERSION=$(GNATCOLL_VERSION)" >> makefile.setup
+	$(ECHO) "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
+	$(ECHO) "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
+	$(ECHO) "GNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS)" >> makefile.setup
 
