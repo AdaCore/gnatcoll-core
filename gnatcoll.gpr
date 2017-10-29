@@ -48,7 +48,6 @@ project GnatColl is
    for Library_Dir
       use "lib/gnatcoll/" & Project'Library_Kind;
    for Library_Name    use Name;
-   for Library_Version use Version;
 
    for Languages use ("Ada", "C");
 
@@ -63,7 +62,6 @@ project GnatColl is
          case Mmap is
             when "yes" =>
                Extra_Switches := ("-DHAVE_MMAP");
-               Extra_Libs := ("-lmman");
                case Madvise is
                   when "yes" =>
                      Extra_Switches := Extra_Switches & ("-DHAVE_MADVISE");
@@ -74,6 +72,17 @@ project GnatColl is
                null;
          end case;
    end case;
+
+   So_Ext := "";
+   case OS is
+      when "windows" =>
+         So_Ext := ".dll";
+      when "osx" =>
+         So_Ext := ".dylib";
+      when others =>
+         So_Ext := ".so";
+   end case;
+   for Library_Version use "lib" & Name & So_Ext & "." & Version;
 
    case Atomics is
       when "intrinsic" =>

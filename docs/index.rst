@@ -1,4 +1,4 @@
-GNAT Reusable Components
+GNATColl Core Components
 ========================
 
 .. toctree::
@@ -23,13 +23,10 @@ GNAT Reusable Components
    geometry
    projects
    refcount
-   readline
    config
    pools
    json
-   iconv
    sql
-   xref
    terminals
    promises
 

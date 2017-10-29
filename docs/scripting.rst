@@ -63,16 +63,14 @@ when new languages are added, since the interface to export subprograms
 and classes to the scripting languages is language-neutral, and will
 automatically export to all known scripting languages.
 
-Support is provided for the following languages:
+The Core component provides support for the following language:
 
 *Shell*
   This is a very simple-minded scripting language, which doesn't provide
   flow-control instructions (:ref:`The_Shell_language`).
 
-*Python*
-  Python (`http://www.python.org <http://www.python.org>`_) is an advanced scripting language
-  that comes with an extensive library. It is fully object-oriented
-  (:ref:`The_Python_language`).
+Optional components add support for other languages, e.g. Python. Please
+refer to the corresponding component's documentation.
 
 
 .. _The_Shell_language:
@@ -159,89 +157,6 @@ language is added to the application. These are
 `Function clear_cache`
   This frees the memory used to store the output of previous commands. Calling
   `%1` afterward will not make sense until further commands are executed.
-
-.. _The_Python_language:
-
-The Python language
--------------------
-
-.. highlight:: python
-.. index:: Python
-
-Python is an interpreted, object-oriented language. See
-`http://www.python.org <http://www.python.org>`_ for more information, including tutorials, on
-this language.
-
-|Note| Python support is optional in GNATColl. If it hasn't been installed
-on your system, GNATColl will be compiled without it, but that
-will not impact applications using GNATColl, since the same packages
-(and the same API therein) are provided in both cases. Of course, if python
-support wasn't compiled in, these packages will do nothing.
-
-.. index:: GNATCOLL.Python
-.. index:: gnatcoll-python.ads
-
-In addition to the API common to all languages (:ref:`Scripts_API`),
-GNATColl also comes with a low-level interface to the python
-library. This interface is available in the :file:`GNATCOLL.Python` package.
-In general, it is much simpler to use the common API rather than this
-specialized one, though, since otherwise you will need to take care of lots
-of details like memory management, conversion to and from python types,...
-
-|Tip| All functions exported to python are available in a specific namespace
-
-All functions exported to python through GNATColl are available in
-a single python module, whose name you must specify when adding support
-for python. This is done to avoid namespace pollution. You can further
-organize the subprograms through python classes to provide more logical
-namespaces.
-
-As in Ada, python lets you use named parameters in subprogram calls,
-and thus let's you change the order of arguments on the command line.
-This is fully supported by GNATColl, although your callbacks will
-need to specify the name of the parameters for this to work fine::
-
-  >>> func_name (arg1, arg2)
-  >>> func_name (arg2=arg2, arg1=arg1)`
-
-Some commands and types are always exported by GNATColl, since they
-are needed by most application, or even internally by GNATColl
-itself.
-
-.. index::  Exception Unexpected_Exception
-
-`Exception Unexpected_Exception`
-
-.. index:: Exception Exception
-
-`Exception Exception`
-
-.. index:: Exception Missing_Arguments
-
-`Exception Missing_Arguments`
-
-.. index:: Exception Invalid_Argument
-
-`Exception Invalid_Argument`
-  A number of exceptions are added automatically, so that the internal
-  state of your application is reflected in python. These are raised on
-  unexpected uncaught Ada exceptions, when your callbacks return explicit
-  errors, or when a function call is missing some arguments.
-
-.. index:: Function exec_in_console
-
-`Function exec_in_console command`
-  This function can be used in your script when you need to modify the
-  contents of the python interpreter itself.
-
-  When you run a python script, all its commands (including the global
-  variables) are within the context of the script. Therefore, you cannot
-  affect variables which are used for instance in the rest of your
-  application or in the python console. With this function, `command`
-  will be executed as if it had been typed in the python console::
-
-    exec_in_console ("sys.ps1 = 'foo'")
-    	=> foo>  # Prompt was changed in the console
 
 
 .. _Classes_exported_to_all_languages:

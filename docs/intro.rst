@@ -17,45 +17,8 @@ including string and text processing, memory management,
 and file handling. Several of the components are
 especially useful in enterprise applications.
 
-The next chapter explains how to build and install GNATColl.
-The remainder of this document then describes the various components that make up
-the collection:
+Bug reports
+-----------
 
-* *Scripts*: Embedding script languages
-
-* *Traces*: Logging information
-
-* *Memory*: Monitoring memory usage
-
-* *Mmap*: Reading and writing files
-
-* *Boyer-Moore*: Searching strings
-
-* *Paragraph filling*: Formatting text
-
-* *Templates*: Generating text
-
-* *Email*: Processing email messages
-
-* *Ravenscar*: Patterns for multitasking
-
-* *Storage Pools*: Controlling memory management
-
-* *VFS*: Manipulating files
-
-* *Tribooleans*: Three-state logic
-
-* *Geometry*: Primitive geometric operations
-
-* *Projects*: Manipulating ``gpr`` files
-
-* *Refcount*: Reference counting
-
-* *Config*: Parsing configuration files
-
-* *Pools*: Controlling access to resources
-
-* *JSON*: Handling JavaScript Object Notation
-
-* *SQL*: Database interface
-
+Please send questions and bug reports to report@adacore.com following
+the same procedures used to submit reports with the GNAT toolset itself.

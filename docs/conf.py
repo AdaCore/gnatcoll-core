@@ -48,10 +48,7 @@ copyright = get_copyright()
 
 def get_version():
     """Extract the version from configure.in"""
-    for line in file("../configure.in").readlines():
-        if line.startswith("AC_INIT"):
-            return line.split(",")[1]
-    raise Exception("Cannot find version number")
+    return file("../version_information").read().strip()
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
