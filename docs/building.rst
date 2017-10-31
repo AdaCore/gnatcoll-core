@@ -31,6 +31,9 @@ General:
 *prefix*
   Location of the installation, the default is the running GNAT installation root.
 
+*INTEGRATED*
+  Treat prefix as compiler installation: yes or no (default). This is so that installed gnatcoll project can later be referenced as a predefined project of this compiler; this adds a normalized target subdir to prefix.
+
 *BUILD*
   Controls the build options : PROD (default) or DEBUG
 
@@ -55,7 +58,7 @@ Module-specific:
   Whether MADVISE: yes (default) or no; this has no effect on Windows where MADVISE functionality is unavailable
 
 *GNATCOLL_ATOMICS*
-Selects atomics model: intrinsic (default) or mutex.
+  Selects atomics model: intrinsic (default) or mutex.
 
 
 .. _Building_GNATColl:
