@@ -797,12 +797,16 @@ package body GNATCOLL.Projects is
       Att : constant Attribute_Pkg_String :=
         Build ("IDE", "Artifacts_Dir");
    begin
-      if Project.Has_Attribute (Att) and then
-        Attribute_Value (Project, Att) /= ""
+      if
+        Project.Data.Tree.Env.IDE_Mode
+        and then Project.Has_Attribute (Att)
+        and then Attribute_Value (Project, Att) /= ""
       then
-         return Create_From_Base
+         D := Create_From_Base
            (+Attribute_Value (Project, Att),
-           Project.Project_Path.Dir_Name);
+            Project.Project_Path.Dir_Name);
+         Ensure_Directory (D);
+         return D;
       end if;
       if Project.Object_Dir /= GNATCOLL.VFS.No_File then
          return Project.Object_Dir;

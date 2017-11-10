@@ -548,7 +548,9 @@ package GNATCOLL.Projects is
    --  Return the artifacts directory for this project. This directory should
    --  be used by various tools to create temporary files and other artifacts.
    --
-   --  First check if IDE'Artifacts_Dir is declared and return its value.
+   --  First check if IDE'Artifacts_Dir is declared and return its value. This
+   --  step is only performed if IDE_mode has been set to True when loading
+   --  the project.
    --  Otherwise return the object directory if it is set implicitly or
    --  explicitly.
    --  Otherwise return project directory, if it is writable.
