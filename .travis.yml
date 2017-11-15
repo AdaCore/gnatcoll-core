@@ -27,7 +27,7 @@ install:
   - (mkdir -p ada-compiler && cd ada-compiler && tar --strip-components 1 -xzf $GNAT_TAR_PATH)
 
   # Add GNAT to $PATH
-  - export PATH=$PATH:$PWD/ada-compiler/bin/
+  - export PATH=$PWD/ada-compiler/bin:$PATH
 
 script:
   # Show GNAT version for the record
