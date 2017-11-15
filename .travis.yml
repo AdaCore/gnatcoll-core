@@ -34,4 +34,4 @@ script:
   - $PWD/ada-compiler/bin/gprbuild --version
 
     # Build gnatcoll-core
-  - make all
+  - make all GPRBUILD_OPTIONS="-v"
