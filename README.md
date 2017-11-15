@@ -4,6 +4,15 @@ The GNAT Components Collection (GNATcoll) - Core packages
 This is the core module of the GNAT Components Collection. Please refer to the
 documentation in the `docs/` directory.
 
+Code status
+===========
+
+Build status with GNAT GPL 2017
+
+Platform | Status
+---------|-------
+Linux    | [![Build Status](https://travis-ci.org/AdaCore/gnatcoll-core.svg?branch=master)](https://travis-ci.org/AdaCore/gnatcoll-core)
+
 Dependencies
 ------------
 
