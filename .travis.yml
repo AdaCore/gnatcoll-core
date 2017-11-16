@@ -7,7 +7,6 @@ env:
     - DARWIN_GNAT_URL=http://mirrors.cdn.adacore.com/art/591c9045c7a447af2deed24e
 os:
   - linux
-  - osx
 
 # Cache directory that allows us to not download GNAT GPL every time, speeding
 # up the process.
@@ -40,4 +39,4 @@ script:
   - $PWD/ada-compiler/bin/gprbuild --version
 
     # Build gnatcoll-core
-  - if [ "$TRAVIS_OS_NAME" != "osx" ]; then make all GPRBUILD_OPTIONS="-v"; fi
+  - make all
