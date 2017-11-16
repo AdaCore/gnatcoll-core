@@ -86,10 +86,10 @@ package body GNATCOLL.Traces is
    --  default foreground.
 
    Default_Exception_Style : constant Message_Style :=
-      (Fg    => GNATCOLL.Terminal.Unchanged,
+      (Fg    => GNATCOLL.Terminal.Black,
        Bg    => GNATCOLL.Terminal.Red,
        Style => GNATCOLL.Terminal.Unchanged);
-   --  Use the foreground of the handle, but highlight with a red background.
+   --  Highlight with a red background.
    --  This is used to report unexpected exceptions when an exception
    --  occurrence is passed to Trace.
 
