@@ -20,7 +20,7 @@ install:
     - ps: dir $env:CACHE_DIR
     - cmd: cmd /c start /wait %COMPILER_INSTALLER% /S /D=%COMPILER_DIR%
     - ps: $env:Path = $env:COMPILER_DIR + "\bin;" + $env:Path 
-build:
     - cmd: cd
     - cmd: dir
     - cmd: make all
+build: off
