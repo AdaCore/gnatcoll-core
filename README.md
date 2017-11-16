@@ -12,6 +12,7 @@ Build status with GNAT GPL 2017
 Platform | Status
 ---------|-------
 Linux    | [![Build Status](https://travis-ci.org/AdaCore/gnatcoll-core.svg?branch=master)](https://travis-ci.org/AdaCore/gnatcoll-core)
+Windows  | [![Build status](https://ci.appveyor.com/api/projects/status/31a7dh523xto7b9f/branch/master?svg=true)](https://ci.appveyor.com/project/github-integration-adacore/gnatcoll-core/branch/master)
 
 Dependencies
 ------------
