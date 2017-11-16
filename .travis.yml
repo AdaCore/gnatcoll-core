@@ -40,4 +40,4 @@ script:
   - $PWD/ada-compiler/bin/gprbuild --version
 
     # Build gnatcoll-core
-  - make all GPRBUILD_OPTIONS="-v"
+  - if [ "$TRAVIS_OS_NAME" != "osx" ]; then make all GPRBUILD_OPTIONS="-v"; fi
