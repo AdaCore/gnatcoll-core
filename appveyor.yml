@@ -1,0 +1,26 @@
+version: 1.0.{build}
+environment:
+    PYTHON: C:\Python27
+cache:
+    - C:\AdaDownloads
+install:
+    - ps: $env:COMPILER_DIR = "C:\AdaCompiler"
+    - ps: $env:CACHE_DIR = "C:\AdaDownloads"
+    - ps: $env:COMPILER_INSTALLER = $env:CACHE_DIR + "\gnat-gpl-2017.exe"
+    - ps: md -f $env:COMPILER_DIR
+    - ps: md -f $env:CACHE_DIR
+    - ps: >
+        If (Test-Path $env:COMPILER_INSTALLER) {
+            echo compiler already in cache
+        } Else {
+            (new-object net.webclient).DownloadFile(
+                'http://mirrors.cdn.adacore.com/art/591c97f0a3f5d779ee51082d',
+                $env:COMPILER_INSTALLER)
+        }
+    - ps: dir $env:CACHE_DIR
+    - cmd: cmd /c start /wait %COMPILER_INSTALLER% /S /D=%COMPILER_DIR%
+    - ps: $env:Path = $env:COMPILER_DIR + "\bin;" + $env:Path 
+build:
+    - cmd: cd
+    - cmd: dir
+    - cmd: make all
