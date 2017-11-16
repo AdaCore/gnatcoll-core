@@ -942,6 +942,9 @@ package body GNATCOLL.Projects is
       --  (everything after and including the last dot in the file name).
       --  Otherwise, the suffix ALI_Ext is removed from the file name.
 
+      function Is_Extending_All (P : Project_Type) return Boolean is
+         (Is_Extending_All (P.Data.Node, P.Data.Tree.Tree));
+
       function Find_Ada_In_Subtree
         (Map    : Names_Files.Map;
          Key    : GNATCOLL.VFS.Filesystem_String;
@@ -1008,7 +1011,6 @@ package body GNATCOLL.Projects is
                      --  Creating a temporary element to point to.
 
                      Local_Obj_Map.Include (Key, SFD);
-                     Decrease_Indent (Me);
                      return Local_Obj_Map.First;
                   end if;
 
@@ -1063,7 +1065,6 @@ package body GNATCOLL.Projects is
                   if Extended_P = SFD.Project then
                      Local_Obj_Map.Include (Key, SFD);
 
-                     Decrease_Indent (Me);
                      return Local_Obj_Map.First;
                   end if;
 
@@ -1081,7 +1082,7 @@ package body GNATCOLL.Projects is
          return Names_Files.No_Element;
       end Find_C_In_Subtree;
 
-      Seen : Virtual_File_Sets.Set;
+      Seen, Added : Virtual_File_Sets.Set;
 
       ---------------------
       -- Process_Project --
@@ -1255,7 +1256,13 @@ package body GNATCOLL.Projects is
                   Should_Append := Lowest_Project = Self;
                end if;
 
-               if Should_Append then
+               if Has_Element (Info_Cursor) and then
+                 Added.Contains (Element (Info_Cursor).File)
+               then
+                  Trace (Me, "Library_Files not including : "
+                         & Display_Base_Name (Tmp (F))
+                         & " (which is overwritten in extends all project)");
+               elsif Should_Append then
                   List.Append
                     (Library_Info'
                        (Library_File => Tmp (F),
@@ -1266,6 +1273,33 @@ package body GNATCOLL.Projects is
                         Source       => new File_Info'
                           (Source_File_Data_To_Info
                                (Element (Info_Cursor)))));
+               elsif
+                 Has_Element (Info_Cursor) and then
+                 Is_Extending_All (Project)
+               then
+                  --  Corresponding source is not from current project, but
+                  --  current project is an extends all project, so any
+                  --  library file for a sourse of any project of the subtree
+                  --  belongs to current project.
+
+                  List.Append
+                    (Library_Info'
+                       (Library_File => Tmp (F),
+                        LI_Project => new Project_Type'
+                          (Lowest_Project),
+                        Non_Aggregate_Root_Project =>
+                           new Project_Type'(Self),
+                        Source       => new File_Info'
+                          (Source_File_Data_To_Info
+                               (Element (Info_Cursor)))));
+
+                  if Exclude_Overridden then
+                     --  Also so that we do not include corresponding overriden
+                     --  ALI file from the corresponding project, we need to
+                     --  store it's name explicitly.
+                     Added.Include (Element (Info_Cursor).File);
+                  end if;
+
                elsif Active (Me)
                  and then Has_Element (Info_Cursor)
                then
@@ -1407,6 +1441,7 @@ package body GNATCOLL.Projects is
       end if;
 
       Unchecked_Free (Re);
+      Added.Clear;
 
       if Active (Me) then
          Decrease_Indent (Me, "Done library files");
