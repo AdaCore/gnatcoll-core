@@ -8,9 +8,11 @@ env:
   global:
     - TOOLS_DIR=$HOME/build_tools
     - GNAT_TAR_PATH=$TOOLS_DIR/gpl-2017-compiler.tar.gz
-    - GNAT_URL=http://mirrors.cdn.adacore.com/art/591c6d80c7a447af2deed1d7
+    - LINUX_GNAT_URL=http://mirrors.cdn.adacore.com/art/591c6d80c7a447af2deed1d7
+    - DARWIN_GNAT_URL=http://mirrors.cdn.adacore.com/art/591c9045c7a447af2deed24e
 os:
   - linux
+  - osx
 
 # Cache directory that allows us to not download GNAT GPL every time, speeding
 # up the process.
@@ -21,7 +23,15 @@ cache:
 install:
   # Check if the GNAT package is already available in the cache directory. If
   # not, download it.
-  - test -f  $GNAT_TAR_PATH ||( mkdir -p $TOOLS_DIR && wget $GNAT_URL -O $GNAT_TAR_PATH)
+  - >
+      test -f  $GNAT_TAR_PATH ||
+      (mkdir -p $TOOLS_DIR &&
+       if [ "$TRAVIS_OS_NAME" = "osx" ]; then
+          wget $DARWIN_GNAT_URL -O $GNAT_TAR_PATH
+       else
+          wget $LINUX_GNAT_URL -O $GNAT_TAR_PATH
+       fi
+      )
 
   # Extract GNAT from its package
   - (mkdir -p ada-compiler && cd ada-compiler && tar --strip-components 1 -xzf $GNAT_TAR_PATH)
