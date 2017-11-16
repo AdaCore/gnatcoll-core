@@ -13,13 +13,14 @@ os:
 # up the process.
 cache:
   directories:
-  - $HOME/build_tools
+    - /home/travis/build_tools
+    - /Users/travis/build_tools
 
 install:
   # Check if the GNAT package is already available in the cache directory. If
   # not, download it.
   - >
-      test -f  $GNAT_TAR_PATH ||
+      test -f $GNAT_TAR_PATH ||
       (mkdir -p $TOOLS_DIR &&
        if [ "$TRAVIS_OS_NAME" = "osx" ]; then
           wget $DARWIN_GNAT_URL -O $GNAT_TAR_PATH
