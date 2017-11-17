@@ -218,7 +218,9 @@ package body GNATCOLL.Projects is
    --  Return the project view for the project Name
 
    type External_Variable_Callback is access function
-     (Variable : Project_Node_Id; Prj : Project_Node_Id) return Boolean;
+     (Variable : Project_Node_Id;
+      Prj      : Project_Node_Id;
+      Tree     : GPR.Project_Node_Tree_Ref) return Boolean;
    --  Called for a typed variable declaration that references an external
    --  variable in GPR.
    --  Stops iterating if this subprogram returns False.
@@ -4776,7 +4778,6 @@ package body GNATCOLL.Projects is
    --------------------------------
 
    procedure Compute_Scenario_Variables (Tree : Project_Tree_Data_Access) is
-      T     : constant GPR.Project_Node_Tree_Ref := Tree.Tree;
       List  : Scenario_Variable_Array_Access;
       Curr  : Positive;
 
@@ -4784,12 +4785,15 @@ package body GNATCOLL.Projects is
       --  Return the number of scenario variables in tree
 
       function Register_Var
-        (Variable : Project_Node_Id; Proj : Project_Node_Id) return Boolean;
+        (Variable : Project_Node_Id;
+         Proj     : Project_Node_Id;
+         T        : GPR.Project_Node_Tree_Ref) return Boolean;
       --  Add the variable to the list of scenario variables, if not there yet
       --  (see the documentation for Scenario_Variables for the exact rules
       --  used to detect aliases).
 
-      function External_Default (Var : Project_Node_Id) return Name_Id;
+      function External_Default
+        (Var : Project_Node_Id; T : GPR.Project_Node_Tree_Ref) return Name_Id;
       --  Return the default value for the variable. Var must be a variable
       --  declaration or a variable reference. This routine supports only
       --  single expressions (no composite values).
@@ -4802,7 +4806,9 @@ package body GNATCOLL.Projects is
          Count : Natural := 0;
 
          function Cb
-           (Variable : Project_Node_Id; Prj : Project_Node_Id) return Boolean;
+           (Variable : Project_Node_Id;
+            Prj      : Project_Node_Id;
+            Tree     : GPR.Project_Node_Tree_Ref) return Boolean;
          --  Increment the total number of variables
 
          --------
@@ -4810,9 +4816,11 @@ package body GNATCOLL.Projects is
          --------
 
          function Cb
-           (Variable : Project_Node_Id; Prj : Project_Node_Id) return Boolean
+           (Variable : Project_Node_Id;
+            Prj      : Project_Node_Id;
+            Tree     : GPR.Project_Node_Tree_Ref) return Boolean
          is
-            pragma Unreferenced (Variable, Prj);
+            pragma Unreferenced (Variable, Prj, Tree);
          begin
             Count := Count + 1;
             return True;
@@ -4828,7 +4836,9 @@ package body GNATCOLL.Projects is
       -- External_Default --
       ----------------------
 
-      function External_Default (Var : Project_Node_Id) return Name_Id is
+      function External_Default
+        (Var : Project_Node_Id; T : GPR.Project_Node_Tree_Ref) return Name_Id
+      is
          Proj : Project_Type    := Tree.Root;
          Expr : Project_Node_Id := Expression_Of (Var, T);
       begin
@@ -4916,7 +4926,9 @@ package body GNATCOLL.Projects is
       ------------------
 
       function Register_Var
-        (Variable : Project_Node_Id; Proj : Project_Node_Id) return Boolean
+        (Variable : Project_Node_Id;
+         Proj     : Project_Node_Id;
+         T        : GPR.Project_Node_Tree_Ref) return Boolean
       is
          pragma Unreferenced (Proj);
          V        : constant Name_Id := External_Reference_Of (Variable, T);
@@ -4933,11 +4945,11 @@ package body GNATCOLL.Projects is
 
          Var := Scenario_Variable'
            (Name        => V,
-            Default     => External_Default (Variable),
+            Default     => External_Default (Variable, T),
             String_Type => String_Type_Of (Variable, T),
             Value       => GPR.Ext.Value_Of
               (Tree.Env.Env.External, V,
-               With_Default => External_Default (Variable)));
+               With_Default => External_Default (Variable, T)));
 
          List (Curr) := Var;
 
@@ -5217,8 +5229,7 @@ package body GNATCOLL.Projects is
       Recursive : Boolean;
       Callback  : External_Variable_Callback)
    is
-      Tree     : constant GPR.Project_Node_Tree_Ref := Project.Tree_Tree;
-      Iterator : Inner_Project_Iterator := Start (Project, Recursive);
+      Iterator : Project_Iterator := Start (Project, Recursive);
       P        : Project_Type;
 
       procedure Process_Prj (Prj : Project_Node_Id);
@@ -5231,6 +5242,8 @@ package body GNATCOLL.Projects is
       procedure Process_Prj (Prj : Project_Node_Id) is
          Pkg : Project_Node_Id := Prj;
          Var : Project_Node_Id;
+         Tree : constant GPR.Project_Node_Tree_Ref :=
+           P.Data.Tree.Tree;
       begin
          --  For all the packages and the common section
          while Pkg /= Empty_Project_Node loop
@@ -5239,7 +5252,7 @@ package body GNATCOLL.Projects is
             while Var /= Empty_Project_Node loop
                if Kind_Of (Var, Tree) = N_Typed_Variable_Declaration
                  and then Is_External_Variable (Var, Tree)
-                 and then not Callback (Var, Prj)
+                 and then not Callback (Var, Prj, Tree)
                then
                   exit;
 
@@ -7916,12 +7929,6 @@ package body GNATCOLL.Projects is
       Reset_View (Self);
       GPR.Initialize (Self.Data.View);
 
-      --  Compute the list of scenario variables. This also ensures that
-      --  the variables do exist in the environment, and therefore that
-      --  we can correctly load the project.
-
-      Compute_Scenario_Variables (Self.Data);
-
       Opt.Follow_Links_For_Files := not Self.Data.Env.Trusted_Mode;
       Opt.Follow_Links_For_Dirs  := not Self.Data.Env.Trusted_Mode;
 
@@ -8049,6 +8056,12 @@ package body GNATCOLL.Projects is
       end if;
 
       Create_Project_Instances (Self, Self, With_View => True);
+
+      --  To get scenario variables from aggregated projects we first need
+      --  all to fully parse all project trees and create instances of all
+      --  projects.
+
+      Compute_Scenario_Variables (Self.Data);
 
       Parse_Source_Files (Self);
       Initialize_Source_Records;
