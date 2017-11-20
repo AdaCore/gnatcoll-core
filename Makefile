@@ -136,7 +136,7 @@ build-%:
 ###########
 
 uninstall:
-ifneq (,$(wildcard $(prefix)/share/gpr/manifests/gnatcoll))
+ifneq (,$(wildcard $(prefix)$(integrated_install)/share/gpr/manifests/gnatcoll))
 	$(UNINSTALLER) $(GNATCOLL_GPR)
 endif
 
