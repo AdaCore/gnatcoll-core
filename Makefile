@@ -118,7 +118,7 @@ GPRBUILD_OPTIONS=
 BUILDER=gprbuild -p -m $(GTARGET) $(RBD) -j$(PROCESSORS) $(GPR_VARS) \
 	$(GPRBUILD_OPTIONS)
 INSTALLER=gprinstall -p -f $(GTARGET) $(GPR_VARS) \
-	$(RBD) --sources-subdir=include/$(NAME) --prefix=$(prefix)$(integrated_install)
+	$(RBD) --sources-subdir=include/gnatcoll --prefix=$(prefix)$(integrated_install)
 CLEANER=gprclean -q $(RBD) $(GTARGET)
 UNINSTALLER=$(INSTALLER) -p -f --install-name=gnatcoll --uninstall
 
