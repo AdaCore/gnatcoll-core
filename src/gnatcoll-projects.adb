@@ -6944,6 +6944,11 @@ package body GNATCOLL.Projects is
             S : constant String := GNATCOLL.Utils.Get_Command_Output (Fd);
          begin
             Trace (Me, "Output of gnatls is " & S);
+
+            if S = "" and Errors /= null then
+               Errors ("The output from '" & Gnatls & "-v' is empty");
+            end if;
+
             Set_Path_From_Gnatls_Output
               (Self,
                Output       => S,
