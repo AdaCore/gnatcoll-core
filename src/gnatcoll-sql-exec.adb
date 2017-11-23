@@ -30,13 +30,16 @@ with Ada.Strings.Maps.Constants;
 with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;      use Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
-with GNAT.Strings;              use GNAT.Strings;
-with GNATCOLL.Traces;           use GNATCOLL.Traces;
-with GNATCOLL.Utils;            use GNATCOLL.Utils;
-with GNATCOLL.SQL.Exec_Private; use GNATCOLL.SQL.Exec_Private;
-with GNATCOLL.SQL.Exec.Tasking; use GNATCOLL.SQL.Exec.Tasking;
+with GNAT.Strings;               use GNAT.Strings;
+with GNATCOLL.OS.Constants;      use GNATCOLL.OS.Constants;
+with GNATCOLL.Plugins;           use GNATCOLL.Plugins;
+with GNATCOLL.Traces;            use GNATCOLL.Traces;
+with GNATCOLL.Utils;             use GNATCOLL.Utils;
+with GNATCOLL.SQL.Exec_Private;  use GNATCOLL.SQL.Exec_Private;
+with GNATCOLL.SQL.Exec.Tasking;  use GNATCOLL.SQL.Exec.Tasking;
 with Interfaces.C.Strings;
-with System.Address_Image;
+with System.Address_Image;       use System;
+with Ada.Unchecked_Conversion;
 
 package body GNATCOLL.SQL.Exec is
 
@@ -103,6 +106,63 @@ package body GNATCOLL.SQL.Exec is
       Equivalent_Elements => "=");
    --  List of connections that were freed, so that we no longer try to use
    --  them
+
+   type Get_Database_Engine_Function is
+     access function return Database_Engine_Access;
+
+   DB_Engines : Database_Engines.Map;
+
+   -----------
+   -- Setup --
+   -----------
+
+   function Setup
+     (Kind    : String;
+      Options : Name_Values.Map;
+      Errors  : access Error_Reporter'Class) return Database_Description
+   is
+      DBP    : Plugin := No_Plugin;
+      CE     : Database_Engines.Cursor;
+      Engine : Database_Engine_Access;
+      DBE    : System.Address;
+
+      function To_Function is new Ada.Unchecked_Conversion
+        (Address, Get_Database_Engine_Function);
+   begin
+      CE := DB_Engines.Find (Kind);
+
+      if Database_Engines.Has_Element (CE) then
+         Engine := DB_Engines (CE);
+
+      else
+         DBP := Load ("libgnatcoll_" & Kind & DLL_Ext);
+
+         if DBP = No_Plugin then
+            Trace (Me_Error, "DB plugin load error: " & Last_Error_Message);
+            return null;
+         end if;
+
+         DBE := Routine_Address (DBP, "db_engine");
+
+         if DBE = Null_Address then
+            Trace
+              (Me_Error, "Can't bind engine provider: " & Last_Error_Message);
+            return null;
+         end if;
+
+         Engine := To_Function (DBE).all;
+
+         if Engine = null then
+            Trace (Me_Error, "Can't get engine");
+            return null;
+         end if;
+
+         Engine.Plugin := DBP;
+         DB_Engines.Insert (Kind, Engine);
+      end if;
+
+      return Engine.Setup (Options, Errors);
+   end Setup;
 
    -----------------
    -- Query_Cache --

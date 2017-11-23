@@ -102,10 +102,14 @@
 pragma Ada_2012;
 
 with Ada.Calendar;
+with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Finalization;
+with Ada.Strings.Equal_Case_Insensitive;
+with Ada.Strings.Hash_Case_Insensitive;
 with System;
-private with Ada.Finalization;
 private with GNATCOLL.Refcount;
 with GNAT.Strings;
+with GNATCOLL.Plugins;
 with GNATCOLL.SQL_Impl;
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
@@ -206,6 +210,20 @@ package GNATCOLL.SQL.Exec is
    --  If Cache is true, some statements will be cached locally in the
    --  connection (see the parameter Use_Cache for the Prepare subprograms
    --  below).
+
+   package Name_Values is new Ada.Containers.Indefinite_Hashed_Maps
+     (String, String, Hash => Ada.Strings.Hash_Case_Insensitive,
+      Equivalent_Keys => Ada.Strings.Equal_Case_Insensitive);
+
+   function Setup
+     (Kind     : String;
+      Options  : Name_Values.Map;
+      Errors   : access Error_Reporter'Class)
+      return Database_Description;
+   --  Return description of the database engine defined by Kind parameter.
+   --  If the kind of database was not detected, this function returns null.
+   --  Errors (if specified) will be used to report errors and warnings to the
+   --  application. Errors is never freed.
 
    type Database_Connection_Record
      (Descr : access Database_Description_Record'Class;
@@ -994,6 +1012,24 @@ package GNATCOLL.SQL.Exec is
    function Is_Prepared_On_Server_Supported
      (Connection : access Database_Connection_Record) return Boolean;
    --  True if Prepared supported on the server for this connection
+
+   type Database_Engine is abstract tagged limited record
+      Plugin : Plugins.Plugin := Plugins.No_Plugin;
+   end record;
+
+   function Setup
+     (Engine  : Database_Engine;
+      Options : Name_Values.Map;
+      Errors  : access Error_Reporter'Class) return Database_Description
+      is abstract;
+
+   type Database_Engine_Access is access all Database_Engine'Class;
+
+   package Database_Engines is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => String,
+      Element_Type    => Database_Engine_Access,
+      Hash            => Ada.Strings.Hash_Case_Insensitive,
+      Equivalent_Keys => Ada.Strings.Equal_Case_Insensitive);
 
 private
 
