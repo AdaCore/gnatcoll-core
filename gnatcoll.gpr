@@ -140,6 +140,10 @@ project GnatColl is
    end Ide;
 
    package Naming is
+
+      for Specification  ("GNATCOLL.OS.Constants")
+        use "gnatcoll-os-constants__" & OS & ".ads";
+
       case OS is
          when "unix" | "osx" =>
             for Specification  ("GNATCOLL.Mmap.System")
