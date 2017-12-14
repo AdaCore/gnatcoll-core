@@ -443,7 +443,7 @@ package GNATCOLL.Email is
 
    procedure Set_Text_Payload
      (Msg         : Message'Class;
-      Payload     : String;
+      Payload     : Unbounded_String;
       MIME_Type   : String  := Text_Plain;
       Disposition : String  := "";
       Charset     : String  := Charset_US_ASCII;
@@ -463,6 +463,15 @@ package GNATCOLL.Email is
    --  parameter. If Msg is a single part message, then Payload will replace
    --  the current payload if Prepend is False, otherwise the old payload is
    --  preserved and set after the new one.
+
+   procedure Set_Text_Payload
+     (Msg         : Message'Class;
+      Payload     : String;
+      MIME_Type   : String  := Text_Plain;
+      Disposition : String  := "";
+      Charset     : String  := Charset_US_ASCII;
+      Prepend     : Boolean := False);
+   --  The same like above but Payload is just a String
 
    procedure Get_Single_Part_Payload
      (Msg     : Message'Class;

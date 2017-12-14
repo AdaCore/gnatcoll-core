@@ -1250,7 +1250,7 @@ package body GNATCOLL.Email is
 
    procedure Set_Text_Payload
      (Msg         : Message'Class;
-      Payload     : String;
+      Payload     : Unbounded_String;
       MIME_Type   : String  := Text_Plain;
       Disposition : String  := "";
       Charset     : String  := Charset_US_ASCII;
@@ -1280,7 +1280,7 @@ package body GNATCOLL.Email is
             Add_Header (Msg2, Create (Content_Disposition, Disposition));
          end if;
 
-         Set_Unbounded_String (Msg2.Contents.Payload.Text, Payload);
+         Msg2.Contents.Payload.Text := Payload;
 
          if Prepend then
             Message_List.Prepend (Msg.Contents.Payload.Parts, Msg2);
@@ -1306,11 +1306,26 @@ package body GNATCOLL.Email is
             --  payload???
 
          else
-            --  Do not use Set_Unbounded_String, which has a memory leak in the
-            --  GNAT implementation ???
-            Set_Unbounded_String (Msg.Contents.Payload.Text, Payload);
+            Msg.Contents.Payload.Text := Payload;
          end if;
       end if;
+   end Set_Text_Payload;
+
+   procedure Set_Text_Payload
+     (Msg         : Message'Class;
+      Payload     : String;
+      MIME_Type   : String  := Text_Plain;
+      Disposition : String  := "";
+      Charset     : String  := Charset_US_ASCII;
+      Prepend     : Boolean := False) is
+   begin
+      Set_Text_Payload
+        (Msg         => Msg,
+         Payload     => To_Unbounded_String (Payload),
+         MIME_Type   => MIME_Type,
+         Disposition => Disposition,
+         Charset     => Charset,
+         Prepend     => Prepend);
    end Set_Text_Payload;
 
    -----------------------------
