@@ -381,7 +381,7 @@ package body GNATCOLL.Email is
                   Start := Eol + 1;
                end loop;
 
-               Set_Text_Payload (Reply, To_String (Who_Quoted));
+               Set_Text_Payload (Reply, Who_Quoted);
             end;
          end if;
 
@@ -1694,7 +1694,7 @@ package body GNATCOLL.Email is
       end if;
 
       To_String (Attach, Result => Tmp);
-      Set_Text_Payload (Attachment, To_String (Tmp),
+      Set_Text_Payload (Attachment, Tmp,
                         Charset   => "",
                         MIME_Type => Message_RFC822);
       Replace_Header (Attachment, Create (Content_Disposition, "inline"));
