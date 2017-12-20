@@ -144,7 +144,9 @@ install: uninstall $(LIBRARY_TYPES:%=install-%)
 
 install-%:
 	$(INSTALLER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* \
-		--build-name=$* --build-var=LIBRARY_TYPE $(GPR_VARS) $(GNATCOLL_GPR)
+		--build-name=$* $(GPR_VARS) \
+		--build-var=LIBRARY_TYPE --build-var=GNATCOLL_BUILD \
+		--build-var=GNATCOLL_CORE_BUILD $(GNATCOLL_GPR)
 
 ###########
 # Cleanup #
@@ -174,4 +176,3 @@ setup:
 	$(ECHO) "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
 	$(ECHO) "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
 	$(ECHO) "GNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS)" >> makefile.setup
-
