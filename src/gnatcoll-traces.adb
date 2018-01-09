@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2001-2017, AdaCore                     --
+--                     Copyright (C) 2001-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1653,12 +1653,15 @@ package body GNATCOLL.Traces is
       Relative_Path_To : GNATCOLL.VFS.Virtual_File :=
          GNATCOLL.VFS.Get_Current_Dir)
    is
-      Index  : Natural;
       Handle : Trace_Handle;
       Dec    : Trace_Decorator;
+      Count  : Natural := 0;
 
       procedure Create_Decorators;
       --  Create all default decorators, if not done yet
+
+      function One_Line (Line : String) return Boolean;
+      --  Callback function for each line of the configuration
 
       -----------------------
       -- Create_Decorators --
@@ -1737,17 +1740,121 @@ package body GNATCOLL.Traces is
           & "(\+)" & S                    --  6 = "+"
 
           & ")?"                          --  line can be empty
-          & S & "(?:--.*)?"               --  end of line comments
-          & "\r?$",
-          Multiple_Lines);
-      Group_Name            : constant := 1;
-      Group_Active          : constant := 2;
-      Group_Options         : constant := 3;
-      Group_Stream          : constant := 4;
-      Group_Default_Stream  : constant := 5;
-      Group_All             : constant := 6;
+          & S & "(?:(?:#|--).*)?"         --  end of line comments
+          & "\r?$");
 
-      M : GNAT.Regpat.Match_Array (0 .. 6);
+      function One_Line (Line : String) return Boolean is
+         M : GNAT.Regpat.Match_Array (0 .. 6);
+         Group_Name            : constant := 1;
+         Group_Active          : constant := 2;
+         Group_Options         : constant := 3;
+         Group_Stream          : constant := 4;
+         Group_Default_Stream  : constant := 5;
+         Group_All             : constant := 6;
+      begin
+         Count := Count + 1;
+
+         if Line = "" then
+            return True;
+         end if;
+
+         Match (Line_Re, Line, Matches => M);
+
+         if M (0) = No_Match then
+            if On_Exception = Propagate then
+               raise Constraint_Error with
+                 "Line " & Count'Img & ": """ & Line & """ is not recognised.";
+            end if;
+
+         elsif M (Group_All) /= No_Match then
+            Global.Default_Activation := True;
+            Handle := Global.Handles_List;
+            while Handle /= null loop
+               if not Handle.Forced_Active then
+                  Set_Active (Handle, True);
+
+                  --  A later declaration of the stream in the code
+                  --  should not be allowed to reset Active to False
+                  Handle.Forced_Active := True;
+               end if;
+               Handle := Handle.Next;
+            end loop;
+
+         elsif M (Group_Default_Stream) /= No_Match then
+            Set_Default_Stream
+              (Config (M (Group_Default_Stream).First ..
+                 M (Group_Default_Stream).Last),
+               Config_File => Relative_Path_To);
+
+         elsif M (Group_Name) /= No_Match then
+            declare
+               Active : constant Default_Activation_Status :=
+                 (if M (Group_Active) = No_Match
+                  or else Config (M (Group_Active).First ..
+                      M (Group_Active).Last) /= "no"
+                  then On
+                  else Off);
+               Stream : Trace_Stream := null;
+               Style  : Message_Style := Default_Style;
+            begin
+               --  Do we have options for this handle ?
+
+               if M (Group_Options) /= No_Match then
+                  declare
+                     use GNATCOLL.Terminal;
+                     Options : String_List_Access := Split
+                       (Config (M (Group_Options).First ..
+                          M (Group_Options).Last),
+                       ':');
+                  begin
+                     for Opt of Options.all loop
+                        if Starts_With (Opt.all, "fg=") then
+                           Style.Fg := ANSI_Color'Value
+                             (Opt (Opt'First + 3 .. Opt'Last));
+                        elsif Starts_With (Opt.all, "bg=") then
+                           Style.Bg := ANSI_Color'Value
+                             (Opt (Opt'First + 3 .. Opt'Last));
+                        elsif Starts_With (Opt.all, "style=") then
+                           Style.Style := ANSI_Style'Value
+                             (Opt (Opt'First + 6 .. Opt'Last));
+                        end if;
+                     end loop;
+
+                     Free (Options);
+                  end;
+               end if;
+
+               --  What stream is this sent to ?
+
+               if M (Group_Stream) /= No_Match then
+                  declare
+                     Save   : Integer := M (Group_Stream).First;
+                     Append : Boolean := False;
+                  begin
+                     if Save + 1 <= M (Group_Stream).Last
+                       and then Config (Save) = '>'
+                     then
+                        Append := True;
+                        Save := Save + 1;
+                     end if;
+
+                     Stream := Find_Stream
+                       (Config (Save .. M (Group_Stream).Last),
+                        Relative_Path_To, Append);
+                  end;
+               end if;
+
+               Handle := Create_Internal
+                 (Config (M (Group_Name).First .. M (Group_Name).Last),
+                  From_Config_File => True,
+                  Default          => Active,
+                  Style            => Style,
+                  Stream           => Stream);
+            end;
+         end if;
+
+         return True;
+      end One_Line;
 
    begin
       if not Debug_Mode then
@@ -1761,103 +1868,7 @@ package body GNATCOLL.Traces is
       end if;
 
       if Config /= "" then
-         Index := Config'First;
-
-         while Index <= Config'Last loop
-            Match (Line_Re, Config, Data_First => Index, Matches => M);
-            exit when M (0) = No_Match;
-            Index := M (0).Last + 1;
-
-            if M (0).Last < M (0).First then
-               Index := M (0).First + 1;
-
-            elsif M (Group_All) /= No_Match then
-               Global.Default_Activation := True;
-               Handle := Global.Handles_List;
-               while Handle /= null loop
-                  if not Handle.Forced_Active then
-                     Set_Active (Handle, True);
-
-                     --  A later declaration of the stream in the code
-                     --  should not be allowed to reset Active to False
-                     Handle.Forced_Active := True;
-                  end if;
-                  Handle := Handle.Next;
-               end loop;
-
-            elsif M (Group_Default_Stream) /= No_Match then
-               Set_Default_Stream
-                  (Config (M (Group_Default_Stream).First ..
-                           M (Group_Default_Stream).Last),
-                   Config_File => Relative_Path_To);
-
-            elsif M (Group_Name) /= No_Match then
-               declare
-                  Active : constant Default_Activation_Status :=
-                     (if M (Group_Active) = No_Match
-                        or else Config (M (Group_Active).First ..
-                                        M (Group_Active).Last) /= "no"
-                      then On
-                      else Off);
-                  Stream : Trace_Stream := null;
-                  Style  : Message_Style := Default_Style;
-               begin
-                  --  Do we have options for this handle ?
-
-                  if M (Group_Options) /= No_Match then
-                     declare
-                        use GNATCOLL.Terminal;
-                        Options : String_List_Access := Split
-                           (Config (M (Group_Options).First ..
-                                    M (Group_Options).Last),
-                            ':');
-                     begin
-                        for Opt of Options.all loop
-                           if Starts_With (Opt.all, "fg=") then
-                              Style.Fg := ANSI_Color'Value
-                                 (Opt (Opt'First + 3 .. Opt'Last));
-                           elsif Starts_With (Opt.all, "bg=") then
-                              Style.Bg := ANSI_Color'Value
-                                 (Opt (Opt'First + 3 .. Opt'Last));
-                           elsif Starts_With (Opt.all, "style=") then
-                              Style.Style := ANSI_Style'Value
-                                 (Opt (Opt'First + 6 .. Opt'Last));
-                           end if;
-                        end loop;
-
-                        Free (Options);
-                     end;
-                  end if;
-
-                  --  What stream is this sent to ?
-
-                  if M (Group_Stream) /= No_Match then
-                     declare
-                        Save   : Integer := M (Group_Stream).First;
-                        Append : Boolean := False;
-                     begin
-                        if Save + 1 <= M (Group_Stream).Last
-                           and then Config (Save) = '>'
-                        then
-                           Append := True;
-                           Save := Save + 1;
-                        end if;
-
-                        Stream := Find_Stream
-                          (Config (Save .. M (Group_Stream).Last),
-                           Relative_Path_To, Append);
-                     end;
-                  end if;
-
-                  Handle := Create_Internal
-                     (Config (M (Group_Name).First .. M (Group_Name).Last),
-                      From_Config_File => True,
-                      Default          => Active,
-                      Style            => Style,
-                      Stream           => Stream);
-               end;
-            end if;
-         end loop;
+         Split (Config, (1 => ASCII.LF), One_Line'Access);
       end if;
    end Parse_Config;
 
