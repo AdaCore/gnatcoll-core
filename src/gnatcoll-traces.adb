@@ -217,7 +217,8 @@ package body GNATCOLL.Traces is
       --  Version of Local_Sub_Second taking advantage of the timezone cache
       --  return values in range 0 .. 999
 
-   function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle;
+   function Find_Handle
+     (Handle : Trace_Handle; Name_Upper_Case : String) return Trace_Handle;
    --  Return the debug handle associated with Unit_Name_Upper_Case,
    --  or null if there is none. The case of Unit_Name_Upper_Case is
    --  not changed.
@@ -334,14 +335,17 @@ package body GNATCOLL.Traces is
    -- Find_Handle --
    -----------------
 
-   function Find_Handle (Unit_Name_Upper_Case : String) return Trace_Handle is
-      Tmp : Trace_Handle := Global.Handles_List;
+   function Find_Handle
+     (Handle : Trace_Handle; Name_Upper_Case : String) return Trace_Handle
+   is
+      Tmp : Trace_Handle := Handle;
    begin
       while Tmp /= null
-        and then Tmp.Name.all /= Unit_Name_Upper_Case
+        and then Tmp.Name.all /= Name_Upper_Case
       loop
          Tmp := Tmp.Next;
       end loop;
+
       return Tmp;
    end Find_Handle;
 
@@ -400,6 +404,7 @@ package body GNATCOLL.Traces is
 
          Tmp := Tmp.Next;
       end loop;
+
       return null;
    end Find_Wildcard_Handle;
 
@@ -726,11 +731,10 @@ package body GNATCOLL.Traces is
    begin
       --  Do we already have an existing handle ?
 
-      if Is_Star then
-         Handle := Find_Wildcard_Handle (Upper_Case);
-      else
-         Handle := Find_Handle (Upper_Case);
-      end if;
+      Handle := Find_Handle
+        ((if Is_Star then Global.Wildcard_Handles_List
+          else Global.Handles_List),
+         Upper_Case);
 
       if Handle = null then
          if Factory /= null then
@@ -742,29 +746,30 @@ package body GNATCOLL.Traces is
          end if;
 
          Register_Handle
-           (Handle           => Handle,
-            Upper_Case       => Upper_Case,
-            Finalize         => Finalize);
+           (Handle     => Handle,
+            Upper_Case => Upper_Case,
+            Finalize   => Finalize);
 
          --  Unless both settings are already known, check if we have a
          --  wildcard.
-         if Default = From_Config
-            or else Stream = null
-         then
-            if not Is_Star then
-               Wildcard := Find_Wildcard_Handle (Handle.Name.all);
-               if Wildcard /= null then
-                  Set_Active (Handle, Wildcard.Active);
-                  Handle.Forced_Active := True;
 
-                  --  Unless we specified an explicit stream, inherit it
-                  if Stream = null and then Wildcard.Stream /= null then
-                     Handle.Stream := Wildcard.Stream;
-                     Handle.Stream_Is_Default := Wildcard.Stream_Is_Default;
-                  end if;
-               else
-                  Set_Active (Handle, Global.Default_Activation);
+         if (Default = From_Config or else Stream = null)
+           and then not Is_Star
+         then
+            Wildcard := Find_Wildcard_Handle (Handle.Name.all);
+
+            if Wildcard /= null then
+               Set_Active (Handle, Wildcard.Active);
+               Handle.Forced_Active := True;
+
+               --  Unless we specified an explicit stream, inherit it
+               if Stream = null and then Wildcard.Stream /= null then
+                  Handle.Stream := Wildcard.Stream;
+                  Handle.Stream_Is_Default := Wildcard.Stream_Is_Default;
                end if;
+
+            else
+               Set_Active (Handle, Global.Default_Activation);
             end if;
          end if;
       end if;
