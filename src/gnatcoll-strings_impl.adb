@@ -198,6 +198,7 @@ package body GNATCOLL.Strings_Impl is
       begin
          if not Copy_On_Write
             or else not Self.Data.Small.Is_Big
+            or else Self.Data.Big.Data = null
             or else Self.Data.Big.Data.Refcount = Unshareable
          then
             null;   --  nothing to do
@@ -221,6 +222,7 @@ package body GNATCOLL.Strings_Impl is
       begin
          if not Copy_On_Write
             or else not Self.Data.Small.Is_Big
+            or else Self.Data.Big.Data = null
             or else Self.Data.Big.Data.Refcount = Unshareable
          then
             null;   --  nothing to do
@@ -378,6 +380,10 @@ package body GNATCOLL.Strings_Impl is
          Old_Size    : Natural;
       begin
          if Self.Data.Small.Is_Big then
+            if Self.Data.Big.Data = null then
+               raise Program_Error with "Modifying locked XString";
+            end if;
+
             Current_Cap := Get_Capacity (Self);
             First := Self.Data.Big.First;
 
@@ -712,6 +718,9 @@ package body GNATCOLL.Strings_Impl is
             L := Natural (Self.Data.Small.Size);
             S := Convert (Self.Data.Small.Data'Address);
 
+         elsif Self.Data.Big.Data = null then
+            raise Program_Error with "Accessing locked XString";
+
          --  For a big string, we need to take into account First. Yet,
          --  everything should behave for the user as if the first character
          --  was always at index 1.
@@ -737,7 +746,6 @@ package body GNATCOLL.Strings_Impl is
          (Self    : XString;
           Process : not null access procedure (S : Char_String))
       is
-         Copy : XString;
          To_Decref : Big_String_Data_Access;
          S : Char_Array;
          L : Natural;
@@ -752,9 +760,12 @@ package body GNATCOLL.Strings_Impl is
             or else not Copy_On_Write
          then
             --  We must make a copy, since the internal data might change
-            Copy := Self;
-            Get_String (Copy, S, L);
-            Process (Char_String (S (S'First .. L)));
+            declare
+               Copy : constant XString := Self;
+            begin
+               Get_String (Copy, S, L);
+               Process (Char_String (S (S'First .. L)));
+            end;
          else
             if Self.Data.Big.Data.Refcount /= Unshareable then
                --  If anyone tries to modify the string, it will make a copy.
@@ -775,6 +786,91 @@ package body GNATCOLL.Strings_Impl is
             end if;
          end if;
       end Access_String;
+
+      -----------
+      -- Write --
+      -----------
+
+      procedure Write
+         (Self    : in out XString;
+          Process : not null access procedure
+             (S    : not null access Indefinite_Char_Array;
+              Last : in out Natural))
+      is
+         S : Char_Array;
+         L : Natural;
+         C : String_Size;
+      begin
+         --  Self is passed by reference, so its refcount might still be 1.
+         --  As a result, if Process would access the original variable and
+         --  for instance Append to it, we would end up modifying the internal
+         --  value of Self, and thus our S variable might end up referencing
+         --  freed memory, same for Process.
+
+         if not Self.Data.Small.Is_Big
+            or else not Copy_On_Write
+         then
+            --  We must make a copy, since the internal data might change
+            declare
+               Copy : XString := Self;
+            begin
+               Get_String (Copy, S, L);
+               C := (if Copy.Data.Small.Is_Big
+                     then Get_Capacity (Copy)
+                     else Max_Small_Length);
+               Process (S (1 .. Natural (C))'Unrestricted_Access,
+                        Last => L);
+
+               if L > Natural (C) then
+                  raise Constraint_Error
+                     with "Invalid size returned:" & L'Image;
+               end if;
+
+               Store_Size (Copy, L);
+               Self := Copy;
+            end;
+         else
+            C := Get_Capacity (Self);
+            Make_Writable (Self, Min_Capacity => C);
+
+            --  Process should not be allowed to make a shared copy of Self,
+            --  since that copy would indirectly be modified by modifying S.
+            --  In fact, we'll simply disable access to S (so even S2 := S
+            --  would not work)
+            declare
+               Tmp : constant Big_String := Self.Data.Big;
+            begin
+               Get_String (Self, S, L);
+               Self.Data.Big :=
+                  (Is_Big         => True,
+                    Half_Capacity => 0,
+                    Size          => 0,
+                    Data          => null,  --  lock the string
+                    First         => 1);
+
+               Process (S (1 .. Natural (C))'Unrestricted_Access,
+                        Last => L);
+
+               if L > Natural (C) then
+                  System.Memory.Free (Convert (Tmp.Data));
+                  Self.Clear;
+                  raise Constraint_Error
+                     with "Invalid size returned:" & L'Image;
+               end if;
+
+               if not Self.Data.Small.Is_Big
+                  or else Self.Data.Big.Data /= null
+               then
+                  System.Memory.Free (Convert (Tmp.Data));
+                  raise Program_Error
+                     with "XString modified while calling Write";
+               end if;
+
+               Self.Data.Big := Tmp;
+               Store_Size (Self, L);
+            end;
+         end if;
+      end Write;
 
       ----------------
       -- To_XString --

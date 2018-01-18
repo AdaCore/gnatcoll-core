@@ -324,8 +324,9 @@ package GNATCOLL.Strings_Impl is
       --       if Str = "" then
       --  or   if Str = Null_Xstring then
 
-      type Unconstrained_Char_Array is
-         array (1 .. Natural'Last) of aliased Char_Type;
+      type Indefinite_Char_Array is
+         array (Positive range <>) of aliased Char_Type;
+      subtype Unconstrained_Char_Array is Indefinite_Char_Array (Positive);
       type Char_Array is access all Unconstrained_Char_Array;
       pragma Suppress_Initialization (Unconstrained_Char_Array);
       pragma No_Strict_Aliasing (Char_Array);
@@ -460,8 +461,11 @@ package GNATCOLL.Strings_Impl is
       procedure Reserve (Self : in out XString; Capacity : String_Size);
       --  Make sure Self has enough storage to contain a string of length
       --  Size. This doesn't impact the current value of Self, so if the
-      --  current length is greater than Size, nothing is done.
-      --  More memory could be allocated, for performance reasons.
+      --  current capacity is greater than Capacity, nothing is done.
+      --  More memory than just Capacity could end up being allocated,
+      --  for performance reasons.
+      --  See Write for a way to initialize the string in
+      --  place after you have reserved enough space.
 
       procedure Shrink (Self : in out XString);
       --  Shrinks the memory used by Self to the minimum needed. This will
@@ -612,6 +616,7 @@ package GNATCOLL.Strings_Impl is
       --  Do not modify the characters in this string, since it could be
       --  shared among multiple strings.
       --  S is only valid as long as Self is not accessed or modified.
+      --  Only characters from 1..L should be read.
 
       procedure Access_String
          (Self    : XString;
@@ -622,6 +627,31 @@ package GNATCOLL.Strings_Impl is
       --
       --  This might easier to use than Get_String, and is more efficient
       --  than To_String.
+
+      procedure Write
+         (Self    : in out XString;
+          Process : not null access procedure
+             (S    : not null access Indefinite_Char_Array;
+              Last : in out Natural));
+      --  Access the string contained in Self, and lets you change its
+      --  contents. This is an efficient way to load a large file in an
+      --  XString for instance: call Self.Reserve with a large capacity,
+      --  then call Self.Write to modify the internal buffer
+      --  in place.
+      --  While Process is running, Self itself will not be destroy, so it
+      --  is safe to modify S (but see below, you can't modify Self itself).
+      --  On input, Process receives the whole buffer allocated for Self,
+      --  though only 1..Last characters have been initialized (the others
+      --  are the extra memory allocated by Reserve for instance).
+      --  On exit, Self will be modified so that it contains the 1..Last
+      --  characters.
+      --
+      --  Raises Constraint_Error if Last is greater than S'Last on exit.
+      --  Raises Program_Error if you try to modify Self within Process
+      --    (the string is locked during that time). You also cannot assign
+      --    it to some other string (the latter would end up an empty
+      --    string). Furthermore, Write itself might raise a Program_Error
+      --    in this case even if you captured exceptions in Process.
 
       function To_String (Self : XString) return Char_String;
       --  This functions returns the internal string.
@@ -1016,6 +1046,9 @@ package GNATCOLL.Strings_Impl is
          Data          : aliased Big_String_Data_Access;
          --  This field must be aligned on multiple of word_size, so can't
          --  be last.
+         --  Might be null when the string is "locked" during a call to
+         --  Write. Most modifying operations will raise Program_Error in
+         --  this case.
 
          First         : Positive;
          --  Index of the first character in data.
