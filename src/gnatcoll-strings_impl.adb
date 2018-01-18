@@ -36,6 +36,18 @@ package body GNATCOLL.Strings_Impl is
    Page_Size : constant := 4096;
    --  Memory page size
 
+   Unshareable : constant GNATCOLL.Atomic.Atomic_Counter :=
+      GNATCOLL.Atomic.Atomic_Counter'Last;
+   --  This is used as the refcount for strings that must not be
+   --  shared. In particular, this is the case when we have taken
+   --  a variable reference to a string, to fix the following case:
+   --        R := S (2);   --  a variable indexing
+   --        S2 := S;      --  share the buffer ??? WRONG
+   --        R := 'A';     --  also alters S2
+   --
+   --  See http://www.gotw.ca/gotw/044.htm for a C++ discussion on why
+   --  we need to make a string unshareable.
+
    --------------------
    -- Default_Growth --
    --------------------
@@ -72,18 +84,6 @@ package body GNATCOLL.Strings_Impl is
       function Convert is new Ada.Unchecked_Conversion
          (Big_String_Data_Access, System.Address);
 
-      Unshareable : constant GNATCOLL.Atomic.Atomic_Counter :=
-         GNATCOLL.Atomic.Atomic_Counter'Last;
-      --  This is used as the refcount for strings that must not be
-      --  shared. In particular, this is the case when we have taken
-      --  a variable reference to a string, to fix the following case:
-      --        R := S (2);   --  a variable indexing
-      --        S2 := S;      --  share the buffer ??? WRONG
-      --        R := 'A';     --  also alters S2
-      --
-      --  See http://www.gotw.ca/gotw/044.htm for a C++ discussion on why
-      --  we need to make a string unshareable.
-
       Bytes_Per_Char : constant size_t := Char_Type'Size / Character'Size;
       --  Number of bytes for each character in the string.
 
@@ -104,21 +104,32 @@ package body GNATCOLL.Strings_Impl is
          with Inline;
       --  Store the size of Self.
 
+      procedure Reserve_Make_Writable
+         (Self                 : in out XString;
+          Capacity             : String_Size;
+          Always_Make_Writable : Boolean);
+      --  Internal version of Reserve, that optionally always make
+      --  the string writable even if its initial capacity was big enough.
+
       procedure Clone
-         (Self   : in out XString;
-          Data   : Big_String_Data_Access)
+         (Self         : in out XString;
+          Data         : Big_String_Data_Access;
+          Min_Capacity : String_Size)
          with Pre => Self.Data.Small.Is_Big, Inline;
       --  Set the big string data, copying from Data.
       --  We copy the data from the parameter and not from Self.Data.Big.Data
       --  because the latter might already have been set to null at that
       --  point.
-      --  New memory is allocated.
+      --  New memory is allocated, at least Max (Self.Size, Min_Capacity)
 
-      procedure Make_Writable_Thread_Safe (Self : in out XString) with Inline;
-      procedure Make_Writable_Thread_Unsafe (Self : in out XString)
-         with Inline;
-      Make_Writable : constant not null
-         access procedure (Self : in out XString) :=
+      procedure Make_Writable_Thread_Safe
+         (Self         : in out XString;
+          Min_Capacity : String_Size) with Inline;
+      procedure Make_Writable_Thread_Unsafe
+         (Self         : in out XString;
+          Min_Capacity : String_Size) with Inline;
+      Make_Writable : constant not null access procedure
+         (Self : in out XString; Min_Capacity : String_Size) :=
             (if GNATCOLL.Refcount.Application_Uses_Tasks
              then Make_Writable_Thread_Safe'Access
              else Make_Writable_Thread_Unsafe'Access);
@@ -136,6 +147,12 @@ package body GNATCOLL.Strings_Impl is
       --    --  modifies shared buffer         |
       --                                       | Put_Line (S2.To_String);
       --                                       | --  different output
+      --
+      --  If the string is not shared, nothing is done.
+      --  If the string is shared, the buffer is duplicated so that Self has
+      --  its own version. We allocate a buffer big enough to contain
+      --  the current content of the string (Size) or up to Min_Capacity
+      --  characters.
 
       procedure Convert_To_Big_String
          (Self : in out XString;
@@ -175,7 +192,9 @@ package body GNATCOLL.Strings_Impl is
       -- Make_Writable_Thread_Unsafe --
       ---------------------------------
 
-      procedure Make_Writable_Thread_Unsafe (Self : in out XString) is
+      procedure Make_Writable_Thread_Unsafe
+         (Self         : in out XString;
+          Min_Capacity : String_Size) is
       begin
          if not Copy_On_Write
             or else not Self.Data.Small.Is_Big
@@ -186,7 +205,7 @@ package body GNATCOLL.Strings_Impl is
             null;
          else
             Decrement (Self.Data.Big.Data.Refcount);
-            Clone (Self, Self.Data.Big.Data);
+            Clone (Self, Self.Data.Big.Data, Min_Capacity);
          end if;
       end Make_Writable_Thread_Unsafe;
 
@@ -194,7 +213,10 @@ package body GNATCOLL.Strings_Impl is
       -- Make_Writable_Thread_Safe --
       -------------------------------
 
-      procedure Make_Writable_Thread_Safe (Self : in out XString) is
+      procedure Make_Writable_Thread_Safe
+         (Self         : in out XString;
+          Min_Capacity : String_Size)
+      is
          Tmp   : Big_String_Data_Access;
       begin
          if not Copy_On_Write
@@ -226,9 +248,8 @@ package body GNATCOLL.Strings_Impl is
             else
                --  Other threads were still sharing the data. We have to
                --  make a copy
-               Clone (Self, Tmp);
+               Clone (Self, Tmp, Min_Capacity);
             end if;
-
          end if;
       end Make_Writable_Thread_Safe;
 
@@ -237,13 +258,15 @@ package body GNATCOLL.Strings_Impl is
       -----------
 
       procedure Clone
-         (Self   : in out XString;
-          Data   : Big_String_Data_Access)
+         (Self         : in out XString;
+          Data         : Big_String_Data_Access;
+          Min_Capacity : String_Size)
       is
          Size  : constant Integer := Integer (Self.Data.Big.Size);
          First : constant Natural := Natural (Self.Data.Big.First);
-         Cap  : constant String_Size :=
-            Growth_Strategy (0, Min_Size => Self.Data.Big.Size);
+         Cap  : constant String_Size := Growth_Strategy
+            (0, Min_Size =>
+                String_Size'Max (Self.Data.Big.Size, Min_Capacity));
          Result : constant Big_String_Data_Access := Convert
             (System.Memory.Alloc
                (size_t (Cap) * Bytes_Per_Char + Extra_Header_Size));
@@ -279,7 +302,7 @@ package body GNATCOLL.Strings_Impl is
             --  We do not need atomic operations here. We are still in
             --  the thread that did the assignment, and there is no
             --  shared data in this mode.
-            Clone (Self, Self.Data.Big.Data);
+            Clone (Self, Self.Data.Big.Data, Min_Capacity => 0);
          end if;
       end Adjust;
 
@@ -340,39 +363,57 @@ package body GNATCOLL.Strings_Impl is
          end if;
       end Convert_To_Big_String;
 
-      -------------
-      -- Reserve --
-      -------------
+      ---------------------------
+      -- Reserve_Make_Writable --
+      ---------------------------
 
-      procedure Reserve (Self : in out XString; Capacity : String_Size) is
+      procedure Reserve_Make_Writable
+         (Self                 : in out XString;
+          Capacity             : String_Size;
+          Always_Make_Writable : Boolean)
+      is
          Current_Cap : String_Size;
          First       : Natural;
          New_Size    : String_Size;
          Old_Size    : Natural;
       begin
          if Self.Data.Small.Is_Big then
-            --  We are about to modify the string
-            if Copy_On_Write then
-               Make_Writable (Self);
-            end if;
-
             Current_Cap := Get_Capacity (Self);
             First := Self.Data.Big.First;
 
-            --  Do we have enough space at the end already (i.e
-            --  the capacity we really need extends from First, not
-            --  from character 1).
+            --  Do we have enough space after First to store up to
+            --  Capacity bytes ? If yes, nothing to do unless the user wants
+            --  to make the string writable
 
-            if Current_Cap >= String_Size (First) - 1 + Capacity then
-               --  nothing to do, we have enough space
-               null;
+            if String_Size (First) - 1 + Capacity <= Current_Cap then
+               if Copy_On_Write and then Always_Make_Writable then
+                  --  If not shared => does nothing, the current capacity is
+                  --      big enough anyway
+                  --  If shared => will set First to 1, and allocate a size
+                  --      max(size, Capacity). This might actually shrink the
+                  --      total allocated size
+                  Make_Writable (Self, Min_Capacity => Capacity);
+               else
+                  --  Nothing to do, not shared and already has right capacity
+                  null;
+               end if;
 
-            else
-               --  We'll have to make space. The simplest is first to move all
-               --  characters back to First=1, which might free enough space at
-               --  the end of the string.
+            --  Would we have enough space if we move characters so that First
+            --  becomes 1 ?
 
-               if First > 1 then
+            elsif Capacity <= Current_Cap then
+               if Copy_On_Write and then Always_Make_Writable then
+                  --  If not shared => does nothing
+                  --  If shared => First set to 1, allocate
+                  --     max(size, capacity) and copy. Might shrink the total
+                  --     allocated size.
+                  Make_Writable (Self, Min_Capacity => Capacity);
+               end if;
+
+               --  not shared, only have to copy characters unless First is
+               --  already 1
+
+               if Self.Data.Big.First /= 1 then
                   Old_Size := Natural (Self.Data.Big.Size);
                   if Copy_On_Write then
                      Self.Data.Big.Data.Bytes2 (1 .. Old_Size) :=
@@ -387,9 +428,19 @@ package body GNATCOLL.Strings_Impl is
                   Self.Data.Big.First := 1;
                end if;
 
-               --  Do we have enough space now ?
+            --  Definitely not enough allocated memory
 
-               if Current_Cap < Capacity then
+            else
+               if Copy_On_Write then
+                  --  If not shared => does nothing
+                  --  If shared => allocate max(size, capacity) and copy
+                  Make_Writable (Self, Min_Capacity => Capacity);
+               end if;
+
+               --  Do we need to extend the memory ? Only needed if the string
+               --  wasn't shared before and thus we did not already
+               --  alloc/realloc
+               if Get_Capacity (Self) < Capacity then
                   New_Size := Growth_Strategy (Current_Cap, Capacity);
                   Store_Capacity (Self, New_Size);
                   Self.Data.Big.Data := Convert
@@ -423,6 +474,18 @@ package body GNATCOLL.Strings_Impl is
                end;
             end if;
          end if;
+      end Reserve_Make_Writable;
+
+      -------------
+      -- Reserve --
+      -------------
+
+      procedure Reserve
+         (Self     : in out XString;
+          Capacity : String_Size) is
+      begin
+         Reserve_Make_Writable
+            (Self, Capacity, Always_Make_Writable => False);
       end Reserve;
 
       ------------
@@ -437,14 +500,18 @@ package body GNATCOLL.Strings_Impl is
             null;
          else
             --  ??? Should we try to revert to a small string
-            Make_Writable (Self);
+            --  If the string is shared, this call will already shrink
+            --  the memory, so we won't need to do anything afterwards
+            Make_Writable (Self, Min_Capacity => 0);
 
             New_Size := Growth_Strategy (0, Self.Data.Big.Size);
-            Store_Capacity (Self, New_Size);
-            Self.Data.Big.Data := Convert
-               (System.Memory.Realloc
-                 (Convert (Self.Data.Big.Data),
-                  size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
+            if Get_Capacity (Self) > New_Size then
+               Store_Capacity (Self, New_Size);
+               Self.Data.Big.Data := Convert
+                  (System.Memory.Realloc
+                    (Convert (Self.Data.Big.Data),
+                     size_t (New_Size) * Bytes_Per_Char + Extra_Header_Size));
+            end if;
          end if;
       end Shrink;
 
@@ -458,7 +525,8 @@ package body GNATCOLL.Strings_Impl is
       is
       begin
          Store_Size (Self, 0);
-         Self.Reserve (Capacity => Str'Length);
+         Reserve_Make_Writable
+            (Self, Capacity => Str'Length, Always_Make_Writable => True);
 
          if not Self.Data.Small.Is_Big then
             Self.Data.Small.Size := Str'Length;
@@ -497,7 +565,10 @@ package body GNATCOLL.Strings_Impl is
          --  characters back to position 1, or by converting to
          --  a big string, or resizing the current buffer.
 
-         Self.Reserve (Capacity => String_Size (New_Size));
+         Reserve_Make_Writable
+            (Self,
+             Capacity             => String_Size (New_Size),
+             Always_Make_Writable => True);
 
          if not Self.Data.Small.Is_Big then
             Self.Data.Small.Data (Current + 1 .. New_Size) := Str;
@@ -528,7 +599,10 @@ package body GNATCOLL.Strings_Impl is
          Current : constant Natural := Self.Length;
          F : Natural;
       begin
-         Self.Reserve (Capacity => String_Size (Current + 1));
+         Reserve_Make_Writable
+            (Self,
+             Capacity             => String_Size (Current + 1),
+             Always_Make_Writable => True);
 
          if not Self.Data.Small.Is_Big then
             Self.Data.Small.Data (Current + 1) := Char;
@@ -950,7 +1024,7 @@ package body GNATCOLL.Strings_Impl is
             and then Self.Data.Big.Is_Big
          then
             --  Make the string unshareable
-            Make_Writable (Self);
+            Make_Writable (Self, Min_Capacity => Get_Capacity (Self));
             Self.Data.Big.Data.Refcount := Unshareable;
          end if;
 
@@ -975,7 +1049,8 @@ package body GNATCOLL.Strings_Impl is
          New_Size : Natural;
       begin
          if Low > High then
-            Self.Clear;
+            --  Keep the memory allocated in case we append again
+            Store_Size (Self, 0);
             return;
          end if;
 
@@ -1114,7 +1189,8 @@ package body GNATCOLL.Strings_Impl is
 
                else
                   Into.Data.Big.Size := 0;
-                  Reserve (Into, Capacity => Size);
+                  Reserve_Make_Writable
+                     (Into, Capacity => Size, Always_Make_Writable => True);
                end if;
 
                if Copy_On_Write then
@@ -1306,7 +1382,7 @@ package body GNATCOLL.Strings_Impl is
          L : Natural;
       begin
          if Self.Data.Big.Is_Big then
-            Make_Writable (Self);
+            Make_Writable (Self, Min_Capacity => Get_Capacity (Self));
          end if;
 
          Get_String (Self, S, L);
@@ -1343,7 +1419,10 @@ package body GNATCOLL.Strings_Impl is
          end if;
 
          --  This makes the string writable
-         Self.Reserve (String_Size (New_L));
+         Reserve_Make_Writable
+            (Self,
+             Capacity             => String_Size (New_L),
+             Always_Make_Writable => True);
 
          --  Couldn't get the string before, since we might have reset it
          Get_String (Self, S, L2);
@@ -1398,7 +1477,10 @@ package body GNATCOLL.Strings_Impl is
 
          --  This makes the string writable, and ensure we no longer share
          --  the buffer.
-         Self.Reserve (String_Size (New_L));
+         Reserve_Make_Writable
+            (Self,
+             Capacity             => String_Size (New_L),
+             Always_Make_Writable => True);
 
          --  Couldn't get the string before, since we might have reset it
          Get_String (Self, S, L2);
@@ -1551,7 +1633,10 @@ package body GNATCOLL.Strings_Impl is
          F   : Positive;
       begin
          if Len < Width then
-            Self.Reserve (String_Size (Width));
+            Reserve_Make_Writable
+               (Self,
+                Capacity             => String_Size (Width),
+                Always_Make_Writable => True);
 
             Get_String (Self, S, L);
             F := (Width - Len + 1) / 2;
@@ -1624,7 +1709,10 @@ package body GNATCOLL.Strings_Impl is
          L   : Natural;
       begin
          if Len < Width then
-            Self.Reserve (String_Size (Width));
+            Reserve_Make_Writable
+               (Self,
+                Capacity             => String_Size (Width),
+                Always_Make_Writable => True);
             Get_String (Self, S, L);
 
             for C in Len + 1 .. Width loop
@@ -1659,7 +1747,10 @@ package body GNATCOLL.Strings_Impl is
             return Self;
          else
             Result := Self;
-            Result.Reserve (String_Size (Width));
+            Reserve_Make_Writable
+               (Result,
+                Capacity             => String_Size (Width),
+                Always_Make_Writable => True);
 
             Get_String (Result, S, L);
             for C in Len + 1 .. Width loop
@@ -1685,7 +1776,10 @@ package body GNATCOLL.Strings_Impl is
          L   : Natural;
       begin
          if Len < Width then
-            Self.Reserve (String_Size (Width));
+            Reserve_Make_Writable
+               (Self,
+                Capacity             => String_Size (Width),
+                Always_Make_Writable => True);
             Get_String (Self, S, L);
 
             S (Width - Len + 1 .. Width) := S (1 .. Len);
@@ -2345,7 +2439,10 @@ package body GNATCOLL.Strings_Impl is
             end loop;
 
             Store_Size (Self, 0);  --  Reset the string
-            Self.Reserve (String_Size (Size));
+            Reserve_Make_Writable
+               (Self,
+                Capacity             => String_Size (Size),
+                Always_Make_Writable => True);
 
             Self.Append (Prefix);
             for It in Items'Range loop
@@ -2399,7 +2496,10 @@ package body GNATCOLL.Strings_Impl is
             end loop;
 
             Store_Size (Self, 0);  --  Reset the string
-            Self.Reserve (String_Size (Size));
+            Reserve_Make_Writable
+               (Self,
+                Capacity             => String_Size (Size),
+                Always_Make_Writable => True);
 
             Self.Append (Prefix);
             for It in Items'Range loop
@@ -2420,7 +2520,7 @@ package body GNATCOLL.Strings_Impl is
          S   : Char_Array;
          L   : Natural;
       begin
-         Make_Writable (Self);
+         Make_Writable (Self, Min_Capacity => Get_Capacity (Self));
          Get_String (Self, S, L);
          for Idx in 1 .. L loop
             S (Idx) := To_Upper (S (Idx));
@@ -2446,7 +2546,7 @@ package body GNATCOLL.Strings_Impl is
          S   : Char_Array;
          L   : Natural;
       begin
-         Make_Writable (Self);
+         Make_Writable (Self, Min_Capacity => Get_Capacity (Self));
          Get_String (Self, S, L);
          for Idx in 1 .. L loop
             S (Idx) := To_Lower (S (Idx));
@@ -2472,7 +2572,7 @@ package body GNATCOLL.Strings_Impl is
          S   : Char_Array;
          L   : Natural;
       begin
-         Make_Writable (Self);
+         Make_Writable (Self, Min_Capacity => Get_Capacity (Self));
          Get_String (Self, S, L);
          S (1) := To_Upper (S (1));
       end Capitalize;
@@ -2486,7 +2586,7 @@ package body GNATCOLL.Strings_Impl is
          L   : Natural;
          Idx : Natural;
       begin
-         Make_Writable (Self);
+         Make_Writable (Self, Min_Capacity => Get_Capacity (Self));
          Get_String (Self, S, L);
          S (1) := To_Upper (S (1));
 
