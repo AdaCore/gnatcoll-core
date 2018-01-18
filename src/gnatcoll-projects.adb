@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2017, AdaCore                     --
+--                     Copyright (C) 2002-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -7536,6 +7536,13 @@ package body GNATCOLL.Projects is
       --  This is temporary until GPR.Sinput doesn't have
       --  a corresponding visible procedure
 
+      Undefined_Externals_Present : Boolean := False;
+      procedure Catch_Undefined_Externals (S : String);
+      --  Sets Undefined_Externals_Present to true if there is at least one
+      --  error message about undefined externals when loading the project.
+      --  This only works in IDE mode, since for other tools there is no way
+      --  to change the Scenario Variables mid-loading and recompute view.
+
       ------------------------------------
       -- Add_Default_GNAT_Naming_Scheme --
       ------------------------------------
@@ -7909,10 +7916,35 @@ package body GNATCOLL.Projects is
            (T, Tree_For_Map => Self, With_View => False);
       end On_New_Tree_Loaded;
 
+      -------------------------------
+      -- Catch_Undefined_Externals --
+      -------------------------------
+
+      procedure Catch_Undefined_Externals (S : String) is
+         Pattern   : constant String := "undefined external reference";
+      begin
+         if Errors = null then
+            Trace (Me, "calling output wrapper when Errors callback not set");
+            return;
+         end if;
+
+         if Index (S, Pattern) /= 0 then
+            Undefined_Externals_Present := True;
+         end if;
+
+         Errors (S);
+      end Catch_Undefined_Externals;
+
       Sources_Count : Source_File_Index;
    begin
       Sources_Count := GPR.Sinput.Source_File.Last;
-      GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
+
+      if Self.Data.Env.IDE_Mode then
+         GPR.Output.Set_Special_Output
+           (Catch_Undefined_Externals'Unrestricted_Access);
+      else
+         GPR.Output.Set_Special_Output (GPR.Output.Output_Proc (Errors));
+      end if;
 
       --  The views stored in the projects are no longer valid, we should make
       --  sure they are not called.
@@ -8093,6 +8125,15 @@ package body GNATCOLL.Projects is
 
       GPR.Err.Finalize;
       GPR.Output.Cancel_Special_Output;
+
+      if Undefined_Externals_Present then
+         Errors
+           ("Some externals are undefined, project may be loaded incompletely"
+            & ASCII.LF);
+         Errors
+           ("Set values of corresponding externals and reload the project"
+            & ASCII.LF);
+      end if;
 
       for Index in Sources_Count + 1 .. GPR.Sinput.Source_File.Last loop
          Free (GPR.Sinput.Source_File.Table (Index));
