@@ -7705,6 +7705,7 @@ package body GNATCOLL.Projects is
 
       Tree.Data.Directories.Clear;
       Unchecked_Free (Tree.Data.Env.Scenario_Variables);
+      Unchecked_Free (Tree.Data.Env.Untyped_Variables);
    end Reset_View;
 
    --------------------
