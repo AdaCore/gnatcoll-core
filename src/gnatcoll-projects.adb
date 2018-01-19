@@ -93,6 +93,8 @@ package body GNATCOLL.Projects is
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Scenario_Variable_Array, Scenario_Variable_Array_Access);
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+     (Untyped_Variable_Array, Untyped_Variable_Array_Access);
+   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Project_Type'Class, Project_Type_Access);
 
    package Project_Htables is new Ada.Containers.Indefinite_Hashed_Maps
@@ -945,7 +947,7 @@ package body GNATCOLL.Projects is
       --  Otherwise, the suffix ALI_Ext is removed from the file name.
 
       function Is_Extending_All (P : Project_Type) return Boolean is
-         (Is_Extending_All (P.Data.Node, P.Data.Tree.Tree));
+        (Is_Extending_All (P.Data.Node, P.Data.Tree.Tree));
 
       function Find_Ada_In_Subtree
         (Map    : Names_Files.Map;
@@ -1443,6 +1445,7 @@ package body GNATCOLL.Projects is
       end if;
 
       Unchecked_Free (Re);
+
       Added.Clear;
 
       if Active (Me) then
@@ -4778,8 +4781,12 @@ package body GNATCOLL.Projects is
    --------------------------------
 
    procedure Compute_Scenario_Variables (Tree : Project_Tree_Data_Access) is
-      List  : Scenario_Variable_Array_Access;
-      Curr  : Positive;
+      Typed_List   : Scenario_Variable_Array_Access;
+      Untyped_List : Untyped_Variable_Array_Access;
+      T_Curr  : Positive;
+      U_Curr  : Positive;
+
+      Var_Quantity : Natural;
 
       function Count_Vars return Natural;
       --  Return the number of scenario variables in tree
@@ -4788,9 +4795,22 @@ package body GNATCOLL.Projects is
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          T        : GPR.Project_Node_Tree_Ref) return Boolean;
+      --  Wrapper that calls either Register_Scenario_Var or
+      --  Register_Untyped_Var depending on the kind of the variable.
+
+      function Register_Scenario_Var
+        (Variable : Project_Node_Id;
+         Proj     : Project_Node_Id;
+         T        : GPR.Project_Node_Tree_Ref) return Boolean;
       --  Add the variable to the list of scenario variables, if not there yet
       --  (see the documentation for Scenario_Variables for the exact rules
       --  used to detect aliases).
+
+      function Register_Untyped_Var
+        (Variable : Project_Node_Id;
+         Proj     : Project_Node_Id;
+         T        : GPR.Project_Node_Tree_Ref) return Boolean;
+      --  Likewise, add the variable to the list of untyped variables.
 
       function External_Default
         (Var : Project_Node_Id; T : GPR.Project_Node_Tree_Ref) return Name_Id;
@@ -4854,8 +4874,11 @@ package body GNATCOLL.Projects is
 
             if Kind_Of (Expr, T) /= N_Literal_String then
                Expr := First_Term (Expr, T);
-               Assert (Me, Next_Term (Expr, T) = Empty_Project_Node,
-                       "Default value cannot be a concatenation");
+               if Next_Term (Expr, T) /= Empty_Project_Node then
+                  Trace (Me, "Default value cannot be a concatenation");
+                  Proj.Data.Uses_Variables := True;  --  Prevent edition
+                  return No_Name;
+               end if;
 
                Expr := Current_Term (Expr, T);
 
@@ -4893,9 +4916,14 @@ package body GNATCOLL.Projects is
 
                            --  Check now that this is not a composite value
 
-                           Assert
-                             (Me, Next_Term (Expr, T) = Empty_Project_Node,
-                              "Default value cannot be a concatenation");
+                           if Next_Term (Expr, T) /= Empty_Project_Node then
+                              Trace
+                                (Me,
+                                 "Default value cannot be a concatenation");
+                              Proj.Data.Uses_Variables := True;
+                              --  Prevent edition
+                              return No_Name;
+                           end if;
 
                            --  Get the string literal
 
@@ -4930,14 +4958,77 @@ package body GNATCOLL.Projects is
          Proj     : Project_Node_Id;
          T        : GPR.Project_Node_Tree_Ref) return Boolean
       is
+         function Is_Simple_Scenario_Variable return Boolean;
+         --  Check whether or not given variable is a simple canonical
+         --  Scebario Variable, that is there are no concatenations in the
+         --  defaulr value or after the external variable declaration
+         --  and so on.
+
+         function Is_Simple_Scenario_Variable return Boolean is
+
+            Expr : Project_Node_Id;
+         begin
+            Expr :=
+              First_Term (Expression_Of (Variable, T), T);
+
+            if Next_Term (Expr, T) /= Empty_Project_Node then
+               --  Not good, we have a declaration of the following kind:
+               --  Val : Type := External ("Ext", "default") & <something>
+               return False;
+            end if;
+
+            Expr := Expression_Of (Variable, T);
+            Expr := First_Term   (Expr, T);
+            Expr := Current_Term (Expr, T);
+            Expr := External_Default_Of (Expr, T);
+            if Expr /= Empty_Project_Node and then
+              Kind_Of (Expr, T) /= N_Literal_String
+            then
+               Expr := First_Term (Expr, T);
+               if Next_Term (Expr, T) /= Empty_Project_Node then
+                  --  Not good, we have a declaration of the following kind:
+                  --  Val : Type := External ("Ext", "default" & <something>)
+                  return False;
+               end if;
+            end if;
+
+            return True;
+         end Is_Simple_Scenario_Variable;
+
+      begin
+         case Kind_Of (Variable, T) is
+            when N_Variable_Declaration =>
+               return Register_Untyped_Var (Variable, Proj, T);
+            when N_Typed_Variable_Declaration =>
+               if Is_Simple_Scenario_Variable then
+                  return Register_Scenario_Var (Variable, Proj, T);
+               else
+                  return Register_Untyped_Var (Variable, Proj, T);
+               end if;
+            when others =>
+               Trace (Me, "Unexpected kind of variable");
+               return True;
+         end case;
+      end Register_Var;
+
+      ---------------------------
+      -- Register_Scenario_Var --
+      ---------------------------
+
+      function Register_Scenario_Var
+        (Variable : Project_Node_Id;
+         Proj     : Project_Node_Id;
+         T        : GPR.Project_Node_Tree_Ref) return Boolean
+      is
          pragma Unreferenced (Proj);
          V        : constant Name_Id := External_Reference_Of (Variable, T);
          N        : constant String := Get_String (V);
          Var      : Scenario_Variable;
          Is_Valid : Boolean;
       begin
-         for Index in 1 .. Curr - 1 loop
-            if External_Name (List (Index)) = N then
+
+         for Index in 1 .. T_Curr - 1 loop
+            if External_Name (Typed_List (Index)) = N then
                --  Nothing to do
                return True;
             end if;
@@ -4951,7 +5042,7 @@ package body GNATCOLL.Projects is
               (Tree.Env.Env.External, V,
                With_Default => External_Default (Variable, T)));
 
-         List (Curr) := Var;
+         Typed_List (T_Curr) := Var;
 
          --  Ensure the external reference actually exists and has a valid
          --  value.
@@ -4992,26 +5083,74 @@ package body GNATCOLL.Projects is
             end if;
          end if;
 
-         Curr := Curr + 1;
+         T_Curr := T_Curr + 1;
          return True;
-      end Register_Var;
+      end Register_Scenario_Var;
+
+      --------------------------
+      -- Register_Untyped_Var --
+      --------------------------
+
+      function Register_Untyped_Var
+        (Variable : Project_Node_Id;
+         Proj     : Project_Node_Id;
+         T        : GPR.Project_Node_Tree_Ref) return Boolean
+      is
+         pragma Unreferenced (Proj);
+         V        : constant Name_Id := External_Reference_Of (Variable, T);
+         N        : constant String := Get_String (V);
+         Var      : Untyped_Variable;
+      begin
+
+         for Index in 1 .. U_Curr - 1 loop
+            if External_Name (Untyped_List (Index)) = N then
+               --  Nothing to do
+               return True;
+            end if;
+         end loop;
+
+         Var := Untyped_Variable'
+           (Name    => V,
+            Default => External_Default (Variable, T),
+            Value   => GPR.Ext.Value_Of
+              (Tree.Env.Env.External, V,
+               With_Default => External_Default (Variable, T)));
+
+         Untyped_List (U_Curr) := Var;
+
+         U_Curr := U_Curr + 1;
+         return True;
+      end Register_Untyped_Var;
 
    begin
       Trace (Me, "Compute the list of scenario variables");
       Unchecked_Free (Tree.Env.Scenario_Variables);
-      List :=  new Scenario_Variable_Array (1 .. Count_Vars);
-      Curr := List'First;
+      Unchecked_Free (Tree.Env.Untyped_Variables);
+      Var_Quantity := Count_Vars;
+
+      Typed_List :=  new Scenario_Variable_Array (1 .. Var_Quantity);
+      T_Curr := Typed_List'First;
+      Untyped_List :=  new Untyped_Variable_Array (1 .. Var_Quantity);
+      U_Curr := Untyped_List'First;
 
       For_Each_External_Variable_Declaration
         (Tree.Root, Recursive => True,
          Callback => Register_Var'Unrestricted_Access);
 
-      if Curr > List'Last then
-         Tree.Env.Scenario_Variables := List;
+      if T_Curr > Typed_List'Last then
+         Tree.Env.Scenario_Variables := Typed_List;
       else
          Tree.Env.Scenario_Variables :=
-           new Scenario_Variable_Array'(List (1 .. Curr - 1));
-         Unchecked_Free (List);
+           new Scenario_Variable_Array'(Typed_List (1 .. T_Curr - 1));
+         Unchecked_Free (Typed_List);
+      end if;
+
+      if U_Curr > Untyped_List'Last then
+         Tree.Env.Untyped_Variables := Untyped_List;
+      else
+         Tree.Env.Untyped_Variables :=
+           new Untyped_Variable_Array'(Untyped_List (1 .. U_Curr - 1));
+         Unchecked_Free (Untyped_List);
       end if;
    end Compute_Scenario_Variables;
 
@@ -5024,6 +5163,16 @@ package body GNATCOLL.Projects is
    begin
       return Scenario_Variables (Self.Data);
    end Scenario_Variables;
+
+   -----------------------
+   -- Untyped_Variables --
+   -----------------------
+
+   function Untyped_Variables
+     (Self : Project_Tree) return Untyped_Variable_Array is
+   begin
+      return Untyped_Variables (Self.Data);
+   end Untyped_Variables;
 
    ------------------------
    -- Scenario_Variables --
@@ -5049,6 +5198,31 @@ package body GNATCOLL.Projects is
 
       return Tree.Env.Scenario_Variables.all;
    end Scenario_Variables;
+
+   -----------------------
+   -- Untyped_Variables --
+   -----------------------
+
+   function Untyped_Variables
+     (Tree : Project_Tree_Data_Access) return Untyped_Variable_Array
+   is
+   begin
+      if Tree = null or else Tree.Is_Aggregated then
+         return (1 .. 0 => <>);
+      end if;
+
+      if Tree.Env.Untyped_Variables = null then
+         Compute_Scenario_Variables (Tree);
+      end if;
+
+      for V of Tree.Env.Untyped_Variables.all loop
+         V.Value :=
+           GPR.Ext.Value_Of
+             (Tree.Env.Env.External, V.Name, With_Default => V.Default);
+      end loop;
+
+      return Tree.Env.Untyped_Variables.all;
+   end Untyped_Variables;
 
    ------------------------
    -- Scenario_Variables --
@@ -5099,11 +5273,29 @@ package body GNATCOLL.Projects is
       return Get_String (Var.Name);
    end External_Name;
 
+   -------------------
+   -- External_Name --
+   -------------------
+
+   function External_Name (Var : Untyped_Variable) return String is
+   begin
+      return Get_String (Var.Name);
+   end External_Name;
+
    ----------------------
    -- External_Default --
    ----------------------
 
    function External_Default (Var : Scenario_Variable) return String is
+   begin
+      return Get_String (Var.Default);
+   end External_Default;
+
+   ----------------------
+   -- External_Default --
+   ----------------------
+
+   function External_Default (Var : Untyped_Variable) return String is
    begin
       return Get_String (Var.Default);
    end External_Default;
@@ -5120,19 +5312,39 @@ package body GNATCOLL.Projects is
       Var.Value := Get_String (Value);
    end Set_Value;
 
+   ---------------
+   -- Set_Value --
+   ---------------
+
+   procedure Set_Value
+     (Var   : in out Untyped_Variable;
+      Value : String)
+   is
+   begin
+      Var.Value := Get_String (Value);
+   end Set_Value;
+
    ------------------------
    -- Change_Environment --
    ------------------------
 
    procedure Change_Environment
-     (Self  : Project_Tree;
-      Vars  : Scenario_Variable_Array) is
+     (Self   : Project_Tree;
+      Vars   : Scenario_Variable_Array;
+      UVars  : Untyped_Variable_Array := Empty_Untyped_Variable_Array) is
    begin
       for V in Vars'Range loop
          GPR.Ext.Add
            (Self.Data.Env.Env.External,
             Get_String (Vars (V).Name),
             Get_String (Vars (V).Value),
+            GPR.Ext.From_Command_Line);
+      end loop;
+      for V in UVars'Range loop
+         GPR.Ext.Add
+           (Self.Data.Env.Env.External,
+            Get_String (UVars (V).Name),
+            Get_String (UVars (V).Value),
             GPR.Ext.From_Command_Line);
       end loop;
    end Change_Environment;
@@ -5171,6 +5383,15 @@ package body GNATCOLL.Projects is
    -----------
 
    function Value (Var : Scenario_Variable) return String is
+   begin
+      return Get_String (Var.Value);
+   end Value;
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (Var : Untyped_Variable) return String is
    begin
       return Get_String (Var.Value);
    end Value;
@@ -5250,7 +5471,9 @@ package body GNATCOLL.Projects is
             Var := First_Variable_Of (Pkg, Tree);
 
             while Var /= Empty_Project_Node loop
-               if Kind_Of (Var, Tree) = N_Typed_Variable_Declaration
+
+               if Kind_Of (Var, Tree) in
+                   N_Typed_Variable_Declaration | N_Variable_Declaration
                  and then Is_External_Variable (Var, Tree)
                  and then not Callback (Var, Prj, Tree)
                then

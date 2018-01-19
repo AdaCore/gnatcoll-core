@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2017, AdaCore                     --
+--                     Copyright (C) 2002-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1202,6 +1202,19 @@ package GNATCOLL.Projects is
    --  then BUILD2 is not considered as a scenario variable: it is not
    --  possible in the general case to find the set of valid values for
    --  instance.
+   --  The same goes to composite default values:
+   --      type Build2_Type is ("Debug_Mode", "Production_Mode");
+   --      Build2 : Build2_Type := external ("BUILD2", "Production" & "_Mode");
+   --
+   --  All other project variables like untyped externals or the concatenation
+   --  case described above are considered Untyped Variables and have a lesser
+   --  range of manipulation, basically get and set are available for them.
+   --
+   --  For the latest case (composite default) only Set_Value is available
+   --  once the project is loaded, both External_Default and Value will return
+   --  an empty string, although the project will be loaded normally. Once
+   --  the value of such external is changed by Set_Value, Value will return
+   --  proper values.
 
    type Scenario_Variable is private;
    type Scenario_Variable_Array is array (Natural range <>)
@@ -1210,6 +1223,14 @@ package GNATCOLL.Projects is
 
    No_Variable   : aliased constant Scenario_Variable;
    All_Scenarios : aliased constant Scenario_Variable_Array;
+
+   type Untyped_Variable is private;
+   type Untyped_Variable_Array is array (Natural range <>)
+     of aliased Untyped_Variable;
+   type Untyped_Variable_Array_Access is access Untyped_Variable_Array;
+
+   No_Untyped_Variable          : aliased constant Untyped_Variable;
+   Empty_Untyped_Variable_Array : aliased constant Untyped_Variable_Array;
 
    function Scenario_Variables
      (Self : Project_Tree) return Scenario_Variable_Array;
@@ -1222,6 +1243,11 @@ package GNATCOLL.Projects is
    --  The variables stored in the result have the value they had when the
    --  project was loaded.
 
+   function Untyped_Variables
+     (Self : Project_Tree) return Untyped_Variable_Array;
+   --  Return the list of untyped variables used in the whole project
+   --  tree. The result is cached for efficiency.
+
    function Scenario_Variables
      (Self : Project_Tree; External_Name : String) return Scenario_Variable;
    --  Return the scenario variable associated with External_Name.
@@ -1232,6 +1258,7 @@ package GNATCOLL.Projects is
    --  created.
 
    function External_Name (Var : Scenario_Variable) return String;
+   function External_Name (Var : Untyped_Variable) return String;
    --  Returns the name of the external variable referenced by Var.
    --  Empty string is returned if Var doesn't reference an external variable.
 
@@ -1243,11 +1270,15 @@ package GNATCOLL.Projects is
    --  GNATCOLL.Utils.Free
 
    function External_Default (Var : Scenario_Variable) return String;
+   function External_Default (Var : Untyped_Variable) return String;
    --  Return the default value for the external variable, computed for the
    --  current view of the project.
 
    procedure Set_Value
      (Var   : in out Scenario_Variable;
+      Value : String);
+   procedure Set_Value
+     (Var   : in out Untyped_Variable;
       Value : String);
    --  Change the value stored in Var.
    --  This does not affect the environment or the loaded project. In general,
@@ -1263,8 +1294,9 @@ package GNATCOLL.Projects is
    --  variable.
 
    procedure Change_Environment
-     (Self : Project_Tree;
-      Vars : Scenario_Variable_Array);
+     (Self  : Project_Tree;
+      Vars  : Scenario_Variable_Array;
+      UVars : Untyped_Variable_Array := Empty_Untyped_Variable_Array);
    procedure Change_Environment
      (Self        : Project_Environment;
       Name, Value : String);
@@ -1276,6 +1308,7 @@ package GNATCOLL.Projects is
    --  a project is loaded. It will not impact already loaded projects.
 
    function Value (Var : Scenario_Variable) return String;
+   function Value (Var : Untyped_Variable) return String;
    --  Return the values set for Var.
    --  This value is not necessary that when the project was loaded, if you
    --  have used Set_Value. However, it will be if the variable comes straight
@@ -1953,9 +1986,10 @@ private
       --  See Set_Save_Config_File
 
       Scenario_Variables : Scenario_Variable_Array_Access;
-      --  Cached value of the scenario variables. This should be accessed
-      --  only through the function Scenario_Variables, since it needs to
-      --  be initialized first.
+      Untyped_Variables  : Untyped_Variable_Array_Access;
+      --  Cached value of the scenario variables and untyped variables.
+      --  This should be accessed only through the function Scenario_Variables,
+      --  since it needs to be initialized first.
 
       TTY_Process_Descriptor_Disabled : Boolean := False;
       --  when TTY_Process_Descriptor are disabled, Process_Descriptor are
@@ -2061,12 +2095,24 @@ private
       Value       : GPR.Name_Id;
    end record;
 
+   type Untyped_Variable is record
+      Name        : GPR.Name_Id;
+      Default     : GPR.Name_Id;
+      Value       : GPR.Name_Id;
+   end record;
+
    No_Variable   : aliased constant Scenario_Variable :=
      (GPR.No_Name, GPR.No_Name, GPR.Empty_Project_Node,
       GPR.No_Name);
 
    All_Scenarios : aliased constant Scenario_Variable_Array (1 .. 0) :=
                    (others => No_Variable);
+
+   No_Untyped_Variable : aliased constant Untyped_Variable :=
+     (GPR.No_Name, GPR.No_Name, GPR.No_Name);
+
+   Empty_Untyped_Variable_Array : aliased constant Untyped_Variable_Array :=
+     Untyped_Variable_Array'(1 .. 0 => No_Untyped_Variable);
 
    type Inner_Project_Iterator is record
       Root      : Project_Type;
@@ -2231,6 +2277,11 @@ private
      (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array;
    pragma Inline (Scenario_Variables);
    --  Internal version of Scenario_Variables
+
+   function Untyped_Variables
+     (Tree : Project_Tree_Data_Access) return Untyped_Variable_Array;
+   pragma Inline (Untyped_Variables);
+   --  Internal version of Untyped_Variables
 
    procedure Reset_All_Caches (Tree : Project_Tree_Data_Access);
    --  Reset all the caches for imported/importing projects
