@@ -25,6 +25,7 @@
 --  copy-on-write.
 --  See details in gnatcoll-strings_impl.ads
 
+with GNATCOLL.Counters;
 with GNATCOLL.Strings_Impl;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 
@@ -32,4 +33,5 @@ package GNATCOLL.Strings is
    new GNATCOLL.Strings_Impl.Strings
       (SSize            => GNATCOLL.Strings_Impl.Optimal_String_Size,
        Character_Type   => Character,
-       Character_String => String);
+       Character_String => String,
+       Counters         => GNATCOLL.Counters.Automatic_Counters);

@@ -243,6 +243,7 @@ with Ada.Exceptions;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 private with Ada.Finalization;
 
+with GNATCOLL.Counters;
 with GNATCOLL.VFS;           use GNATCOLL.VFS;
 with GNATCOLL.Atomic;        use GNATCOLL.Atomic;
 with GNATCOLL.Strings_Impl;
@@ -711,7 +712,8 @@ package GNATCOLL.Traces is
    package Msg_Strings is new GNATCOLL.Strings_Impl.Strings
       (SSize            => Typical_Msg_Size,
        Character_Type   => Character,
-       Character_String => String);
+       Character_String => String,
+       Counters         => GNATCOLL.Counters.Automatic_Counters);
    --  We assume that most messages (including decorators) will be less than
    --  this number of characters, and optimize the string creation for this.
    --  But we still support larger messages, at a cost of one memory

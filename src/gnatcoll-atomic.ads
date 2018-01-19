@@ -92,6 +92,12 @@ package GNATCOLL.Atomic is
    --      4 (thread 1 has read and incremented, then thread 2)
    --  If you use the other operations above, you always end up with 4.
 
+   function ">" (Left, Right : Atomic_Counter) return Boolean
+      is (System.Atomic_Counters.">" (Left, Right));
+   --  Compare two counters.
+   --  Note that by the time this function returns, and in a multi threaded
+   --  application, either of the two counters might have changed.
+
    function "="
       (Left, Right : Atomic_Counter) return Boolean
       renames System.Atomic_Counters."=";

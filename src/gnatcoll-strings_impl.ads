@@ -232,7 +232,7 @@
 private with Ada.Finalization;
 with Ada.Containers;
 with Ada.Strings;
-with GNATCOLL.Atomic;
+with GNATCOLL.Counters;
 with System;
 
 package GNATCOLL.Strings_Impl is
@@ -259,6 +259,25 @@ package GNATCOLL.Strings_Impl is
    --  Current and Min_Size are given in 'characters' not in 'bytes', since
    --  a character could potentially take several bytes.
 
+   type No_Counter is null record;
+   for No_Counter'Size use 0;
+   procedure NullP (V : aliased in out No_Counter) is null;
+   procedure NullSetP (V : out No_Counter) is null;
+   function NullDec (V : aliased in out No_Counter) return Boolean is (True);
+   function NullCheck (V : No_Counter) return Boolean is (False);
+   package No_Copy_On_Write is new GNATCOLL.Counters.Signature
+      (No_Counter,
+       Increment        => NullP,
+       Decrement        => NullDec,
+       Set_To_One       => NullSetP,
+       Set_To_Zero      => NullSetP,
+       Is_Zero          => NullCheck,
+       Greater_Than_One => NullCheck,
+       Task_Safe        => False,
+       Is_Lock_Free     => True);
+   --  Use this package to disable copy-on-write when you instantiate the
+   --  package below.
+
    generic
       type SSize is mod <>;
       --  Number of characters that can be stored in the XString object itself,
@@ -277,6 +296,17 @@ package GNATCOLL.Strings_Impl is
       --  An array of Char_Type, i.e. a string as can be stored on the
       --  stack.
 
+      with package Counters is new GNATCOLL.Counters.Signature (<>);
+      --  How to do copy-on-write (i.e. only duplicate the internal buffer for
+      --  strings prior to modifying them, but share those buffers as much as
+      --  possible).
+      --
+      --  * GNATCOLL.Counters.Atomic_Counter: get task-safe xstrings,
+      --    as documented above
+      --  * GNATCOLL.Counters.Non_Atomic_Counter: more efficient, but never
+      --    task safe
+      --  * No_Copy_On_Write: disable copy-on-write
+
       Space : Character_Type := Character_Type'Val (Character'Pos (' '));
       --  The space character
 
@@ -288,12 +318,6 @@ package GNATCOLL.Strings_Impl is
       --  In general, you do not need to specify those if you have 'use'd
       --  the package Ada.Characters.Handling or Ada.Wide_Characters.Handling.
 
-      Copy_On_Write : Boolean := GNATCOLL.Atomic.Is_Lock_Free;
-      --  Whether we only duplicate strings when they are actually modified.
-      --  The alternative is to duplicate them every time a xstring is copied
-      --  into another. The latter might be faster in some cases (less
-      --  contention in multithreading for instance).
-
       with function Growth_Strategy
          (Current, Min_Size : String_Size) return String_Size
          is Default_Growth;
@@ -302,6 +326,13 @@ package GNATCOLL.Strings_Impl is
    package Strings is
       pragma Compile_Time_Error
          (Natural (SSize'Last) > 2 ** 7, "SSize too large");
+
+      Copy_On_Write : constant Boolean := Counters.Is_Lock_Free
+         and then Counters.Counter'Size /= 0;
+      --  Whether we only duplicate strings when they are actually modified.
+      --  The alternative is to duplicate them every time a xstring is copied
+      --  into another. The latter might be faster in some cases (less
+      --  contention in multithreading for instance).
 
       subtype Char_Type is Character_Type;
       subtype Char_String is Character_String;
@@ -1004,21 +1035,27 @@ package GNATCOLL.Strings_Impl is
       type Character_Reference (Char : not null access Char_Type)
          is null record;
 
-      type Big_String_Data (Copy_On_Write : Boolean) is limited record
-         case Copy_On_Write is
-            when False =>
-               Bytes1   : Unconstrained_Char_Array;
-            when True =>
-               Refcount : aliased GNATCOLL.Atomic.Atomic_Counter;
-               Bytes2   : Unconstrained_Char_Array;
-         end case;
-      end record with Unchecked_Union;
+      type Big_String_Data is limited record
+         Refcount : aliased Counters.Counter;   --  might be null record
+         Bytes    : Unconstrained_Char_Array;
+      end record;
       type Big_String_Data_Access is access all Big_String_Data;
       pragma Suppress_Initialization (Big_String_Data);
       pragma No_Strict_Aliasing (Big_String_Data_Access);
       --  Unsafe: this is the data used by big strings to store the actual
       --  byte sequence. When we use refcounting, we need to have an explicit
       --  refcount, which is not needed otherwise.
+      --
+      --  Refcount is set via Counters.Set_Zero to indicate strings
+      --  that must not be shared.
+      --  In particular, this is the case when we have taken
+      --  a variable reference to a string, to fix the following case:
+      --        R := S (2);   --  a variable indexing
+      --        S2 := S;      --  share the buffer ??? WRONG
+      --        R := 'A';     --  also alters S2
+      --
+      --  See http://www.gotw.ca/gotw/044.htm for a C++ discussion on why
+      --  we need to make a string unshareable.
 
       type Small_String is record
          Is_Big  : Boolean;
