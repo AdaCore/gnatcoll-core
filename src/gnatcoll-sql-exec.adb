@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -918,6 +918,7 @@ package body GNATCOLL.SQL.Exec is
                   R2 : constant Abstract_Cursor_Access :=
                     Task_Safe_Instance (R, Index_By);
                begin
+                  Finalize (DBMS_Forward_Cursor'Class (R.all));
                   Unchecked_Free (R);
 
                   R := R2;
@@ -1226,7 +1227,7 @@ package body GNATCOLL.SQL.Exec is
    overriding procedure Finalize (Self : in out Forward_Cursor) is
       Res : Abstract_Cursor_Access := Self.Res;
    begin
-      Self.Res := null;  --  Make Finalize idempotent
+      Self.Res := null; -- Make Finalize idempotent
       if Res /= null then
          Res.Refcount := Res.Refcount - 1;
          if Res.Refcount = 0 then
