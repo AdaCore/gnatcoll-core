@@ -1844,6 +1844,11 @@ package body GNATCOLL.Strings_Impl is
       begin
          Get_String (Self, S, L);
 
+         --  Special case for empty strings: do not raise Index_Error
+         if L = 0 then
+            return 0;
+         end if;
+
          if Low > L then
             raise Ada.Strings.Index_Error with Low'Img & " >" & L'Img;
          end if;
