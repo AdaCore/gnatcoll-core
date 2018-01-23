@@ -356,7 +356,7 @@ package GNATCOLL.Strings_Impl is
       --  or   if Str = Null_Xstring then
 
       type Indefinite_Char_Array is
-         array (Positive range <>) of aliased Char_Type;
+         array (Positive range <>) of Char_Type;
       subtype Unconstrained_Char_Array is Indefinite_Char_Array (Positive);
       type Char_Array is access all Unconstrained_Char_Array;
       pragma Suppress_Initialization (Unconstrained_Char_Array);
@@ -662,7 +662,7 @@ package GNATCOLL.Strings_Impl is
       procedure Write
          (Self    : in out XString;
           Process : not null access procedure
-             (S    : not null access Indefinite_Char_Array;
+             (S    : in out Char_String;
               Last : in out Natural));
       --  Access the string contained in Self, and lets you change its
       --  contents. This is an efficient way to load a large file in an

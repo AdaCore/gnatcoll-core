@@ -631,7 +631,7 @@ package body GNATCOLL.Strings_Impl is
       procedure Write
          (Self    : in out XString;
           Process : not null access procedure
-             (S    : not null access Indefinite_Char_Array;
+             (S    : in out Char_String;
               Last : in out Natural))
       is
          S : Char_Array;
@@ -644,27 +644,25 @@ package body GNATCOLL.Strings_Impl is
          --  value of Self, and thus our S variable might end up referencing
          --  freed memory, same for Process.
 
-         if not Self.Data.Small.Is_Big
-            or else not Copy_On_Write
-         then
+         if not Self.Data.Small.Is_Big then
             --  We must make a copy, since the internal data might change
             declare
-               Copy : XString := Self;
+               Copy : Char_String := Self.Data.Small.Data;
             begin
-               Get_String (Copy, S, L);
-               C := (if Copy.Data.Small.Is_Big
-                     then Get_Capacity (Copy)
-                     else Max_Small_Length);
-               Process (S (1 .. Natural (C))'Unrestricted_Access,
-                        Last => L);
-
-               if L > Natural (C) then
+               L := Natural (Self.Data.Small.Size);
+               Process (Copy, Last => L);
+               if L > Copy'Last then
                   raise Constraint_Error
                      with "Invalid size returned:" & L'Image;
                end if;
 
-               Store_Size (Copy, L);
-               Self := Copy;
+               if Self.Data.Small.Is_Big then
+                  raise Program_Error
+                     with "XString modified while calling Write";
+               end if;
+
+               Store_Size (Self, L);
+               Self.Data.Small.Data := Copy;
             end;
          else
             C := Get_Capacity (Self);
@@ -686,7 +684,7 @@ package body GNATCOLL.Strings_Impl is
                     Data          => null,  --  lock the string
                     First         => 1);
 
-               Process (S (1 .. Natural (C))'Unrestricted_Access,
+               Process (Char_String (S (1 .. Natural (C))),
                         Last => L);
 
                if L > Natural (C) then
