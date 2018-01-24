@@ -1963,7 +1963,11 @@ package body GNATCOLL.Traces is
       TmpF  : Stream_Factories_List;
       NextF : Stream_Factories_List;
    begin
-      if not Global.Finalized and then Global.Finalize_Traces.Active then
+      if not Global.Finalized
+         --  Might never have been initialized at all
+         and then Global.Finalize_Traces /= null
+         and then Global.Finalize_Traces.Active
+      then
          Lock (Global.Lock);
          Tmp := Global.Handles_List;
          while Tmp /= null loop
