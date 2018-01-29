@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -65,13 +65,14 @@ package GNATCOLL.SQL.Exec.Tasking is
    --  direct cursor.
 
    function Task_Safe_Clone (Source : Direct_Cursor) return Direct_Cursor;
-   --  Clone the cursor copy to use in different task.
+   --  Clone the cursor copy to use in the current task and reset the copy to
+   --  the first position,
    --  Source must be the result of a call to Task_Safe_Instance.
    --  The clone have to be made in the task where it will be used.
    --  Each task would use the same data, but own cursor pointer to the current
    --  record. If the Task_Safe_Clone called from the same task where the
-   --  Task_Safe_Instance called, the routine returns the same Source cursor to
-   --  avoid odd copy.
+   --  Task_Safe_Instance called, the routine returns the same Source cursor
+   --  resetted to the first position to avoid odd copy.
 
    procedure Find (Self : Abstract_Cursor_Access; Value : String);
    --  Search the record with specified field value over the internal cursor

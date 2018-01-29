@@ -1736,7 +1736,6 @@ package body GNATCOLL.SQL.Exec is
             Query_Cache.Get_Result (Stmt, RC, Found);
 
             if Found then
-               RC.First; --  Move to first element
                if Active (Me_Cache) then
                   Trace (Me_Cache, "(" & Stmt.Get.Name.To_String
                      & "): from cache");

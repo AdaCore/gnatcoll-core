@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -416,11 +416,14 @@ package body GNATCOLL.SQL.Exec.Tasking is
    ---------------------
 
    function Task_Safe_Clone (Source : Direct_Cursor) return Direct_Cursor is
-      Data : constant Data_Set_Pointers.Ref :=
-        Task_Cursor_Access (Source.Res).Data;
+      TC : constant Task_Cursor_Access := Task_Cursor_Access (Source.Res);
    begin
-      if Data.Get.TID = Current_Task then
-         --  Do not need to create a copy for the task where the cursor created
+      if TC.Data.Get.TID = Current_Task then
+         --  Do not need to create a copy for the task where the cursor was
+         --  created. But we need to reset the position because it was changed
+         --  by the previos user.
+
+         TC.First;
 
          return Source;
       end if;
@@ -428,7 +431,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
       return (Ada.Finalization.Controlled with
               Res => new Task_Cursor'
                            (Abstract_DBMS_Forward_Cursor with
-                            Position => 1, Data => Data));
+                            Position => 1, Data => TC.Data));
    end Task_Safe_Clone;
 
 end GNATCOLL.SQL.Exec.Tasking;
