@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -132,7 +132,7 @@ package GNATCOLL.Email.Utils is
    --  Return the list of all recipients of the message. This takes into
    --  account all occurrences of all relevant headers.
    --  In the first case, Include_From indicates whether the sender of the
-   --  message should also be returned.
+   --  message should also be returned. For Null_Message, return an empty set.
 
    --  ??? The 2nd function should be renamed to Get_Addresses since it applies
    --  to all headers containing addresses, not only those designating

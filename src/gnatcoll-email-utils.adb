@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1080,23 +1080,26 @@ package body GNATCOLL.Email.Utils is
       Include_From : Boolean := False) return Address_Set.Set
    is
       use Address_Set;
-      Iter   : Header_Iterator := Get_Headers (Msg);
+      Iter   : Header_Iterator;
       H      : Header;
       Result : Address_Set.Set;
    begin
-      loop
-         Next (Iter, H => H);
-         exit when H = Null_Header;
-         if Get_Name (H) = "to"
-           or else Get_Name (H) = "cc"
-           or else Get_Name (H) = "resent-to"
-           or else Get_Name (H) = "resent-cc"
-           or else (Include_From and then Get_Name (H) = "from")
-         then
-            --  ??? Should avoid extra copy here
-            Union (Result, Get_Recipients (H));
-         end if;
-      end loop;
+      if Msg.Contents /= null then
+         Iter := Get_Headers (Msg);
+         loop
+            Next (Iter, H => H);
+            exit when H = Null_Header;
+            if Get_Name (H) = "to"
+              or else Get_Name (H) = "cc"
+              or else Get_Name (H) = "resent-to"
+              or else Get_Name (H) = "resent-cc"
+              or else (Include_From and then Get_Name (H) = "from")
+            then
+               --  ??? Should avoid extra copy here
+               Union (Result, Get_Recipients (H));
+            end if;
+         end loop;
+      end if;
       return Result;
    end Get_Recipients;
 
