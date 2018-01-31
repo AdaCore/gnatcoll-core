@@ -1084,22 +1084,21 @@ package body GNATCOLL.Email.Utils is
       H      : Header;
       Result : Address_Set.Set;
    begin
-      if Msg.Contents /= null then
-         Iter := Get_Headers (Msg);
-         loop
-            Next (Iter, H => H);
-            exit when H = Null_Header;
-            if Get_Name (H) = "to"
-              or else Get_Name (H) = "cc"
-              or else Get_Name (H) = "resent-to"
-              or else Get_Name (H) = "resent-cc"
-              or else (Include_From and then Get_Name (H) = "from")
-            then
-               --  ??? Should avoid extra copy here
-               Union (Result, Get_Recipients (H));
-            end if;
-         end loop;
-      end if;
+      Iter := Get_Headers (Msg);
+      loop
+         Next (Iter, H => H);
+         exit when H = Null_Header;
+         if Get_Name (H) = "to"
+           or else Get_Name (H) = "cc"
+           or else Get_Name (H) = "resent-to"
+           or else Get_Name (H) = "resent-cc"
+           or else (Include_From and then Get_Name (H) = "from")
+         then
+            --  ??? Should avoid extra copy here
+            Union (Result, Get_Recipients (H));
+         end if;
+      end loop;
+
       return Result;
    end Get_Recipients;
 

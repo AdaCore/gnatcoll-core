@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -395,8 +395,8 @@ package GNATCOLL.Email is
    function Get_Headers
      (Msg : Message'Class; Name : String := "") return Header_Iterator;
    --  Iterate over all headers with the given name. If Name is unspecified,
-   --  iterates over all headers of the message. Looping over all headers is
-   --  done as follows:
+   --  iterates over all headers of the message. For Null_Message, return an
+   --  empty iterator. Looping over all headers is done as follows:
    --      Iter := Get_Headers (Msg);
    --      loop
    --         Next (Iter, H);

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1193,9 +1193,15 @@ package body GNATCOLL.Email is
    function Get_Headers
      (Msg : Message'Class; Name : String := "") return Header_Iterator
    is
-      C : Header_List.Cursor := First (Msg.Contents.Headers);
+      C : Header_List.Cursor;
       N : constant Unbounded_String := To_Unbounded_String (To_Lower (Name));
    begin
+      if Msg.Contents = null then
+         return (Header_List.No_Element, N);
+      end if;
+
+      C := First (Msg.Contents.Headers);
+
       if Name /= "" then
          while Has_Element (C)
            and then Element (C).Contents.Name /= N
