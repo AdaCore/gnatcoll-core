@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2017, AdaCore                     --
+--                     Copyright (C) 2008-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -169,7 +169,7 @@ package body GNATCOLL.Templates is
 
          Identifier_Last := Last;
 
-         for D in Identifier_First .. Identifier_Last loop
+         for D in Identifier_First .. Identifier_Last - 1 loop
             if Str (D) = ':' and then Str (D + 1) = '-' then
                Identifier_Last := D - 1;
                exit;
