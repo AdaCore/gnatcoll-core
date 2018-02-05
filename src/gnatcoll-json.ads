@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2017, AdaCore                     --
+--                     Copyright (C) 2011-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -244,6 +244,28 @@ package GNATCOLL.JSON is
       Field      : JSON_Array);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
    --  Any change you do to the array afterward will not impact Val
+
+   procedure Set_Field_Not_Empty
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
+      Field      : UTF8_Unbounded_String);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+   --  Set Field only if it is not empty string
+
+   procedure Set_Field_Not_Empty
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
+      Field      : UTF8_String);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+   --  Set Field only if it is not empty string
+
+   procedure Set_Field_Not_Empty
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
+      Field      : JSON_Array);
+   pragma Precondition (Kind (Val) = JSON_Object_Type);
+   --  Set Field only if it is not empty array.
+   --  Any change you do to the array afterward will not impact Val.
 
    procedure Unset_Field
      (Val        : JSON_Value;

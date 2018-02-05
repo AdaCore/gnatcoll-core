@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2017, AdaCore                     --
+--                     Copyright (C) 2011-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1082,6 +1082,39 @@ package body GNATCOLL.JSON is
       Set_Field (Val, Field_Name, F_Val);
    end Set_Field;
 
+   -------------------------
+   -- Set_Field_Not_Empty --
+   -------------------------
+
+   procedure Set_Field_Not_Empty
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
+      Field      : UTF8_Unbounded_String) is
+   begin
+      if Field /= Null_Unbounded_String then
+         Set_Field (Val, Field_Name, Field);
+      end if;
+   end Set_Field_Not_Empty;
+
+   procedure Set_Field_Not_Empty
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
+      Field      : UTF8_String) is
+   begin
+      if Field /= "" then
+         Set_Field (Val, Field_Name, Field);
+      end if;
+   end Set_Field_Not_Empty;
+
+   procedure Set_Field_Not_Empty
+     (Val        : JSON_Value;
+      Field_Name : UTF8_String;
+      Field      : JSON_Array) is
+   begin
+      if Field /= Empty_Array then
+         Set_Field (Val, Field_Name, Field);
+      end if;
+   end Set_Field_Not_Empty;
    ----------
    -- Kind --
    ----------
