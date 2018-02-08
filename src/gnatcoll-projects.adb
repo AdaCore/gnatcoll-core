@@ -9507,14 +9507,22 @@ package body GNATCOLL.Projects is
       With_Clause : Project_Node_Id :=
                       First_With_Clause_Of (Project.Node, Tree);
       Next        : Project_Node_Id;
+
+      Iter   : Project_Iterator;
+      Remove : Boolean := True;
+
+      Basename  : constant Filesystem_String :=
+        Base_Name
+          (Imported_Project.Project_Path.Full_Name,
+           Project_File_Extension);
+
+      Dep_ID : constant Name_Id := Get_String (+Basename);
+
+      Tree_Node : constant GPR.Project_Node_Tree_Ref := Project.Data.Tree.Tree;
    begin
       if not Project.Is_Editable then
          raise Project_Not_Editable;
       end if;
-
-      --  ??? When the project is no longer found in the hierarchy, it should
-      --  also be removed from the htable in GPR.Tree, so that another
-      --  project by that name can be loaded.
 
       if With_Clause /= Empty_Project_Node
         and then GPR.Tree.Name_Of (With_Clause, Tree) =
@@ -9543,6 +9551,24 @@ package body GNATCOLL.Projects is
       --  Need to reset all the caches, since the caches contain the indirect
       --  dependencies as well.
       Reset_All_Caches (Project.Data.Tree);
+
+      Iter := Start (Project.Data.Tree.Root,
+                     Recursive => True);
+      while Current (Iter) /= No_Project loop
+         Trace (Me, "  " & Current (Iter).Project_Path.Display_Full_Name);
+
+         if Current (Iter) = Imported_Project then
+            Remove := False;
+            exit;
+         end if;
+
+         Projects.Next (Iter);
+      end loop;
+
+      if Remove and then Dep_Id /= No_Name then
+         Tree_Private_Part.Projects_Htable.Remove
+           (Tree_Node.Projects_HT, Dep_ID);
+      end if;
    end Remove_Imported_Project;
 
    ----------------------
