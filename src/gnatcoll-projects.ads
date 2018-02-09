@@ -2092,6 +2092,7 @@ private
       Name        : GPR.Name_Id;
       Default     : GPR.Name_Id;
       String_Type : GPR.Project_Node_Id;
+      Tree_Ref    : GPR.Project_Node_Tree_Ref;
       Value       : GPR.Name_Id;
    end record;
 
@@ -2103,7 +2104,7 @@ private
 
    No_Variable   : aliased constant Scenario_Variable :=
      (GPR.No_Name, GPR.No_Name, GPR.Empty_Project_Node,
-      GPR.No_Name);
+      null, GPR.No_Name);
 
    All_Scenarios : aliased constant Scenario_Variable_Array (1 .. 0) :=
                    (others => No_Variable);

@@ -5038,6 +5038,7 @@ package body GNATCOLL.Projects is
            (Name        => V,
             Default     => External_Default (Variable, T),
             String_Type => String_Type_Of (Variable, T),
+            Tree_Ref    => T,
             Value       => GPR.Ext.Value_Of
               (Tree.Env.Env.External, V,
                With_Default => External_Default (Variable, T)));
@@ -5253,6 +5254,7 @@ package body GNATCOLL.Projects is
         (Name        => Ext,
          Default     => No_Name,
          String_Type => Empty_Project_Node,  --   ??? Won't be able to edit it
+         Tree_Ref    => null,
          Value       => No_Name);
 
       List := Self.Data.Env.Scenario_Variables;
@@ -5648,7 +5650,8 @@ package body GNATCOLL.Projects is
    function Possible_Values_Of
      (Self : Project_Tree; Var : Scenario_Variable) return String_List
    is
-      Tree  : constant GPR.Project_Node_Tree_Ref := Self.Data.Tree;
+      pragma Unreferenced (Self);
+      Tree  : constant GPR.Project_Node_Tree_Ref := Var.Tree_Ref;
       Count : Natural := 0;
       Iter  : String_List_Iterator := Value_Of (Tree, Var);
    begin
@@ -9565,7 +9568,7 @@ package body GNATCOLL.Projects is
          Projects.Next (Iter);
       end loop;
 
-      if Remove and then Dep_Id /= No_Name then
+      if Remove and then Dep_ID /= No_Name then
          Tree_Private_Part.Projects_Htable.Remove
            (Tree_Node.Projects_HT, Dep_ID);
       end if;
@@ -9883,7 +9886,8 @@ package body GNATCOLL.Projects is
       return (Name        => Get_String (External_Name),
               Default     => No_Name,
               Value       => No_Name,
-              String_Type => Typ);
+              String_Type => Typ,
+              Tree_Ref    => Tree_Node);
    end Create_Scenario_Variable;
 
    --------------------------
