@@ -245,21 +245,21 @@ package GNATCOLL.JSON is
    pragma Precondition (Kind (Val) = JSON_Object_Type);
    --  Any change you do to the array afterward will not impact Val
 
-   procedure Set_Field_Not_Empty
+   procedure Set_Field_If_Not_Empty
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : UTF8_Unbounded_String);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
    --  Set Field only if it is not empty string
 
-   procedure Set_Field_Not_Empty
+   procedure Set_Field_If_Not_Empty
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : UTF8_String);
    pragma Precondition (Kind (Val) = JSON_Object_Type);
    --  Set Field only if it is not empty string
 
-   procedure Set_Field_Not_Empty
+   procedure Set_Field_If_Not_Empty
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
       Field      : JSON_Array);
