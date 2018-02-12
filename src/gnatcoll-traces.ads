@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2001-2017, AdaCore                     --
+--                     Copyright (C) 2001-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -633,6 +633,10 @@ package GNATCOLL.Traces is
    --  the Debug_Mode flag statically, so that if you have disable debugging
    --  altogether, the code will not even be inserted in the object code by
    --  the compiler.
+
+   type Handlers_Proc is access procedure (Handle : Trace_Handle);
+   procedure Handlers (Proc : Handlers_Proc);
+   --  Calls Proc for all created trace handlers.
 
    ------------
    -- Blocks --
