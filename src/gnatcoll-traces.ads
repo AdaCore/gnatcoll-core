@@ -635,7 +635,7 @@ package GNATCOLL.Traces is
    --  the compiler.
 
    type Handlers_Proc is access procedure (Handle : Trace_Handle);
-   procedure Handlers (Proc : Handlers_Proc);
+   procedure For_Each_Handle (Proc : not null Handlers_Proc);
    --  Calls Proc for all created trace handlers.
 
    ------------

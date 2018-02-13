@@ -2016,18 +2016,18 @@ package body GNATCOLL.Traces is
       Global.Finalized := True;
    end Finalize;
 
-   --------------
-   -- Handlers --
-   --------------
+   ---------------------
+   -- For_Each_Handle --
+   ---------------------
 
-   procedure Handlers (Proc : Handlers_Proc) is
+   procedure For_Each_Handle (Proc : not null Handlers_Proc) is
       Tmp : Trace_Handle := Global.Handles_List;
    begin
       while Tmp /= null loop
          Proc (Tmp);
          Tmp := Tmp.Next;
       end loop;
-   end Handlers;
+   end For_Each_Handle;
 
    ------------------------
    -- Set_Default_Stream --
