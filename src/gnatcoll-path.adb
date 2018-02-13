@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -601,7 +601,11 @@ package body GNATCOLL.Path is
             Src := Src + 1;
          end if;
       end loop;
-      return Dest (Dest'First .. Idx - 1);
+      if Is_Case_Sensitive (FS) then
+         return Dest (Dest'First .. Idx - 1);
+      else
+         return FS_String (To_Lower (String (Dest (Dest'First .. Idx - 1))));
+      end if;
    end Normalize;
 
    -------------------
