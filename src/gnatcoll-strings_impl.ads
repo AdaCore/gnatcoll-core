@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2017, AdaCore                          --
+--                     Copyright (C) 2017-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -337,7 +337,7 @@ package GNATCOLL.Strings_Impl is
       --  variables of this type).
       --  It is the responsibility of the user to check the proper bounds.
 
-      type XString_Array is array (Natural range <>) of XString;
+      type XString_Array is array (Positive range <>) of XString;
 
       ----------------
       -- Properties --
