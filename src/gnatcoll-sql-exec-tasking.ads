@@ -72,7 +72,7 @@ package GNATCOLL.SQL.Exec.Tasking is
    --  Each task would use the same data, but own cursor pointer to the current
    --  record. If the Task_Safe_Clone called from the same task where the
    --  Task_Safe_Instance called, the routine returns the same Source cursor
-   --  resetted to the first position to avoid odd copy.
+   --  reset to the first position to avoid odd copy.
 
    procedure Find (Self : Abstract_Cursor_Access; Value : String);
    --  Search the record with specified field value over the internal cursor

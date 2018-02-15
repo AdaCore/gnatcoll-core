@@ -421,7 +421,7 @@ package body GNATCOLL.SQL.Exec.Tasking is
       if TC.Data.Get.TID = Current_Task then
          --  Do not need to create a copy for the task where the cursor was
          --  created. But we need to reset the position because it was changed
-         --  by the previos user.
+         --  by the previous user.
 
          TC.First;
 
