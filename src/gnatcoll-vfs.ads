@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -230,8 +230,6 @@ package GNATCOLL.VFS is
    --  are not resolved there by default, unless you specify Resolve_Links to
    --  True.
    --  The returned value can be used to recreate a Virtual_File instance.
-   --  If file names are case insensitive, the normalized name will always
-   --  be all lower cases.
 
    function Full_Name
      (File      : Virtual_File;
