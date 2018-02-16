@@ -26,7 +26,8 @@
 --  number of rows in each column.
 
 with GNATCOLL.Strings;
-with GNATCOLL.Format_Columns_Vertical_Impl;
+with GNATCOLL.Formatters;
 
 procedure GNATCOLL.Format_Columns_Vertical is
-  new Format_Columns_Vertical_Impl (Strings);
+  new Formatters.Columns_Vertical (Strings);
+--  See comment for GNATCOLL.Formatters.Columns_Vertical
