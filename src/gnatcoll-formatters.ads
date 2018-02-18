@@ -33,10 +33,11 @@ package GNATCOLL.Formatters is
    procedure Columns_Vertical
      (Words     : Strings.XString_Array;
       Width     : Positive;
-      Put_Line  : not null access procedure (Line : Strings.Char_String);
-      Pad       : Strings.Char_Type := Strings.Space;
+      Put_Line  : not null access procedure (Line : Strings.XString);
+      Pad       : Strings.Char_Type   := Strings.Space;
       Delimiter : Strings.Char_String := (1 => Strings.Space));
-   --  Procedure to format ordered phrases by columns vertically.
+   --  Procedure to format ordered phrases by columns vertically and output it
+   --  to callback line by line.
    --  Number of columns limited by width and have to be calculated to minimize
    --  number of rows in each column. Output example:
    --
@@ -54,9 +55,20 @@ package GNATCOLL.Formatters is
    --
    --  Words is the array of strings to be formatted in the output.
    --  Width is the width limit of the output.
-   --  Put_Line is the routine to take output line by line.
+   --  Put_Line is the callback routine to take output line by line.
    --  Pad is the character filling the space after words to have same size in
    --  column for next column to be alligned.
    --  Delimiter is string delimiting the columns.
+
+   generic
+      with package Strings is new GNATCOLL.Strings_Impl.Strings (<>);
+      End_Of_Line : Strings.Char_Type;
+   function Columns_Vertical_XString
+     (Words       : Strings.XString_Array;
+      Width       : Positive;
+      Pad         : Strings.Char_Type   := Strings.Space;
+      Delimiter   : Strings.Char_String := (1 => Strings.Space))
+      return Strings.XString;
+   --  The same as above but returns formatted text at once
 
 end GNATCOLL.Formatters;

@@ -8,6 +8,13 @@ XML = r'''<?xml version="1.0"?>
   </documentation_file>
 
   <documentation_file>
+     <shell>Editor.edit "gnatcoll-format_columns_vertical_xstring.ads"</shell>
+     <descr></descr>
+     <menu>/Help/GNAT Runtime/</menu>
+     <category>GNAT Components Collection</category>
+  </documentation_file>
+
+  <documentation_file>
      <shell>Editor.edit "gnatcoll-any_types.ads"</shell>
      <descr>GNATCOLL.Any_Types</descr>
      <menu>/Help/GNAT Runtime/GNATCOLL/Any__Types/&lt;Any__Types&gt;</menu>

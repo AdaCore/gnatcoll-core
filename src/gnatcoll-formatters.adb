@@ -30,8 +30,8 @@ package body GNATCOLL.Formatters is
    procedure Columns_Vertical
      (Words     : Strings.XString_Array;
       Width     : Positive;
-      Put_Line  : not null access procedure (Line : Strings.Char_String);
-      Pad       : Strings.Char_Type := Strings.Space;
+      Put_Line  : not null access procedure (Line : Strings.XString);
+      Pad       : Strings.Char_Type   := Strings.Space;
       Delimiter : Strings.Char_String := (1 => Strings.Space))
    is
       use Strings;
@@ -127,8 +127,42 @@ package body GNATCOLL.Formatters is
                Align := Cmax (Col) - Words (Idx).Length;
             end loop;
 
-            Put_Line (Line.To_String);
+            Put_Line (Line);
          end loop;
       end;
    end Columns_Vertical;
+
+   -------------------------------
+   -- Columns_Vertical_XStrings --
+   -------------------------------
+
+   function Columns_Vertical_XString
+     (Words       : Strings.XString_Array;
+      Width       : Positive;
+      Pad         : Strings.Char_Type   := Strings.Space;
+      Delimiter   : Strings.Char_String := (1 => Strings.Space))
+      return Strings.XString
+   is
+      Result : Strings.XString;
+
+      procedure Append_Line (Line : Strings.XString);
+      --  Append line to result
+
+      ---------------
+      -- Each_Line --
+      ---------------
+
+      procedure Append_Line (Line : Strings.XString) is
+      begin
+         Result.Append (Line);
+         Result.Append (End_Of_Line);
+      end Append_Line;
+
+      procedure Format_Columns is new Columns_Vertical (Strings);
+
+   begin
+      Format_Columns (Words, Width, Append_Line'Access, Pad, Delimiter);
+      return Result;
+   end Columns_Vertical_XString;
+
 end GNATCOLL.Formatters;
