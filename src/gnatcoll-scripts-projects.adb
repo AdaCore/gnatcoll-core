@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -438,6 +438,9 @@ package body GNATCOLL.Scripts.Projects is
          begin
             Set_Return_Value (Data, Dir.Full_Name);
          end;
+
+      elsif Command = "save" then
+         Data.Set_Return_Value (Project.Save);
       end if;
    end Project_Queries;
 
@@ -573,6 +576,10 @@ package body GNATCOLL.Scripts.Projects is
          Getter => Project_Queries'Access);
       Register_Command
         (Repo, "artifacts_dir",
+         Class   => Get_Project_Class (Repo),
+         Handler => Project_Queries'Access);
+      Register_Command
+        (Repo, "save",
          Class   => Get_Project_Class (Repo),
          Handler => Project_Queries'Access);
    end Register_Commands;
