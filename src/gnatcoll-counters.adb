@@ -71,11 +71,13 @@ package body GNATCOLL.Counters is
    ---------------
 
    procedure Increment (Val : aliased in out Non_Atomic_Counter) is
+      pragma Suppress (Overflow_Check);
    begin
       Val := Val + 1;
    end Increment;
 
    procedure Increment (Val : aliased in out Automatic_Counter) is
+      pragma Suppress (Overflow_Check);
    begin
       case Application_Uses_Tasks is
          when True  => GNATCOLL.Atomic.Increment (Val.A_Value);
@@ -88,7 +90,9 @@ package body GNATCOLL.Counters is
    ---------------
 
    function Decrement
-      (Val : aliased in out Non_Atomic_Counter) return Boolean is
+      (Val : aliased in out Non_Atomic_Counter) return Boolean
+   is
+      pragma Suppress (Overflow_Check);
    begin
       Val := Val - 1;
       return Val = 0;

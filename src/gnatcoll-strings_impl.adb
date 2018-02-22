@@ -121,7 +121,7 @@ package body GNATCOLL.Strings_Impl is
          (Self         : in out XString;
           Data         : Big_String_Data_Access;
           Min_Capacity : String_Size)
-         with Pre => Self.Data.Small.Is_Big, Inline;
+         with Pre => Self.Data.Small.Is_Big, No_Inline;
       --  Set the big string data, copying from Data.
       --  We copy the data from the parameter and not from Self.Data.Big.Data
       --  because the latter might already have been set to null at that
@@ -193,6 +193,7 @@ package body GNATCOLL.Strings_Impl is
       ------------
 
       overriding procedure Adjust (Self : in out XString) is
+         pragma Suppress (Access_Check);
       begin
          if not Self.Data.Small.Is_Big then
             null;   --  nothing to do
