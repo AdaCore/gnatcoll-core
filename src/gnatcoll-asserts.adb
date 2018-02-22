@@ -187,7 +187,7 @@ package body GNATCOLL.Asserts is
                and then not ("<" (Left, Right) or else "=" (Left, Right))
             then
                Report.On_Assertion_Failed
-                  (Details  => Image (Left) & " = " & Image (Right),
+                  (Details  => Image (Left) & " <= " & Image (Right),
                    Msg      => Msg,
                    Location => Location,
                    Entity   => Entity);
@@ -208,7 +208,7 @@ package body GNATCOLL.Asserts is
                and then "<" (Left, Right)
             then
                Report.On_Assertion_Failed
-                  (Details  => Image (Left) & " = " & Image (Right),
+                  (Details  => Image (Left) & " >= " & Image (Right),
                    Msg      => Msg,
                    Location => Location,
                    Entity   => Entity);
@@ -229,7 +229,7 @@ package body GNATCOLL.Asserts is
                and then ("<" (Left, Right) or else "=" (Left, Right))
             then
                Report.On_Assertion_Failed
-                  (Details  => Image (Left) & " = " & Image (Right),
+                  (Details  => Image (Left) & " > " & Image (Right),
                    Msg      => Msg,
                    Location => Location,
                    Entity   => Entity);
