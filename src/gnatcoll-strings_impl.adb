@@ -302,24 +302,25 @@ package body GNATCOLL.Strings_Impl is
                   --  Nothing to do, not shared and already has right capacity
                   null;
 
-               --  Would we have enough space if we move characters so that
-               --  First becomes 1 ?
+               else
+                  --  Move back all characters to "first=1"
 
-               elsif Capacity <= Current then
-                  Old := Natural (Self.Data.Big.Size);
-                  Tmp.Bytes (1 .. Old) := Tmp.Bytes (First .. First - 1 + Old);
-                  Self.Data.Big.First := 1;
+                  if First /= 1 then
+                     Old := Natural (Self.Data.Big.Size);
+                     Tmp.Bytes (1 .. Old) :=
+                        Tmp.Bytes (First .. First - 1 + Old);
+                     Self.Data.Big.First := 1;
+                  end if;
 
-               --  Do we need to extend the memory ?
-
-               elsif Current < Capacity then
-                  New_Size := Growth_Strategy (Current, Capacity);
-                  Store_Capacity (Self, New_Size);
-                  Self.Data.Big.Data := Convert
-                     (System.Memory.Realloc
-                       (Convert (Tmp),
-                        size_t (New_Size) * Bytes_Per_Char +
-                        Extra_Header_Size));
+                  if Capacity > Current then
+                     New_Size := Growth_Strategy (Current, Capacity);
+                     Store_Capacity (Self, New_Size);
+                     Self.Data.Big.Data := Convert
+                        (System.Memory.Realloc
+                          (Convert (Tmp),
+                           size_t (New_Size) * Bytes_Per_Char +
+                           Extra_Header_Size));
+                  end if;
                end if;
             end;
 
