@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1220,11 +1220,11 @@ package body GNATCOLL.SQL_Impl is
       end Operator;
 
       ---------------------
-      -- Scalar_Operator --
+      -- String_Operator --
       ---------------------
 
-      function Scalar_Operator
-        (Self : Field'Class; Operand : Scalar) return Field'Class
+      function String_Operator
+        (Self : Field'Class; Operand : String) return Field'Class
       is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => null, Name => null,
@@ -1237,13 +1237,25 @@ package body GNATCOLL.SQL_Impl is
          D2 : Named_Field_Internal (Typ => Field_Std);
 
       begin
-         D2.Str_Value := new String'(Prefix & Scalar'Image (Operand) & Suffix);
+         D2.Str_Value := new String'(Prefix & Operand & Suffix);
          F2.Data.Set (D2);
 
          D.Op_Value := new String'(Name);
          D.List := Self & F2;
          F.Data.Set (D);
          return F;
+      end String_Operator;
+
+      ---------------------
+      -- Scalar_Operator --
+      ---------------------
+
+      function Scalar_Operator
+        (Self : Field'Class; Operand : Scalar) return Field'Class
+      is
+         function Operator is new String_Operator (Name, Prefix, Suffix);
+      begin
+         return Operator (Self, Scalar'Image (Operand));
       end Scalar_Operator;
 
       ------------------

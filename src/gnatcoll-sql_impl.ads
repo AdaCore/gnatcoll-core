@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -701,6 +701,13 @@ package GNATCOLL.SQL_Impl is
          Name : String;
       function Operator (Field1, Field2 : Field'Class) return Field'Class;
       --  An operator between two fields, that return a field of the new type
+
+      generic
+         Name   : String;
+         Prefix : String := "";
+         Suffix : String := "";
+      function String_Operator
+        (Self : Field'Class; Operand : String) return Field'Class;
 
       generic
          type Scalar is (<>);

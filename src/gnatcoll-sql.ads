@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -432,6 +432,9 @@ package GNATCOLL.SQL is
    function "+" is new Integer_Fields.Scalar_Operator (Integer, "+");
    function "*" is new Integer_Fields.Scalar_Operator (Integer, "*");
    function "/" is new Integer_Fields.Scalar_Operator (Integer, "/");
+
+   function Collate is new Text_Fields.String_Operator ("COLLATE", """", """");
+   --  Assigns a collating sequence to an expression
 
    function Current_Date is new Date_Fields.SQL_Function ("current_date");
    --  Returns current date
