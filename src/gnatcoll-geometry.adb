@@ -359,7 +359,7 @@ package body GNATCOLL.Geometry is
    ------------
 
    function Inside (P : Point; Poly : Polygon) return Boolean is
-      J : constant Natural := Poly'Last;
+      J : Natural := Poly'Last;
       C : Boolean := False;
       Deltay  : Coordinate;
    begin
@@ -379,6 +379,7 @@ package body GNATCOLL.Geometry is
          then
             C := not C;
          end if;
+         J := S;
       end loop;
       return C;
    end Inside;
