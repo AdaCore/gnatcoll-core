@@ -222,7 +222,8 @@ package body GNATCOLL.Projects is
    type External_Variable_Callback is access function
      (Variable : Project_Node_Id;
       Prj      : Project_Node_Id;
-      Tree     : GPR.Project_Node_Tree_Ref) return Boolean;
+      Tree     : GPR.Project_Node_Tree_Ref;
+      Project  : Project_Type) return Boolean;
    --  Called for a typed variable declaration that references an external
    --  variable in GPR.
    --  Stops iterating if this subprogram returns False.
@@ -4794,14 +4795,16 @@ package body GNATCOLL.Projects is
       function Register_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
-         T        : GPR.Project_Node_Tree_Ref) return Boolean;
+         T        : GPR.Project_Node_Tree_Ref;
+         Project  : Project_Type) return Boolean;
       --  Wrapper that calls either Register_Scenario_Var or
       --  Register_Untyped_Var depending on the kind of the variable.
 
       function Register_Scenario_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
-         T        : GPR.Project_Node_Tree_Ref) return Boolean;
+         T        : GPR.Project_Node_Tree_Ref;
+         Project  : Project_Type) return Boolean;
       --  Add the variable to the list of scenario variables, if not there yet
       --  (see the documentation for Scenario_Variables for the exact rules
       --  used to detect aliases).
@@ -4809,14 +4812,19 @@ package body GNATCOLL.Projects is
       function Register_Untyped_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
-         T        : GPR.Project_Node_Tree_Ref) return Boolean;
+         T        : GPR.Project_Node_Tree_Ref;
+         Project  : Project_Type) return Boolean;
       --  Likewise, add the variable to the list of untyped variables.
 
       function External_Default
-        (Var : Project_Node_Id; T : GPR.Project_Node_Tree_Ref) return Name_Id;
+        (Project : Project_Type;
+         Var     : Project_Node_Id;
+         T       : GPR.Project_Node_Tree_Ref)
+         return Name_Id;
       --  Return the default value for the variable. Var must be a variable
       --  declaration or a variable reference. This routine supports only
-      --  single expressions (no composite values).
+      --  all kinds of expressions, but for composite values it will set on
+      --  the Uses_Variables flag for the root project.
 
       ----------------
       -- Count_Vars --
@@ -4828,7 +4836,8 @@ package body GNATCOLL.Projects is
          function Cb
            (Variable : Project_Node_Id;
             Prj      : Project_Node_Id;
-            Tree     : GPR.Project_Node_Tree_Ref) return Boolean;
+            Tree     : GPR.Project_Node_Tree_Ref;
+            Project  : Project_Type) return Boolean;
          --  Increment the total number of variables
 
          --------
@@ -4838,9 +4847,10 @@ package body GNATCOLL.Projects is
          function Cb
            (Variable : Project_Node_Id;
             Prj      : Project_Node_Id;
-            Tree     : GPR.Project_Node_Tree_Ref) return Boolean
+            Tree     : GPR.Project_Node_Tree_Ref;
+            Project  : Project_Type) return Boolean
          is
-            pragma Unreferenced (Variable, Prj, Tree);
+            pragma Unreferenced (Variable, Prj, Tree, Project);
          begin
             Count := Count + 1;
             return True;
@@ -4857,40 +4867,44 @@ package body GNATCOLL.Projects is
       ----------------------
 
       function External_Default
-        (Var : Project_Node_Id; T : GPR.Project_Node_Tree_Ref) return Name_Id
+        (Project : Project_Type;
+         Var     : Project_Node_Id;
+         T       : GPR.Project_Node_Tree_Ref)
+         return Name_Id
       is
+         V : Variable_Value;
+
          Proj : Project_Type    := Tree.Root;
          Expr : Project_Node_Id := Expression_Of (Var, T);
-      begin
-         Expr := First_Term   (Expr, T);
-         Expr := Current_Term (Expr, T);
 
-         if Kind_Of (Expr, T) = N_External_Value then
-            Expr := External_Default_Of (Expr, T);
+         procedure Check_Complexity (Expression : Project_Node_Id);
+         --  Check wether or not the default value is a simple one,
+         --  and mark project tree not editable, if the value is complex.
 
-            if Expr = Empty_Project_Node then
-               return No_Name;
-            end if;
+         procedure Check_Complexity (Expression : Project_Node_Id) is
+            Expr : Project_Node_Id := Expression;
+         begin
 
             if Kind_Of (Expr, T) /= N_Literal_String then
                Expr := First_Term (Expr, T);
                if Next_Term (Expr, T) /= Empty_Project_Node then
-                  Trace (Me, "Default value cannot be a concatenation");
+                  Trace (Me, "No project editing: "
+                         & "Default value cannot be a concatenation");
                   Proj.Data.Uses_Variables := True;  --  Prevent edition
-                  return No_Name;
+                  return;
                end if;
 
                Expr := Current_Term (Expr, T);
 
                if Kind_Of (Expr, T) = N_Variable_Reference then
-                  --  A variable reference, look for the corresponding string
-                  --  literal.
+               --  A variable reference, look for the corresponding string
+               --  literal.
 
                   declare
                      Var    : constant Name_Id :=
-                                GPR.Tree.Name_Of (Expr, T);
+                       GPR.Tree.Name_Of (Expr, T);
                      In_Prj : constant Project_Node_Id :=
-                                Project_Node_Of (Expr, T);
+                       Project_Node_Of (Expr, T);
                      Decl   : Project_Node_Id;
                   begin
                      if In_Prj /= Empty_Project_Node then
@@ -4918,11 +4932,11 @@ package body GNATCOLL.Projects is
 
                            if Next_Term (Expr, T) /= Empty_Project_Node then
                               Trace
-                                (Me,
-                                 "Default value cannot be a concatenation");
+                                (Me, "No project editing: "
+                                 & "Default value cannot be a concatenation");
                               Proj.Data.Uses_Variables := True;
                               --  Prevent edition
-                              return No_Name;
+                              return;
                            end if;
 
                            --  Get the string literal
@@ -4936,17 +4950,43 @@ package body GNATCOLL.Projects is
                end if;
 
                if Kind_Of (Expr, T) /= N_Literal_String then
-                  Trace (Me, "Default value can only be literal string");
+                  Trace (Me,  "No project editing: "
+                         & "Default value can only be literal string");
                   Proj.Data.Uses_Variables := True; --  prevent edition
-                  return No_Name;
+                  return;
                end if;
             end if;
+         end Check_Complexity;
+      begin
+         Expr := First_Term   (Expr, T);
+         Expr := Current_Term (Expr, T);
 
-            return String_Value_Of (Expr, T);
-
-         else
+         if Kind_Of (Expr, T) /= N_External_Value then
             return No_Name;
          end if;
+
+         Expr := External_Default_Of (Expr, T);
+
+         if Expr = Empty_Project_Node then
+            return No_Name;
+         end if;
+
+         Check_Complexity (Expr);
+
+         V := GPR.Proc.Expression
+           (Project                => Project.Data.View,
+            Shared                 => Project.Tree_View.Shared,
+            From_Project_Node      => Var,
+            From_Project_Node_Tree => T,
+            Env                    => Project.Data.Tree.Env.Env,
+            Pkg                    => No_Package,
+            --  Variables can be only on top level.
+            First_Term             =>
+              First_Term
+                (Expr, T),
+            Kind                    =>
+              Expression_Kind_Of (Expr, T));
+         return V.Value;
       end External_Default;
 
       ------------------
@@ -4956,7 +4996,8 @@ package body GNATCOLL.Projects is
       function Register_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
-         T        : GPR.Project_Node_Tree_Ref) return Boolean
+         T        : GPR.Project_Node_Tree_Ref;
+         Project  : Project_Type) return Boolean
       is
          function Is_Simple_Scenario_Variable return Boolean;
          --  Check whether or not given variable is a simple canonical
@@ -4998,12 +5039,12 @@ package body GNATCOLL.Projects is
       begin
          case Kind_Of (Variable, T) is
             when N_Variable_Declaration =>
-               return Register_Untyped_Var (Variable, Proj, T);
+               return Register_Untyped_Var (Variable, Proj, T, Project);
             when N_Typed_Variable_Declaration =>
                if Is_Simple_Scenario_Variable then
-                  return Register_Scenario_Var (Variable, Proj, T);
+                  return Register_Scenario_Var (Variable, Proj, T, Project);
                else
-                  return Register_Untyped_Var (Variable, Proj, T);
+                  return Register_Untyped_Var (Variable, Proj, T, Project);
                end if;
             when others =>
                Trace (Me, "Unexpected kind of variable");
@@ -5018,7 +5059,8 @@ package body GNATCOLL.Projects is
       function Register_Scenario_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
-         T        : GPR.Project_Node_Tree_Ref) return Boolean
+         T        : GPR.Project_Node_Tree_Ref;
+         Project  : Project_Type) return Boolean
       is
          pragma Unreferenced (Proj);
          V        : constant Name_Id := External_Reference_Of (Variable, T);
@@ -5036,12 +5078,13 @@ package body GNATCOLL.Projects is
 
          Var := Scenario_Variable'
            (Name        => V,
-            Default     => External_Default (Variable, T),
+            Default     => External_Default (Project, Variable, T),
             String_Type => String_Type_Of (Variable, T),
             Tree_Ref    => T,
             Value       => GPR.Ext.Value_Of
               (Tree.Env.Env.External, V,
-               With_Default => External_Default (Variable, T)));
+               With_Default =>
+                 External_Default (Project, Variable, T)));
 
          Typed_List (T_Curr) := Var;
 
@@ -5095,7 +5138,8 @@ package body GNATCOLL.Projects is
       function Register_Untyped_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
-         T        : GPR.Project_Node_Tree_Ref) return Boolean
+         T        : GPR.Project_Node_Tree_Ref;
+         Project  : Project_Type) return Boolean
       is
          pragma Unreferenced (Proj);
          V        : constant Name_Id := External_Reference_Of (Variable, T);
@@ -5112,10 +5156,11 @@ package body GNATCOLL.Projects is
 
          Var := Untyped_Variable'
            (Name    => V,
-            Default => External_Default (Variable, T),
+            Default => External_Default (Project, Variable, T),
             Value   => GPR.Ext.Value_Of
               (Tree.Env.Env.External, V,
-               With_Default => External_Default (Variable, T)));
+               With_Default =>
+                 External_Default (Project, Variable, T)));
 
          Untyped_List (U_Curr) := Var;
 
@@ -5477,7 +5522,7 @@ package body GNATCOLL.Projects is
                if Kind_Of (Var, Tree) in
                    N_Typed_Variable_Declaration | N_Variable_Declaration
                  and then Is_External_Variable (Var, Tree)
-                 and then not Callback (Var, Prj, Tree)
+                 and then not Callback (Var, Prj, Tree, Project)
                then
                   exit;
 
