@@ -1,0 +1,4 @@
+driver: 'json_validation'
+data_files:
+    test1.json: "Minimal test"
+    test2.json: "Minimal test2"

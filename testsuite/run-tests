@@ -1,0 +1,96 @@
+#!/usr/bin/env python
+from drivers import make_gnatcoll_for_gcov, TESTSUITE_ROOT_DIR
+from drivers.basic import BasicTestDriver
+from drivers.json_validation import JSONValidationDriver
+from e3.testsuite import Testsuite
+from e3.fs import mkdir, ls
+from e3.os.process import Run
+import re
+import os
+import logging
+
+
+class MyTestsuite(Testsuite):
+    CROSS_SUPPORT = True
+    TEST_SUBDIR = 'tests'
+    DRIVERS = {
+        'json_validation': JSONValidationDriver,
+        'default': BasicTestDriver}
+
+    def add_options(self):
+        self.main.argument_parser.add_argument(
+            '--gcov',
+            help="compute testsuite coverage of gnatcoll",
+            default=False,
+            action="store_true")
+
+    def tear_up(self):
+        self.env.gcov = self.main.args.gcov
+        if self.main.args.gcov:
+            work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'gcov')
+            gpr_dir, src_dir, obj_dir = make_gnatcoll_for_gcov(work_dir)
+            self.env.gnatcoll_gpr_dir = gpr_dir
+            self.env.gnatcoll_src_dir = src_dir
+            self.env.gnatcoll_obj_dir = obj_dir
+
+    def tear_down(self):
+        if self.main.args.gcov:
+            wd = TESTSUITE_ROOT_DIR
+            gcda_files = ls(os.path.join(self.env.gnatcoll_obj_dir, '*.gcda'))
+            mkdir(os.path.join(wd, 'gcov', 'results'))
+            gcr = os.path.join(wd, 'gcov', 'results')
+            p = Run(['gcov'] + gcda_files,
+                    cwd=os.path.join(wd, 'gcov', 'results'))
+
+            print p.out
+            total_sources = 0
+            total_covered = 0
+
+            for source_file in ls(
+                    os.path.join(self.env.gnatcoll_src_dir, '*')):
+                base_file = os.path.basename(source_file)
+                if not os.path.isfile(os.path.join(gcr, base_file + '.gcov')):
+                    total = 1
+                    covered = 0
+                    with open(source_file) as fd:
+                        total = len([line for line in fd
+                                     if line.strip() and
+                                     not re.match(r' *--', line)])
+                else:
+                    with open(os.path.join(gcr, base_file + '.gcov')) as fd:
+                        total = 0
+                        covered = 0
+                        for line in fd:
+                            if re.match(r' *-:', line):
+                                pass
+                            elif re.match(r' *[#=]{5}:', line):
+                                total += 1
+                            else:
+                                total += 1
+                                covered += 1
+                total_sources += total
+                total_covered += covered
+
+                logging.info('%6.2f %% %8d/%-8d %s',
+                             float(covered) * 100.0 / float(total),
+                             covered,
+                             total,
+                             os.path.basename(source_file))
+
+            logging.info('%6.2f %% %8d/%-8d %s',
+                         float(total_covered) * 100.0 / float(total_sources),
+                         total_covered,
+                         total_sources,
+                         'TOTAL')
+        super(MyTestsuite, self).tear_down()
+
+    @property
+    def default_driver(self):
+        return 'default'
+
+
+if __name__ == '__main__':
+    suite = MyTestsuite(os.path.dirname(__file__))
+    suite.testsuite_main()
+    for k, v in suite.test_status_counters.iteritems():
+        print '%-24s: %d' % (k, v)

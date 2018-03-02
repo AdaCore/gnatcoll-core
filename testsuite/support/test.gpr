@@ -1,0 +1,13 @@
+--  Default project use for tests
+--
+--  The scenario variable TEST_SOURCES is automatically set by the
+--  driver to point to the test sources.
+with "gnatcoll";
+
+project Test is
+   Test_Sources := External("TEST_SOURCES");
+   for Source_Dirs use (".", Test_Sources);
+   for Main use ("test.adb");
+   for Languages use ("Ada");
+   for Object_Dir use "obj";
+end Test;
