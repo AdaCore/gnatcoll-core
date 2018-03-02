@@ -87,7 +87,8 @@ def gprbuild(driver,
     for k, v in scenario.iteritems():
         gprbuild_cmd.append('-X%s=%s' % (k, v))
     if gcov:
-        gprbuild_cmd += ['-largs', '-lgcov']
+        gprbuild_cmd += ['-largs', '-lgcov', '-cargs',
+                         '-fprofile-arcs', '-ftest-coverage']
     check_call(
         driver,
         gprbuild_cmd,

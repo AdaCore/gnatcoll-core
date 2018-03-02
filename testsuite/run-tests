@@ -3,7 +3,7 @@ from drivers import make_gnatcoll_for_gcov, TESTSUITE_ROOT_DIR
 from drivers.basic import BasicTestDriver
 from drivers.json_validation import JSONValidationDriver
 from e3.testsuite import Testsuite
-from e3.fs import mkdir, ls
+from e3.fs import mkdir, ls, find
 from e3.os.process import Run
 import re
 import os
@@ -36,7 +36,12 @@ class MyTestsuite(Testsuite):
     def tear_down(self):
         if self.main.args.gcov:
             wd = TESTSUITE_ROOT_DIR
-            gcda_files = ls(os.path.join(self.env.gnatcoll_obj_dir, '*.gcda'))
+
+            # We need to call gcov on gcda present both in gnatcoll itself and
+            # tests (for generics coverage).
+            gcda_files = \
+                find(os.path.join(self.env.gnatcoll_obj_dir), '*.gcda') + \
+                find(os.path.join(self.env.working_dir), '*.gcda')
             mkdir(os.path.join(wd, 'gcov', 'results'))
             gcr = os.path.join(wd, 'gcov', 'results')
             p = Run(['gcov'] + gcda_files,
