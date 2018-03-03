@@ -59,7 +59,7 @@ package body GNATCOLL.Formatters is
 
       --  Trying to reduce number of rows using max length in each column
 
-      Reduce_Rows : loop
+      Reduce_Rows : while Rows > 1 loop
          Rows := Rows - 1;
          Cols := Words'Length / Rows;
 
