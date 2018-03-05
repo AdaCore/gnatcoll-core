@@ -25,7 +25,7 @@ install:
     - cmd: git clone https://github.com/AdaCore/gprbuild libgpr-src
     - cmd: cd libgpr-src
     - cmd: gprbuild -p -m -j0 -XBUILD=production -XLIBRARY_TYPE=relocatable -XXMLADA_BUILD=relocatable -P gpr/gpr.gpr
-    - cmd: gprinstall -p -f -XBUILD=production --install-name=gpr --build-var=LIBRARY_TYPE -XLIBRARY_TYPE=relocatable -XXMLADA_BUILD=relocatable  --build-name=relocatable
+    - cmd: gprinstall -p -f -XBUILD=production --install-name=gpr --build-var=LIBRARY_TYPE -XLIBRARY_TYPE=relocatable -XXMLADA_BUILD=relocatable  --build-name=relocatable -P gpr/gpr.gpr
     - cmd: cd ..
     - cmd: >
         gprbuild.exe -p -m -j0 -XGNATCOLL_OS=windows -XGNATCOLL_VERSION=0.0 -XBUILD=PROD -XLIBRARY_TYPE=relocatable -XXMLADA_BUILD=relocatable -P gnatcoll.gpr
