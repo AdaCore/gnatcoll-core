@@ -34,9 +34,14 @@ install:
   # Add GNAT to $PATH
   - export PATH=$PWD/ada-compiler/bin:$PATH
 
+  # Checkout gprbuild
+  - git clone https://github.com/AdaCore/gprbuild libgpr-src
+
 script:
   # Show GNAT version for the record
   - $PWD/ada-compiler/bin/gprbuild --version
+
+  - (cd libgpr-src && make libgpr.build && make libgpr.install)
 
     # Build gnatcoll-core
   - make all
