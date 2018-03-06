@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2017, AdaCore                     --
+--                     Copyright (C) 2010-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -29,6 +29,23 @@
 --  [Section]
 --  key1 = value1
 --  key2 = value2
+--
+--  .ini file format is not a very strict parser. Statement types are
+--  considered in that order:
+--
+--  1- comment
+--  2- assigment
+--  3- section declaration
+--
+--  Thus for example:
+--
+--     [key1 = key2]
+--
+--  Will be parsed as "[key1" = "key2]" and not as a section declaration.
+--
+--  Any line that does not correspond to any of the previous types will be
+--  ignored. Leading and trailing whitespaces are ignored. Whitespaces around
+--  the first '=' are also ignored.
 --
 --  As a special case, some strings are automatically substituted in the values
 --  - HOME:  home directory for the user, as configured in the parser
@@ -253,7 +270,8 @@ package GNATCOLL.Config is
    --  change.
 
 private
-   Section_From_Key : constant String := "#";
+   Section_From_Key : constant String := "=";
+   --  Choose = as special name as it cannot appears in a section name.
 
    type Config_Parser is abstract tagged record
       System_ID : Strings.XString;
@@ -278,7 +296,7 @@ private
    end record;
 
    package String_Maps is new Ada.Containers.Indefinite_Hashed_Maps
-     (Key_Type        => String,   --  "section#key"
+     (Key_Type        => String,   --  "section=key"
       Element_Type    => Config_Value,
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=",

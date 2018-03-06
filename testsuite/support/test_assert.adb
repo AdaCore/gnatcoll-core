@@ -63,8 +63,17 @@ package body Test_Assert is
    begin
       Assert (Success, Msg, Location);
       if not Success then
-         IO.Put_Line ("expected: " & Right);
-         IO.Put_Line ("got:      " & Left);
+         if Right'Length > 0 then
+            IO.Put_Line ("expected: " & Right);
+         else
+            IO.Put_Line ("expected empty string");
+         end if;
+
+         if Left'Length > 0 then
+            IO.Put_Line ("got:      " & Left);
+         else
+            IO.Put_Line ("got empty string");
+         end if;
       end if;
    end Assert;
 

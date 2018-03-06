@@ -1,7 +1,9 @@
+from e3.fs import cp
 from e3.testsuite.driver import TestDriver
 from e3.testsuite.process import check_call
 from e3.testsuite.result import TestStatus
 from drivers import gprbuild
+import os
 
 
 class BasicTestDriver(TestDriver):
@@ -38,6 +40,11 @@ class BasicTestDriver(TestDriver):
         """Check status fragment."""
         if not previous_values['build']:
             return
+
+        for data in self.test_env.get('data', []):
+            cp(os.path.join(self.test_env['test_dir'], data),
+               self.test_env['working_dir'], recursive=True)
+
         process = check_call(self, [self.test_env['test_exe']])
         if '<=== TEST PASSED ===>' not in process.out:
             self.result.set_status(TestStatus.FAIL)

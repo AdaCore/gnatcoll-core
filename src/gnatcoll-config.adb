@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2017, AdaCore                     --
+--                     Copyright (C) 2010-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -37,7 +37,8 @@ package body GNATCOLL.Config is
    No_Value : constant Config_Value :=
       (Len => 0, System_Id => Null_XString, Value => (others => ' '));
 
-   Space_CR : constant Character_Set := To_Set (" " & ASCII.CR);
+   Whitespaces : constant Character_Set := To_Set
+      (" " & ASCII.CR & ASCII.HT & ASCII.LF & ASCII.VT & ASCII.FF);
 
    function Internal_Get
      (Self    : Config_Pool;
@@ -148,7 +149,8 @@ package body GNATCOLL.Config is
    overriding procedure Open (Self : in out INI_Parser; Filename : String) is
    begin
       Open (File_Config_Parser (Self), Filename);
-      Self.Eol      := 0;
+      Self.Eol := 0;
+      Self.Current_Section := To_XString ("");
       Next (Self);
    end Open;
 
@@ -157,51 +159,70 @@ package body GNATCOLL.Config is
    ----------
 
    overriding procedure Next (Self : in out INI_Parser) is
-      Eol   : Integer;
-      Tmp   : Integer;
-      Last  : constant Integer := Length (Self.Contents);
-      Comment : constant Integer := Length (Self.Comment_Start);
+      Eol          : Integer;
+      First_Non_WS : Integer;
+      Last_Non_WS  : Integer;
+      Last         : constant Integer := Length (Self.Contents);
+      Comment      : constant Integer := Length (Self.Comment_Start);
    begin
+      --  Mark begining of the line.
       Self.First := Self.Eol + 1;
 
-      --  Search end of current line
       while Self.First <= Last loop
          Eol := Self.First;
          Self.Equal := 0;
-         while Eol <= Last
-           and then Self.Contents (Eol) /= ASCII.LF
-         loop
-            if Self.Equal = 0 and then Self.Contents (Eol) = '=' then
-               Self.Equal := Eol;
-            end if;
+         First_Non_WS := 0;
+         Last_Non_WS := 0;
+
+         --  Search end of current line and presence of '='
+         while Eol <= Last loop
+            declare
+               CC : constant Character := Self.Contents (Eol);
+            begin
+               case CC is
+                  when ASCII.LF => exit;
+                  when '=' =>
+                     if Self.Equal = 0 then
+                        Self.Equal := Eol;
+                     end if;
+                  when ' ' | ASCII.CR | ASCII.HT | ASCII.VT | ASCII.FF =>
+                     null;
+                  when others =>
+                     if First_Non_WS = 0 then
+                        First_Non_WS := Eol;
+                     else
+                        Last_Non_WS := Eol;
+                     end if;
+                     if Self.Equal = 0 and then CC = '=' then
+                        Self.Equal := Eol;
+                     end if;
+               end case;
+            end;
             Eol := Eol + 1;
          end loop;
 
          Self.Eol := Eol;
 
-         Tmp := Eol - 1;
-         if Tmp >= 1 and then Self.Contents (Tmp) = ASCII.CR then
-            Tmp := Tmp - 1;
-         end if;
-
-         --  Are we seeing a comment ?
-
-         if Self.First + Comment - 1 <= Eol
-           and then Slice
-             (Self.Contents, Self.First, Self.First + Comment - 1) =
-           Self.Comment_Start
-         then
+         if First_Non_WS = 0 then
+            --  line containing only whitespaces
             null;
-
-         elsif Self.Use_Sections
-           and then Self.Contents (Self.First) = '['
-           and then Self.Contents (Tmp) = ']'
+         elsif First_Non_WS + Comment - 1 <= Eol
+            and then Slice (Self.Contents,
+                            First_Non_WS,
+                            First_Non_WS + Comment - 1) = Self.Comment_Start
          then
-            Self.Current_Section :=
-              Self.Contents.Slice (Self.First + 1, Tmp - 1);
-
+            --  This is comment line so skip it
+            null;
          elsif Self.Equal /= 0 then
-            return;
+            --  We have an equal sign so this an assignement
+            exit;
+         elsif Self.Use_Sections
+            and then Self.Contents (First_Non_WS) = '['
+            and then Self.Contents (Last_Non_WS) = ']'
+         then
+            --  This is a section declaration.
+            Self.Current_Section :=
+              Self.Contents.Slice (First_Non_WS + 1, Last_Non_WS - 1);
          end if;
 
          Self.First := Eol + 1;
@@ -250,6 +271,9 @@ package body GNATCOLL.Config is
         (Str       => Value,
          Callback  => Callback'Unrestricted_Access,
          Delimiter => '$');
+   exception
+      when others =>
+         return Value;
    end Substitute;
 
    -------------
@@ -280,7 +304,7 @@ package body GNATCOLL.Config is
         (Self,
          Trim
            (Self.Contents.Slice (Self.Equal + 1, Self.Eol - 1).To_String,
-            Space_CR, Space_CR));
+            Whitespaces, Whitespaces));
    end Value;
 
    ----------
@@ -323,7 +347,7 @@ package body GNATCOLL.Config is
          for D in Key'Range loop
             if Key (D) = '.' then
                C := Self.Keys.Find
-                  (Key (Key'First .. D - 1) & '#' & Key (D + 1 .. Key'Last));
+                  (Key (Key'First .. D - 1) & '=' & Key (D + 1 .. Key'Last));
                if C = No_Element then
                   return No_Value;
                else
@@ -332,9 +356,9 @@ package body GNATCOLL.Config is
             end if;
          end loop;
 
-         C := Self.Keys.Find ('#' & Key);
+         C := Self.Keys.Find ('=' & Key);
       else
-         C := Self.Keys.Find (Section & '#' & Key);
+         C := Self.Keys.Find (Section & '=' & Key);
       end if;
 
       if C = No_Element then
@@ -459,7 +483,7 @@ package body GNATCOLL.Config is
 
    procedure Set (Self : in out Config_Pool; Section, Key, Value : String) is
    begin
-      Include (Self.Keys, Section & "#" & Key,
+      Include (Self.Keys, Section & "=" & Key,
                Config_Value'
                  (Len       => Value'Length,
                   Value     => Value,
