@@ -53,3 +53,6 @@ script:
   - make all
 
   - (cd testsuite; ./run-tests --gcov)
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
