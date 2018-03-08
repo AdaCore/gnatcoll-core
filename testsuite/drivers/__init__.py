@@ -29,7 +29,7 @@ def make_gnatcoll_for_gcov(work_dir):
 
     make_gnatcoll_cmd = [
         'make', '-f', os.path.join(GNATCOLL_ROOT_DIR, 'Makefile'),
-        'BUILD=DEBUG',
+        'BUILD=PROD',
         'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage -gargs',
         'ENABLE_SHARED=no']
 

@@ -32,6 +32,38 @@ with GNATCOLL.Strings;        use GNATCOLL.Strings;
 
 package body GNATCOLL.JSON is
 
+   type Text_Position is record
+      Index  : Natural := 0;
+      Line   : Natural := 0;
+      Column : Natural := 0;
+   end record;
+   --  Record to represent position in a given text
+
+   type Token_Kind is
+     (J_NULL,
+      J_TRUE,
+      J_FALSE,
+      J_NUMBER,
+      J_INTEGER,
+      J_STRING,
+      J_ARRAY,
+      J_OBJECT,
+      J_ARRAY_END,
+      J_OBJECT_END,
+      J_COMMA,
+      J_COLON,
+      J_EOF);
+   --  JSON Token kinds. Note that in ECMA 404 there is no notion of integer.
+   --  Only numbers are supported. In our implementation we return J_INTEGER
+   --  if there is no decimal part in the number. The semantic is that this is
+   --  a J_NUMBER token that "might" be represented as an integer. Special
+   --  token J_EOF means that end of stream has been reached.
+
+   function Is_Value (TK : Token_Kind) return Boolean;
+   pragma Inline (Is_Value);
+   --  Return True if the token kind is a JSON value: null, false, true,
+   --  a string, a number, an array or an object.
+
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Array_Internal, JSON_Array_Access);
    procedure Free is
@@ -48,12 +80,37 @@ package body GNATCOLL.JSON is
    --  Auxiliary write function
 
    function Read
-     (Strm     :        String;
-      Idx      : in out Natural;
-      Col      : access Natural;
-      Line     : access Natural;
-      Filename : String) return JSON_Value;
-   --  ???
+     (Strm      : String;
+      Pos       : in out Text_Position;
+      Kind      : out Token_Kind;
+      Filename  : String;
+      Check_EOF : Boolean := False)
+      return JSON_Value;
+   --  Internal function that reads a JSON stream.
+   --
+   --  Strm is the content to decode,
+   --  Pos is the current position in the Strm,
+   --  Kind is set to the last read token kind,
+   --  Filename is the filename of corresponding to the content Strm (used for
+   --  for error reporting only).
+   --  If Check_EOF is set to True, check before returning the JSON value that
+   --  we have reached the end of the stream.
+
+   function Read_Token
+     (Strm        : String;
+      Filename    : String;
+      Pos         : in out Text_Position;
+      Token_Start : out Text_Position;
+      Token_End   : out Text_Position)
+      return Token_Kind;
+   --  Read a token
+   --
+   --  Strm is the content to decode,
+   --  Filename is the filename of the decoded content (error reporting)
+   --  Pos is the current position in Strm
+   --  Token_Start are Token_End are respectively the position of the first and
+   --  last character of the token (outside boundaries of Strm if the return
+   --  token is J_EOF).
 
    ------------
    -- Append --
@@ -78,6 +135,21 @@ package body GNATCOLL.JSON is
       end case;
    end Is_Empty;
 
+   --------------
+   -- Is_Value --
+   --------------
+   function Is_Value (TK : Token_Kind) return Boolean is
+   begin
+      return TK = J_NULL or else
+        TK = J_TRUE or else
+        TK = J_FALSE or else
+        TK = J_STRING or else
+        TK = J_ARRAY or else
+        TK = J_OBJECT or else
+        TK = J_INTEGER or else
+        TK = J_NUMBER;
+   end Is_Value;
+
    ------------------
    -- Report_Error --
    ------------------
@@ -96,31 +168,42 @@ package body GNATCOLL.JSON is
 
       Ada.Text_IO.Put_Line
         (L (L'First + 1 .. L'Last) & ":" & C (C'First + 1 .. C'Last) & ": " &
-         Msg);
+           Msg);
       raise Invalid_JSON_Stream with Msg;
    end Report_Error;
 
-   ----------
-   -- Read --
-   ----------
+   ----------------
+   -- Read_Token --
+   ----------------
 
-   function Read
-     (Strm     :        String;
-      Idx      : in out Natural;
-      Col      : access Natural;
-      Line     : access Natural;
-      Filename : String) return JSON_Value
+   function Read_Token
+     (Strm        : String;
+      Filename    : String;
+      Pos         : in out Text_Position;
+      Token_Start : out Text_Position;
+      Token_End   : out Text_Position)
+       return Token_Kind
    is
+      procedure Next_Char;
+      --  Update Pos to point to next char
+
+      function Is_Whitespace return Boolean;
+      pragma Inline (Is_Whitespace);
+      --  Return True of current character is a whitespace
+
+      function Is_Structural_Token return Boolean;
+      pragma Inline (Is_Structural_Token);
+      --  Return True if current character is one of the structural tokens
+
+      function Is_Token_Sep return Boolean;
+      pragma Inline (Is_Token_Sep);
+      --  Return True if current character is a token separator
+
       procedure Error (Msg : String);
       pragma No_Return (Error);
 
-      procedure Next_Char (N : Natural := 1);
-
-      procedure Skip_Blanks;
-      --  Does Idx + 1 until a non-blank character is found
-
-      function Read_String return UTF8_XString;
-      --  Reads a string
+      procedure Delimit_Keyword (Kw : String);
+      --  Helper function to parse tokens such as null, false and true
 
       -----------
       -- Error --
@@ -128,411 +211,454 @@ package body GNATCOLL.JSON is
 
       procedure Error (Msg : String) is
       begin
-         Report_Error (Filename, Line.all, Col.all, Msg);
+         Report_Error (Filename, Pos.Line, Pos.Column, Msg);
       end Error;
 
       ---------------
       -- Next_Char --
       ---------------
 
-      procedure Next_Char (N : Natural := 1) is
+      procedure Next_Char is
       begin
-         if N > 1 then
-            for J in 1 .. N - 1 loop
+         Pos.Index := Pos.Index + 1;
+         if Pos.Index > Strm'Last then
+            Pos.Column := Pos.Column + 1;
+         elsif Strm (Pos.Index) = ASCII.LF then
+            Pos.Column := 1;
+            Pos.Line := Pos.Line + 1;
+         else
+            Pos.Column := Pos.Column + 1;
+         end if;
+      end Next_Char;
+
+      -------------------
+      -- Is_Whitespace --
+      -------------------
+
+      function Is_Whitespace return Boolean is
+      begin
+         return Pos.Index <= Strm'Last and then
+           (Strm (Pos.Index) = ASCII.LF or else
+            Strm (Pos.Index) = ASCII.CR or else
+            Strm (Pos.Index) = ASCII.HT or else
+            Strm (Pos.Index) = ' ');
+      end Is_Whitespace;
+
+      -------------------------
+      -- Is_Structural_Token --
+      -------------------------
+
+      function Is_Structural_Token return Boolean is
+      begin
+         return Pos.Index <= Strm'Last and then
+           (Strm (Pos.Index) = '[' or else
+            Strm (Pos.Index) = ']' or else
+            Strm (Pos.Index) = '{' or else
+            Strm (Pos.Index) = '}' or else
+            Strm (Pos.Index) = ',' or else
+            Strm (Pos.Index) = ':');
+      end Is_Structural_Token;
+
+      ------------------
+      -- Is_Token_Sep --
+      ------------------
+
+      function Is_Token_Sep return Boolean is
+      begin
+         return Pos.Index > Strm'Last or else
+           Is_Whitespace or else
+           Is_Structural_Token;
+      end Is_Token_Sep;
+
+      ---------------------
+      -- Delimit_Keyword --
+      ---------------------
+
+      procedure Delimit_Keyword (Kw : String) is
+      begin
+         while not Is_Token_Sep loop
+            Token_End := Pos;
+            Next_Char;
+         end loop;
+         if Strm (Token_Start.Index .. Token_End.Index) /= Kw then
+            Error ("invalid keyword starting with: " &
+                     Strm (Token_Start.Index .. Token_End.Index));
+         end if;
+      end Delimit_Keyword;
+
+      CC             : Character;
+      Can_Be_Integer : Boolean := True;
+   begin
+      --  Skip leading whitespaces
+      while Is_Whitespace loop
+         Next_Char;
+      end loop;
+
+      --  Initialize token delimiters
+      Token_Start := Pos;
+      Token_End   := Pos;
+
+      --  End of stream reached
+      if Pos.Index > Strm'Last then
+         return J_EOF;
+      end if;
+
+      CC := Strm (Pos.Index);
+
+      if CC = '[' then
+         Next_Char;
+         return J_ARRAY;
+      elsif CC = ']' then
+         Next_Char;
+         return J_ARRAY_END;
+      elsif CC = '{' then
+         Next_Char;
+         return J_OBJECT;
+      elsif CC = '}' then
+         Next_Char;
+         return J_OBJECT_END;
+      elsif CC = ',' then
+         Next_Char;
+         return J_COMMA;
+      elsif CC = ':' then
+         Next_Char;
+         return J_COLON;
+      elsif CC = 'n' then
+         Delimit_Keyword ("null");
+         return J_NULL;
+      elsif CC = 'f' then
+         Delimit_Keyword ("false");
+         return J_FALSE;
+      elsif CC = 't' then
+         Delimit_Keyword ("true");
+         return J_TRUE;
+      elsif CC = '"' then
+         --  We expect a string
+         --  Just scan till the end the of the string but do not attempt
+         --  to decode it. This means that even if we get a string token
+         --  it might not be a valid string from the ECMA 404 point of
+         --  view.
+         Next_Char;
+         while Pos.Index <= Strm'Last and then Strm (Pos.Index) /= '"' loop
+            if Strm (Pos.Index) in ASCII.NUL .. ASCII.US then
+               Error ("control character not allowed in string");
+            end if;
+
+            if Strm (Pos.Index) = '\' then
+               Next_Char;
+               if Pos.Index > Strm'Last then
+                  Error ("non terminated string token");
+               end if;
+
+               case Strm (Pos.Index) is
+                  when 'u' =>
+                     for Idx in 1 .. 4 loop
+                        Next_Char;
+                        if Pos.Index > Strm'Last or else
+                          (Strm (Pos.Index) not in 'a' .. 'f' and then
+                           Strm (Pos.Index) not in 'A' .. 'F' and then
+                           Strm (Pos.Index) not in '0' .. '9')
+                        then
+                           Error ("invalid unicode escape sequence");
+                        end if;
+
+                     end loop;
+
+                  when '\' | '/' | '"' | 'b' | 'f' | 'n' | 'r' | 't' =>
+                     null;
+                  when others =>
+                     Error ("invalid escape sequence");
+               end case;
+            end if;
+            Next_Char;
+         end loop;
+
+         --  No quote found report and error
+         if Pos.Index > Strm'Last then
+            Error ("non terminated string token");
+         end if;
+
+         Token_End := Pos;
+
+         --  Go to next char and ensure that this is separator. Indeed
+         --  construction such as "string1""string2" are not allowed
+         Next_Char;
+         if not Is_Token_Sep then
+            Error ("invalid syntax");
+         end if;
+         return J_STRING;
+      elsif CC = '-' or else CC in '0' .. '9' then
+         --  We expect a number
+         if CC = '-' then
+            Next_Char;
+         end if;
+
+         if Pos.Index > Strm'Last then
+            Error ("invalid number");
+         end if;
+
+         --  Parse integer part of a number. Superfluous leading zeros are not
+         --  allowed.
+         if Strm (Pos.Index) = '0' then
+            Token_End := Pos;
+            Next_Char;
+         elsif Strm (Pos.Index) in '1' .. '9' then
+            Token_End := Pos;
+            Next_Char;
+            while Pos.Index <= Strm'Last and then
+              Strm (Pos.Index) in '0' .. '9'
+            loop
+               Token_End := Pos;
+               Next_Char;
+            end loop;
+         else
+            Error ("invalid number");
+         end if;
+
+         if Is_Token_Sep then
+            --  Valid integer number
+            return J_INTEGER;
+         elsif Strm (Pos.Index) /= '.' and then
+           Strm (Pos.Index) /= 'e' and then
+           Strm (Pos.Index) /= 'E'
+         then
+            Error ("invalid number");
+         end if;
+
+         --  Check for a fractional part
+         if Strm (Pos.Index) = '.' then
+            Can_Be_Integer := False;
+            Token_End := Pos;
+            Next_Char;
+            if Pos.Index > Strm'Last or else
+              Strm (Pos.Index) not in '0' .. '9'
+            then
+               Error ("invalid number");
+            end if;
+
+            while Pos.Index <= Strm'Last and then
+              Strm (Pos.Index) in '0' .. '9'
+            loop
+               Token_End := Pos;
+               Next_Char;
+            end loop;
+
+         end if;
+
+         --  Check for exponent part
+         if Pos.Index <= Strm'Last and then
+           (Strm (Pos.Index) = 'e' or else Strm (Pos.Index) = 'E')
+         then
+            Token_End := Pos;
+            Next_Char;
+            if Pos.Index > Strm'Last then
+               Error ("invalid number");
+            end if;
+
+            if Strm (Pos.Index) = '-' then
+               --  Also a few corner cases can lead to an integer, assume that
+               --  the number is not an integer.
+               Can_Be_Integer := False;
+            end if;
+
+            if Strm (Pos.Index) = '-' or else Strm (Pos.Index) = '+' then
+               Next_Char;
+            end if;
+
+            if Pos.Index > Strm'Last or else
+              Strm (Pos.Index) not in '0' .. '9'
+            then
+               Error ("invalid number");
+            end if;
+
+            while Pos.Index <= Strm'Last and then
+              Strm (Pos.Index) in '0' .. '9'
+            loop
+               Token_End := Pos;
                Next_Char;
             end loop;
          end if;
 
-         Idx := Idx + 1;
-         if Idx > Strm'Last then
-            Col.all := Col.all + 1;
-         elsif Strm (Idx) = ASCII.CR then
-            Col.all := 0;
-         elsif Strm (Idx) = ASCII.LF then
-            Col.all := 1;
-            Line.all := Line.all + 1;
-         else
-            Col.all := Col.all + 1;
-         end if;
-      end Next_Char;
-
-      ------------------
-      -- Skip_Blancks --
-      ------------------
-
-      procedure Skip_Blanks is
-      begin
-         while Idx <= Strm'Last loop
-            exit when Strm (Idx) /= ' '
-              and then Strm (Idx) /= ASCII.HT
-              and then Strm (Idx) /= ASCII.CR
-              and then Strm (Idx) /= ASCII.LF;
-
-            Next_Char;
-         end loop;
-      end Skip_Blanks;
-
-      -----------------
-      -- Read_String --
-      -----------------
-
-      function Read_String return UTF8_XString is
-         Prev : Natural;
-
-      begin
-         Prev := Idx;
-         while Idx < Strm'Last loop
-            Next_Char;
-            if Strm (Idx) = '\' then
-               Next_Char;
-            elsif Strm (Idx) = '"' then
-               exit;
+         if Is_Token_Sep then
+            --  Valid decimal number
+            if Can_Be_Integer then
+               return J_INTEGER;
+            else
+               return J_NUMBER;
             end if;
-         end loop;
-
-         if Idx > Strm'Last
-           or else Strm (Idx) /= '"'
-         then
-            Error ("Invalid string: cannot find ending """);
+         else
+            Error ("invalid number");
          end if;
+      else
+         Error ("invalid syntax");
+      end if;
+   end Read_Token;
 
-         --  Skip the trailing '"'
-         Next_Char;
+   ----------
+   -- Read --
+   ----------
 
-         return Utility.Un_Escape_String (Strm, Prev, Idx - 1);
-      end Read_String;
+   function Read
+     (Strm      : String;
+      Pos       : in out Text_Position;
+      Kind      : out Token_Kind;
+      Filename  : String;
+      Check_EOF : Boolean := False)
+      return JSON_Value
+   is
 
+      procedure Error (Msg : String);
+      pragma No_Return (Error);
+
+      -----------
+      -- Error --
+      -----------
+
+      procedure Error (Msg : String) is
+      begin
+         Report_Error (Filename, Pos.Line, Pos.Column, Msg);
+      end Error;
+
+      Token_Start, Token_End : Text_Position;
+      TK                     : Token_Kind;
+      Result                 : JSON_Value;
    begin
-      Skip_Blanks;
-
-      if Idx not in Strm'Range then
-         Error ("Nothing to read from stream");
+      TK := Read_Token (Strm, Filename, Pos, Token_Start, Token_End);
+      if TK = J_EOF then
+         Error ("empty stream");
       end if;
 
-      case Strm (Idx) is
-         when 'n' | 'N' =>
-            --  null
-            if To_Lower (Strm (Idx .. Idx + 3)) /= "null" then
-               Error ("Invalid token");
-            end if;
+      Kind := TK;
 
-            Next_Char (4);
-
-            return Create;
-
-         when 't' =>
-            --  true
-            if To_Lower (Strm (Idx .. Idx + 3)) /= "true" then
-               Error ("Invalid token");
-            end if;
-
-            Next_Char (4);
-
-            return Create (True);
-
-         when 'f' =>
-            --  false
-            if To_Lower (Strm (Idx .. Idx + 4)) /= "false" then
-               Error ("Invalid token");
-            end if;
-
-            Next_Char (5);
-
-            return Create (False);
-
-         when '-' | '0' .. '9' =>
-            --  Numerical value
-
+      case TK is
+         when J_NULL =>
+            Result :=  Create;
+         when J_FALSE =>
+            Result := Create (False);
+         when J_TRUE =>
+            Result := Create (True);
+         when J_STRING =>
+            Result := Create (Utility.Un_Escape_String
+                              (Strm, Token_Start.Index, Token_End.Index));
+         when J_ARRAY =>
             declare
-               type Num_Part is (Trail, Int, Frac, Exp);
-               Unb      : Unbounded_String;
-               Part     : Num_Part := Trail;
-               Old_Col  : constant Natural := Col.all;
-               Old_Line : constant Natural := Line.all;
-
+               Arr : constant JSON_Array_Access := new JSON_Array_Internal;
+               ST       : Token_Kind;
+               Element  : JSON_Value;
+               Is_First : Boolean := True;
             begin
-               --  Potential initial '-'
-               if Strm (Idx) = '-' then
-                  Append (Unb, Strm (Idx));
-                  Next_Char;
-
-                  if Idx > Strm'Last
-                    or else Strm (Idx) not in '0' .. '9'
-                  then
-                     Error
-                       ("Expecting a digit after the initial '-' when " &
-                        "decoding a number");
+               loop
+                  Element := Read (Strm, Pos, ST, Filename);
+                  if Is_First and then ST = J_ARRAY_END then
+                     exit;
+                  elsif Is_Value (ST) then
+                     Append (Arr.Arr, Element);
+                     Element := Read (Strm, Pos, ST, Filename);
+                     if ST = J_ARRAY_END then
+                        exit;
+                     elsif ST /= J_COMMA then
+                        Error ("comma expected");
+                     end if;
+                  else
+                     Error ("syntax error");
                   end if;
-               end if;
-
-               while Idx <= Strm'Last loop
-                  if Part = Trail
-                    and then Strm (Idx) in '1' .. '9'
-                  then
-                     --  Non-0 value, we can start adding the digits to the
-                     --  Int part of the number
-                     Part := Int;
-
-                  elsif (Part = Trail or else Part = Int)
-                    and then Strm (Idx) = '.'
-                  then
-                     if Part = Trail then
-                        Append (Unb, "0");
-                     end if;
-
-                     Part := Frac;
-                     Append (Unb, Strm (Idx));
-                     Next_Char;
-
-                     if Idx > Strm'Last
-                       or else Strm (Idx) not in '0' .. '9'
-                     then
-                        Error ("Expecting digits after a '.' when decoding " &
-                               "a number");
-                     end if;
-
-                  elsif Part /= Exp
-                    and then (Strm (Idx) = 'e'
-                                or else Strm (Idx) = 'E')
-                  then
-                     if Part = Trail then
-                        --  Although legal, so handled here, this case is
-                        --  a number of the form 0e99.
-                        Append (Unb, "0");
-                     end if;
-
-                     --  Authorized patterns for exponent: (e|E)(+|-)?[0-9]+
-                     Part := Exp;
-                     Append (Unb, Strm (Idx));
-                     Next_Char;
-
-                     if Idx > Strm'Last then
-                        Error ("Invalid number");
-                     end if;
-
-                     if Strm (Idx) = '+'
-                       or else Strm (Idx) = '-'
-                     then
-                        Append (Unb, Strm (Idx));
-                        Next_Char;
-                     end if;
-
-                     if Idx > Strm'Last
-                       or else Strm (Idx) not in '0' .. '9'
-                     then
-                        Error ("Expecting digits after 'e' when decoding " &
-                               "a number");
-                     end if;
-                  end if;
-
-                  exit when Idx > Strm'Last
-                    or else Strm (Idx) not in '0' .. '9';
-
-                  --  Ignore trailing zeros
-                  if Part /= Trail then
-                     Append (Unb, Strm (Idx));
-                  end if;
-
-                  Next_Char;
+                  Is_First := False;
                end loop;
-
-               if Part = Trail then
-                  --  The number only contains zeros
-                  return Create (Long_Long_Integer'(0));
-
-               elsif Part = Int then
-                  --  Protect against too large values to fit in the stack: a
-                  --  128-bit integer is maximum 39 digits, so any longer
-                  --  string won't fit into an integer, whatever the CPU.
-                  --  Note that the string representation is already striped
-                  --  of trailing zeros, see the decoding part above.
-                  if Length (Unb) > 40 then
-                     Report_Error
-                       (Filename, Old_Line, Old_Col,
-                        "Numerical value too large to fit " &
-                          "into a Long_Long_Integer");
-                  end if;
-
-                  declare
-                     Int : Long_Long_Integer;
-                  begin
-                     Int := Long_Long_Integer'Value (To_String (Unb));
-
-                     return Create (Int);
-
-                  exception
-                     when Constraint_Error | Storage_Error =>
-                        --  The test above is not sufficient ... We still catch
-                        --  too large values here.
-                        Report_Error
-                          (Filename, Old_Line, Old_Col,
-                           "Numerical value too large to fit " &
-                             "into a Long_Long_Integer");
-                  end;
-               else
-                  declare
-                     Flt : Long_Float;
-                  begin
-                     Flt := Long_Float'Value (To_String (Unb));
-
-                     if not Flt'Valid then
-                        raise Constraint_Error;
-                     end if;
-
-                     return Create (Flt);
-                  exception
-                     when Constraint_Error =>
-                        Report_Error
-                          (Filename, Old_Line, Old_Col,
-                           "Numerical value too large to fit " &
-                             "into an IEEE 754 float");
-                  end;
-               end if;
+               Result := (Ada.Finalization.Controlled with
+                          Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
             end;
-
-         when '"' =>
-            return Create (Read_String);
-
-         when '[' =>
+         when J_OBJECT =>
             declare
-               Arr   : constant JSON_Array_Access := new JSON_Array_Internal;
-               First : Boolean := True;
-            begin
-               --  Skip '['
-               Next_Char;
-
-               while Idx < Strm'Last loop
-                  Skip_Blanks;
-
-                  if Idx > Strm'Last then
-                     Error ("Uncomplete JSON array");
-                  end if;
-
-                  exit when Strm (Idx) = ']';
-
-                  if not First then
-                     if Strm (Idx) /= ',' then
-                        Error ("Expected ',' in the array value");
-                     end if;
-
-                     --  Skip the coma
-                     Next_Char;
-                  end if;
-
-                  First := False;
-                  Append (Arr.Arr, Read (Strm, Idx, Col, Line, Filename));
-               end loop;
-
-               if Idx > Strm'Last
-                 or else Strm (Idx) /= ']'
-               then
-                  Error ("Unfinished array, expecting ending ']'");
-               end if;
-
-               Next_Char;
-
-               return (Ada.Finalization.Controlled with
-                       Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
-            end;
-
-         when '{' =>
-            declare
-               First : Boolean := True;
-               Ret   : JSON_Value;
-
+               Is_First   : Boolean := True;
+               ST         : Token_Kind;
+               Ret        : JSON_Value;
+               Key, Value : JSON_Value;
+               Key_Str : UTF8_XString;
             begin
                --  Allocate internal container
                Ret.Data := (Kind => JSON_Object_Type,
                             Obj_Value => new JSON_Object_Internal);
+               loop
+                  Key := Read (Strm, Pos, ST, Filename);
+                  if Is_First and then ST = J_OBJECT_END then
+                     exit;
+                  elsif ST = J_STRING then
+                     Value := Read (Strm, Pos, ST, Filename);
+                     if ST /= J_COLON then
+                        Error ("colon expected");
+                     end if;
+                     Value := Read (Strm, Pos, ST, Filename);
+                     if not Is_Value (ST) then
+                        Error ("non expected token");
+                     end if;
+                     Key_Str := Get (Key);
+                     Set_Field (Ret, Key_Str, Value);
 
-               --  Skip '{'
-               Next_Char;
-
-               while Idx < Strm'Last loop
-                  Skip_Blanks;
-
-                  if Idx > Strm'Last then
-                     Error ("Unterminated object value");
+                     Value := Read (Strm, Pos, ST, Filename);
+                     if ST = J_OBJECT_END then
+                        exit;
+                     elsif ST /= J_COMMA then
+                        Error ("comma expected");
+                     end if;
+                  else
+                     Error ("string value expected");
                   end if;
-
-                  exit when Strm (Idx) = '}';
-
-                  if not First then
-                     if Strm (Idx) /= ',' then
-                        Error ("Expected ',' as object value separator");
-                     end if;
-
-                     --  Skip the coma
-                     Next_Char;
-                  end if;
-
-                  First := False;
-                  Skip_Blanks;
-
-                  declare
-                     Name : constant UTF8_XString := Read_String;
-                  begin
-                     Skip_Blanks;
-
-                     if Idx > Strm'Last then
-                        Error ("Unterminated object value");
-                     end if;
-
-                     if Strm (Idx) /= ':' then
-                        Error
-                          ("Expected a value after the name in a JSON object"
-                           & " at index" & Idx'Img);
-                     end if;
-
-                     --  Skip the semi-colon
-                     Next_Char;
-
-                     declare
-                        Item : constant JSON_Value :=
-                                 Read (Strm, Idx, Col, Line, Filename);
-                     begin
-                        Set_Field (Ret, Name, Item);
-                     end;
-                  end;
+                  Is_First := False;
                end loop;
-
-               if Idx > Strm'Last
-                 or else Strm (Idx) /= '}'
-               then
-                  Error ("Unterminated object value");
+               Result := Ret;
+            end;
+         when J_NUMBER | J_INTEGER =>
+            --  This is a number
+            declare
+               Number_Str : constant String :=
+                 Strm (Token_Start.Index .. Token_End.Index);
+            begin
+               if TK = J_INTEGER then
+                  declare
+                     Result_Int : Long_Long_Integer;
+                  begin
+                     Result_Int := Long_Long_Integer'Value (Number_Str);
+                     Result := Create (Result_Int);
+                  exception
+                     when Constraint_Error | Storage_Error =>
+                        null;
+                  end;
                end if;
 
-               Next_Char;
-
-               return Ret;
+               Result := Create (Long_Float'Value (Number_Str));
             end;
-
          when others =>
-            Error ("Unexpected token");
-            raise Invalid_JSON_Stream;
+            if Check_EOF then
+               Error ("invalid JSON stream");
+            else
+               Result := Create;
+            end if;
       end case;
+
+      if Check_EOF and then
+        Read_Token (Strm, Filename, Pos, Token_Start, Token_End) /= J_EOF
+      then
+         Error ("additional data after end of JSON stream");
+      end if;
+      return Result;
    end Read;
 
    function Read
      (Strm     : Unbounded_String;
       Filename : String := "<data>") return JSON_Value
    is
-      Idx  : Natural := 1;
-      Col  : aliased Natural := 1;
-      Line : aliased Natural := 1;
    begin
-      return Read (To_String (Strm), Idx, Col'Access, Line'Access, Filename);
+      return Read (To_String (Strm), Filename);
    end Read;
 
    function Read
      (Strm     : String;
       Filename : String := "<data>") return JSON_Value
    is
-      Idx  : Natural := Strm'First;
-      Col  : aliased Natural := 1;
-      Line : aliased Natural := 1;
+      Pos : Text_Position := (Strm'First, 1, 1);
+      Kind : Token_Kind;
    begin
-      return Read (Strm, Idx, Col'Access, Line'Access, Filename);
+      return Read (Strm, Pos, Kind, Filename, Check_EOF => True);
    end Read;
 
    -----------
@@ -939,10 +1065,10 @@ package body GNATCOLL.JSON is
    function Create (Val : JSON_Array) return JSON_Value is
    begin
       return (Ada.Finalization.Controlled with
-              Data => (Kind      => JSON_Array_Type,
-                       Arr_Value => new JSON_Array_Internal'
-                          (Cnt => 1,
-                           Arr => Val)));
+                Data => (Kind      => JSON_Array_Type,
+                         Arr_Value => new JSON_Array_Internal'
+                           (Cnt => 1,
+                            Arr => Val)));
    end Create;
 
    -------------------
@@ -1234,7 +1360,7 @@ package body GNATCOLL.JSON is
    end Get;
 
    function Get_Long_Float
-      (Val : JSON_Value; Field : UTF8_String) return Long_Float is
+     (Val : JSON_Value; Field : UTF8_String) return Long_Float is
    begin
       return Get_Long_Float (Get (Val, Field));
    end Get_Long_Float;
@@ -1281,9 +1407,9 @@ package body GNATCOLL.JSON is
          when JSON_Array_Type =>
             declare
                Result : constant JSON_Value :=
-                  (Ada.Finalization.Controlled with
-                   Data => (Kind => JSON_Array_Type,
-                            Arr_Value => new JSON_Array_Internal));
+                 (Ada.Finalization.Controlled with
+                  Data => (Kind => JSON_Array_Type,
+                           Arr_Value => new JSON_Array_Internal));
             begin
                for E of Val.Data.Arr_Value.Arr.Vals loop
                   Append (Result.Data.Arr_Value.Arr, Clone (E));
@@ -1335,15 +1461,15 @@ package body GNATCOLL.JSON is
             if Left.Data.Arr_Value = Right.Data.Arr_Value then
                return True;
             elsif Left.Data.Arr_Value.Arr.Vals.Length /=
-               Right.Data.Arr_Value.Arr.Vals.Length
+              Right.Data.Arr_Value.Arr.Vals.Length
             then
                return False;
             else
                for J in Left.Data.Arr_Value.Arr.Vals.First_Index ..
-                  Left.Data.Arr_Value.Arr.Vals.Last_Index
+                 Left.Data.Arr_Value.Arr.Vals.Last_Index
                loop
                   if not (Left.Data.Arr_Value.Arr.Vals (J) =  --  recursive
-                          Right.Data.Arr_Value.Arr.Vals (J))
+                            Right.Data.Arr_Value.Arr.Vals (J))
                   then
                      return False;
                   end if;
@@ -1356,7 +1482,7 @@ package body GNATCOLL.JSON is
             if Left.Data.Obj_Value = Right.Data.Obj_Value then
                return True;
             elsif Left.Data.Obj_Value.Vals.Length /=
-               Right.Data.Obj_Value.Vals.Length
+              Right.Data.Obj_Value.Vals.Length
             then
                return False;
             else

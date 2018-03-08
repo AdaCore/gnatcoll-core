@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2017, AdaCore                     --
+--                     Copyright (C) 2011-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -111,7 +111,7 @@ package body GNATCOLL.JSON.Utility is
 
          case W_Chr is
             when NUL =>
-               null;
+               Append (Ret, "\u0000");
             when '"' =>
                Append (Ret, "\""");
             when '\' =>
