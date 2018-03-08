@@ -190,6 +190,7 @@ package body GNATCOLL.Config is
                   when others =>
                      if First_Non_WS = 0 then
                         First_Non_WS := Eol;
+                        Last_Non_WS := Eol;
                      else
                         Last_Non_WS := Eol;
                      end if;

@@ -143,6 +143,16 @@ begin
       when others =>
          A.Assert (False, "parsing test5.ini");
    end;
+
+   --  Check that a line containing only [ will not crash the parser
+   begin
+      Ini3.Open ("test6.ini");
+      Pool.Fill (Ini3);
+      A.Assert (True, "parsing test6.ini");
+   exception
+      when others =>
+         A.Assert (False, "parsing test6.ini");
+   end;
    return A.Report;
 
 end Test;
