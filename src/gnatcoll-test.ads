@@ -1,4 +1,4 @@
-package GNATCOLL.Test is 
+package GNATCOLL.Test is
 
    My_Var : Integer;
 
