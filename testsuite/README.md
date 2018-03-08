@@ -9,7 +9,7 @@ e3-testsuite.
 To install e3-testsuite:
 
 ```sh
-pip install git+https://github.com/AdaCore/e3-core.git
+pip install git+https://github.com/AdaCore/e3-testsuite.git
 ```
 
 Then do
