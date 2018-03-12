@@ -251,6 +251,15 @@ package body GNATCOLL.SQL_Impl is
       Free (Self);
    end Free_Dispatch;
 
+   --------------
+   -- Is_Empty --
+   --------------
+
+   function Is_Empty (List : SQL_Field_List) return Boolean is
+   begin
+      return List.List.Is_Empty;
+   end Is_Empty;
+
    ---------------
    -- To_String --
    ---------------

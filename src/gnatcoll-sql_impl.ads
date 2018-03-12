@@ -320,6 +320,8 @@ package GNATCOLL.SQL_Impl is
    Empty_Field_List : constant SQL_Field_List;
    --  A list of fields, as used in a SELECT query ("field1, field2");
 
+   function Is_Empty (List : SQL_Field_List) return Boolean;
+
    overriding function To_String
      (Self   : SQL_Field_List;
       Format : Formatter'Class;
@@ -756,6 +758,7 @@ package GNATCOLL.SQL_Impl is
    end Field_Types;
 
 private
+
    type SQL_Field_List is new SQL_Field_Or_List with record
       List : Field_List.Vector;
    end record;
