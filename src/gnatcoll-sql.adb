@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1527,7 +1527,7 @@ package body GNATCOLL.SQL is
                Next (C2);
             end loop;
             Append (List, To_String (Self.Subquery, Format));
-            Append (List, To_String (Self.In_String));
+            Append (List, Self.In_String);
 
             if List = "" then
                --  "A in ()" is same as "False"
