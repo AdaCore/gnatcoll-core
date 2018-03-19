@@ -2493,6 +2493,7 @@ package body GNATCOLL.Projects is
       UIndex  : Unit_Index;
       Lang    : Language_Ptr;
    begin
+
       if Is_Ada_Predefined_Unit (Unit_Name) then
          declare
             Buffer : String := Substitute_Dot (Unit_Name, "-");
@@ -2534,7 +2535,7 @@ package body GNATCOLL.Projects is
       --  The project naming scheme
       else
          Name_Len := Unit_Name'Length;
-         Name_Buffer (1 .. Name_Len) := Unit_Name;
+         Name_Buffer (1 .. Name_Len) := To_Lower (Unit_Name);
          Unit := Name_Find;
 
          --  Take advantage of computation done by the project manager when we

@@ -14,6 +14,12 @@ class BasicTestDriver(TestDriver):
     1- Create a directory with a test.yaml inside
     2- Add test sources in that directory
     3- Add a main called test.adb that use support/test_assert.ads package.
+    4- Do not put test.gpr there, it breaks the test, if you need a project
+       file for testing, name it something else.
+    5- If you need additional files for you test, list them in test.yaml:
+       data:
+           - "your_file1"
+           - "your_file2"
     """
 
     def add_test(self, dag):

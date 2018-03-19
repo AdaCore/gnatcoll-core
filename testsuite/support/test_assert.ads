@@ -57,7 +57,7 @@ package Test_Assert is
 
    function Report return Natural;
    --  Report should be called the following way at the end of a test
-   --  program main procedure:
+   --  program main function:
    --
    --      return Report;
    --
