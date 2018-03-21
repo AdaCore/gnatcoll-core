@@ -38,7 +38,8 @@ class JSONValidationDriver(TestDriver):
 
         process = check_call(
             self,
-            [self.test_env.get('validator', 'obj/test'),
+            [os.path.join(self.test_env['working_dir'],
+                          self.test_env.get('validator', 'obj/test')),
              os.path.join(self.test_env['test_dir'], data_file)],
             result=result)
 

@@ -45,7 +45,10 @@ class BasicTestDriver(TestDriver):
             cp(os.path.join(self.test_env['test_dir'], data),
                self.test_env['working_dir'], recursive=True)
 
-        process = check_call(self, [self.test_env['test_exe']])
+        process = check_call(
+            self,
+            [os.path.join(self.test_env['working_dir'],
+                          self.test_env['test_exe'])])
         if '<=== TEST PASSED ===>' not in process.out:
             self.result.set_status(TestStatus.FAIL)
         else:
