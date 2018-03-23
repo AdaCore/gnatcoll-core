@@ -1,0 +1,4 @@
+description: Complex default value of external in imported project
+data:
+    - "p.gpr"
+    - "q.gpr"

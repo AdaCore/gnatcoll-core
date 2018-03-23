@@ -1,0 +1,8 @@
+project Q is
+   for Source_Files use ();
+   
+   Path  := project'Project_Dir & "some_dir";
+   Var1 := external ("NONEXISTINGVAR1", Path);
+   
+   Var2 := external ("NONEXISTINGVAR2", project'Project_Dir & "some_dir");
+end Q;
