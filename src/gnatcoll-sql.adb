@@ -814,10 +814,10 @@ package body GNATCOLL.SQL is
    --------------
 
    function Absolute
-     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class
+     (Field : SQL_Field'Class) return Integer_Fields.Field'Class
    is
       function Internal is new Integer_Fields.Apply_Function
-        (Integer_Fields.Field, "ABS (");
+        (SQL_Field, "ABS (");
    begin
       return Internal (Field);
    end Absolute;
@@ -827,10 +827,10 @@ package body GNATCOLL.SQL is
    -----------
 
    function Lower
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class
    is
       function Internal is new Text_Fields.Apply_Function
-        (Text_Fields.Field, "LOWER (");
+        (SQL_Field, "LOWER (");
    begin
       return Internal (Field);
    end Lower;
@@ -840,10 +840,10 @@ package body GNATCOLL.SQL is
    -----------
 
    function Upper
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class
    is
       function Internal is new Text_Fields.Apply_Function
-        (Text_Fields.Field, "UPPER (");
+        (SQL_Field, "UPPER (");
    begin
       return Internal (Field);
    end Upper;
@@ -852,11 +852,9 @@ package body GNATCOLL.SQL is
    -- Trim --
    ----------
 
-   function Trim
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
-   is
+   function Trim (Field : SQL_Field'Class) return Text_Fields.Field'Class is
       function Internal is new Text_Fields.Apply_Function
-        (Text_Fields.Field, "TRIM (");
+        (SQL_Field, "TRIM (");
    begin
       return Internal (Field);
    end Trim;
@@ -866,10 +864,10 @@ package body GNATCOLL.SQL is
    -------------
 
    function Initcap
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class
    is
       function Internal is new Text_Fields.Apply_Function
-        (Text_Fields.Field, "INITCAP (");
+        (SQL_Field, "INITCAP (");
    begin
       return Internal (Field);
    end Initcap;

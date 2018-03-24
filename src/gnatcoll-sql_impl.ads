@@ -701,7 +701,7 @@ package GNATCOLL.SQL_Impl is
 
       generic
          Name : String;
-      function Operator (Field1, Field2 : Field'Class) return Field'Class;
+      function Operator (Field1, Field2 : SQL_Field'Class) return Field'Class;
       --  An operator between two fields, that return a field of the new type
 
       generic
@@ -709,7 +709,7 @@ package GNATCOLL.SQL_Impl is
          Prefix : String := "";
          Suffix : String := "";
       function String_Operator
-        (Self : Field'Class; Operand : String) return Field'Class;
+        (Self : SQL_Field'Class; Operand : String) return Field'Class;
 
       generic
          type Scalar is (<>);
@@ -717,7 +717,7 @@ package GNATCOLL.SQL_Impl is
          Prefix : String := "";
          Suffix : String := "";
       function Scalar_Operator
-        (Self : Field'Class; Operand : Scalar) return Field'Class;
+        (Self : SQL_Field'Class; Operand : Scalar) return Field'Class;
       --  An operator between a field and a constant value, as in
       --      field + interval '2 days'
       --           where  Name   is "+"
@@ -737,6 +737,9 @@ package GNATCOLL.SQL_Impl is
       --  Applying a function to a field, as in  "LOWER (field)", where
       --     Name   is "LOWER ("
       --     Suffix is ")"
+
+      function Cast_Implicit (Self : SQL_Field'Class) return Field'Class;
+      --  Convert any field type to this package provided implicitly
 
       generic
          type Argument1_Type is abstract new SQL_Field with private;

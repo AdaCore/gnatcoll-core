@@ -289,20 +289,13 @@ package GNATCOLL.SQL is
       renames Long_Float_Fields.Param;
 
    subtype T_Money is GNATCOLL.SQL_Impl.T_Money;
-   function "=" (T1, T2 : T_Money) return Boolean
-      renames GNATCOLL.SQL_Impl."=";
-   function "+" (T1, T2 : T_Money) return T_Money
-      renames GNATCOLL.SQL_Impl."+";
-   function "-" (T1, T2 : T_Money) return T_Money
-      renames GNATCOLL.SQL_Impl."-";
-   function "<" (T1, T2 : T_Money) return Boolean
-      renames GNATCOLL.SQL_Impl."<";
-   function "<=" (T1, T2 : T_Money) return Boolean
-      renames GNATCOLL.SQL_Impl."<=";
-   function ">" (T1, T2 : T_Money) return Boolean
-      renames GNATCOLL.SQL_Impl.">";
-   function ">=" (T1, T2 : T_Money) return Boolean
-      renames GNATCOLL.SQL_Impl.">=";
+   function "=" (T1, T2 : T_Money) return Boolean renames SQL_Impl."=";
+   function "+" (T1, T2 : T_Money) return T_Money renames SQL_Impl."+";
+   function "-" (T1, T2 : T_Money) return T_Money renames SQL_Impl."-";
+   function "<" (T1, T2 : T_Money) return Boolean renames SQL_Impl."<";
+   function "<=" (T1, T2 : T_Money) return Boolean renames SQL_Impl."<=";
+   function ">" (T1, T2 : T_Money) return Boolean renames SQL_Impl.">";
+   function ">=" (T1, T2 : T_Money) return Boolean renames SQL_Impl.">=";
    --  Make this type visible here, so that users do not have to explicitly
    --  'with' GNATCOLL.SQL_Impl.
 
@@ -460,20 +453,15 @@ package GNATCOLL.SQL is
    --  Returns current timestamp with timezone
 
    function Absolute
-     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class
-     with Inline;
+     (Field : SQL_Field'Class) return Integer_Fields.Field'Class with Inline;
    function Lower
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
-     with Inline;
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class with Inline;
    function Upper
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
-     with Inline;
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class with Inline;
    function Initcap
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
-     with Inline;
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class with Inline;
    function Trim
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
-     with Inline;
+     (Field : SQL_Field'Class) return Text_Fields.Field'Class with Inline;
    --  Return the corresponding SQL function applied on Field
 
    function Cast_To_String

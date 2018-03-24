@@ -1216,7 +1216,9 @@ package body GNATCOLL.SQL_Impl is
       -- Operator --
       --------------
 
-      function Operator (Field1, Field2 : Field'Class) return Field'Class is
+      function Operator
+        (Field1, Field2 : SQL_Field'Class) return Field'Class
+      is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => null,
             Instance_Index => -1, Name => null);
@@ -1233,7 +1235,7 @@ package body GNATCOLL.SQL_Impl is
       ---------------------
 
       function String_Operator
-        (Self : Field'Class; Operand : String) return Field'Class
+        (Self : SQL_Field'Class; Operand : String) return Field'Class
       is
          F : Typed_Data_Fields.Field
            (Table => null, Instance => null, Name => null,
@@ -1260,7 +1262,7 @@ package body GNATCOLL.SQL_Impl is
       ---------------------
 
       function Scalar_Operator
-        (Self : Field'Class; Operand : Scalar) return Field'Class
+        (Self : SQL_Field'Class; Operand : Scalar) return Field'Class
       is
          function Operator is new String_Operator (Name, Prefix, Suffix);
       begin
@@ -1305,6 +1307,23 @@ package body GNATCOLL.SQL_Impl is
          F.Data.Set (D);
          return F;
       end Apply_Function;
+
+      -------------------
+      -- Cast_Implicit --
+      -------------------
+
+      function Cast_Implicit (Self : SQL_Field'Class) return Field'Class is
+         F : Typed_Data_Fields.Field
+           (Table => null, Instance => null, Name => null,
+            Instance_Index => -1);
+         D : Function_Field;
+      begin
+         D.Suffix := new String'("");
+         D.Prefix := new String'("");
+         D.To_Field := +Self;
+         F.Data.Set (D);
+         return F;
+      end Cast_Implicit;
 
       ---------------------
       -- Apply_Function2 --
