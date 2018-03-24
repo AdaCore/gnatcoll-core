@@ -848,6 +848,19 @@ package body GNATCOLL.SQL is
       return Internal (Field);
    end Upper;
 
+   ----------
+   -- Trim --
+   ----------
+
+   function Trim
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+   is
+      function Internal is new Text_Fields.Apply_Function
+        (Text_Fields.Field, "TRIM (");
+   begin
+      return Internal (Field);
+   end Trim;
+
    -------------
    -- Initcap --
    -------------

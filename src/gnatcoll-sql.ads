@@ -460,13 +460,20 @@ package GNATCOLL.SQL is
    --  Returns current timestamp with timezone
 
    function Absolute
-     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class;
+     (Field : Integer_Fields.Field'Class) return Integer_Fields.Field'Class
+     with Inline;
    function Lower
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+     with Inline;
    function Upper
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+     with Inline;
    function Initcap
-     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class;
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+     with Inline;
+   function Trim
+     (Field : Text_Fields.Field'Class) return Text_Fields.Field'Class
+     with Inline;
    --  Return the corresponding SQL function applied on Field
 
    function Cast_To_String
