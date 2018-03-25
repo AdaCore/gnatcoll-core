@@ -86,10 +86,10 @@ package body GNATCOLL.Traces is
    --  default foreground.
 
    Default_Exception_Style : constant Message_Style :=
-      (Fg    => GNATCOLL.Terminal.Unchanged,
+      (Fg    => GNATCOLL.Terminal.Black,
        Bg    => GNATCOLL.Terminal.Red,
        Style => GNATCOLL.Terminal.Unchanged);
-   --  Use the foreground of the handle, but highlight with a red background.
+   --  Highlight with a red background.
    --  This is used to report unexpected exceptions when an exception
    --  occurrence is passed to Trace.
 
@@ -1633,7 +1633,7 @@ package body GNATCOLL.Traces is
    -- Close --
    -----------
 
-   procedure Close (Stream : in out File_Stream_Record) is
+   overriding procedure Close (Stream : in out File_Stream_Record) is
       Status : int;
       pragma Unreferenced (Status);
    begin
@@ -1963,7 +1963,11 @@ package body GNATCOLL.Traces is
       TmpF  : Stream_Factories_List;
       NextF : Stream_Factories_List;
    begin
-      if not Global.Finalized and then Global.Finalize_Traces.Active then
+      if not Global.Finalized
+         --  Might never have been initialized at all
+         and then Global.Finalize_Traces /= null
+         and then Global.Finalize_Traces.Active
+      then
          Lock (Global.Lock);
          Tmp := Global.Handles_List;
          while Tmp /= null loop
