@@ -575,17 +575,33 @@ package GNATCOLL.SQL.Exec is
    function Current (Self : Forward_Cursor) return Positive;
    --  Index of the current row. The first row is always numbered 1
 
+   function Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : String) return String;
    function Value (Self : Forward_Cursor; Field : Field_Index) return String;
-   --  Gets the field value as a string
+   --  Gets the field value as a string.
 
    function Unbounded_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Unbounded_String) return Unbounded_String;
+   function Unbounded_Value
      (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String;
-   --  Gets the field value as an Unbounded_String
+   --  Gets the field value as an Unbounded_String.
 
    function XString_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : XString) return XString;
+   function XString_Value
      (Self : Forward_Cursor; Field : Field_Index) return XString;
-   --  Gets the field value as an XString
+   --  Gets the field value as an XString.
 
+   function Boolean_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Boolean) return Boolean;
    function Boolean_Value
      (Self : Forward_Cursor; Field : Field_Index) return Boolean;
 
@@ -630,8 +646,18 @@ package GNATCOLL.SQL.Exec is
    --  The first version will return the default instead.
 
    function Money_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : T_Money) return T_Money;
+   function Money_Value
      (Self : Forward_Cursor; Field : Field_Index)
      return T_Money;
+   --  Reads a value as a money.
+
+   function Time_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Ada.Calendar.Time) return Ada.Calendar.Time;
    function Time_Value
      (Self  : Forward_Cursor; Field : Field_Index) return Ada.Calendar.Time;
    --  Return a specific cell, converted to the appropriate format

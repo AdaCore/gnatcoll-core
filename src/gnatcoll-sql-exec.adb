@@ -1285,6 +1285,22 @@ package body GNATCOLL.SQL.Exec is
       return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
    end Value;
 
+   -----------
+   -- Value --
+   -----------
+
+   function Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : String) return String
+   is
+   begin
+      return Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
+         return Default;
+   end Value;
+
    ---------------------
    -- Unbounded_Value --
    ---------------------
@@ -1293,6 +1309,22 @@ package body GNATCOLL.SQL.Exec is
      (Self : Forward_Cursor; Field : Field_Index) return Unbounded_String is
    begin
       return Unbounded_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Unbounded_Value;
+
+   ---------------------
+   -- Unbounded_Value --
+   ---------------------
+
+   function Unbounded_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Unbounded_String) return Unbounded_String
+   is
+   begin
+      return Unbounded_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
+         return Default;
    end Unbounded_Value;
 
    -------------------
@@ -1306,6 +1338,22 @@ package body GNATCOLL.SQL.Exec is
    end XString_Value;
 
    -------------------
+   -- XString_Value --
+   -------------------
+
+   function XString_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : XString) return XString
+   is
+   begin
+      return XString_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
+         return Default;
+   end XString_Value;
+
+   -------------------
    -- Boolean_Value --
    -------------------
 
@@ -1314,6 +1362,22 @@ package body GNATCOLL.SQL.Exec is
       Field : Field_Index) return Boolean is
    begin
       return Boolean_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Boolean_Value;
+
+   -------------------
+   -- Boolean_Value --
+   -------------------
+
+   function Boolean_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Boolean) return Boolean
+   is
+   begin
+      return Boolean_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
+         return Default;
    end Boolean_Value;
 
    -------------------
@@ -1417,15 +1481,31 @@ package body GNATCOLL.SQL.Exec is
          return Default;
    end Long_Float_Value;
 
-   -----------
-   -- Value --
-   -----------
+   -----------------
+   -- Money_Value --
+   -----------------
 
    function Money_Value
      (Self : Forward_Cursor; Field : Field_Index)
      return T_Money is
    begin
       return Money_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Money_Value;
+
+   -----------------
+   -- Money_Value --
+   -----------------
+
+   function Money_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : T_Money) return T_Money
+   is
+   begin
+      return Money_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
+         return Default;
    end Money_Value;
 
    ----------------
@@ -1437,6 +1517,22 @@ package body GNATCOLL.SQL.Exec is
       Field : Field_Index) return Ada.Calendar.Time is
    begin
       return Time_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   end Time_Value;
+
+   ----------------
+   -- Time_Value --
+   ----------------
+
+   function Time_Value
+     (Self    : Forward_Cursor;
+      Field   : Field_Index;
+      Default : Ada.Calendar.Time) return Ada.Calendar.Time
+   is
+   begin
+      return Time_Value (DBMS_Forward_Cursor'Class (Self.Res.all), Field);
+   exception
+      when Constraint_Error | Interfaces.C.Strings.Dereference_Error  =>
+         return Default;
    end Time_Value;
 
    -------------
