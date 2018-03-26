@@ -752,6 +752,9 @@ package GNATCOLL.SQL_Impl is
          return Field'Class;
       --  Applying a function to two fields, and return another field
 
+      function Nullif (Left, Right : SQL_Field'Class) return Field'Class;
+      --  SQL NULLIF function
+
    private
       Null_Field : constant Field :=
         (Table    => null,

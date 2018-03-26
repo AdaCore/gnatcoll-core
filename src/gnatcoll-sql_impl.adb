@@ -1351,6 +1351,17 @@ package body GNATCOLL.SQL_Impl is
          return F;
       end Apply_Function2;
 
+      ------------
+      -- Nullif --
+      ------------
+
+      function Nullif (Left, Right : SQL_Field'Class) return Field'Class is
+         function Internal is new Apply_Function2
+           (SQL_Field, SQL_Field, "NULLIF (");
+      begin
+         return Internal (Left, Right);
+      end Nullif;
+
       ---------------
       -- Operators --
       ---------------
