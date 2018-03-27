@@ -3,6 +3,7 @@ with GNATCOLL.JSON;
 with GNATCOLL.VFS;
 with GNAT.Strings;
 with Ada.Command_Line;
+with Ada.Exceptions;
 
 function Test return Integer is
    package A renames Test_Assert;
@@ -21,8 +22,9 @@ function Test return Integer is
       exception
          when JSON.Invalid_JSON_Stream =>
             A.Assert (True, "failed with Invalid_JSON_Stream");
-         when others =>
-            A.Assert (False, "invalid json: (wrong exception)");
+         when E : others =>
+            A.Assert (False, "invalid json: (wrong exception)" & ASCII.LF &
+                      Ada.Exceptions.Exception_Information (E));
       end;
    end Test;
 

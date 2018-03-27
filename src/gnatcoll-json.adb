@@ -612,6 +612,7 @@ package body GNATCOLL.JSON is
             declare
                Number_Str : constant String :=
                  Strm (Token_Start.Index .. Token_End.Index);
+               Has_Integer : Boolean := False;
             begin
                if TK = J_INTEGER then
                   declare
@@ -619,13 +620,21 @@ package body GNATCOLL.JSON is
                   begin
                      Result_Int := Long_Long_Integer'Value (Number_Str);
                      Result := Create (Result_Int);
+                     Has_Integer := True;
                   exception
                      when Constraint_Error | Storage_Error =>
                         null;
                   end;
                end if;
 
-               Result := Create (Long_Float'Value (Number_Str));
+               if not Has_Integer then
+                  begin
+                     Result := Create (Long_Float'Value (Number_Str));
+                  exception
+                     when Constraint_Error =>
+                        Error ("cannot convert JSON number to Long_Float");
+                  end;
+               end if;
             end;
          when others =>
             if Check_EOF then
