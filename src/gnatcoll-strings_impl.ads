@@ -395,12 +395,12 @@ package GNATCOLL.Strings_Impl is
                            Has_Element => Has_Element,
                            Element     => Element);
       function First (Self : Index_Range) return Positive is (Self.Low);
-      function Next (Self : Index_Range; Index : Positive) return Positive
-         is (Index + 1);
+      function Next (Ignored_Self : Index_Range; Index : Positive)
+         return Positive is (Index + 1);
       function Has_Element (Self : Index_Range; Index : Positive)
          return Boolean is (Index <= Self.High);
       function Element
-         (Self : Index_Range; Index : Positive) return Positive
+         (Ignored_Self : Index_Range; Index : Positive) return Positive
          is (Index);
 
       function Iterate (Self : XString) return Index_Range
