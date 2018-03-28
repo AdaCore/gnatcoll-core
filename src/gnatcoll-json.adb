@@ -490,7 +490,7 @@ package body GNATCOLL.JSON is
             Error ("invalid number");
          end if;
       else
-         Error ("invalid syntax");
+         Error ("Unexpected character '" & CC & ''');
       end if;
    end Read_Token;
 
