@@ -5356,6 +5356,43 @@ package body GNATCOLL.Projects is
       return Var;
    end Scenario_Variables;
 
+   --------------------------
+   -- Get_Untyped_Variable --
+   --------------------------
+
+   function Get_Untyped_Variable
+     (Self : Project_Tree; External_Name : String) return Untyped_Variable
+   is
+      Ext  : Name_Id;
+      List : Untyped_Variable_Array_Access;
+      Var  : Untyped_Variable;
+   begin
+      Ext := Get_String (External_Name);
+
+      if Self.Data.Env.Scenario_Variables = null then
+         Compute_Scenario_Variables (Self.Data);
+      end if;
+
+      for V of Self.Data.Env.Untyped_Variables.all loop
+         if V.Name = Ext then
+            return V;
+         end if;
+      end loop;
+
+      Var := Untyped_Variable'
+        (Name        => Ext,
+         Default     => No_Name,
+         Value       => No_Name);
+
+      List := Self.Data.Env.Untyped_Variables;
+      Self.Data.Env.Untyped_Variables :=
+        new Untyped_Variable_Array'
+          (Self.Data.Env.Untyped_Variables.all & Var);
+      Unchecked_Free (List);
+
+      return Var;
+   end Get_Untyped_Variable;
+
    -------------------
    -- External_Name --
    -------------------

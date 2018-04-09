@@ -1257,6 +1257,15 @@ package GNATCOLL.Projects is
    --  you call this function before loading the project), a new variable is
    --  created.
 
+   function Get_Untyped_Variable
+     (Self : Project_Tree; External_Name : String) return Untyped_Variable;
+   --  Return the scenario variable associated with External_Name.
+   --  If you call Value on the result, you get the current value it had when
+   --  the project was loaded.
+   --  If the project does not contain such a variable (for instance because
+   --  you call this function before loading the project), a new variable is
+   --  created.
+
    function External_Name (Var : Scenario_Variable) return String;
    function External_Name (Var : Untyped_Variable) return String;
    --  Returns the name of the external variable referenced by Var.
