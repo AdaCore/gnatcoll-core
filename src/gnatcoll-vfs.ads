@@ -230,6 +230,8 @@ package GNATCOLL.VFS is
    --  are not resolved there by default, unless you specify Resolve_Links to
    --  True.
    --  The returned value can be used to recreate a Virtual_File instance.
+   --  If file names are case insensitive, the normalized name will always
+   --  be all lower cases.
 
    function Full_Name
      (File      : Virtual_File;
@@ -241,6 +243,7 @@ package GNATCOLL.VFS is
    --  Return a Hash_Type computed from the full name of the given VFS.
    --  Could be used to instantiate an Ada 2005 container that uses a VFS as
    --  key and requires a hash function.
+   --  See File_Sets below.
 
    function File_Extension
      (File      : Virtual_File;
@@ -328,7 +331,7 @@ package GNATCOLL.VFS is
    function Size (File : Virtual_File) return Long_Integer;
    --  The size of the file
 
-   function "=" (File1, File2 : Virtual_File) return Boolean;
+   overriding function "=" (File1, File2 : Virtual_File) return Boolean;
    --  Overloading of the standard operator
 
    function "<" (File1, File2 : Virtual_File) return Boolean;
@@ -613,8 +616,8 @@ private
    end record;
 
    pragma Finalize_Storage_Only (Virtual_File);
-   procedure Finalize (File : in out Virtual_File);
-   procedure Adjust (File : in out Virtual_File);
+   overriding procedure Finalize (File : in out Virtual_File);
+   overriding procedure Adjust (File : in out Virtual_File);
 
    type Writable_File is record
       File     : Virtual_File;

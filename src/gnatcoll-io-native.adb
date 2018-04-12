@@ -60,7 +60,7 @@ package body GNATCOLL.IO.Native is
    -- Dispatching_Create --
    ------------------------
 
-   function Dispatching_Create
+   overriding function Dispatching_Create
      (Ref       : not null access Native_File_Record;
       Full_Path : FS_String) return File_Access
    is
@@ -73,7 +73,7 @@ package body GNATCOLL.IO.Native is
    -- To_UTF8 --
    -------------
 
-   function To_UTF8
+   overriding function To_UTF8
      (Ref  : not null access Native_File_Record;
       Path : FS_String) return String
    is
@@ -86,7 +86,7 @@ package body GNATCOLL.IO.Native is
    -- From_UTF8 --
    ---------------
 
-   function From_UTF8
+   overriding function From_UTF8
      (Ref  : not null access Native_File_Record;
       Path : String) return FS_String
    is
@@ -235,7 +235,7 @@ package body GNATCOLL.IO.Native is
    -- Is_Local --
    --------------
 
-   function Is_Local (File : Native_File_Record) return Boolean is
+   overriding function Is_Local (File : Native_File_Record) return Boolean is
       pragma Unreferenced (File);
    begin
       return True;
@@ -245,7 +245,7 @@ package body GNATCOLL.IO.Native is
    -- Get_FS --
    ------------
 
-   function Get_FS
+   overriding function Get_FS
      (File : not null access Native_File_Record) return FS_Type
    is
       pragma Unreferenced (File);
@@ -257,7 +257,7 @@ package body GNATCOLL.IO.Native is
    -- Resolve_Symlinks --
    ----------------------
 
-   procedure Resolve_Symlinks
+   overriding procedure Resolve_Symlinks
      (File : not null access Native_File_Record)
    is
       Is_Dir_Path : Boolean;
@@ -309,7 +309,7 @@ package body GNATCOLL.IO.Native is
    -- Is_Regular_File --
    ---------------------
 
-   function Is_Regular_File
+   overriding function Is_Regular_File
      (File : not null access Native_File_Record) return Boolean is
    begin
       return GNAT.OS_Lib.Is_Regular_File (String (File.Full.all));
@@ -319,7 +319,7 @@ package body GNATCOLL.IO.Native is
    -- Size --
    ----------
 
-   function Size
+   overriding function Size
      (File : not null access Native_File_Record) return Long_Integer
    is
       Fd : constant GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Open_Read
@@ -337,7 +337,7 @@ package body GNATCOLL.IO.Native is
    -- Is_Directory --
    ------------------
 
-   function Is_Directory
+   overriding function Is_Directory
      (File : not null access Native_File_Record) return Boolean is
    begin
       if GNAT.OS_Lib.Directory_Separator = '\'
@@ -369,7 +369,7 @@ package body GNATCOLL.IO.Native is
    -- Is_Symbolic_Link --
    ----------------------
 
-   function Is_Symbolic_Link
+   overriding function Is_Symbolic_Link
      (File : not null access Native_File_Record) return Boolean is
    begin
       return GNAT.OS_Lib.Is_Symbolic_Link (String (File.Full.all));
@@ -383,7 +383,7 @@ package body GNATCOLL.IO.Native is
    --  Time zone cache, assuming that the OS will not change time zones while
    --  this partition is running.
 
-   function File_Time_Stamp
+   overriding function File_Time_Stamp
      (File : not null access Native_File_Record) return Ada.Calendar.Time
    is
       T      : constant GNAT.OS_Lib.OS_Time :=
@@ -418,7 +418,7 @@ package body GNATCOLL.IO.Native is
    -- Is_Readable --
    -----------------
 
-   function Is_Readable
+   overriding function Is_Readable
      (File : not null access Native_File_Record) return Boolean is
    begin
       return GNAT.OS_Lib.Is_Readable_File (String (File.Full.all));
@@ -428,7 +428,7 @@ package body GNATCOLL.IO.Native is
    -- Is_Writable --
    -----------------
 
-   function Is_Writable
+   overriding function Is_Writable
      (File : not null access Native_File_Record) return Boolean is
    begin
       return GNAT.OS_Lib.Is_Writable_File (String (File.Full.all));
@@ -438,7 +438,7 @@ package body GNATCOLL.IO.Native is
    -- Set_Writable --
    ------------------
 
-   procedure Set_Writable
+   overriding procedure Set_Writable
      (File  : not null access Native_File_Record;
       State : Boolean)
    is
@@ -456,7 +456,7 @@ package body GNATCOLL.IO.Native is
    -- Set_Readable --
    ------------------
 
-   procedure Set_Readable
+   overriding procedure Set_Readable
      (File  : not null access Native_File_Record;
       State : Boolean)
    is
@@ -474,7 +474,7 @@ package body GNATCOLL.IO.Native is
    -- Rename --
    ------------
 
-   procedure Rename
+   overriding procedure Rename
      (From    : not null access Native_File_Record;
       Dest    : not null access Native_File_Record;
       Success : out Boolean)
@@ -492,7 +492,7 @@ package body GNATCOLL.IO.Native is
    -- Copy --
    ----------
 
-   procedure Copy
+   overriding procedure Copy
      (From    : not null access Native_File_Record;
       Dest    : FS_String;
       Success : out Boolean)
@@ -511,7 +511,7 @@ package body GNATCOLL.IO.Native is
    -- Delete --
    ------------
 
-   procedure Delete
+   overriding procedure Delete
      (File    : not null access Native_File_Record;
       Success : out Boolean)
    is
@@ -523,7 +523,7 @@ package body GNATCOLL.IO.Native is
    -- Read_Whole_File --
    ---------------------
 
-   function Read_Whole_File
+   overriding function Read_Whole_File
      (File : not null access Native_File_Record)
       return GNAT.Strings.String_Access
    is
@@ -539,7 +539,7 @@ package body GNATCOLL.IO.Native is
    -- Read_Whole_File --
    ---------------------
 
-   function Read_Whole_File
+   overriding function Read_Whole_File
      (File : not null access Native_File_Record)
       return GNATCOLL.Strings.XString
    is
@@ -555,7 +555,7 @@ package body GNATCOLL.IO.Native is
    -- Open_Write --
    ----------------
 
-   procedure Open_Write
+   overriding procedure Open_Write
      (File   : not null access Native_File_Record;
       Append : Boolean := False;
       FD     : out GNAT.OS_Lib.File_Descriptor)
@@ -582,7 +582,7 @@ package body GNATCOLL.IO.Native is
    -- Close --
    -----------
 
-   procedure Close
+   overriding procedure Close
      (File    : not null access Native_File_Record;
       FD      : GNAT.OS_Lib.File_Descriptor;
       Success : out Boolean)
@@ -602,7 +602,7 @@ package body GNATCOLL.IO.Native is
    -- Change_Dir --
    ----------------
 
-   function Change_Dir
+   overriding function Change_Dir
      (Dir : not null access Native_File_Record)
       return Boolean
    is
@@ -619,7 +619,7 @@ package body GNATCOLL.IO.Native is
    -- Read_Dir --
    --------------
 
-   function Read_Dir
+   overriding function Read_Dir
      (Dir        : not null access Native_File_Record;
       Dirs_Only  : Boolean := False;
       Files_Only : Boolean := False) return GNAT.Strings.String_List
@@ -687,7 +687,7 @@ package body GNATCOLL.IO.Native is
    -- Make_Dir --
    --------------
 
-   function Make_Dir
+   overriding function Make_Dir
      (Dir       : not null access Native_File_Record;
       Recursive : Boolean) return Boolean is
    begin
@@ -708,7 +708,7 @@ package body GNATCOLL.IO.Native is
    -- Remove_Dir --
    ----------------
 
-   procedure Remove_Dir
+   overriding procedure Remove_Dir
      (Dir       : not null access Native_File_Record;
       Recursive : Boolean;
       Success   : out Boolean)
@@ -726,7 +726,7 @@ package body GNATCOLL.IO.Native is
    -- Copy_Dir --
    --------------
 
-   procedure Copy_Dir
+   overriding procedure Copy_Dir
      (From    : not null access Native_File_Record;
       Dest    : FS_String;
       Success : out Boolean)

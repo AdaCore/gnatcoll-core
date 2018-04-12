@@ -257,7 +257,7 @@ private
       --  Cache the current message
    end record;
 
-   procedure Finalize (Self : in out Mailbox);
+   overriding procedure Finalize (Self : in out Mailbox);
    pragma Finalize_Storage_Only (Mailbox);
 
    type Mbox is new Mailbox with record

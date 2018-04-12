@@ -109,7 +109,7 @@ package body GNATCOLL.VFS is
    -- "=" --
    ---------
 
-   function "=" (File1, File2 : Virtual_File) return Boolean is
+   overriding function "=" (File1, File2 : Virtual_File) return Boolean is
    begin
       --  Test for the same pointer to actual value (or both null)
       if File1.Value = File2.Value then
@@ -1812,7 +1812,7 @@ package body GNATCOLL.VFS is
    -- Finalize --
    --------------
 
-   procedure Finalize (File : in out Virtual_File) is
+   overriding procedure Finalize (File : in out Virtual_File) is
       Value : GNATCOLL.IO.File_Access := File.Value;
    begin
       File.Value := null;  --  Make Finalize idempotent
@@ -1825,7 +1825,7 @@ package body GNATCOLL.VFS is
    -- Adjust --
    ------------
 
-   procedure Adjust (File : in out Virtual_File) is
+   overriding procedure Adjust (File : in out Virtual_File) is
    begin
       if File.Value /= null then
          Ref (File.Value);

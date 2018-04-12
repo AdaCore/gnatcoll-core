@@ -48,17 +48,17 @@ private
      (Alignment : System.Storage_Elements.Storage_Count)
      is new System.Storage_Pools.Root_Storage_Pool with null record;
 
-   function Storage_Size
+   overriding function Storage_Size
      (Pool : Unbounded_No_Reclaim_Align_Pool)
       return System.Storage_Elements.Storage_Count;
 
-   procedure Allocate
+   overriding procedure Allocate
      (Pool         : in out Unbounded_No_Reclaim_Align_Pool;
       Address      : out System.Address;
       Storage_Size : System.Storage_Elements.Storage_Count;
       Alignment    : System.Storage_Elements.Storage_Count);
 
-   procedure Deallocate
+   overriding procedure Deallocate
      (Pool         : in out Unbounded_No_Reclaim_Align_Pool;
       Address      : System.Address;
       Storage_Size : System.Storage_Elements.Storage_Count;
