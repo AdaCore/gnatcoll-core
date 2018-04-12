@@ -943,6 +943,13 @@ package body GNATCOLL.Traces is
          then
             --  If active, store it in the list of active decorators
             if Active then
+               for A in 1 .. Global.Active_Last loop
+                  if Global.Active_Decorators (A) = Dec then
+                     --  Already in the list
+                     return;
+                  end if;
+               end loop;
+
                --  ??? Should check if we have too many decorators
                Global.Active_Last := Global.Active_Last + 1;
                Global.Active_Decorators (Global.Active_Last) := Dec;
