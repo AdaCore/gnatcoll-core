@@ -146,6 +146,7 @@ package GNATCOLL.Mmap is
       (Use_Normal,
        Use_Random,
        Use_Sequential);
+   for Use_Advice'Size use Interfaces.C.int'Size;
    for Use_Advice use
       (Use_Normal      => 1,
        Use_Random      => 2,
