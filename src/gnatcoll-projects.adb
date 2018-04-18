@@ -3426,9 +3426,9 @@ package body GNATCOLL.Projects is
       Status                   : out Status_Type;
       Result                   : out GNATCOLL.VFS.File_Array_Access)
    is
-      Mains_Str_List : String_List_Access;
+      Mains_Str_List : String_Vectors.Vector;
       Closure_Status : GPR.Util.Status_Type;
-      Closures_List  : String_List_Access;
+      Closures_List  : String_Vectors.Vector;
    begin
       Trace (Me, "Get_Closures");
 
@@ -3440,24 +3440,17 @@ package body GNATCOLL.Projects is
          return;
       end if;
 
-      Mains_Str_List := new String_List (Mains'First .. Mains'Last);
       for I in Mains'Range loop
-         Mains_Str_List (I) := new String'(Mains (I).Display_Base_Name);
+         Mains_Str_List.Append (Mains (I).Display_Base_Name);
       end loop;
 
       GPR.Util.Get_Closures
         (Project.Get_View, Project.Tree_View,
-         Mains                    => Mains_Str_List.all,
+         Mains                    => Mains_Str_List,
          All_Projects             => All_Projects,
          Include_Externally_Built => Include_Externally_Built,
          Status                   => Closure_Status,
          Result                   => Closures_List);
-
-      --  Freeing temporary list of mains.
-      for I in Mains_Str_List'Range loop
-         Free (Mains_Str_List (I));
-      end loop;
-      Free (Mains_Str_List);
 
       case Closure_Status is
          when Success =>
@@ -3474,17 +3467,10 @@ package body GNATCOLL.Projects is
       end case;
 
       if Closure_Status in Success | Incomplete_Closure then
-         for I in Closures_List'Range loop
-            Append (Result, Create (+Closures_List (I).all));
+         for Closure of Closures_List loop
+            Append (Result, Create (+Closure));
          end loop;
       end if;
-
-      --  Freeing temporary list of closures.
-      for I in Closures_List'Range loop
-         Free (Closures_List (I));
-      end loop;
-      Free (Closures_List);
-
    end Get_Closures;
 
    ---------------------
