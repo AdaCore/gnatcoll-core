@@ -1,0 +1,16 @@
+with "gnatcoll";
+
+project Test is
+   for Main use ("test.adb");
+   for Object_Dir use "obj";
+   for Source_Dirs use (".", "../../../support");
+
+   package Compiler is
+      for Switches ("Ada") use ("-g", "-gnateE");
+      for Switches ("s-memory.adb") use ("-gnatg") & Compiler'Switches ("Ada");
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-E");
+   end Binder;
+end Test;
