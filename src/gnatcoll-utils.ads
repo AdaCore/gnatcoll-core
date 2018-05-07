@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2017, AdaCore                     --
+--                     Copyright (C) 2008-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -97,6 +97,8 @@ package GNATCOLL.Utils is
 
    type Unbounded_String_Array is array (Natural range <>) of
      Ada.Strings.Unbounded.Unbounded_String;
+
+   Empty_Array : constant Unbounded_String_Array;
 
    function Split
      (Str              : String;
@@ -258,5 +260,10 @@ package GNATCOLL.Utils is
    --  For example, if we want to truncate "2015 May 10 05:00 GMT+6" time at
    --  UTC timezone we are going to get "2015 May 9, 00:00 UTC" because
    --  "2015 May 10 05:00 GMT+6" equal to "2015 May 9 23:00 UTC".
+
+private
+
+   Empty_Array : constant Unbounded_String_Array (1 .. 0) :=
+                   (others => Ada.Strings.Unbounded.Null_Unbounded_String);
 
 end GNATCOLL.Utils;
