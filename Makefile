@@ -178,3 +178,7 @@ setup:
 	$(ECHO) "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
 	$(ECHO) "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
 	$(ECHO) "GNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS)" >> makefile.setup
+
+# Let gprbuild handle parallelisation. In general, we don't support parallel
+# runs in this Makefile, as concurrent gprinstall processes may crash.
+.NOTPARALLEL:
