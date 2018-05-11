@@ -65,6 +65,8 @@ package GNATCOLL.JSON is
    --  If you want to create a separate copy, you must use the Clone function.
 
    type JSON_Array is private;
+   --  JSON array type. If an object of type JSON_Array is not otherwise
+   --  initialized, it is initialized to Empty_Array.
 
    JSON_Null : constant JSON_Value;
    Empty_Array : constant JSON_Array;
