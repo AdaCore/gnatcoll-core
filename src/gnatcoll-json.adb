@@ -622,7 +622,7 @@ package body GNATCOLL.JSON is
                      Result := Create (Result_Int);
                      Has_Integer := True;
                   exception
-                     when Constraint_Error | Storage_Error =>
+                     when Constraint_Error =>
                         null;
                   end;
                end if;
