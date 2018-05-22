@@ -1,0 +1,4 @@
+with "Common1.gpr";
+project P is
+   Doo : Common.T := external ("WHATEVER", "a");
+end P;
