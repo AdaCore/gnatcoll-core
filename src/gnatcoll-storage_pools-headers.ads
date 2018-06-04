@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2015-2017, AdaCore                     --
+--                     Copyright (C) 2015-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -45,7 +45,6 @@
 --     String_Pools.Free (Str);   --  reclaim memory
 
 pragma Ada_2012;
-with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with System.Storage_Pools;     use System.Storage_Pools;
 with System.Storage_Elements;  use System.Storage_Elements;
@@ -106,6 +105,7 @@ package GNATCOLL.Storage_Pools.Headers is
       --  The header to allocate for each element. The pool will make sure
       --  to pad its size so that the element's data is properly aligned.
 
+      type Header_Access is access all Extra_Header;
    package Header_Pools is
 
       type Header_Pool is new Root_Storage_Pool with null record;
@@ -141,7 +141,7 @@ package GNATCOLL.Storage_Pools.Headers is
          --  than as a separate dope vector.
 
          function Header_Of
-            (Element : Element_Access) return access Extra_Header
+            (Element : Element_Access) return Header_Access
             with Inline;
          --  Points to the beginning of the header for Element.
          --  Returns null if Element is null

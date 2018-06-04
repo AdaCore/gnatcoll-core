@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2017, AdaCore                     --
+--                     Copyright (C) 2010-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -85,7 +85,9 @@ package GNATCOLL.Refcount is
       --  exists.
    end record;
 
-   package Headers is new Header_Pools (Counters);
+   type Counters_Access is access all Counters;
+
+   package Headers is new Header_Pools (Counters, Counters_Access);
 
    Application_Uses_Tasks : constant Boolean :=
       System.Soft_Links.Lock_Task /= System.Soft_Links.Task_Lock_NT'Access;

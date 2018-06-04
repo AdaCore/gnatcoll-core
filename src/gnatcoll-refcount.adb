@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2017, AdaCore                     --
+--                     Copyright (C) 2010-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -168,7 +168,7 @@ package body GNATCOLL.Refcount is
       ----------
 
       function Weak (Self : Ref'Class) return Weak_Ref is
-         R : access Counters;
+         R : Counters_Access;
          V : Weak_Data_Access;
       begin
          if Self.Data = null then
@@ -271,7 +271,7 @@ package body GNATCOLL.Refcount is
       --------------
 
       overriding procedure Finalize (Self : in out Ref) is
-         R    : access Counters;
+         R    : Counters_Access;
          Data : Pools.Element_Access := Self.Data;
          Tmp  : Boolean;
       begin

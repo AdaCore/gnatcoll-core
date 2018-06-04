@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2015-2017, AdaCore                     --
+--                     Copyright (C) 2015-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with System.Memory;           use System, System.Memory;
+with Ada.Unchecked_Conversion;
 
 package body GNATCOLL.Storage_Pools.Headers is
 
@@ -36,7 +37,6 @@ package body GNATCOLL.Storage_Pools.Headers is
       type Header is record
          Extra : Extra_Header;
       end record;
-      type Extra_Header_Access is access all Extra_Header;
 
       Extra_Bytes  : constant Storage_Offset :=
          (Header'Max_Size_In_Storage_Elements
@@ -55,7 +55,7 @@ package body GNATCOLL.Storage_Pools.Headers is
       --   alignment of the Element_Type is suitable.
 
       function Convert is new Ada.Unchecked_Conversion
-         (System.Address, Extra_Header_Access);
+         (System.Address, Header_Access);
 
       function Address_Header_Of
         (Addr : System.Address) return System.Address
@@ -112,7 +112,7 @@ package body GNATCOLL.Storage_Pools.Headers is
       package body Typed is
 
          function Header_Of
-            (Element : Element_Access) return access Extra_Header
+            (Element : Element_Access) return Header_Access
          is
             F : constant Integer := Element.all'Finalization_Size;
             --  If the element_type is a controlled type, this constant will
@@ -125,7 +125,7 @@ package body GNATCOLL.Storage_Pools.Headers is
             --  Header_Of so we need to take them into account when looking
             --  for the our own header.
 
-            H : constant access Extra_Header :=
+            H : constant Header_Access :=
                (if Element = null
                 then null
                 else Convert
