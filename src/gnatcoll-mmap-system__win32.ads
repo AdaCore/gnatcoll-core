@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2017, AdaCore                     --
+--                     Copyright (C) 2007-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -42,6 +42,7 @@ package GNATCOLL.Mmap.System is
       type DWORD  is new Interfaces.C.unsigned_long;
       type LONG   is new Interfaces.C.long;
       type SIZE_T is new Interfaces.C.size_t;
+      type LARGE_INTEGER is new Long_Long_Integer;
 
       type BOOL   is new Interfaces.C.int;
       for BOOL'Size use Interfaces.C.int'Size;
@@ -120,9 +121,9 @@ package GNATCOLL.Mmap.System is
       function CloseHandle (hObject : HANDLE) return BOOL;
       pragma Import (Stdcall, CloseHandle, "CloseHandle");
 
-      function GetFileSize
-        (hFile : HANDLE; lpFileSizeHigh : access DWORD) return DWORD;
-      pragma Import (Stdcall, GetFileSize, "GetFileSize");
+      function GetFileSizeEx
+        (hFile : HANDLE; lpFileSizeHigh : access LARGE_INTEGER) return BOOL;
+      pragma Import (Stdcall, GetFileSizeEx, "GetFileSizeEx");
 
       function SetFilePointer
         (hFile                : HANDLE;

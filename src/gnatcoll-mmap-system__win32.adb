@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2017, AdaCore                     --
+--                     Copyright (C) 2007-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -57,8 +57,8 @@ package body GNATCOLL.Mmap.System is
          Codec.From_UTF8 (Filename) & Wide_Character'Val (0);
       File_Handle, Mapping_Handle  : HANDLE;
 
-      SizeH                        : aliased DWORD;
-      Size                         : File_Size;
+      Size                         : aliased LARGE_INTEGER;
+      Status                       : BOOL;
    begin
       if Write then
          dwDesiredAccess := GENERIC_READ + GENERIC_WRITE;
@@ -83,34 +83,41 @@ package body GNATCOLL.Mmap.System is
 
       --  Compute its size
 
-      Size := File_Size (Win.GetFileSize (File_Handle, SizeH'Access));
+      Status := Win.GetFileSizeEx (File_Handle, Size'Access);
 
-      if Size = Win.INVALID_FILE_SIZE then
-         raise Ada.IO_Exceptions.Use_Error;
+      if Status = Win.FALSE then
+         --  Raise an error either if we can't compute the size.
+         raise Ada.IO_Exceptions.Use_Error with "cannot compute file size";
       end if;
 
-      if SizeH /= 0 and then File_Size'Size > 32 then
-         Size := Size + (File_Size (SizeH) * 2 ** 32);
+      if File_Size'Size <= 32 and then Size > 2 ** 32 then
+         --  Likewise if user tries to map a file for which size is superior
+         --  than 4GB on 32bits systems. In theory this is supported but this
+         --  would require change in gnatcoll.mmap API.
+         raise Ada.IO_Exceptions.Use_Error with "cannot open file >4GB";
       end if;
 
       --  Then create a mapping object, if needed. On Win32, file memory
       --  mapping is always available.
-
       if Use_Mmap_If_Available then
          Mapping_Handle :=
             Win.CreateFileMapping
               (File_Handle, null, PageFlags,
-               0, DWORD (Size), Standard.System.Null_Address);
+               DWORD (Size / 2 ** 32),
+               DWORD (Size mod 2 ** 32),
+               Standard.System.Null_Address);
       else
          Mapping_Handle := Win.INVALID_HANDLE_VALUE;
       end if;
 
+      --  Note that conversioin to File_Size is safe at this stage because of
+      --  previous checks.
       return
         (Handle         => File_Handle,
          Mapped         => Use_Mmap_If_Available,
          Mapping_Handle => Mapping_Handle,
          Write          => Write,
-         Length         => Size);
+         Length         => File_Size (Size));
    end Open_Common;
 
    ---------------
@@ -214,6 +221,7 @@ package body GNATCOLL.Mmap.System is
    is
       pragma Unreferenced (Advice);
       Flags : DWORD;
+      Offset64 : LARGE_INTEGER;
    begin
       if File.Write then
          Flags := Win.FILE_MAP_WRITE;
@@ -244,10 +252,16 @@ package body GNATCOLL.Mmap.System is
          end if;
       end;
 
+      --  Force conversion of Offset to 64bits format in order to able to
+      --  split it in two DWORD on both 32bits and 64bits systems.
+      Offset64 := LARGE_INTEGER (Offset);
+
       Mapping :=
          (Address => Win.MapViewOfFile
            (File.Mapping_Handle, Flags,
-            0, DWORD (Offset), SIZE_T (Length)),
+            DWORD (Offset64 / 2 ** 32),
+            DWORD (Offset64 mod 2 ** 32),
+            SIZE_T (Length)),
           Length  => Length);
    end Create_Mapping;
 
