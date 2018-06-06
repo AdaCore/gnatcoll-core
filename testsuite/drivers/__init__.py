@@ -1,38 +1,53 @@
-from e3.env import Env
 from e3.fs import mkdir
 from e3.os.process import Run
+from e3.os.fs import df
+from e3.testsuite.driver import TestDriver
 from e3.testsuite.process import check_call
+from e3.testsuite.result import TestStatus
 import os
 import logging
 
 
+# Root directory of respectively the testsuite and the gnatcoll
+# repository.
 TESTSUITE_ROOT_DIR = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))
 GNATCOLL_ROOT_DIR = os.path.dirname(TESTSUITE_ROOT_DIR)
 
 
-def make_gnatcoll_for_gcov(work_dir):
-    """Build gnatcoll core with gcov instrumentation.
+def make_gnatcoll(work_dir, gcov=False):
+    """Build gnatcoll core with or without gcov instrumentation.
 
     :param work_dir: working directory. gnatcoll is built in `build` subdir
         and installed in `install` subdir
     :type work_dir: str
+    :param gcov: if False then build gcov in PROD mode, otherwise
+        build it with gcov instrumentation in DEBUG mode
+    :type gcov: bool
     :return: a triplet (project path, source path, object path)
     :rtype: (str, str, str)
     :raise AssertError: in case compilation of installation fails
     """
-    logging.info('Compiling gnatcoll with gcov instrumentation')
+    logging.info('Compiling gnatcoll (gcov=%s)' % gcov)
+
+    # Create build tree structure
     build_dir = os.path.join(work_dir, 'build')
     install_dir = os.path.join(work_dir, 'install')
     mkdir(build_dir)
     mkdir(install_dir)
 
+    # Compute make invocation
     make_gnatcoll_cmd = [
         'make', '-f', os.path.join(GNATCOLL_ROOT_DIR, 'Makefile'),
-        'BUILD=DEBUG',
-        'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage -gargs',
         'ENABLE_SHARED=no']
+    if gcov:
+        make_gnatcoll_cmd += [
+            'BUILD=DEBUG',
+            'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage -gargs']
+    else:
+        make_gnatcoll_cmd += ['BUILD=PROD']
 
+    # Build & Install
     p = Run(make_gnatcoll_cmd, cwd=build_dir)
     assert p.status == 0, "gnatcoll build failed:\n%s" % p.out
 
@@ -40,9 +55,6 @@ def make_gnatcoll_for_gcov(work_dir):
             cwd=build_dir)
     assert p.status == 0, "gnatcoll installation failed:\n%s" % p.out
 
-    # Add the resulting library into the GPR path
-    Env().add_search_path('GPR_PROJECT_PATH',
-                          os.path.join(install_dir, 'share', 'gpr'))
     return (os.path.join(install_dir, 'share', 'gpr'),
             os.path.join(install_dir, 'include', 'gnatcoll'),
             os.path.join(build_dir, 'obj', 'gnatcoll', 'static'))
@@ -53,6 +65,7 @@ def gprbuild(driver,
              cwd=None,
              gcov=False,
              scenario=None,
+             gpr_project_path=None,
              **kwargs):
     """Launch gprbuild.
 
@@ -67,6 +80,12 @@ def gprbuild(driver,
     :type gcov: bool
     :param scenario: scenario variable values
     :type scenario: dict
+    :param gpr_project_path: if not None prepent this value to GPR_PROJECT_PATH
+    :type gpr_project_path: None | str
+    :param kwargs: additional keyword arguements are passed to
+        e3.testsuite.process.check_call function
+    :return: True on successful completion
+    :rtype: bool
     """
     if scenario is None:
         scenario = {}
@@ -89,10 +108,43 @@ def gprbuild(driver,
     if gcov:
         gprbuild_cmd += ['-largs', '-lgcov', '-cargs',
                          '-fprofile-arcs', '-ftest-coverage']
+
+    # Adjust process environment
+    env = None
+    if gpr_project_path:
+        new_gpr_path = gpr_project_path
+        if 'GPR_PROJECT_PATH' in os.environ:
+            new_gpr_path += os.path.pathsep + os.environ['GPR_PROJECT_PATH']
+        env = {'GPR_PROJECT_PATH': new_gpr_path}
+
     check_call(
         driver,
         gprbuild_cmd,
         cwd=cwd,
+        env=env,
+        ignore_environ=False,
         **kwargs)
     # If we get there it means the build succeeded.
     return True
+
+
+class GNATcollTestDriver(TestDriver):
+    """Abstract class to share some common facilities."""
+
+    def should_skip(self):
+        """Handle of 'skip' in test.yaml.
+
+        :return: None if the test should not be skipped, a TestStatus
+            otherwise.
+        :rtype: None | TestStatus
+        """
+        if 'skip' in self.test_env:
+            eval_env = {
+                'env': self.env,
+                'test_env': self.test_env,
+                'disk_space': lambda: df(self.test_env['working_dir'])}
+
+            for status, expr in self.test_env['skip']:
+                if eval(expr, eval_env):
+                    return TestStatus[status]
+        return None

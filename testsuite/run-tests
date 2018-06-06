@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from drivers import make_gnatcoll_for_gcov, TESTSUITE_ROOT_DIR
+from drivers import make_gnatcoll, TESTSUITE_ROOT_DIR
 from drivers.basic import BasicTestDriver
 from drivers.json_validation import JSONValidationDriver
 from drivers.data_validation import DataValidationDriver
@@ -25,16 +25,32 @@ class MyTestsuite(Testsuite):
             help="compute testsuite coverage of gnatcoll",
             default=False,
             action="store_true")
+        self.main.argument_parser.add_argument(
+            '--recompile',
+            help="recompile production version of gnatcoll for testing",
+            default=False,
+            action="store_true")
 
     def tear_up(self):
         self.env.gcov = self.main.args.gcov
         self.env.enable_cleanup = self.main.args.enable_cleanup
         if self.main.args.gcov:
             work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'gcov')
-            gpr_dir, src_dir, obj_dir = make_gnatcoll_for_gcov(work_dir)
+            gpr_dir, src_dir, obj_dir = make_gnatcoll(work_dir, gcov=True)
             self.env.gnatcoll_gpr_dir = gpr_dir
             self.env.gnatcoll_src_dir = src_dir
             self.env.gnatcoll_obj_dir = obj_dir
+        else:
+            self.env.gnatcoll_gpr_dir = None
+
+        if self.main.args.recompile:
+            work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'prod')
+            gpr_dir, _, _ = make_gnatcoll(work_dir, gcov=False)
+            self.env.gnatcoll_prod_gpr_dir = gpr_dir
+            if self.env.gnatcoll_gpr_dir is None:
+                self.env.gnatcoll_gpr_dir = gpr_dir
+        else:
+            self.env.gnatcoll_prod_gpr_dir = None
 
     def tear_down(self):
         if self.main.args.gcov:

@@ -1,12 +1,11 @@
 from e3.fs import cp
-from e3.testsuite.driver import TestDriver
 from e3.testsuite.process import check_call
 from e3.testsuite.result import TestStatus
-from drivers import gprbuild
+from drivers import gprbuild, GNATcollTestDriver
 import os
 
 
-class BasicTestDriver(TestDriver):
+class BasicTestDriver(GNATcollTestDriver):
     """Default GNATcoll testsuite driver.
 
     In order to declare a test:
@@ -40,7 +39,18 @@ class BasicTestDriver(TestDriver):
 
     def build(self, previous_values):
         """Build fragment."""
-        return gprbuild(self, gcov=self.env.gcov)
+        skip = self.should_skip()
+        if skip is not None:
+            self.result.set_status(skip)
+            self.push_result()
+            return False
+
+        if self.test_env.get('no-coverage'):
+            gpr_project_path = self.env.gnatcoll_prod_gpr_dir
+        else:
+            gpr_project_path = self.env.gnatcoll_gpr_dir
+        return gprbuild(self, gcov=self.env.gcov,
+                        gpr_project_path=gpr_project_path)
 
     def check_run(self, previous_values):
         """Check status fragment."""
