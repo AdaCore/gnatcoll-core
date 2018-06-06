@@ -6,6 +6,7 @@ from e3.testsuite.process import check_call
 from e3.testsuite.result import TestStatus
 import os
 import logging
+import traceback
 
 
 # Root directory of respectively the testsuite and the gnatcoll
@@ -142,9 +143,13 @@ class GNATcollTestDriver(TestDriver):
             eval_env = {
                 'env': self.env,
                 'test_env': self.test_env,
-                'disk_space': lambda: df(self.test_env['working_dir'])}
+                'disk_space': lambda: df(self.env.working_dir)}
 
             for status, expr in self.test_env['skip']:
-                if eval(expr, eval_env):
-                    return TestStatus[status]
+                try:
+                    if eval(expr, eval_env):
+                        return TestStatus[status]
+                except Exception:
+                    logging.error(traceback.format_exc())
+                    return TestStatus.ERROR
         return None
