@@ -68,4 +68,5 @@ class DataValidationDriver(TestDriver):
             rm(self.test_env['working_dir'], recursive=True)
 
     def build(self, previous_values):
-        return gprbuild(self, gcov=self.env.gcov)
+        return gprbuild(self, gcov=self.env.gcov,
+                        gpr_project_path=self.env.gnatcoll_gpr_dir)
