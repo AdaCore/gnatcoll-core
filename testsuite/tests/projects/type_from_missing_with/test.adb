@@ -10,9 +10,9 @@ with Test_Assert;
 with Ada.Text_IO; use Ada.Text_IO;
 
 function Test return Integer is
-   PT  : Project_Tree;
-   My_Root_Project  : Project_Type;
-   Env : Project_Environment_Access;
+   PT              : Project_Tree;
+   My_Root_Project : Project_Type;
+   Env             : Project_Environment_Access;
 
    package String_Lists is new
      Ada.Containers.Indefinite_Doubly_Linked_Lists (String);
@@ -64,6 +64,7 @@ begin
 
    GNATCOLL.Projects.Aux.Delete_All_Temp_Files (PT.Root_Project);
 
+   PT.Unload;
+   Free (Env);
    return Test_Assert.Report;
-
 end Test;

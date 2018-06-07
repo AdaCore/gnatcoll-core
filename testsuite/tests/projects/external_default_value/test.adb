@@ -4,9 +4,9 @@ with GNATCOLL.VFS;      use GNATCOLL.VFS;
 with Test_Assert;
 
 function Test return Integer is
-   PT  : Project_Tree;
-   My_Root_Project  : Project_Type;
-   Env : Project_Environment_Access;
+   PT              : Project_Tree;
+   My_Root_Project : Project_Type;
+   Env             : Project_Environment_Access;
 begin
    Initialize (Env);
 
@@ -38,6 +38,7 @@ begin
       end if;
    end;
 
+   PT.Unload;
+   Free (Env);
    return Test_Assert.Report;
-
 end Test;

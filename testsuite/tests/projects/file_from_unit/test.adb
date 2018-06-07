@@ -5,9 +5,11 @@ with Gnatcoll.VFS;      use Gnatcoll.VFS;
 with Test_Assert;
 
 function Test return Integer is
+   Env  : Gnatcoll.Projects.Project_Environment_Access;
    Tree : Gnatcoll.Projects.Project_Tree;
 begin
-   Load (Tree, Root_Project_Path => Create (+"test1.gpr"));
+   Initialize (Env);
+   Load (Tree, Env => Env, Root_Project_Path => Create (+"test1.gpr"));
 
    declare
       File_Name : constant String :=
@@ -21,7 +23,7 @@ begin
         (File_Name, "my__proc.txt", "Wrong file name for unit Proc");
    end;
 
+   Tree.Unload;
+   Free (Env);
    return Test_Assert.Report;
-
 end Test;
-
