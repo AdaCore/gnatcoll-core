@@ -542,7 +542,7 @@ package body GNATCOLL.JSON is
                               (Strm, Token_Start.Index, Token_End.Index));
          when J_ARRAY =>
             declare
-               Arr : constant JSON_Array_Access := new JSON_Array_Internal;
+               Arr      : JSON_Array_Access := new JSON_Array_Internal;
                ST       : Token_Kind;
                Element  : JSON_Value;
                Is_First : Boolean := True;
@@ -566,6 +566,10 @@ package body GNATCOLL.JSON is
                end loop;
                Result := (Ada.Finalization.Controlled with
                           Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
+            exception
+               when others =>
+                  Free (Arr);
+                  raise;
             end;
          when J_OBJECT =>
             declare
