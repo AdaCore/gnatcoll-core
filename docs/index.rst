@@ -26,7 +26,6 @@ GNATColl Core Components
    config
    pools
    json
-   sql
    terminals
    promises
 
