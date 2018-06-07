@@ -1,8 +1,8 @@
 from e3.fs import rm
 from e3.testsuite.driver import TestDriver
-from e3.testsuite.process import check_call
 from e3.testsuite.result import TestStatus, TestResult
 from drivers import gprbuild
+from drivers.valgrind import check_call_valgrind
 import os
 
 
@@ -35,7 +35,7 @@ class DataValidationDriver(TestDriver):
         if not previous_values['build']:
             return TestStatus.FAIL
 
-        process = check_call(
+        process = check_call_valgrind(
             self,
             [os.path.join(self.test_env['working_dir'],
                           self.test_env.get('validator', 'obj/test')),

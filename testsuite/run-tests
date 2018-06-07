@@ -26,6 +26,10 @@ class MyTestsuite(Testsuite):
             default=False,
             action="store_true")
         self.main.argument_parser.add_argument(
+            '--valgrind',
+            help="check memory usage with Valgrind (memcheck tool)",
+            action="store_true")
+        self.main.argument_parser.add_argument(
             '--recompile',
             help="recompile production version of gnatcoll for testing",
             default=False,
@@ -33,6 +37,7 @@ class MyTestsuite(Testsuite):
 
     def tear_up(self):
         self.env.gcov = self.main.args.gcov
+        self.env.valgrind = self.main.args.valgrind
         self.env.enable_cleanup = self.main.args.enable_cleanup
         if self.main.args.gcov:
             work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'gcov')

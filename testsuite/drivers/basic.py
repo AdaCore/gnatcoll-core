@@ -1,7 +1,7 @@
 from e3.fs import cp
-from e3.testsuite.process import check_call
 from e3.testsuite.result import TestStatus
 from drivers import gprbuild, GNATcollTestDriver
+from drivers.valgrind import check_call_valgrind
 import os
 
 
@@ -61,7 +61,7 @@ class BasicTestDriver(GNATcollTestDriver):
             cp(os.path.join(self.test_env['test_dir'], data),
                self.test_env['working_dir'], recursive=True)
 
-        process = check_call(
+        process = check_call_valgrind(
             self,
             [os.path.join(self.test_env['working_dir'],
                           self.test_env['test_exe'])])
