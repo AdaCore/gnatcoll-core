@@ -31,5 +31,6 @@ function Test return Integer is
    File_Content : GNAT.Strings.String_Access := VFS.Read_File (VFS.Create(VFS."+"(Ada.Command_Line.Argument (1))));
 begin
    Test (File_Content.all); 
+   GNAT.Strings.Free (File_Content);
    return A.Report;
 end Test;
