@@ -8,6 +8,6 @@ def check_call_valgrind(driver, cmd, test_name=None, result=None, **kwargs):
     2 if Valgrind finds memory issues.
     """
     if driver.env.valgrind:
-        cmd = ['valgrind', '-q', '--log-file=valgrind.log',
-               '--error-exitcode=2', '--leak-check=full'] + cmd
+        cmd = ['valgrind', '-q', '--error-exitcode=2',
+               '--leak-check=full'] + cmd
     return check_call(driver, cmd, test_name, result, **kwargs)
