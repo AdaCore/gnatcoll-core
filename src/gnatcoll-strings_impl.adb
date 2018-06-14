@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2017, AdaCore                          --
+--                     Copyright (C) 2018, AdaCore                          --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -2469,12 +2469,16 @@ package body GNATCOLL.Strings_Impl is
       ----------------
 
       procedure Capitalize (Self : in out XString) is
-         S   : Char_Array;
-         L   : Natural;
+         S  : Char_Array;
+         L  : Natural;
       begin
          Make_Writable (Self);
          Get_String (Self, S, L);
          S (1) := To_Upper (S (1));
+         for Idx in 2 .. L loop
+            S (Idx) := To_Lower (S (Idx));
+         end loop;
+
       end Capitalize;
 
       -----------
