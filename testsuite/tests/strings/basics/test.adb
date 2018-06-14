@@ -1402,7 +1402,7 @@ function Test return Integer is
          A.Assert ((Slice (S, 1, 1).Is_Upper and
                     Slice (S, 2, S.Length).Is_Lower) = True,
                    Title);
-         A.Assert ((Slice (S, 1, 1).Is_Lower and
+         A.Assert ((Slice (S, 1, 1).Is_Lower or
                     Slice (S, 2, S.Length).Is_Upper) = False,
                    Title);
 
@@ -1426,14 +1426,6 @@ function Test return Integer is
          A.Assert (S.Is_Upper = False, Title);
          A.Assert (S.Is_Lower = True, Title);
 
-         S.Capitalize;
-         A.Assert ((Slice (S, 1, 1).Is_Upper and
-                    Slice (S, 2, S.Length).Is_Lower) = True,
-                   Title);
-         A.Assert ((Slice (S, 1, 1).Is_Lower and
-                    Slice (S, 2, S.Length).Is_Upper) = False,
-                   Title);
-
          S2 := To_Upper(S);
          A.Assert (S2.Is_Upper = True, Title);
          A.Assert (S2.Is_Lower = False, Title);
@@ -1441,6 +1433,14 @@ function Test return Integer is
          S.To_Upper;
          A.Assert (S.Is_Upper = True, Title);
          A.Assert (S.Is_Lower = False, Title);
+
+         S.Capitalize;
+         A.Assert ((Slice (S, 1, 1).Is_Upper and
+                    Slice (S, 2, S.Length).Is_Lower) = True,
+                   Title);
+         A.Assert ((Slice (S, 1, 1).Is_Lower or
+                    Slice (S, 2, S.Length).Is_Upper) = False,
+                   Title);
 
       end Test_Casing;
 
