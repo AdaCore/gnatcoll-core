@@ -8,10 +8,8 @@
  * not create a sparse file. */
 #if defined (_WIN32) || defined (__MINGW32__)
 #define LSEEK _lseeki64
-#elif defined (__APPLE__)
-#define LSEEK lseek
 #else
-#define LSEEK lseek64
+#define LSEEK lseek
 #endif
 
 /* See test.adb */
