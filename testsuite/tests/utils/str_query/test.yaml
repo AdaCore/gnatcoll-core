@@ -1,0 +1,6 @@
+title: "GNATCOLL.Utils string queries"
+
+description: >
+   "Test of queries on Strings available in GNATCOLL.Utils. Only involves
+    String type, and no modifications of the String in entry. Can involve
+    split of strings."
