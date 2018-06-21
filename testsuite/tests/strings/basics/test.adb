@@ -340,8 +340,11 @@ function Test return Integer is
             A.Assert (Compare (S2.Slice (2, 3), S.Slice (2, 3)) = 0, Title);
             A.Assert (S2.Slice (2, 3) = S2.Slice (2, 3), Title);
             A.Assert (Compare (S2.Slice (2, 3), S2.Slice (2, 3)) = 0, Title);
+            -- Test inequality with substring
+            A.Assert (Compare(S2,S) = 1, Title);
+            A.Assert (Compare(S,S2) = -1, Title);
 
-            --  Check that we have the same behavior as we standard strings
+            --  Check that we have the same behavior as with standard strings
             A.Assert (S.Slice (3, 2) = Null_XString, Title);
             A.Assert (S.Slice (Natural'Last, 1) = Null_XString, Title);
             A.Assert (S.Slice (1, 0) = Null_XString, Title);
@@ -360,7 +363,7 @@ function Test return Integer is
          end;
 
          declare
-            S, S2 : XString;
+            S, S2, S3 : XString;
          begin
             S.Set (Short);
             S2.Set (Long);
@@ -392,6 +395,12 @@ function Test return Integer is
 
             A.Assert (Compare (S, S) = 0, Title);
             A.Assert (Compare (S2, S2) = 0, Title);
+
+            S3.Set(Short(Short'First) &
+                   Char_Type'Val(Char_Type'Pos(Short(Short'First + 1)) + 1) &
+                   Short(Short'First + 2..Short'Last));
+            A.Assert (Compare (S3, S) = 1, Title);
+
          end;
 
       end Test_Compare;
