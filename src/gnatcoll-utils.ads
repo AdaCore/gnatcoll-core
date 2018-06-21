@@ -39,8 +39,12 @@ package GNATCOLL.Utils is
    No_Time : Ada.Calendar.Time renames GNAT.Calendar.No_Time;
 
    procedure Free (List : in out GNAT.Strings.String_List);
+   pragma Obsolescent (
+       Entity => Free,
+       Message => "use Free procedure from GNAT.Strings package");
    --  Free the memory used by List.
-   --  ??? This should be moved to GNAT.Strings itself in fact
+   --  This was added in GNAT.Strings under R615-031.
+   --  The above procedure is now obsolete
 
    function Equal (S1, S2 : String; Case_Sensitive : Boolean) return Boolean;
    function Case_Insensitive_Equal (S1, S2 : String) return Boolean;
