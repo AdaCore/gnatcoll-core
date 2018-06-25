@@ -231,6 +231,13 @@ package body GNATCOLL.Mmap.System is
          Flags := Win.FILE_MAP_READ;
       end if;
 
+      --  Check that limits are valid regarding overflow and/or file size.
+      if Offset > File_Size'Last - Length or else
+         Offset + Length > File.Length
+      then
+         raise Ada.IO_Exceptions.Use_Error with "Invalid mapping limits";
+      end if;
+
       --  Adjust offset and mapping length to account for the required
       --  alignment of offset on page boundary.
 
@@ -243,12 +250,19 @@ package body GNATCOLL.Mmap.System is
          --  it on the upper page boundary, so that the whole queried area is
          --  covered.
 
+         --  By construction Align return an integer >= 0 lower than the
+         --  original one. As consequence the following 2 statements cannot
+         --  overflow. Addition of Get_Page_Size to length is done afterwards
+         --  to avoid possible overflow.
          Length := Length + Queried_Offset - Offset;
-         Length := Align (Length + Get_Page_Size - 1);
+         Length := Align (Length - 1);
 
          --  But do not exceed the length of the file
-         if Offset + Length > File.Length then
+         --  By construction File.Length - Offset - Length is >=0 (no overflow)
+         if Get_Page_Size > File.Length - Offset - Length then
             Length := File.Length - Offset;
+         else
+            Length := Length + Get_Page_Size;
          end if;
       end;
 
