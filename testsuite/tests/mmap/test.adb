@@ -1,4 +1,5 @@
 with Ada.Unchecked_Conversion;
+with GNAT.Directory_Operations;
 with GNAT.OS_Lib;
 with GNATcoll.Mmap;
 with Interfaces;
@@ -13,9 +14,6 @@ function Test return Integer is
    use type Mmap.Mapped_File;
    use type Mmap.Mapped_Region;
 
-   type Buffer is array (Interfaces.Unsigned_64) of Character;
-   type Buffer_Access is access Buffer;
-
    function Create_File
       (Filename : String;
        Size     : Long_Long_Integer)
@@ -29,9 +27,6 @@ function Test return Integer is
    --  Create a file of size Size called Name and fill it with 0 except last 3
    --  characters that should contain "xyz". Ensure that we can read the file
    --  correctly using GNATcoll.Mmap facilities.
-
-   function To_Buffer is new Ada.Unchecked_Conversion
-      (GNATCOLL.Mmap.Str_Access, Buffer_Access);
 
    -----------------
    -- Create_File --
@@ -69,27 +64,28 @@ function Test return Integer is
       Mr              : Mmap.Mapped_Region;
       Creation_Status : Boolean;
       Delete_Status   : Boolean;
-      Trace_Buffer    : Buffer_Access;
+      Trace_Buffer    : Mmap.Str_Access;
    begin
       Creation_Status := Create_File (Name, Size);
       A.Assert (Creation_Status, "Create test file of size" & Size'Img);
 
-      Fd := GNATCOLL.Mmap.Open_Read (Name);
+      Fd := Mmap.Open_Read (Name);
       A.Assert (Fd /= Mmap.Invalid_Mapped_File, "Open file");
 
       GNATCOLL.Mmap.Read
            (File    => Fd,
             Region  => Mr,
-            Offset  => GNATCOLL.Mmap.File_Size (Size - 3),
+            Offset  => Mmap.File_Size (Size - 3),
             Length  => 3,
             Mutable => False);
       A.Assert (Mr /= Mmap.Invalid_Mapped_Region, "valid region?");
       A.Assert (Mmap.Is_Mmapped (Fd), "is mapped?");
 
-      Trace_Buffer := To_Buffer (GNATCOLL.Mmap.Data (Mr));
-      A.Assert (Trace_Buffer (0) = 'x', "expect character x");
-      A.Assert (Trace_Buffer (1) = 'y', "expect character y");
-      A.Assert (Trace_Buffer (2) = 'z', "expect character z");
+      Trace_Buffer := Mmap.Data (Mr);
+      A.Assert (Trace_Buffer (1) = 'x', "expect character x");
+      A.Assert (Trace_Buffer (2) = 'y', "expect character y");
+      A.Assert (Trace_Buffer (3) = 'z', "expect character z");
+      A.Assert (Mmap.Last (Mr) = 3, "expect size 3, got" & Mmap.Last (Mr)'Img);
 
       --  Free resources
       GNATCOLL.Mmap.Free (mr);
@@ -115,9 +111,21 @@ begin
    --  tests on various file size
    Test_For_Size ("test1.txt", 8);
    Test_For_Size ("test2.txt", 1000);
-   Test_For_Size ("test3.txt", 16#0_ffff_0000#);
-   Test_For_Size ("test4.txt", 16#0_ffff_fffe#);
-   Test_For_Size ("test5.txt", 16#0_ffff_ffff#);
+   if GNAT.Directory_Operations.Dir_Separator = '\' or else
+      Mmap.File_Size'Size > 32
+   then
+      --  On windows 32bits and 64bits unixes test file length close to 4Go
+      Test_For_Size ("test3.txt", 16#0_ffff_0000#);
+      Test_For_Size ("test4.txt", 16#0_ffff_fffe#);
+      Test_For_Size ("test5.txt", 16#0_ffff_ffff#);
+   else
+      --  On 32bits unixes the maximum offset is 2**31 (as lseek takes a
+      --  signed long)
+      Test_For_Size ("test3.txt", 16#0_0fff_0000#);
+      Test_For_Size ("test4.txt", 16#0_0fff_fffe#);
+      Test_For_Size ("test5.txt", 16#0_0fff_ffff#);
+   end if;
+
    if Mmap.File_Size'Size > 32 then
       --  System supports large file > 4GB. Ensure that GNATcoll.Mmap does too
       Test_For_Size ("test6.txt", 16#1_0000_1000#);
