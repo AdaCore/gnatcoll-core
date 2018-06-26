@@ -1,6 +1,7 @@
 with GNATCOLL.Utils;
 with GNAT.Strings;              use GNAT.Strings;
 
+with Ada.Assertions;
 with Ada.Strings.Unbounded;     use Ada.Strings.Unbounded;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
 with Ada.Characters.Latin_1;    use Ada.Characters.Latin_1;
@@ -42,11 +43,16 @@ function Test return Integer is
           begin
               S7 := GNATCOLL.Utils.Replace (S, "", " something");
               A.Assert (False,
-                        Msg => "replace failed raising exception of pre-cond");
+                        Msg => "replace failed raising exception or pre-cond");
           exception
               when SYSTEM.ASSERTIONS.ASSERT_FAILURE =>
                    A.Assert (True,
-                             Msg => "replace raising exception of pre-cond");
+                             Msg => "replace raised assertion failure");
+
+              when ADA.STRINGS.PATTERN_ERROR =>
+                   A.Assert (True,
+                             Msg => "replace raised exception (no assertions)");
+
           end;
       end;
 
@@ -64,11 +70,15 @@ function Test return Integer is
       begin
           GNATCOLL.Utils.Replace (S2, "", " something");
           A.Assert (False,
-                    Msg => "replace failed raising exception of pre-cond");
+                    Msg => "replace failed raising exception or pre-cond");
       exception
           when SYSTEM.ASSERTIONS.ASSERT_FAILURE =>
                A.Assert (True,
-                         Msg => "replace raising exception of pre-cond");
+                         Msg => "replace raised assertion failure");
+          when ADA.STRINGS.PATTERN_ERROR =>
+               A.Assert (True,
+                         Msg => "replace raised exception (no assertions)");
+
       end;
 
 
