@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -137,6 +137,23 @@ package body GNATCOLL.VFS is
             Ensure_Directory
               (File1.Value.Get_FS, File2.Value.Normalized_And_Resolved.all));
       end if;
+   end "=";
+
+   ---------
+   -- "=" --
+   ---------
+
+   function "=" (Left : Writable_File; Right : Writable_File) return Boolean is
+      use type GNAT.OS_Lib.File_Descriptor;
+
+   begin
+      --  Compare all components except Error for backward compatibility.
+
+      return Left.File = Right.File
+        and then Left.Tmp_File = Right.Tmp_File
+        and then Left.FD = Right.FD
+        and then Left.Append = Right.Append
+        and then Left.Success = Right.Success;
    end "=";
 
    ---------
@@ -322,6 +339,16 @@ package body GNATCOLL.VFS is
                FS_String (Dir.Full_Name (Normalize).all) &
                From_Unix (Dir.Value.Get_FS, +Base_Name)));
    end Create_From_Dir;
+
+   ------------------
+   -- Error_String --
+   ------------------
+
+   function Error_String
+     (Self : Writable_File) return Ada.Strings.Unbounded.Unbounded_String is
+   begin
+      return Self.Error;
+   end Error_String;
 
    --------------------
    -- Locate_On_Path --
@@ -1192,17 +1219,21 @@ package body GNATCOLL.VFS is
          W.Tmp_File := Create
            (File.Full_Name.all & "~",
             Host => File.Get_Host);
-         W.Tmp_File.Value.Open_Write (Append => False, FD => W.FD);
+         W.Tmp_File.Value.Open_Write
+           (Append => False, FD => W.FD, Error => W.Error);
 
       else
          W.Tmp_File := No_File;
 
          --  append-mode, and the file already exists.
-         File.Value.Open_Write (Append => True, FD => W.FD);
+         File.Value.Open_Write
+           (Append => True, FD => W.FD, Error => W.Error);
       end if;
 
       if W.FD = GNAT.OS_Lib.Invalid_FD then
-         return Invalid_File;
+         return X : Writable_File := Invalid_File do
+            X.Error := W.Error;
+         end return;
       else
          return W;
       end if;

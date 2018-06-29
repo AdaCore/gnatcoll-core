@@ -764,8 +764,12 @@ package body GNATCOLL.IO.Remote is
    procedure Open_Write
      (File    : not null access Remote_File_Record;
       Append  : Boolean := False;
-      FD      : out GNAT.OS_Lib.File_Descriptor)
+      FD      : out GNAT.OS_Lib.File_Descriptor;
+      Error   : out Ada.Strings.Unbounded.Unbounded_String)
    is
+      pragma Unreferenced (Error);
+      --  Error diagnostics is not implemented for remote files.
+
       Tmp_Dir : File_Access :=
                   GNATCOLL.IO.Native.Get_Tmp_Directory;
       Cur_Dir : File_Access :=

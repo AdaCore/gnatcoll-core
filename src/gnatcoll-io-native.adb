@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,9 +21,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with System;
-with Ada.Unchecked_Deallocation;
 with Ada.Directories;
+with Ada.Exceptions;
+with Ada.Unchecked_Deallocation;
+with System;
 
 with Ada.Calendar.Formatting;  use Ada.Calendar;
 with Ada.Calendar.Time_Zones;  use Ada.Calendar.Time_Zones;
@@ -558,24 +559,43 @@ package body GNATCOLL.IO.Native is
    procedure Open_Write
      (File   : not null access Native_File_Record;
       Append : Boolean := False;
-      FD     : out GNAT.OS_Lib.File_Descriptor)
+      FD     : out GNAT.OS_Lib.File_Descriptor;
+      Error  : out Ada.Strings.Unbounded.Unbounded_String)
    is
+      use type GNAT.OS_Lib.File_Descriptor;
+
    begin
       if Append then
          FD := GNAT.OS_Lib.Open_Read_Write
            (String (File.Full.all),
             Fmode => GNAT.OS_Lib.Binary);
-         GNAT.OS_Lib.Lseek
-           (FD, 0, GNAT.OS_Lib.Seek_End);
       else
          FD := GNAT.OS_Lib.Create_File
            (String (File.Full.all),
             Fmode => GNAT.OS_Lib.Binary);
       end if;
 
+      if FD = GNAT.OS_Lib.Invalid_FD then
+         Error :=
+           Ada.Strings.Unbounded.To_Unbounded_String
+             (GNAT.OS_Lib.Errno_Message);
+
+      else
+         Error := Ada.Strings.Unbounded.Null_Unbounded_String;
+      end if;
+
+      if Append then
+         GNAT.OS_Lib.Lseek (FD, 0, GNAT.OS_Lib.Seek_End);
+         --  It is impossible to obtain return value of lseek to check for
+         --  errors.
+      end if;
+
    exception
-      when others =>
-         FD := GNAT.OS_Lib.Invalid_FD;
+      when E : others =>
+         FD    := GNAT.OS_Lib.Invalid_FD;
+         Error :=
+           Ada.Strings.Unbounded.To_Unbounded_String
+             (Ada.Exceptions.Exception_Information (E));
    end Open_Write;
 
    -----------

@@ -48,8 +48,9 @@ pragma Ada_05;
 
 with Ada.Calendar;
 with Ada.Containers;
-with Ada.Unchecked_Deallocation;
 with Ada.Finalization;
+with Ada.Strings.Unbounded;
+with Ada.Unchecked_Deallocation;
 
 with Interfaces.C.Strings;        use Interfaces.C.Strings;
 
@@ -561,6 +562,9 @@ package GNATCOLL.VFS is
    Invalid_File : constant Writable_File;
    --  Used when a file couldn't be open
 
+   function "=" (Left : Writable_File; Right : Writable_File) return Boolean;
+   --  Return True when points to the same file.
+
    function Write_File
      (File   : Virtual_File;
       Append : Boolean := False) return Writable_File;
@@ -574,6 +578,10 @@ package GNATCOLL.VFS is
    --  Append is true, which will be renamed when calling Close. This ensures
    --  that the original file (if there was one) is not destroyed if for some
    --  reason the write fails.
+
+   function Error_String
+     (Self : Writable_File) return Ada.Strings.Unbounded.Unbounded_String;
+   --  Return error message for last operation on file.
 
    procedure Write
      (File : in out Writable_File;
@@ -622,6 +630,7 @@ private
       FD       : GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Invalid_FD;
       Append   : Boolean;
       Success  : Boolean;
+      Error    : Ada.Strings.Unbounded.Unbounded_String;
    end record;
 
    Invalid_File : constant Writable_File :=
@@ -629,7 +638,8 @@ private
       Tmp_File => (Ada.Finalization.Controlled with Value => null),
       FD       => GNAT.OS_Lib.Invalid_FD,
       Append   => False,
-      Success  => False);
+      Success  => False,
+      Error    => <>);
 
    type Virtual_Dir is record
       File       : Virtual_File;

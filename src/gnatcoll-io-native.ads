@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -108,7 +108,8 @@ package GNATCOLL.IO.Native is
    overriding procedure Open_Write
      (File    : not null access Native_File_Record;
       Append  : Boolean := False;
-      FD      : out GNAT.OS_Lib.File_Descriptor);
+      FD      : out GNAT.OS_Lib.File_Descriptor;
+      Error   : out Ada.Strings.Unbounded.Unbounded_String);
    overriding procedure Close
      (File    : not null access Native_File_Record;
       FD      : GNAT.OS_Lib.File_Descriptor;

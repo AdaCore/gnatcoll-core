@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,6 +22,8 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;
+with Ada.Strings.Unbounded;
+
 with GNAT.OS_Lib;
 with GNAT.Strings;
 with GNATCOLL.Strings;   use GNATCOLL.Strings;
@@ -174,7 +176,8 @@ private package GNATCOLL.IO is
    procedure Open_Write
      (File    : not null access File_Record;
       Append  : Boolean := False;
-      FD      : out GNAT.OS_Lib.File_Descriptor) is abstract;
+      FD      : out GNAT.OS_Lib.File_Descriptor;
+      Error   : out Ada.Strings.Unbounded.Unbounded_String) is abstract;
    --  Opens a file for writing. Return a file descriptor used to actually
    --  write.
    --  /!\ Do not call close directly on FD, but use the method below instead.
