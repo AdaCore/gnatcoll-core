@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -777,9 +777,8 @@ package body GNATCOLL.IO.Remote is
                   GNATCOLL.Path.Ensure_Directory
                     (Cur_Dir.Get_FS, Cur_Dir.Full.all);
       Content : GNAT.Strings.String_Access;
-      Dead    : Boolean;
       Written : Integer;
-      pragma Unreferenced (Dead, Written);
+      pragma Unreferenced (Written);
 
    begin
       Ensure_Initialized (File);
