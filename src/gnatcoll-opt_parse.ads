@@ -30,6 +30,9 @@ private with GNATCOLL.Refcount;
 
 package GNATCOLL.Opt_Parse is
 
+   --  WARNING: The interface of this package is still unstable. No guarantees
+   --  of API stability. USE AT YOUR OWN RISK.
+   --
    --  This package is meant to create powerful command line argument parsers
    --  in a declarative fashion. The generated argument parsers have a typed
    --  interface, in that, you can specify the types of expected arguments and
