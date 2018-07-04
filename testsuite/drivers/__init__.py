@@ -108,7 +108,7 @@ def gprbuild(driver,
         gprbuild_cmd.append('-X%s=%s' % (k, v))
     if gcov:
         gprbuild_cmd += ['-largs', '-lgcov', '-cargs',
-                         '-fprofile-arcs', '-ftest-coverage']
+                         '-fprofile-arcs', '-ftest-coverage', '-g']
 
     # Adjust process environment
     env = None
