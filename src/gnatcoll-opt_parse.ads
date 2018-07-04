@@ -27,6 +27,7 @@ with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 private with Ada.Containers.Vectors;
 private with GNATCOLL.Refcount;
+with Ada.Finalization;
 
 package GNATCOLL.Opt_Parse is
 
@@ -88,7 +89,7 @@ package GNATCOLL.Opt_Parse is
    --  General API types --
    ------------------------
 
-   type Argument_Parser is tagged private;
+   type Argument_Parser is tagged limited private;
    --  Base type for the Opt_Parse API. Represents a general parser to which
    --  you will associate specific argument parsers.
 
@@ -305,6 +306,9 @@ package GNATCOLL.Opt_Parse is
 
 private
 
+   type Argument_Parser_Data;
+   type Argument_Parser_Data_Access is access all Argument_Parser_Data;
+
    package XString_Vectors is new Ada.Containers.Vectors (Positive, XString);
 
    type Parser_Type is abstract tagged record
@@ -319,6 +323,8 @@ private
 
       Opt      : Boolean := True;
       --  Whether this parser is optional or not
+
+      Parser   : Argument_Parser_Data_Access;
    end record;
 
    subtype Parser_Return is Integer range -1 .. Integer'Last;
@@ -356,10 +362,6 @@ private
      (To_String (Self.Name));
    --  Return the help name for this parser.
 
-   function Get_Argument_Parser
-     (Self : Parser_Type) return Argument_Parser'Class is abstract;
-   --  Return the owning Argument_Parser for this Parser.
-
    function Does_Accumulate
      (Self : Parser_Type) return Boolean is (False);
    --  Whether this parser accumulates results or not. If it does, then it is
@@ -372,12 +374,13 @@ private
 
    subtype Parser_Vector is Parsers_Vectors.Vector;
 
-   type Argument_Parser is tagged record
+   type Argument_Parser_Data is record
       Help, Command_Name                    : XString;
       Positional_Args_Parsers, Opts_Parsers : Parser_Vector;
       All_Parsers                           : Parser_Vector;
       Default_Result                        : Parsed_Arguments
         := No_Parsed_Arguments;
+      Help_Flag                             : Parser_Access := null;
    end record;
 
    type Parser_Result is abstract tagged record
@@ -416,5 +419,12 @@ private
 
    No_Parsed_Arguments : constant Parsed_Arguments :=
      (Ref => Parsed_Arguments_Shared_Ptrs.Null_Ref);
+
+   type Argument_Parser is new Ada.Finalization.Limited_Controlled with record
+      Data : Argument_Parser_Data_Access := null;
+   end record;
+
+   overriding procedure Initialize (Self : in out Argument_Parser);
+   overriding procedure Finalize (Self : in out Argument_Parser);
 
 end GNATCOLL.Opt_Parse;
