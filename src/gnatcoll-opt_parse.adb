@@ -29,6 +29,7 @@ with Ada.Unchecked_Deallocation;
 
 with GNAT.OS_Lib;
 
+with GNATCOLL.Locks; use GNATCOLL.Locks;
 with GNATCOLL.VFS;
 
 package body GNATCOLL.Opt_Parse is
@@ -306,19 +307,27 @@ package body GNATCOLL.Opt_Parse is
      (Self : Parser_Type'Class;
       Args : Parsed_Arguments) return Parser_Result_Access
    is
-      Real_Args : Parsed_Arguments;
+      --  Due to controlled objects finalization, the following code is not
+      --  thread safe, so we use a critical section here, so that Get functions
+      --  for arguments are thread safe.
+
+      Dummy : Scoped_Lock (Self.Parser.Mutex'Access);
    begin
-      if Args = No_Parsed_Arguments then
-         Real_Args := Self.Parser.Default_Result;
-      else
-         Real_Args := Args;
-      end if;
+      declare
+         Real_Args : Parsed_Arguments;
+      begin
+         if Args = No_Parsed_Arguments then
+            Real_Args := Self.Parser.Default_Result;
+         else
+            Real_Args := Args;
+         end if;
 
-      if Real_Args = No_Parsed_Arguments then
-         raise Opt_Parse_Error with "No results for command line arguments";
-      end if;
+         if Real_Args = No_Parsed_Arguments then
+            raise Opt_Parse_Error with "No results for command line arguments";
+         end if;
 
-      return Real_Args.Ref.Get.Results (Self.Position);
+         return Real_Args.Ref.Get.Results (Self.Position);
+      end;
    end Get_Result;
 
    ----------------
@@ -979,7 +988,8 @@ package body GNATCOLL.Opt_Parse is
           else Command_Name);
    begin
       return Parser : Argument_Parser do
-         Parser.Data.all := (+Help, XCommand_Name, others => <>);
+         Parser.Data :=
+           new Argument_Parser_Data'(+Help, XCommand_Name, others => <>);
          Parser.Data.Help_Flag := new Help_Flag_Parser'
            (Name     => +"help",
             Help     => +"Show this help message",
@@ -1089,15 +1099,6 @@ package body GNATCOLL.Opt_Parse is
          return +"";
       end if;
    end Parse_One_Option;
-
-   ----------------
-   -- Initialize --
-   ----------------
-
-   overriding procedure Initialize (Self : in out Argument_Parser) is
-   begin
-      Self.Data := new Argument_Parser_Data;
-   end Initialize;
 
    --------------
    -- Finalize --

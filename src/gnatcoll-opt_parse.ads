@@ -21,13 +21,14 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Finalization;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 private with Ada.Containers.Vectors;
 private with GNATCOLL.Refcount;
-with Ada.Finalization;
+private with GNATCOLL.Locks;
 
 package GNATCOLL.Opt_Parse is
 
@@ -306,6 +307,8 @@ package GNATCOLL.Opt_Parse is
 
 private
 
+   use GNATCOLL.Locks;
+
    type Argument_Parser_Data;
    type Argument_Parser_Data_Access is access all Argument_Parser_Data;
 
@@ -381,6 +384,9 @@ private
       Default_Result                        : Parsed_Arguments
         := No_Parsed_Arguments;
       Help_Flag                             : Parser_Access := null;
+
+      Mutex                                 : aliased Mutual_Exclusion;
+      --  Mutex used to make Get_Result thread safe
    end record;
 
    type Parser_Result is abstract tagged record
@@ -410,7 +416,8 @@ private
    end record;
 
    package Parsed_Arguments_Shared_Ptrs
-   is new GNATCOLL.Refcount.Shared_Pointers (Parsed_Arguments_Type);
+   is new GNATCOLL.Refcount.Shared_Pointers
+     (Parsed_Arguments_Type, Atomic_Counters => True);
 
    type Parsed_Arguments is record
       Ref : Parsed_Arguments_Shared_Ptrs.Ref
@@ -424,7 +431,6 @@ private
       Data : Argument_Parser_Data_Access := null;
    end record;
 
-   overriding procedure Initialize (Self : in out Argument_Parser);
    overriding procedure Finalize (Self : in out Argument_Parser);
 
 end GNATCOLL.Opt_Parse;
