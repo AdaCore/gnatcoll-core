@@ -57,9 +57,6 @@ Module-specific:
 *GNATCOLL_MADVISE*
   Whether MADVISE: yes (default) or no; this has no effect on Windows where MADVISE functionality is unavailable
 
-*GNATCOLL_ATOMICS*
-  Selects atomics model: intrinsic (default) or mutex.
-
 
 .. _Building_GNATColl:
 

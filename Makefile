@@ -47,8 +47,6 @@
 #                      default is "yes"; has no effect on Windows
 #   GNATCOLL_MADVISE : whether MADVISE is supported (yes/no)
 #                      default is "yes"; has no effect on Windows
-#   GNATCOLL_ATOMICS : atomic model (intrinsic/mutex)
-#                      default is "intrinsic"
 
 # helper programs
 CAT := cat
@@ -79,7 +77,6 @@ prefix := $(dir $(shell $(WHICH) gnatls))..
 GNATCOLL_VERSION := $(shell $(CAT) $(SOURCE_DIR)/version_information)
 GNATCOLL_MMAP := yes
 GNATCOLL_MADVISE := yes
-GNATCOLL_ATOMICS := intrinsic
 
 BUILD         = PROD
 PROCESSORS    = 0
@@ -107,7 +104,6 @@ endif
 
 GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
 	 -XGNATCOLL_MADVISE=$(GNATCOLL_MADVISE) \
-	 -XGNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS) \
 	 -XGNATCOLL_VERSION=$(GNATCOLL_VERSION) \
 	 -XGNATCOLL_OS=$(GNATCOLL_OS) \
 	 -XBUILD=$(BUILD)
@@ -177,7 +173,6 @@ setup:
 	$(ECHO) "GNATCOLL_VERSION=$(GNATCOLL_VERSION)" >> makefile.setup
 	$(ECHO) "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
 	$(ECHO) "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
-	$(ECHO) "GNATCOLL_ATOMICS=$(GNATCOLL_ATOMICS)" >> makefile.setup
 
 # Let gprbuild handle parallelisation. In general, we don't support parallel
 # runs in this Makefile, as concurrent gprinstall processes may crash.

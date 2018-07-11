@@ -32,9 +32,6 @@ project GnatColl is
    Mmap      : Yes_No := External ("GNATCOLL_MMAP", "yes");
    Madvise   : Yes_No := External ("GNATCOLL_MADVISE", "yes");
 
-   type Atomics_Kind is ("intrinsic", "mutex");
-   Atomics   : Atomics_Kind := External ("GNATCOLL_ATOMICS", "intrinsic");
-
    type Build_Type is ("DEBUG", "PROD");
    Build : Build_Type := External ("BUILD");
 
@@ -53,7 +50,7 @@ project GnatColl is
 
    type OS_Kind is ("windows", "unix", "osx");
    OS : OS_Kind := External ("GNATCOLL_OS", "unix");
-   Extra_Switches := ();
+   Extra_Switches := ("-DATOMIC_INTRINSICS");
    Extra_Libs := ();
    case OS is
       when "windows" =>
@@ -84,13 +81,6 @@ project GnatColl is
    end case;
 
    for Library_Version use "lib" & Name & So_Ext & "." & Version;
-
-   case Atomics is
-      when "intrinsic" =>
-         Extra_Switches := Extra_Switches & ("-DATOMIC_INTRINSICS");
-      when "mutex" =>
-         null;
-   end case;
 
    case Library_Type is
       when "relocatable" =>
@@ -164,15 +154,6 @@ project GnatColl is
               use "gnatcoll-io-native-codec__win32.adb";
             for Implementation ("GNATCOLL.Plugins")
               use "gnatcoll-plugins__windows.adb";
-      end case;
-
-      case Atomics is
-         when "intrinsic" =>
-            for Implementation ("GNATCOLL.Atomic")
-               use "gnatcoll-atomic__intrinsic.ada";
-         when "mutex" =>
-            for Implementation ("GNATCOLL.Atomic")
-               use "gnatcoll-atomic__mutex.ada";
       end case;
    end Naming;
 

@@ -51,7 +51,6 @@ Module-specific:
   effect on Windows
 * `GNATCOLL_MADVISE`: whether MADVISE is supported (yes/no) default is "yes";
   has no effect on Windows
-* `GNATCOLL_ATOMICS`: atomic model (intrinsic/mutex) default is "intrinsic"
 
 To use the default options:
 

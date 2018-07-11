@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2017, AdaCore                     --
+--                     Copyright (C) 2010-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,17 +21,41 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-pragma Ada_2012;
-
-with GNAT.Task_Lock;
+with Interfaces;    use Interfaces;
 
 package body GNATCOLL.Atomic is
+
+   function Intrinsic_Sync_Bool_Compare_And_Swap
+     (Ptr    : access Atomic_Counter;
+      Oldval : Atomic_Counter;
+      Newval : Atomic_Counter) return Boolean;
+   pragma Import (Intrinsic, Intrinsic_Sync_Bool_Compare_And_Swap,
+                  External_Name => "__sync_bool_compare_and_swap_4");
+
+   function Intrinsic_Sync_Val_Compare_And_Swap
+     (Ptr    : access Atomic_Counter;
+      Oldval : Atomic_Counter;
+      Newval : Atomic_Counter) return Atomic_Counter;
+   pragma Import (Intrinsic, Intrinsic_Sync_Val_Compare_And_Swap,
+                  External_Name => "__sync_val_compare_and_swap_4");
+
+   function Intrinsic_Sync_Add_And_Fetch
+     (Ptr   : access Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter;
+   pragma Import (Intrinsic, Intrinsic_Sync_Add_And_Fetch,
+                  External_Name => "__sync_add_and_fetch_4");
+
+   function Intrinsic_Sync_Sub_And_Fetch
+     (Ptr   : access Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter;
+   pragma Import (Intrinsic, Intrinsic_Sync_Sub_And_Fetch,
+                  External_Name => "__sync_sub_and_fetch_4");
 
    ------------------
    -- Is_Lock_Free --
    ------------------
 
-   function Is_Lock_Free return Boolean is (False);
+   function Is_Lock_Free return Boolean is (True);
 
    ------------------------
    -- Sync_Add_And_Fetch --
@@ -39,25 +63,17 @@ package body GNATCOLL.Atomic is
 
    function Sync_Add_And_Fetch
      (Ptr   : access Atomic_Counter;
-      Value : Atomic_Counter) return Atomic_Counter
-   is
-      Result : Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter is
    begin
-      GNAT.Task_Lock.Lock;
-      Ptr.all := Atomic_Counter (Natural (Ptr.all) + Natural (Value));
-      Result := Ptr.all;
-      --   ??? Should use a memory barriere here
-      GNAT.Task_Lock.Unlock;
-      return Result;
+      return Intrinsic_Sync_Add_And_Fetch (Ptr, Value);
    end Sync_Add_And_Fetch;
 
    procedure Sync_Add_And_Fetch
      (Ptr : access Atomic_Counter; Value : Atomic_Counter)
    is
-      Dummy : Atomic_Counter;
-      pragma Unreferenced (Dummy);
+      Dummy : Atomic_Counter with Unreferenced;
    begin
-      Dummy := Sync_Add_And_Fetch (Ptr, Value);
+      Dummy := Intrinsic_Sync_Add_And_Fetch (Ptr, Value);
    end Sync_Add_And_Fetch;
 
    ------------------------
@@ -66,25 +82,17 @@ package body GNATCOLL.Atomic is
 
    function Sync_Sub_And_Fetch
      (Ptr   : access Atomic_Counter;
-      Value : Atomic_Counter) return Atomic_Counter
-   is
-      Result : Atomic_Counter;
+      Value : Atomic_Counter) return Atomic_Counter is
    begin
-      GNAT.Task_Lock.Lock;
-      Ptr.all := Atomic_Counter (Natural (Ptr.all) - Natural (Value));
-      Result := Ptr.all;
-      --   ??? Should use a memory barriere here
-      GNAT.Task_Lock.Unlock;
-      return Result;
+      return Intrinsic_Sync_Sub_And_Fetch (Ptr, Value);
    end Sync_Sub_And_Fetch;
 
    procedure Sync_Sub_And_Fetch
      (Ptr : access Atomic_Counter; Value : Atomic_Counter)
    is
-      Dummy : Atomic_Counter;
-      pragma Unreferenced (Dummy);
+      Dummy : Atomic_Counter with Unreferenced;
    begin
-      Dummy := Sync_Sub_And_Fetch (Ptr, Value);
+      Dummy := Intrinsic_Sync_Sub_And_Fetch (Ptr, Value);
    end Sync_Sub_And_Fetch;
 
    ---------------
@@ -93,7 +101,7 @@ package body GNATCOLL.Atomic is
 
    procedure Increment (Value : aliased in out Atomic_Counter) is
    begin
-      Sync_Add_And_Fetch (Value'Unrestricted_Access, 1);
+      System.Atomic_Counters.Increment (Value);
    end Increment;
 
    ---------------
@@ -102,12 +110,12 @@ package body GNATCOLL.Atomic is
 
    procedure Decrement (Value : aliased in out Atomic_Counter) is
    begin
-      Sync_Sub_And_Fetch (Value'Unrestricted_Access, 1);
+      System.Atomic_Counters.Decrement (Value);
    end Decrement;
 
    function Decrement (Value : aliased in out Atomic_Counter) return Boolean is
    begin
-      return Sync_Sub_And_Fetch (Value'Unrestricted_Access, 1) = 0;
+      return System.Atomic_Counters.Decrement (Value);
    end Decrement;
 
    ----------------------
@@ -116,7 +124,7 @@ package body GNATCOLL.Atomic is
 
    procedure Unsafe_Increment (Value : in out Atomic_Counter) is
    begin
-      Value := Atomic_Counter (Natural (Value) + 1);
+      Value := Atomic_Counter'Succ (Value);
    end Unsafe_Increment;
 
    ----------------------
@@ -125,7 +133,7 @@ package body GNATCOLL.Atomic is
 
    function Unsafe_Decrement (Value : in out Atomic_Counter) return Boolean is
    begin
-      Value := Atomic_Counter (Natural (Value) - 1);
+      Value := Atomic_Counter'Pred (Value);
       return Value = 0;
    end Unsafe_Decrement;
 
@@ -136,61 +144,40 @@ package body GNATCOLL.Atomic is
    function Sync_Bool_Compare_And_Swap
       (Ptr    : access Element_Access;
        Oldval : Element_Access;
-       Newval : Element_Access) return Boolean is
+       Newval : Element_Access) return Boolean
+   is
+      function Intrinsic_Sync_Bool_And_Swap_Access
+         (Ptr   : access Element_Access;
+          Oldval, Newval : Element_Access) return Interfaces.Integer_8;
+      pragma Import
+         (Intrinsic, Intrinsic_Sync_Bool_And_Swap_Access,
+          External_Name => "gnatcoll_sync_bool_compare_and_swap_access");
    begin
-      GNAT.Task_Lock.Lock;
-      if Ptr.all = Oldval then
-         Ptr.all := Newval;
-         GNAT.Task_Lock.Unlock;
-         return True;
-      else
-         GNAT.Task_Lock.Unlock;
-         return False;
-      end if;
+      return Intrinsic_Sync_Bool_And_Swap_Access (Ptr, Oldval, Newval) /= 0;
    end Sync_Bool_Compare_And_Swap;
 
-   --------------------------------
-   -- Sync_Bool_Compare_And_Swap --
-   --------------------------------
+   ----------------------------------------
+   -- Sync_Bool_Compare_And_Swap_Counter --
+   ----------------------------------------
 
    function Sync_Bool_Compare_And_Swap_Counter
       (Ptr    : access Atomic_Counter;
        Oldval : Atomic_Counter;
-       Newval : Atomic_Counter) return Boolean
-   is
+       Newval : Atomic_Counter) return Boolean is
    begin
-      GNAT.Task_Lock.Lock;
-      if Ptr.all = Oldval then
-         Ptr.all := Newval;
-         GNAT.Task_Lock.Unlock;
-         return True;
-      else
-         GNAT.Task_Lock.Unlock;
-         return False;
-      end if;
+      return Intrinsic_Sync_Bool_Compare_And_Swap (Ptr, Oldval, Newval);
    end Sync_Bool_Compare_And_Swap_Counter;
 
-   -------------------------------
-   -- Sync_Val_Compare_And_Swap --
-   -------------------------------
+   ---------------------------------------
+   -- Sync_Val_Compare_And_Swap_Counter --
+   ---------------------------------------
 
    function Sync_Val_Compare_And_Swap_Counter
       (Ptr    : access Atomic_Counter;
        Oldval : Atomic_Counter;
-       Newval : Atomic_Counter) return Atomic_Counter
-   is
-      Initial : Atomic_Counter;
+       Newval : Atomic_Counter) return Atomic_Counter is
    begin
-      GNAT.Task_Lock.Lock;
-      Initial := Ptr.all;
-      if Ptr.all = Oldval then
-         Ptr.all := Newval;
-         GNAT.Task_Lock.Unlock;
-         return Initial;
-      else
-         GNAT.Task_Lock.Unlock;
-         return Initial;
-      end if;
+      return Intrinsic_Sync_Val_Compare_And_Swap (Ptr, Oldval, Newval);
    end Sync_Val_Compare_And_Swap_Counter;
 
 end GNATCOLL.Atomic;
