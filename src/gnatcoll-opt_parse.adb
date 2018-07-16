@@ -29,7 +29,6 @@ with Ada.Unchecked_Deallocation;
 
 with GNAT.OS_Lib;
 
-with GNATCOLL.Locks; use GNATCOLL.Locks;
 with GNATCOLL.VFS;
 
 package body GNATCOLL.Opt_Parse is
