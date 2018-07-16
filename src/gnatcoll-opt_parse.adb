@@ -143,6 +143,8 @@ package body GNATCOLL.Opt_Parse is
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return;
 
+   overriding procedure Release (Self : in out Flag_Parser_Result) is null;
+
    type Help_Flag_Parser is new Flag_Parser with null record;
    --  Specific subtype of Flag_Parser to designate the help flag parser.
 
@@ -507,6 +509,8 @@ package body GNATCOLL.Opt_Parse is
          Results : Result_Array_Access;
       end record;
 
+      overriding procedure Release (Self : in out Internal_Result);
+
       Self_Val : aliased Positional_Arg_List_Parser :=
         Positional_Arg_List_Parser'
           (Name     => +Name,
@@ -576,6 +580,13 @@ package body GNATCOLL.Opt_Parse is
          return Parser_Return (Last + 1);
       end Parse_Args;
 
+      overriding procedure Release (Self : in out Internal_Result) is
+         procedure Free is new Ada.Unchecked_Deallocation
+           (Result_Array, Result_Array_Access);
+      begin
+         Free (Self.Results);
+      end Release;
+
    begin
       Parser.Data.Positional_Args_Parsers.Append (Self);
       Parser.Data.All_Parsers.Append (Self);
@@ -605,6 +616,8 @@ package body GNATCOLL.Opt_Parse is
       type Internal_Result is new Parser_Result with record
          Result : Arg_Type;
       end record;
+
+      overriding procedure Release (Self : in out Internal_Result) is null;
 
       Self_Val : aliased Positional_Arg_Parser :=
         (Name     => +Name,
@@ -760,6 +773,8 @@ package body GNATCOLL.Opt_Parse is
          Result : Arg_Type;
       end record;
 
+      procedure Release (Self : in out Internal_Result) is null;
+
       Self_Val : aliased Option_Parser :=
         Option_Parser'
           (Name     => +Long (3 .. Long'Last),
@@ -860,6 +875,8 @@ package body GNATCOLL.Opt_Parse is
       type Internal_Result is new Parser_Result with record
          Results : Result_Vectors.Vector;
       end record;
+
+      procedure Release (Self : in out Internal_Result) is null;
 
       Self_Val : aliased Option_List_Parser :=
         (Name   => +Long (3 .. Long'Last),

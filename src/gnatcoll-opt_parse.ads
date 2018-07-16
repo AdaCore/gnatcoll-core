@@ -393,6 +393,10 @@ private
       Start_Pos, End_Pos : Positive;
    end record;
 
+   procedure Release (Result : in out Parser_Result) is abstract;
+   --  Derived types must override this to clean-up internal data when the
+   --  Parser_Result object is about to be deallocated.
+
    type Parser_Result_Access is access all Parser_Result'Class;
 
    function Get_Result
