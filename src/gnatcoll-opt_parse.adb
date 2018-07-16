@@ -1117,6 +1117,28 @@ package body GNATCOLL.Opt_Parse is
       end if;
    end Parse_One_Option;
 
+   -------------
+   -- Release --
+   -------------
+
+   procedure Release (Self : in out Parsed_Arguments_Type) is
+      procedure Free is new Ada.Unchecked_Deallocation
+        (Parser_Result'Class, Parser_Result_Access);
+      procedure Free is new Ada.Unchecked_Deallocation
+        (Parser_Result_Array, Parser_Result_Array_Access);
+      procedure Free is new Ada.Unchecked_Deallocation
+        (XString_Array, XString_Array_Access);
+   begin
+      Free (Self.Raw_Args);
+      for R of Self.Results.all loop
+         if R /= null then
+            R.Release;
+         end if;
+         Free (R);
+      end loop;
+      Free (Self.Results);
+   end Release;
+
    --------------
    -- Finalize --
    --------------

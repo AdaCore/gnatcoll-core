@@ -419,9 +419,11 @@ private
       Results  : Parser_Result_Array_Access;
    end record;
 
+   procedure Release (Self : in out Parsed_Arguments_Type);
+
    package Parsed_Arguments_Shared_Ptrs
    is new GNATCOLL.Refcount.Shared_Pointers
-     (Parsed_Arguments_Type, Atomic_Counters => True);
+     (Parsed_Arguments_Type, Release => Release, Atomic_Counters => True);
 
    type Parsed_Arguments is record
       Ref : Parsed_Arguments_Shared_Ptrs.Ref
