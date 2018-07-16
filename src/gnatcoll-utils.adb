@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2017, AdaCore                     --
+--                     Copyright (C) 2008-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -838,8 +838,9 @@ package body GNATCOLL.Utils is
    --------------
 
    function Line_End (Str : String; P : Natural) return Natural is
+      Index : constant Natural := Natural'Max (Str'First, P);
    begin
-      for J in P .. Str'Last loop
+      for J in Index .. Str'Last loop
          if Str (J) = ASCII.LF or else Str (J) = ASCII.CR then
             return J - 1;
          end if;
@@ -853,8 +854,9 @@ package body GNATCOLL.Utils is
    ---------------
 
    function Next_Line (Str : String; P : Natural) return Natural is
+      Index : constant Natural := Natural'Max (Str'First, P);
    begin
-      for J in P .. Str'Last - 1 loop
+      for J in Index .. Str'Last - 1 loop
          if Str (J) = ASCII.LF then
             return J + 1;
          end if;
