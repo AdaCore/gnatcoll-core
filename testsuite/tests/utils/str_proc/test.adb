@@ -120,6 +120,19 @@ function Test return Integer is
 
    end Test_Capitalize;
 
+   procedure Test_Join is
+       S1 : constant String := ",";
+       S2 : aliased String := "adacore";
+       S  : constant String := S2 & S1 & S2 & S1 & S2 & S1 & S2 & S1 & S2;
+       SL : GNAT.Strings.String_List (1 .. 5) :=
+           (others => S2'Unchecked_Access);
+   begin
+       A.Assert (GNATCOLL.Utils.Join (S1, SL) = S,
+                 Msg => "simple join");
+
+   end Test_Join;
+
+
 begin
    IO.New_Line;
    IO.Put_Line ("GNATCOLL.UTILS");
@@ -127,6 +140,9 @@ begin
    Test_Replace;
    IO.New_Line;
    Test_Capitalize;
+   IO.New_Line;
+   Test_Join;
+
 
    return A.Report;
 end Test;
