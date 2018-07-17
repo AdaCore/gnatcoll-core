@@ -101,6 +101,28 @@ function Test return Integer is
                  Msg => "ends_with false : pattern too long");
    end Test_Ends_With;
 
+   procedure Test_Is_Blank_Line is
+       S1 : constant String := "       " & ASCII.CR;
+       S2 : constant String := "AAAAA";
+       S3 : constant String := S1 & ASCII.CR & ASCII.LF & S2;
+   begin
+       IO.Put_Line ("Test Is_Blank_Line");
+
+       A.Assert (GNATCOLL.Utils.Is_Blank_Line ("", 0) = True,
+                 Msg => "empty string and Index = 0");
+       A.Assert (GNATCOLL.Utils.Is_Blank_Line (S1, 0) = True,
+                 Msg => "only blank + Index = 0");
+       A.Assert (GNATCOLL.Utils.Is_Blank_Line (S2, 0) = False,
+                 Msg => "Not blank + Index = 0");
+
+       A.Assert (GNATCOLL.Utils.Is_Blank_Line ("", 5) = True,
+                 Msg => "empty string, Index > 0");
+
+       A.Assert (GNATCOLL.Utils.Is_Blank_Line (S3, S1'Length + 3) = False,
+                 Msg => "not blank");
+
+   end Test_Is_Blank_Line;
+
 begin
    IO.New_Line;
    Test_Equality;
@@ -110,6 +132,8 @@ begin
    Test_Starts_With;
    IO.New_Line;
    Test_Ends_With;
+   IO.New_Line;
+   Test_Is_Blank_Line;
 
    return A.Report;
 
