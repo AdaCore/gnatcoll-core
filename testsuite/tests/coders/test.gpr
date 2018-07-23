@@ -1,9 +1,9 @@
-with "gnatcoll_python";
-project Examples is
+with "gnatcoll";
+
+project Test is
+   for Main use ("test.adb");
+   for Source_Dirs use (".", "../../support");
    for Object_Dir use "obj";
-   for Exec_Dir use ".";
-   for Main use ("newclass.adb", "base64_coder.adb");
-   for Source_Dirs use (".");
 
    package Compiler is
       for Switches ("Ada") use ("-g", "-gnateE");
@@ -17,4 +17,4 @@ project Examples is
       for Switches ("Ada") use ("-E");
    end Binder;
 
-end Examples;
+end Test;

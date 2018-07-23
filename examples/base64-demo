@@ -1,0 +1,18 @@
+# base64_coder is test and example of using the GNATCOLL.Coders.Base64.
+# base64 utility is system provided base64 encoder/decoder.
+# Encode original phrase few times and decode it the same number of times with
+# system and ours encoder/decoder to be sure that they are working the same.
+# Each encoding by our example decoded by system utility and vise versa.
+
+echo Deep coded $1 \
+ | base64 | base64 | base64 | base64 | base64 | base64 | base64  | base64 \
+ | ./base64_coder er | ./base64_coder er | ./base64_coder er \
+ | ./base64_coder ew | ./base64_coder ew | ./base64_coder ew \
+ | ./base64_coder er | ./base64_coder er | ./base64_coder er \
+ | base64 | ./base64_coder -  | ./base64_coder | base64 -d \
+ | base64 -d | base64 -d | base64 -d \
+ | base64 -d | base64 -d | base64 -d \
+ | base64 -d | base64 -d | base64 -d \
+ | ./base64_coder dr | ./base64_coder dr | ./base64_coder dr \
+ | ./base64_coder dw | ./base64_coder dw | ./base64_coder dw \
+ | ./base64_coder dr | ./base64_coder dw
