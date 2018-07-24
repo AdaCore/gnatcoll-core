@@ -358,7 +358,7 @@ package body GNATCOLL.Utils is
          return False;
       end if;
 
-      --  Do the loop in reverse, since it likely that Suffix starts with '.'
+      --  Do the loop in reverse, since it's likely that Suffix starts with '.'
       --  In the GPS case, it is also often the case that suffix starts with
       --  '.ad' for Ada extensions
       for J in reverse Suffix'Range loop
@@ -417,10 +417,11 @@ package body GNATCOLL.Utils is
       Exec_Name : constant String := Ada.Command_Line.Command_Name;
 
       function Get_Install_Dir (S : String) return String;
-      --  S is the executable name preceeded by the absolute or relative
+      --  S is the executable name preceded by the absolute or relative
       --  path, e.g. "c:\usr\bin\gcc.exe" or "..\bin\gcc". Returns the absolute
       --  or relative directory where "bin" lies (in the example "C:\usr"
-      --  or ".."). If the executable is not a "bin" directory, return "".
+      --  or ".."). If the executable is not in the "bin" directory, returns
+      --  directory itself.
 
       ---------------------
       -- Get_Install_Dir --
@@ -716,7 +717,7 @@ package body GNATCOLL.Utils is
          end if;
       end if;
 
-      --  Special case: UTC time zone speficied as 'Z'
+      --  Special case: UTC time zone specified as 'Z'
 
       if Str'Length > 1 and then Str (Last) = 'Z' then
          Last := Last - 1;

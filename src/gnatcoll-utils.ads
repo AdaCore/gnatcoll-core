@@ -52,7 +52,7 @@ package GNATCOLL.Utils is
       Min_Width  : Integer;
       Force_Sign : Boolean := False;
       Padding    : Character := '0') return String;
-   --  Return Value as a string, using at least Width digits (padded with
+   --  Returns Value as a string, using at least Width digits (padded with
    --  leading characters Padding if necessary); negative values will always
    --  have a leading minus sign; positive values will have a leading plus sign
    --  if Force_Sign is True.
@@ -64,27 +64,27 @@ package GNATCOLL.Utils is
       Pattern     : String;
       Replacement : String)
      with Pre => Pattern /= "";
-   --  Return S, with all occurrences of Pattern replaced with Replacement
+   --  Returns S, with all occurrences of Pattern replaced with Replacement
 
    function Replace
      (S : String; Pattern : String; Replacement : String) return String
      with Pre => Pattern /= "";
-   --  Return S, with all occurrences of Pattern replaced with Replacement
+   --  Returns S, with all occurrences of Pattern replaced with Replacement
 
    procedure Split
      (Str      : String;
       On       : String;
       For_Each : access function (Item : String) return Boolean);
-   --  Split the string on the given delimiter "On" and call function For_Each
-   --  for all found substrings not including delimiter. If function For_Each
-   --  returns False the string processing stops.
+   --  Splits the string on the given delimiter "On" and calls the function
+   --  For_Each for every found substring not including the delimiter.
+   --  If For_Each returns False the string processing stops.
 
    function Split
      (Str              : String;
       On               : Character;
       Omit_Empty_Lines : Boolean := True)
       return GNAT.Strings.String_List_Access;
-   --  Split the string on the given character.
+   --  Splits the string on the given character.
    --  The result depends on the value of Omit_Empty_Lines. For instance, the
    --  string    "a" & ASCII.LF & ASCII.LF & "b"   will be split as:
    --       ["a", "b"]  if Omit_Empty_Lines is true
@@ -109,8 +109,8 @@ package GNATCOLL.Utils is
    --  For a more efficient version, see GNATCOLL.Strings
 
    function Capitalize (Name : String) return String;
-   --  Capitalize a string, ie put in upper case the first character and all
-   --  characters following '_'
+   --  Capitalizes a string, i.e. puts in upper case the first character and
+   --  any character preceded by '_'
 
    function Is_Whitespace (Char : Character) return Boolean;
    --  Returns True if Char is a space, new line, or tab; otherwise returns
@@ -133,28 +133,28 @@ package GNATCOLL.Utils is
    --  before Str'First if no non-whitespace was found.
 
    function Find_Char (Str : String; Char : Character) return Natural;
-   --  Return the first occurrence of Char after Str'First (use substrings for
+   --  Returns the first occurrence of Char after Str'First (use substrings for
    --  later occurrences).
    --  See also GNATCOLL.Strings.Find
 
    function Join (Str : String; List : GNAT.Strings.String_List) return String;
-   --  Return a string that is the concatenation of the list elements,
+   --  Returns a string that is the concatenation of the list elements,
    --  separated by Str: (List(1) & Str & List(2) & Str & ...)
    --  null elements in list are skipped
    --  See also GNATCOLL.Strings.Join
 
    function EOL (Str : String) return Natural;
    pragma Inline (EOL);
-   --  Return the first end-of-line after Str'First (use substrings for later
-   --  lines). The result is either Str'Last+1 or pointing to the first
-   --  ASCII.LF found.
+   --  Returns the first ASCII.LF character after Str'First (use substrings for
+   --  subsequent lines). The result is either Str'Last+1 or points to the
+   --  first ASCII.LF found.
 
    function Line_Start (Str : String; P : Natural) return Natural;
-   --  Return the start of the line pointed by P
+   --  Returns the start of the line pointed by P
    --  See also GNATCOLL.Strings.Head
 
    function Line_End (Str : String; P : Natural) return Natural;
-   --  Return the end of the line pointed by P
+   --  Returns the end of the line pointed by P
    --  See also GNATCOLL.Strings.Tail
 
    procedure Skip_Lines
@@ -162,7 +162,7 @@ package GNATCOLL.Utils is
       Lines         : Integer;
       Index         : in out Natural;
       Lines_Skipped : out Natural);
-   --  Skip Lines forward or backward. Index is set to the beginning of a line.
+   --  Skips lines forward or backward. Sets Index to the beginning of a line.
    --  Lines_Skipped is the number of lines that have actually been skipped.
    --  Use with Skip_To_Column to go to a specific position in a buffer.
 
@@ -171,10 +171,10 @@ package GNATCOLL.Utils is
       Columns   : Integer := 0;
       Index     : in out Integer;
       Tab_Width : Integer := 8);
-   --  Assuming Index points to the begining of a line (as is the case after
-   --  Skip_Lines for instance), jump to the specific column on that line.
-   --  This procedure handles tabulations (ie Columns are columns visible to
-   --  the user, after tab expansion).
+   --  Assuming Index points to the beginning of a line (as is the case after
+   --  Skip_Lines for instance), jumps to the specific column on that line.
+   --  This procedure handles tabulations (i.e. Columns are columns visible to
+   --  the user following the tab expansion).
 
    function Forward_UTF8_Char
      (Str   : String;
@@ -182,16 +182,16 @@ package GNATCOLL.Utils is
    --  Moves Index one character forward, taking into account UTF8 encoding.
 
    function Next_Line (Str : String; P : Natural) return Natural;
-   --  Return the start of the next line or Buffer'Last if the end of the
-   --  buffer is reached.
+   --  Returns the start of the next line or Str'Last if the end of Str
+   --  is reached without finding next line.
 
    function Previous_Line (Str : String; P : Natural) return Natural;
-   --  Return the start of the previous line or Buffer'First if P already
-   --  points to the first line of Buffer.
+   --  Returns the start of the previous line or Str'First if P already
+   --  points to the first line of Str.
 
    function Is_Blank_Line
      (Str : String; Index : Natural := 0) return Boolean;
-   --  Return True if the line pointed by Index only contains blank characters
+   --  Returns True if the line pointed by Index only contains blank characters
    --  (' ', HT, LF, CR). By default, if Index is 0, then the line considered
    --  is the first line of the buffer.
 
@@ -199,17 +199,17 @@ package GNATCOLL.Utils is
      (Str      : String;
       Index     : in out Natural;
       Substring : String);
-   --  Skip every character until an occurence of Substring is found.
-   --  Index is set to the first character of the occurence.
+   --  Skips every character until an occurrence of Substring is found.
+   --  Index is set to the first character of the occurrence.
 
    function Strip_Character (Text : String; C : Character) return String;
-   --  Return a version of Text after stripping all C's from the string
+   --  Returns a version of Text after stripping all C's from the string
 
    function Strip_CR (Text : String) return String;
    pragma Inline (Strip_CR);
-   --  Return a version of Text after stripping all the CR from the string.
+   --  Returns a version of Text after stripping all ASCII.CR from the string.
    --  This function is used on Windows or when the Strip_CR preference is
-   --  enabled (for systems that share dos files).
+   --  enabled (for systems that share DOS files).
    --  CR/LF sequences are replaced by LF chars.
 
    ------------
@@ -226,10 +226,11 @@ package GNATCOLL.Utils is
    ------------------
 
    function Executable_Location return String;
-   --  Return the name of the parent directory where the executable is stored
-   --  (so if you are running "prefix"/bin/gps, you would get "prefix").
-   --  A special case is done for "bin" directories, which are skipped.
-   --  The returned directory always ends up with a directory separator.
+   --  Returns the name of the parent directory where the executable is stored
+   --  (so if you are running "prefix/my_exe", you would get "prefix/").
+   --  A special case is done for "bin" directories, which are consumed
+   --  (so if you are running "prefix/bin/my_exe", you would get "prefix/").
+   --  The returned directory always ends with a directory separator.
 
    function Is_Directory_Separator (C : Character) return Boolean;
    --  Returns True if C is a directory separator
@@ -242,7 +243,7 @@ package GNATCOLL.Utils is
    -----------
 
    function Time_Value (Str : String) return Ada.Calendar.Time;
-   --  Check the validity of Str as a string representing a date
+   --  Checks the validity of Str as a string representing a date
    --  using the same formats as in GNAT.Calendar.Time_IO.Value. In addition,
    --  it also supports timezones (as output for instance by PostgreSQL)
    --     1970-01-01 12:00:00+01
@@ -256,7 +257,7 @@ package GNATCOLL.Utils is
 
    function Truncate
      (Date : Time; Time_Zone : Time_Zones.Time_Offset := 0) return Time;
-   --  Remove time part from the date in specified timezone.
+   --  Removes time part from the date in specified timezone.
    --  For example, if we want to truncate "2015 May 10 05:00 GMT+6" time at
    --  UTC timezone we are going to get "2015 May 9, 00:00 UTC" because
    --  "2015 May 10 05:00 GMT+6" equal to "2015 May 9 23:00 UTC".
