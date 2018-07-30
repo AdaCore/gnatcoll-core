@@ -1,0 +1,10 @@
+with "q.gpr";
+project P is
+   type ValuesA is ("one", "two");
+   type ValuesB is ("two", "three");
+   VarA : ValuesA := External ("Ext1", "two");
+   VarB : ValuesB := External ("Ext1", "two");
+
+   type ValuesC is ("a", "b", "c");
+   VarC : ValuesC := External ("Ext2", "a");
+end P;

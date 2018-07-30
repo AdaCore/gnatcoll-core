@@ -1,0 +1,9 @@
+description: >
+  When scenario variables across the project tree
+  are controlled by same external, but have different
+  types with sets of values that do not match those
+  are moved to untyped variables and a warning is passed
+  to the Errors callback.
+data:
+    - "p.gpr"
+    - "q.gpr"

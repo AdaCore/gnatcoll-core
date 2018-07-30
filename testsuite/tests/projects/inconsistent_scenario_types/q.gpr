@@ -1,0 +1,7 @@
+abstract project Q is
+
+   type ValuesC is ("a", "b", "c", "d");
+   VarC : ValuesC := External ("Ext2", "a");
+   
+   Boo := External ("Ext2", "e");
+end Q;

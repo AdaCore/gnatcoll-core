@@ -2098,11 +2098,17 @@ private
    end record;
 
    type Scenario_Variable is record
-      Name        : GPR.Name_Id;
+      Ext_Name    : GPR.Name_Id;
+      Var_Name    : GPR.Name_Id;
       Default     : GPR.Name_Id;
       String_Type : GPR.Project_Node_Id;
       Tree_Ref    : GPR.Project_Node_Tree_Ref;
       Value       : GPR.Name_Id;
+
+      First_Project_Path : GPR.Path_Name_Type;
+      --  First project in which corresponding controlling external has been
+      --  dicovered. Used for diagnostic message when types of other Scenario
+      --  Variables controlled by same external do not match.
    end record;
 
    type Untyped_Variable is record
@@ -2112,8 +2118,8 @@ private
    end record;
 
    No_Variable   : aliased constant Scenario_Variable :=
-     (GPR.No_Name, GPR.No_Name, GPR.Empty_Project_Node,
-      null, GPR.No_Name);
+     (GPR.No_Name, GPR.No_Name, GPR.No_Name, GPR.Empty_Project_Node,
+      null, GPR.No_Name, GPR.No_Path);
 
    All_Scenarios : aliased constant Scenario_Variable_Array (1 .. 0) :=
                    (others => No_Variable);

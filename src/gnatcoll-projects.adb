@@ -25,6 +25,8 @@ pragma Ada_2012;
 with Ada.Calendar;                use Ada.Calendar;
 with Ada.Characters.Handling;     use Ada.Characters.Handling;
 with Ada.Containers.Hashed_Sets;
+with Ada.Containers.Ordered_Sets;
+with Ada.Containers.Generic_Array_Sort;
 with Ada.Directories;
 with Ada.Exceptions;              use Ada.Exceptions;
 with Ada.Strings;                 use Ada.Strings;
@@ -357,7 +359,9 @@ package body GNATCOLL.Projects is
    procedure Reset_View (Self : in out Project_Data'Class);
    --  Reset and free the internal data of the project view
 
-   procedure Compute_Scenario_Variables (Tree : Project_Tree_Data_Access);
+   procedure Compute_Scenario_Variables
+     (Tree   : Project_Tree_Data_Access;
+      Errors : Error_Report := null);
    --  Compute (and cache) the whole list of scenario variables for the
    --  project tree.
    --  This also ensures that each external reference actually exists
@@ -4773,16 +4777,31 @@ package body GNATCOLL.Projects is
    -- Compute_Scenario_Variables --
    --------------------------------
 
-   procedure Compute_Scenario_Variables (Tree : Project_Tree_Data_Access) is
+   procedure Compute_Scenario_Variables
+     (Tree   : Project_Tree_Data_Access;
+      Errors : Error_Report := null)
+   is
       Typed_List   : Scenario_Variable_Array_Access;
       Untyped_List : Untyped_Variable_Array_Access;
       T_Curr  : Positive;
       U_Curr  : Positive;
 
+      T_Curr2 : Natural;
+
       Var_Quantity : Natural;
+
+      package Name_Id_Sets is new Ada.Containers.Ordered_Sets (GPR.Name_Id);
+      Inconsistent_SC_Externals : Name_Id_Sets.Set := Name_Id_Sets.Empty_Set;
 
       function Count_Vars return Natural;
       --  Return the number of scenario variables in tree
+
+      function Not_Already
+           (UVs      : Untyped_Variable_Array_Access;
+            Last     : Positive;
+            Ext_Name : GPR.Name_Id) return Boolean;
+         --  Checks that an untyped variable with same name
+         --  has not been registered yet.
 
       function Register_Var
         (Variable : Project_Node_Id;
@@ -4796,7 +4815,8 @@ package body GNATCOLL.Projects is
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
-         Project  : Project_Type) return Boolean;
+         Project  : Project_Type;
+         Errors   : Error_Report := null) return Boolean;
       --  Add the variable to the list of scenario variables, if not there yet
       --  (see the documentation for Scenario_Variables for the exact rules
       --  used to detect aliases).
@@ -5003,6 +5023,24 @@ package body GNATCOLL.Projects is
          return V.Value;
       end External_Default;
 
+      -----------------
+      -- Not_Already --
+      -----------------
+
+      function Not_Already
+        (UVs      : Untyped_Variable_Array_Access;
+         Last     : Positive;
+         Ext_Name : GPR.Name_Id) return Boolean
+      is
+      begin
+         for I in 1 .. Last - 1 loop
+            if UVs (I).Name = Ext_Name then
+               return False;
+            end if;
+         end loop;
+         return True;
+      end Not_Already;
+
       ------------------
       -- Register_Var --
       ------------------
@@ -5061,7 +5099,8 @@ package body GNATCOLL.Projects is
                return Register_Untyped_Var (Variable, Proj, Pkg, Project);
             when N_Typed_Variable_Declaration =>
                if Is_Simple_Scenario_Variable then
-                  return Register_Scenario_Var (Variable, Proj, Pkg, Project);
+                  return Register_Scenario_Var
+                    (Variable, Proj, Pkg, Project, Errors);
                else
                   return Register_Untyped_Var (Variable, Proj, Pkg, Project);
                end if;
@@ -5079,37 +5118,128 @@ package body GNATCOLL.Projects is
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
-         Project  : Project_Type) return Boolean
+         Project  : Project_Type;
+         Errors   : Error_Report := null) return Boolean
       is
          pragma Unreferenced (Proj);
          T : constant  GPR.Project_Node_Tree_Ref :=
            Project.Data.Tree.Tree;
 
-         V        : constant Name_Id := External_Reference_Of (Variable, T);
-         N        : constant String := Get_String (V);
-         Var      : Scenario_Variable;
-         Is_Valid : Boolean;
+         V            : constant Name_Id :=
+           External_Reference_Of (Variable, T);
+         N            : constant String := Get_String (V);
+         Var, Old_Var : Scenario_Variable;
+         Is_Valid     : Boolean;
+
+         procedure Report_SV_Type_Mismatch (S : String);
+         procedure Report_SV_Type_Mismatch (S : String) is
+         begin
+            if Errors = null then
+               Trace (Me_SV, S);
+            else
+               Errors (S);
+            end if;
+         end Report_SV_Type_Mismatch;
+
+         function "<" (L, R : String_Access) return Boolean is (L.all < R.all);
+         procedure Sort_Values is new
+           Ada.Containers.Generic_Array_Sort
+             (Positive, String_Access, String_List);
       begin
          Trace
            (Me_SV, "Register_Scenario_Var " &
               Get_Name_String (GPR.Tree.Name_Of (Variable, T)));
 
-         for Index in 1 .. T_Curr - 1 loop
-            if External_Name (Typed_List (Index)) = N then
-               --  Nothing to do
-               return True;
-            end if;
-         end loop;
-
          Var := Scenario_Variable'
-           (Name        => V,
+           (Ext_Name        => V,
+            Var_Name    => GPR.Tree.Name_Of (Variable, T),
             Default     => External_Default (Project, Variable, Pkg, T),
             String_Type => String_Type_Of (Variable, T),
             Tree_Ref    => T,
             Value       => GPR.Ext.Value_Of
               (Tree.Env.Env.External, V,
                With_Default =>
-                 External_Default (Project, Variable, Pkg, T)));
+                 External_Default (Project, Variable, Pkg, T)),
+            First_Project_Path => Project.Data.View.Path.Display_Name);
+
+         for Index in 1 .. T_Curr - 1 loop
+            if External_Name (Typed_List (Index)) = N then
+               Trace (Me_SV, "Same external already registered,"
+                      & " comparing set of possible values");
+               Old_Var := Typed_List (Index);
+
+               declare
+                  Dummy : Project_Tree;
+                  --  Possible_Values_Of doesn't reference the Tree parameter
+                  --  that has been left only for compatibility.
+
+                  Old_Values : String_List_Access :=
+                    new String_List'(Possible_Values_Of (Dummy, Old_Var));
+                  New_Values : String_List_Access :=
+                    new String_List'(Possible_Values_Of (Dummy, Var));
+
+                  Values_Identical : Boolean := True;
+               begin
+                  if Old_Values.all'Length /= New_Values.all'Length then
+                     Trace (Me_SV, "different ammount of values");
+                     Values_Identical := False;
+                  else
+                     Sort_Values (Old_Values.all);
+                     Sort_Values (New_Values.all);
+                     for I in Old_Values'Range loop
+                        if Old_Values (I).all /= New_Values (I).all then
+                           Trace
+                             (Me_SV,
+                              "Unmatching values: " & Old_Values (I).all
+                              & " and " & New_Values (I).all);
+                           Values_Identical := False;
+                           exit;
+                        end if;
+                     end loop;
+                  end if;
+
+                  Free (Old_Values);
+                  Free (New_Values);
+
+                  if not Values_Identical then
+                     if
+                       Old_Var.First_Project_Path = Var.First_Project_Path
+                     then
+                        --  Same project
+
+                        Report_SV_Type_Mismatch
+                           (Project.Project_Path.Display_Full_Name
+                            & ": Scenario variables "
+                            & Get_Name_String (Old_Var.Var_Name)
+                            & " and "
+                            & Get_Name_String (Var.Var_Name)
+                            & " controlled by same external "
+                            & External_Name (Var)
+                            & " have different sets of possible values"
+                            & ASCII.LF);
+                     else
+                        --  Aggregated projects with same name
+                        Report_SV_Type_Mismatch
+                          ("Scenario variables "
+                           & Get_Name_String (Old_Var.First_Project_Path)
+                           & ": "
+                           & Get_Name_String (Old_Var.Var_Name)
+                           & " and "
+                           & Project.Project_Path.Display_Full_Name
+                           & ": "
+                           & Get_Name_String (Var.Var_Name)
+                           & " controlled by same external "
+                           & External_Name (Var)
+                           & " have different sets of possible values"
+                           & ASCII.LF);
+                     end if;
+                  end if;
+               end;
+
+               Inconsistent_SC_Externals.Include (Old_Var.Ext_Name);
+               return True;
+            end if;
+         end loop;
 
          Typed_List (T_Curr) := Var;
 
@@ -5117,12 +5247,12 @@ package body GNATCOLL.Projects is
          --  value.
 
          Is_Valid := GPR.Ext.Value_Of
-            (Tree.Env.Env.External, Var.Name) /= No_Name;
+            (Tree.Env.Env.External, Var.Ext_Name) /= No_Name;
 
          if Is_Valid then
             declare
                Current : constant Name_Id :=
-                  GPR.Ext.Value_Of (Tree.Env.Env.External, Var.Name);
+                  GPR.Ext.Value_Of (Tree.Env.Env.External, Var.Ext_Name);
                Iter : String_List_Iterator := Value_Of (T, Var);
             begin
                Is_Valid := False;
@@ -5199,6 +5329,8 @@ package body GNATCOLL.Projects is
          return True;
       end Register_Untyped_Var;
 
+      use Name_Id_Sets;
+      use Ada.Containers;
    begin
       Trace (Me, "Compute the list of scenario variables");
       Unchecked_Free (Tree.Env.Scenario_Variables);
@@ -5214,12 +5346,41 @@ package body GNATCOLL.Projects is
         (Tree.Root, Recursive => True,
          Callback => Register_Var'Unrestricted_Access);
 
-      if T_Curr > Typed_List'Last then
-         Tree.Env.Scenario_Variables := Typed_List;
+      if Inconsistent_SC_Externals.Length = 0 then
+         if T_Curr > Typed_List'Last then
+            Tree.Env.Scenario_Variables := Typed_List;
+         else
+            Tree.Env.Scenario_Variables :=
+              new Scenario_Variable_Array'(Typed_List (1 .. T_Curr - 1));
+            Unchecked_Free (Typed_List);
+         end if;
       else
+         --  Moving SVs with inconsistent types to UVs
+         T_Curr2 := T_Curr - 1 - Integer (Inconsistent_SC_Externals.Length);
          Tree.Env.Scenario_Variables :=
-           new Scenario_Variable_Array'(Typed_List (1 .. T_Curr - 1));
+           new Scenario_Variable_Array (1 .. T_Curr2);
+         T_Curr2 := 1;
+         for I in 1 .. T_Curr - 1 loop
+            if
+              Inconsistent_SC_Externals.Contains (Typed_List (I).Ext_Name)
+            then
+               if
+                 Not_Already
+                   (Untyped_List, U_Curr, Typed_List (I).Ext_Name)
+               then
+                  Untyped_List (U_Curr) :=
+                    (Name    => Typed_List (I).Ext_Name,
+                     Default => Typed_List (I).Default,
+                     Value   => Typed_List (I).Value);
+                  U_Curr := U_Curr + 1;
+               end if;
+            else
+               Tree.Env.Scenario_Variables (T_Curr2) := Typed_List (I);
+               T_Curr2 := T_Curr2 + 1;
+            end if;
+         end loop;
          Unchecked_Free (Typed_List);
+         Inconsistent_SC_Externals.Clear;
       end if;
 
       if U_Curr > Untyped_List'Last then
@@ -5229,6 +5390,7 @@ package body GNATCOLL.Projects is
            new Untyped_Variable_Array'(Untyped_List (1 .. U_Curr - 1));
          Unchecked_Free (Untyped_List);
       end if;
+
    end Compute_Scenario_Variables;
 
    ------------------------
@@ -5270,7 +5432,7 @@ package body GNATCOLL.Projects is
       for V of Tree.Env.Scenario_Variables.all loop
          V.Value :=
            GPR.Ext.Value_Of
-             (Tree.Env.Env.External, V.Name, With_Default => V.Default);
+             (Tree.Env.Env.External, V.Ext_Name, With_Default => V.Default);
       end loop;
 
       return Tree.Env.Scenario_Variables.all;
@@ -5321,17 +5483,19 @@ package body GNATCOLL.Projects is
       end if;
 
       for V of Self.Data.Env.Scenario_Variables.all loop
-         if V.Name = Ext then
+         if V.Ext_Name = Ext then
             return V;
          end if;
       end loop;
 
       Var := Scenario_Variable'
-        (Name        => Ext,
+        (Ext_Name    => Ext,
+         Var_Name    => No_Name,
          Default     => No_Name,
-         String_Type => Empty_Project_Node,  --   ??? Won't be able to edit it
+         String_Type => Empty_Project_Node,  --   ???  Won't be able to edit it
          Tree_Ref    => null,
-         Value       => No_Name);
+         Value       => No_Name,
+         First_Project_Path => GPR.No_Path);
 
       List := Self.Data.Env.Scenario_Variables;
       Self.Data.Env.Scenario_Variables :=
@@ -5385,7 +5549,7 @@ package body GNATCOLL.Projects is
 
    function External_Name (Var : Scenario_Variable) return String is
    begin
-      return Get_String (Var.Name);
+      return Get_String (Var.Ext_Name);
    end External_Name;
 
    -------------------
@@ -5451,7 +5615,7 @@ package body GNATCOLL.Projects is
       for V in Vars'Range loop
          GPR.Ext.Add
            (Self.Data.Env.Env.External,
-            Get_String (Vars (V).Name),
+            Get_String (Vars (V).Ext_Name),
             Get_String (Vars (V).Value),
             GPR.Ext.From_Command_Line);
       end loop;
@@ -8428,7 +8592,7 @@ package body GNATCOLL.Projects is
       --  all to fully parse all project trees and create instances of all
       --  projects.
 
-      Compute_Scenario_Variables (Self.Data);
+      Compute_Scenario_Variables (Self.Data, Errors);
 
       Parse_Source_Files (Self);
       Initialize_Source_Records;
@@ -9991,11 +10155,13 @@ package body GNATCOLL.Projects is
       --  Clear the cache
       Unchecked_Free (Project.Data.Tree.Env.Scenario_Variables);
 
-      return (Name        => Get_String (External_Name),
+      return (Ext_Name    => Get_String (External_Name),
+              Var_Name    => No_Name,
               Default     => No_Name,
               Value       => No_Name,
               String_Type => Typ,
-              Tree_Ref    => Tree_Node);
+              Tree_Ref    => Tree_Node,
+              First_Project_Path => GPR.No_Path);
    end Create_Scenario_Variable;
 
    --------------------------
@@ -10043,7 +10209,7 @@ package body GNATCOLL.Projects is
 
       --  Create the new variable, to avoid errors when computing the view of
       --  the project.
-      Variable.Name := Get_String (New_Name);
+      Variable.Ext_Name := Get_String (New_Name);
 
       Tree.Change_Environment ((1 => Variable));
    end Change_External_Name;

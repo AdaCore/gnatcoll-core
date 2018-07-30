@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2017, AdaCore                     --
+--                     Copyright (C) 2002-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -831,7 +831,7 @@ package body GNATCOLL.Projects.Normalize is
          Last_Values := Last_Values + 1;
          Values (Last_Values) := External_Variable_Value'
            (Variable_Type  => Scenario_Variables (J).String_Type,
-            Variable_Name  => Scenario_Variables (J).Name,
+            Variable_Name  => Scenario_Variables (J).Ext_Name,
             Variable_Value => Scenario_Variables (J).Value,
             Negated        => False);
       end loop;
