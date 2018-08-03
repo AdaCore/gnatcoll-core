@@ -491,7 +491,9 @@ package GNATCOLL.Projects is
 
    function Source_Dirs
      (Project   : Project_Type;
-      Recursive : Boolean := False) return GNATCOLL.VFS.File_Array;
+      Recursive : Boolean := False;
+      Include_Externally_Built : Boolean := True)
+      return GNATCOLL.VFS.File_Array;
    pragma Precondition (Project /= No_Project);
    --  Return the list of source directories.
    --  The directories are returned in the order in which they are defined in
@@ -502,6 +504,8 @@ package GNATCOLL.Projects is
    --  will also be returned, but in this case the order of the directories in
    --  the result is undefined and the result cannot be considered as a search
    --  path for project sources.
+   --  If Include_Externally_Built is False then source directories belonging
+   --  to project marked "Externally_Built" will not be returned.
    --  Note that duplicate directories might be returned when directories are
    --  shared by multiple projects in the same tree.
 
@@ -674,7 +678,9 @@ package GNATCOLL.Projects is
 
    function Source_Files
      (Project   : Project_Type;
-      Recursive : Boolean := False) return GNATCOLL.VFS.File_Array_Access;
+      Recursive : Boolean := False;
+      Include_Externally_Built : Boolean := True)
+      return GNATCOLL.VFS.File_Array_Access;
    --  Return the list of source files belonging to the project.
    --  If Recursive is False, only the direct sources of the project are
    --  returned. Otherwise, the sources from imported projects are returned as
@@ -689,6 +695,8 @@ package GNATCOLL.Projects is
    --  returned files may not be unique in case when root project is an
    --  aggregate project. For languages other than Ada multiple sources with
    --  same base name can also be returned.
+   --  If Include_Externally_Built is False then source directories belonging
+   --  to project marked "Externally_Built" will not be returned.
 
    type File_And_Project is record
       File    : GNATCOLL.VFS.Virtual_File;

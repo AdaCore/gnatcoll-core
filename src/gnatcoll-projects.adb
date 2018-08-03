@@ -678,8 +678,10 @@ package body GNATCOLL.Projects is
    -----------------
 
    function Source_Dirs
-     (Project   : Project_Type;
-      Recursive : Boolean := False) return GNATCOLL.VFS.File_Array
+     (Project                  : Project_Type;
+      Recursive                : Boolean := False;
+      Include_Externally_Built : Boolean := True)
+      return GNATCOLL.VFS.File_Array
    is
       Current_Dir : constant Filesystem_String := Get_Current_Dir;
       Iter        : Inner_Project_Iterator;
@@ -690,6 +692,7 @@ package body GNATCOLL.Projects is
 
       Aggregated      : Aggregated_Project_List;
       Aggregated_Dirs : File_Array_Access := null;
+
    begin
       if Is_Aggregate_Project (Project) and then Recursive then
          Aggregated := Project.Data.View.Aggregated_Projects;
@@ -699,7 +702,8 @@ package body GNATCOLL.Projects is
                Source_Dirs
                  (Project_From_Path
                     (Project.Data.Tree, Aggregated.Path),
-                  Recursive => True));
+                  Recursive => True,
+                  Include_Externally_Built => Include_Externally_Built));
             Aggregated := Aggregated.Next;
          end loop;
          return Aggregated_Dirs.all;
@@ -713,7 +717,10 @@ package body GNATCOLL.Projects is
          View := Get_View (P);
          exit when View = GPR.No_Project;
 
-         Count := Count + Length (Project.Tree_View, View.Source_Dirs);
+         if Include_Externally_Built or else not Externally_Built (P) then
+            Count := Count + Length (Project.Tree_View, View.Source_Dirs);
+         end if;
+
          Next (Iter);
       end loop;
 
@@ -730,19 +737,21 @@ package body GNATCOLL.Projects is
             View := Get_View (P);
             exit when View = GPR.No_Project;
 
-            Src := View.Source_Dirs;
+            if Include_Externally_Built or else not Externally_Built (P) then
+               Src := View.Source_Dirs;
 
-            while Src /= Nil_String loop
-               Sources (Index) := Create
-                 (Normalize_Pathname
-                    (+Get_String
-                       (String_Elements (P.Data.Tree) (Src).Display_Value),
-                     Current_Dir,
-                     Resolve_Links => False));
-               Ensure_Directory (Sources (Index));
-               Index := Index + 1;
-               Src   := String_Elements (P.Data.Tree) (Src).Next;
-            end loop;
+               while Src /= Nil_String loop
+                  Sources (Index) := Create
+                    (Normalize_Pathname
+                       (+Get_String
+                          (String_Elements (P.Data.Tree) (Src).Display_Value),
+                        Current_Dir,
+                        Resolve_Links => False));
+                  Ensure_Directory (Sources (Index));
+                  Index := Index + 1;
+                  Src   := String_Elements (P.Data.Tree) (Src).Next;
+               end loop;
+            end if;
 
             Next (Iter);
          end loop;
@@ -2060,8 +2069,10 @@ package body GNATCOLL.Projects is
    ------------------
 
    function Source_Files
-     (Project   : Project_Type;
-      Recursive : Boolean := False) return GNATCOLL.VFS.File_Array_Access
+     (Project                  : Project_Type;
+      Recursive                : Boolean := False;
+      Include_Externally_Built : Boolean := True)
+      return GNATCOLL.VFS.File_Array_Access
    is
       Count   : Natural := 0;
       Index   : Natural := 1;
@@ -2070,7 +2081,11 @@ package body GNATCOLL.Projects is
 
    begin
       if not Recursive then
-         if Project.Data = null or else Project.Data.Files = null then
+         if Project.Data = null
+           or else Project.Data.Files = null
+           or else (not Include_Externally_Built
+                    and then Externally_Built (Project))
+         then
             return new File_Array (1 .. 0);
          else
             return new File_Array'(Project.Data.Files.all);
@@ -2088,7 +2103,10 @@ package body GNATCOLL.Projects is
 
             --  Files may be null in case of a parse error
 
-            if P.Data.Files /= null then
+            if P.Data.Files /= null
+              and then (Include_Externally_Built
+                        or else not Externally_Built (P))
+            then
                Count := Count + P.Data.Files'Length;
             end if;
 
@@ -2104,7 +2122,10 @@ package body GNATCOLL.Projects is
             P := Current (Iter);
             exit when P = No_Project;
 
-            if P.Data.Files /= null then
+            if P.Data.Files /= null
+              and then (Include_Externally_Built
+                        or else not Externally_Built (P))
+            then
                for S in P.Data.Files'Range loop
                   Sources (Index) := P.Data.Files (S);
                   Index := Index + 1;
