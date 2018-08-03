@@ -34,13 +34,18 @@ with GNAT.Strings;
 
 package GNATCOLL.Utils is
 
-   type Cst_String_Access is access constant String;
+   -------------
+   -- Strings --
+   -------------
 
-   No_Time : Ada.Calendar.Time renames GNAT.Calendar.No_Time;
+   --  Some simple-minded string manipulation routines.
+   --  See also GNATCOLL.Strings providing alternative more efficient
+   --  implementation
+
+   type Cst_String_Access is access constant String;
 
    procedure Free (List : in out GNAT.Strings.String_List);
    --  Free the memory used by List.
-   --  ??? This should be moved to GNAT.Strings itself in fact
 
    function Equal (S1, S2 : String; Case_Sensitive : Boolean) return Boolean;
    function Case_Insensitive_Equal (S1, S2 : String) return Boolean;
@@ -92,8 +97,6 @@ package GNATCOLL.Utils is
    --
    --  Result must be freed by caller.
    --  See also Split below
-   --
-   --  For a more efficient version, see GNATCOLL.Strings
 
    type Unbounded_String_Array is array (Natural range <>) of
      Ada.Strings.Unbounded.Unbounded_String;
@@ -106,7 +109,6 @@ package GNATCOLL.Utils is
       Omit_Empty_Lines : Boolean := True) return Unbounded_String_Array;
    --  Same as Split above, returning an Unbounded_String_Array that does not
    --  need to be freed.
-   --  For a more efficient version, see GNATCOLL.Strings
 
    function Capitalize (Name : String) return String;
    --  Capitalizes a string, i.e. puts in upper case the first character and
@@ -118,11 +120,9 @@ package GNATCOLL.Utils is
 
    function Starts_With (Str : String; Prefix : String) return Boolean;
    --  Returns True if Str starts with Prefix
-   --  See also GNATCOLL.Strings.
 
    function Ends_With (Str : String; Suffix : String) return Boolean;
    --  Returns True if Str ends with Suffix
-   --  See also GNATCOLL.Strings.
 
    procedure Skip_Blanks (Str : String; Index : in out Natural);
    procedure Skip_Blanks_Backward (Str : String; Index : in out Natural);
@@ -134,14 +134,12 @@ package GNATCOLL.Utils is
 
    function Find_Char (Str : String; Char : Character) return Natural;
    --  Returns the first occurrence of Char after Str'First (use substrings for
-   --  later occurrences).
-   --  See also GNATCOLL.Strings.Find
+   --  later occurrences). Returns Str'Last + 1 if there is no match
 
    function Join (Str : String; List : GNAT.Strings.String_List) return String;
    --  Returns a string that is the concatenation of the list elements,
    --  separated by Str: (List(1) & Str & List(2) & Str & ...)
    --  null elements in list are skipped
-   --  See also GNATCOLL.Strings.Join
 
    function EOL (Str : String) return Natural;
    pragma Inline (EOL);
@@ -151,11 +149,9 @@ package GNATCOLL.Utils is
 
    function Line_Start (Str : String; P : Natural) return Natural;
    --  Returns the start of the line pointed by P
-   --  See also GNATCOLL.Strings.Head
 
    function Line_End (Str : String; P : Natural) return Natural;
    --  Returns the end of the line pointed by P
-   --  See also GNATCOLL.Strings.Tail
 
    procedure Skip_Lines
      (Str           : String;
@@ -241,6 +237,8 @@ package GNATCOLL.Utils is
    -----------
    -- Dates --
    -----------
+
+   No_Time : Ada.Calendar.Time renames GNAT.Calendar.No_Time;
 
    function Time_Value (Str : String) return Ada.Calendar.Time;
    --  Checks the validity of Str as a string representing a date
