@@ -217,6 +217,15 @@ package GNATCOLL.Email.Utils is
    --  This should be used for charsets that have little similarity with
    --  ASCII, for instance asian charsets.
 
+   procedure Base64_Encode
+     (Str           : String;
+      Charset       : String;
+      Max_Block_Len : Integer := Integer'Last;
+      Where         : Region := Text;
+      Put_Parts     : not null access procedure (Part : String));
+   --  Encode Str in base64 format like above but returning result part by part
+   --  over Put_Parts routine to be able to use another kind of output.
+
    procedure Base64_Decode
      (Str    : String;
       Result : out Unbounded_String);

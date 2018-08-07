@@ -1513,6 +1513,25 @@ package body GNATCOLL.Email.Utils is
       Where           : Region := Text;
       Result          : out Unbounded_String)
    is
+      procedure Put_Parts (Part : String);
+
+      procedure Put_Parts (Part : String) is
+      begin
+         Append (Result, Part);
+      end Put_Parts;
+
+   begin
+      Result := Null_Unbounded_String;
+      Base64_Encode (Str, Charset, Max_Block_Len, Where, Put_Parts'Access);
+   end Base64_Encode;
+
+   procedure Base64_Encode
+     (Str           : String;
+      Charset       : String;
+      Max_Block_Len : Integer := Integer'Last;
+      Where         : Region := Text;
+      Put_Parts     : not null access procedure (Part : String))
+   is
       Block_Prefix    : constant String :=
         (if Where in Any_Header then "=?" & Charset & "?b?" else "");
       Block_Suffix    : constant String :=
@@ -1522,100 +1541,41 @@ package body GNATCOLL.Email.Utils is
       --  In Text, use a soft line break as line separator
 
       Max : constant Natural :=
-        4 * Integer'Max
-              (1,
-               (Integer'Min (Max_Block_Len,
-                             (if Where in Any_Header then 75 else 76))
-                  - Block_Prefix'Length
-                  - Block_Suffix'Length) / 4);
-      --  Maximum length of encoded data within an encoded block (must be
-      --  a non-null multiple of 4). Note: block separator does not contain
-      --  any printable character, so does not count against the limit.
+        Integer'Max
+          (1,
+           (Integer'Min
+              (Max_Block_Len, (if Where in Any_Header then 75 else 76))
+            - Block_Prefix'Length - Block_Suffix'Length) / 4) * 3;
+      --  Length of the original data producing output of Max_Block_Len.
+      --  Divide by 4 and multiply by 3 because base64 encoder takes 3
+      --  original bytes (i.e. 24 bits) and produces 4 6-bit-coded characters.
+      --  Another effect of length adjustment by 3/4 is that most of the blocks
+      --  in headers are not going to be aligned by '=' character.
+      --  Note: block separator does not contain any printable character, so
+      --  does not count against the limit.
 
-      Encoded_Len : constant Integer := (Str'Length + 2) / 3 * 4;
-      --  Each group of 3 input bytes yields 4 output bytes, including a
-      --  trailing incomplete group.
-
-      Blocks : constant Integer := (Encoded_Len + Max - 1) / Max;
-
-      Encoded_Block_Len : constant Integer :=
-        Block_Prefix'Length + Max + Block_Suffix'Length
-        + Block_Separator'Length;
-      --  Allocation size for each block
-
-      Len : constant Integer :=
-          Blocks * Encoded_Block_Len;
-      --  Pre-allocation length. This is sufficient to accomodate the entire
-      --  encoded data, split into blocks, except if some blocks need to be
-      --  flushed early (while incomplete) in order to avoid incorrect
-      --  splitting of multi-byte sequences.
-
-      Output   : Ada.Strings.Unbounded.String_Access := new String (1 .. Len);
-      Index    : Integer := Output'First;
       Left     : Unsigned_16 := 0;
       Leftbits : Natural := 0;
       Ch       : Mod64;
-      Current  : Integer := 0;
 
-      procedure Append (Ch : Character);
-      --  Append a new character to the output, splitting lines as necessary
-
-      ------------
-      -- Append --
-      ------------
-
-      procedure Append (Ch : Character) is
-         New_Output : Ada.Strings.Unbounded.String_Access;
-      begin
-         if Current = 0 then
-            --  Make sure that the string has sufficient space for the
-            --  full new encoded block
-
-            if Output'Last - Index + 1 < Encoded_Block_Len then
-               New_Output :=
-                 new String (1 .. Output'Length + Encoded_Block_Len);
-               New_Output (1 .. Index - 1) := Output (1 .. Index - 1);
-               Free (Output);
-               Output := New_Output;
-            end if;
-
-            Output (Index .. Index + Block_Prefix'Length - 1) :=
-              Block_Prefix;
-            Index := Index + Block_Prefix'Length;
-         end if;
-
-         Output (Index) := Ch;
-         Index          := Index + 1;
-         Current        := Current + 1;
-
-         if Current = Max then
-            --  Append suffix and separator
-            Output (Index .. Index
-                               + Block_Suffix'Length
-                               + Block_Separator'Length - 1) :=
-              Block_Suffix & Block_Separator;
-            Index := Index + Block_Suffix'Length + Block_Separator'Length;
-
-            Current := 0;
-         end if;
-      end Append;
-
-      procedure Encode_Append (Str : String);
+      procedure Encode_Append (Str : String; Last_One : Boolean);
       --  Encode Str and append result to output, splitting if necessary.
       --  If Where is Any_Header, then never split Str across two different
       --  blocks.
 
-      procedure Flush;
-      --  Flush pending bits, outputting padding characters if necessary
+      function Flush return String;
+      --  Take pending bits to flush with padding characters if necessary
 
-      procedure Encode_Append (Str : String) is
-         Out_Chars : constant Integer := (Leftbits + Str'Length * 8 + 5) / 6;
+      -------------------
+      -- Encode_Append --
+      -------------------
+
+      procedure Encode_Append (Str : String; Last_One : Boolean) is
+         Out_Chars : String (1 .. (Leftbits + Str'Length * 8 + 5) / 6);
+         Last      : Natural := Out_Chars'First - 1;
       begin
-         --  Force flushing now if in header mode and encoded sequence would
-         --  exceed maximum length.
-
-         if Where in Any_Header and then Current + Out_Chars > Max then
-            Flush;
+         if Where in Any_Header then
+            Put_Parts (Block_Prefix);
          end if;
 
          for J in Str'Range loop
@@ -1623,34 +1583,38 @@ package body GNATCOLL.Email.Utils is
             Leftbits := Leftbits + 8;
 
             while Leftbits >= 6 loop
-               Ch       :=
-                 Mod64 ((Shift_Right (Left, Leftbits - 6)) and 16#3f#);
                Leftbits := Leftbits - 6;
-               Append (To_Base64 (Ch));
+               Ch       := Mod64 ((Shift_Right (Left, Leftbits)) and 16#3F#);
+               Last     := Last + 1;
+               Out_Chars (Last) := To_Base64 (Ch);
             end loop;
          end loop;
+
+         Put_Parts
+           (Out_Chars (1 .. Last)
+            & (if Where in Any_Header or else Last_One then Flush else "")
+            & Block_Suffix & (if Last_One then "" else Block_Separator));
       end Encode_Append;
 
       -----------
       -- Flush --
       -----------
 
-      procedure Flush is
+      function Flush return String is
+         Eqeq : constant String := "==";
+         Leq  : Positive;
       begin
          case Leftbits is
             when 0 =>
-               null;
+               return "";
 
             when 2 =>
                Ch := Mod64 (Shift_Left (Left and 3, 4));
-               Append (To_Base64 (Ch));
-               Append ('=');
-               Append ('=');
+               Leq := 2;
 
             when 4 =>
                Ch := Mod64 (Shift_Left (Left and 16#F#, 2));
-               Append (To_Base64 (Ch));
-               Append ('=');
+               Leq := 1;
 
             when others =>
                raise Program_Error with "invalid Base64 encoder state";
@@ -1658,9 +1622,12 @@ package body GNATCOLL.Email.Utils is
 
          Left := 0;
          Leftbits := 0;
+
+         return To_Base64 (Ch) & Eqeq (1 .. Leq);
+
       end Flush;
 
-      Start, Next : Integer;
+      Start, Next, Fit : Integer;
       --  Start of current encoded sequence,
       --  start of next encoded sequence,
       --  last element of previous encoded sequence.
@@ -1676,36 +1643,21 @@ package body GNATCOLL.Email.Utils is
    --  Start of processing for Base64_Encode
 
    begin
-      Next := Str'First;
-      loop
-         Start := Next;
-         exit when Start > Str'Last;
+      Fit := Str'First;
+      while Fit <= Str'Last loop
+         Start := Fit;
+         Next  := Fit;
 
-         --  Find end of possibly multibyte sequence starting at Start
+         while Next - Start <= Max loop
+            Fit := Next;
 
-         Next := Start;
-         Next_Char_Ignore_Invalid (Next_Char, Str, Next);
+            exit when Fit > Str'Last;
 
-         Encode_Append (Str (Start .. Next - 1));
+            Next_Char_Ignore_Invalid (Next_Char, Str, Next);
+         end loop;
+
+         Encode_Append (Str (Start .. Fit - 1), Last_One => Fit > Str'Last);
       end loop;
-      Flush;
-
-      if Current = 0 then
-         --  Remove last separator
-         Index := Index - Block_Separator'Length;
-      elsif Current > 0 then
-         Output (Index .. Index + Block_Suffix'Length - 1) :=
-           Block_Suffix;
-         Index := Index + Block_Suffix'Length;
-      end if;
-
-      if Output'Last /= Index - 1 then
-         Set_Unbounded_String (Result, Output (1 .. Index - 1));
-      else
-         Set_Unbounded_String (Result, Output.all);
-      end if;
-
-      Free (Output);
    end Base64_Encode;
 
    -------------------
