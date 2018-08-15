@@ -2635,8 +2635,11 @@ package body GNATCOLL.Projects is
                            & Get_Name_String
                              (Name_Id (Lang.Config.Naming_Data.Spec_Suffix)));
 
-               when others =>
-                  return "";
+               when Unit_Separate =>
+                  return +(Uname
+                           & Get_Name_String
+                             (Name_Id
+                                (Lang.Config.Naming_Data.Separate_Suffix)));
             end case;
          end;
       end if;
