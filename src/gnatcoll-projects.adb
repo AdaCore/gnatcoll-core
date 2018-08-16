@@ -125,11 +125,14 @@ package body GNATCOLL.Projects is
    --  In some case, Lang might be set to Unknown_Language, if the file was
    --  set in the project (for instance through the Source_Files attribute),
    --  but no matching language was found.
-   --  Next is only relevant when root project is aggregate project. In that
-   --  case we can have multiple source files with same base name but different
-   --  full names. Even sources with same full name can belong to different
-   --  aggregated projects, so there are different Source_File_Data instances
-   --  for such each such project;
+   --  Next is only relevant when there may be more than one source with same
+   --  base name. This can happen when root project is aggregate project,
+   --  languages other than Ada are involved (i.e. C), or when list of
+   --  languages is changed on the fly and same sources can be treated as those
+   --  of different languages. In that case we can have multiple source files
+   --  with same base name but different full names. Even sources with same
+   --  full name can belong to different aggregated projects, so there are
+   --  different Source_File_Data instances for such each such project;
 
    function Hash
      (File : GNATCOLL.VFS.Filesystem_String) return Ada.Containers.Hash_Type;
@@ -150,6 +153,10 @@ package body GNATCOLL.Projects is
       Elem : Source_File_Data);
    --  If there is no file with same base name in map, adds the file as the
    --  first element in corresponding list. Otherwise adds it to the list.
+
+   procedure Clean_Up (Map : in out Names_Files.Map);
+   --  Clean up possibly existing lists of files with similar base names,
+   --  then Clear the map itself.
 
    function Hash (Node : Project_Node_Id) return Ada.Containers.Hash_Type;
    pragma Inline (Hash);
@@ -1538,6 +1545,29 @@ package body GNATCOLL.Projects is
       Unchecked_Free (Self.LI_Project);
       Unchecked_Free (Self.Non_Aggregate_Root_Project);
    end Free;
+
+   --------------
+   -- Clean_Up --
+   --------------
+
+   procedure Clean_Up (Map : in out Names_Files.Map) is
+      El     : Source_File_Data;
+      Tmp_El : Source_File_Data_Access;
+
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Source_File_Data, Source_File_Data_Access);
+
+   begin
+      for C in Map.Iterate loop
+         El := Names_Files.Element (C);
+         while El.Next /= null loop
+            Tmp_El := El.Next;
+            El.Next := El.Next.Next;
+            Unchecked_Free (Tmp_El);
+         end loop;
+      end loop;
+      Map.Clear;
+   end Clean_Up;
 
    -----------
    -- Clear --
@@ -7998,8 +8028,8 @@ package body GNATCOLL.Projects is
    procedure Reset_View (Tree : Project_Tree'Class) is
    begin
       if not Tree.Data.Is_Aggregated then
-         Tree.Data.Sources.Clear;
-         Tree.Data.Objects_Basename.Clear;
+         Clean_Up (Tree.Data.Sources);
+         Clean_Up (Tree.Data.Objects_Basename);
       end if;
 
       Tree.Data.Directories.Clear;
