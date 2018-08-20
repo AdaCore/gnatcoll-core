@@ -8,6 +8,7 @@ with Ada.Strings.Fixed; use Ada.Strings.Fixed;
 with Test_Assert;
 
 function Test return Integer is
+   Env  : Gnatcoll.Projects.Project_Environment_Access;
    Tree : Gnatcoll.Projects.Project_Tree;
 
    package String_Lists is new
@@ -24,7 +25,9 @@ function Test return Integer is
    end Errors;
 
 begin
+   Initialize (Env);
    Load (Tree, Root_Project_Path => Create (+"p.gpr"),
+         Env    => Env,
          Errors => Errors'Unrestricted_Access);
 
    Cur := Lines.First;
@@ -56,6 +59,8 @@ begin
 
    GNATCOLL.Projects.Aux.Delete_All_Temp_Files (Tree.Root_Project);
 
+   Tree.Unload;
+   Free (Env);
    return Test_Assert.Report;
 
 end Test;
