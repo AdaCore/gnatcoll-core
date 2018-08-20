@@ -4,10 +4,12 @@ with GNATCOLL.VFS;      use GNATCOLL.VFS;
 with Test_Assert;
 
 function Test return Integer is
-   PT : Project_Tree;
+   PT  : Project_Tree;
+   Env : Project_Environment_Access;
    U_Name : constant String := "Foo.Bar.Baz";
 begin
-   PT.Load (GNATCOLL.VFS.Create ("prj.gpr"));
+   Initialize (Env);
+   PT.Load (GNATCOLL.VFS.Create ("prj.gpr"), Env);
 
    Test_Assert.Assert
      (+GNATCOLL.Projects.File_From_Unit
@@ -19,5 +21,7 @@ begin
       "foo.bar.baz.3.ada",
       "check file name for separate");
 
+   PT.Unload;
+   Free (Env);
    return Test_Assert.Report;
 end Test;
