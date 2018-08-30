@@ -5287,10 +5287,11 @@ package body GNATCOLL.Projects is
                            & " have different sets of possible values"
                            & ASCII.LF);
                      end if;
+
+                     Inconsistent_SC_Externals.Include (Old_Var.Ext_Name);
                   end if;
                end;
 
-               Inconsistent_SC_Externals.Include (Old_Var.Ext_Name);
                return True;
             end if;
          end loop;
