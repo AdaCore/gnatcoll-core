@@ -3,5 +3,4 @@ description: >
   project and there are missing withed projects.
 data:
     - "p.gpr"
-skip:
-    - [XFAIL, "env.valgrind"]
+
