@@ -1,0 +1,3 @@
+description:
+    Test for race between object disapearing and restore strong reference from
+    weak reference.

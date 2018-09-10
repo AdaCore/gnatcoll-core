@@ -40,15 +40,20 @@ with Ada.Finalization; use Ada.Finalization;
 with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Atomic;  use GNATCOLL.Atomic;
-with System.Memory;    use System, System.Memory;
+with System;           use System;
 
 package body GNATCOLL.Refcount is
 
-   procedure Inc_Ref (R : access Counters; Atomic : Boolean)
-      with Inline => True;
-   procedure Inc_Ref (R : access Weak_Data; Atomic : Boolean)
-      with Inline => True;
-   --  Increase/Decrease the refcount, and return the new value
+   function Inc_Ref
+     (R : access Counters; Atomic : Boolean) return Atomic_Counter with Inline;
+   --  Increase the refcount and return the new value
+
+   function Inc_Ref (R : access Counters; Atomic : Boolean) return Boolean;
+   --  Increase the refcount only if it was non-zero, returns True if the
+   --  increment has occured.
+
+   procedure Inc_Ref (R : access Weak_Data; Atomic : Boolean) with Inline;
+   --  Increase the refcount
 
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
       (Weak_Data, Weak_Data_Access);
@@ -58,20 +63,53 @@ package body GNATCOLL.Refcount is
    procedure Finalize (Data : in out Weak_Data_Access; Atomic : Boolean);
    --  Decrease refcount, and free memory if needed
 
-   function Sync_Bool_Compare_And_Swap
-      is new GNATCOLL.Atomic.Sync_Bool_Compare_And_Swap
-      (Weak_Data, Weak_Data_Access);
+   function Sync_Bool_Compare_And_Swap is new Atomic.Sync_Bool_Compare_And_Swap
+     (Weak_Data, Weak_Data_Access);
 
    -------------
    -- Inc_Ref --
    -------------
 
-   procedure Inc_Ref (R : access Counters; Atomic : Boolean) is
+   function Inc_Ref (R : access Counters; Atomic : Boolean) return Boolean is
+      Tmp : Atomic_Counter;
+      Tm2 : Atomic_Counter;
    begin
       if Atomic then
-         Increment (R.Refcount);
+         Tmp := R.Refcount;
+         if Tmp = 0 then
+            return False;
+         end if;
+
+         loop
+            Tm2 := Sync_Val_Compare_And_Swap_Counter
+              (R.Refcount'Access, Tmp, Atomic_Counter'Succ (Tmp));
+            if Tm2 = Tmp then
+               return True;
+            elsif Tm2 = 0 then
+               return False;
+            else
+               Tmp := Tm2;
+            end if;
+         end loop;
+
+      else
+         if R.Refcount = 0 then
+            return False;
+         end if;
+
+         R.Refcount := Atomic_Counter'Succ (R.Refcount);
+         return True;
+      end if;
+   end Inc_Ref;
+
+   function Inc_Ref
+     (R : access Counters; Atomic : Boolean) return Atomic_Counter is
+   begin
+      if Atomic then
+         return Sync_Add_And_Fetch (R.Refcount'Access, 1);
       else
          Unsafe_Increment (R.Refcount);
+         return R.Refcount;
       end if;
    end Inc_Ref;
 
@@ -90,6 +128,10 @@ package body GNATCOLL.Refcount is
 
    procedure Finalize (Data : in out Weak_Data_Access; Atomic : Boolean) is
    begin
+      if Data = null then
+         return;
+      end if;
+
       if Atomic then
          if Decrement (Data.Refcount) then
             Unchecked_Free (Data);
@@ -99,8 +141,6 @@ package body GNATCOLL.Refcount is
             Unchecked_Free (Data);
          end if;
       end if;
-
-      Data := null;
    end Finalize;
 
    ---------------------
@@ -179,8 +219,9 @@ package body GNATCOLL.Refcount is
 
          if R.Weak_Data = null then
             V := new Weak_Data'
-               (Refcount => 2,   --  hold by Self and the result
-                Element  => Convert (Self.Data));
+              (Refcount => 2,   --  hold by Self and the result
+               Lock     => 0,
+               Element  => Convert (Self.Data));
             if not Sync_Bool_Compare_And_Swap
                (R.Weak_Data'Access, Oldval => null, Newval => V)
             then
@@ -203,13 +244,34 @@ package body GNATCOLL.Refcount is
       ---------
 
       procedure Set (Self : in out Ref'Class; Weak : Weak_Ref'Class) is
+         Data : Pools.Element_Access;
+         WD   : Weak_Data_Access := Weak.Data;
+         NL   : Atomic_Counter;
       begin
          Finalize (Self);
 
-         if not Weak.Was_Freed then
-            Self.Data := Convert (Weak.Data.Element);
-            Inc_Ref (Pools.Header_Of (Self.Data), Atomic_Counters);
+         if WD = null then
+            return;
          end if;
+
+         Data := Convert (WD.Element);
+
+         if Data = null then
+            return;
+         end if;
+
+         if Integer (Sync_Add_And_Fetch (WD.Lock'Access, 2)) rem 2 /= 0 then
+            return;
+         end if;
+
+         if Inc_Ref (Pools.Header_Of (Data), Atomic_Counters) then
+            Self.Data := Data;
+         end if;
+
+         NL := Sync_Sub_And_Fetch (WD.Lock'Access, 2);
+
+         pragma Assert
+           (Integer (NL) rem 2 = 0, "Unexpected Lock value " & NL'Img);
       end Set;
 
       ---------------
@@ -219,7 +281,7 @@ package body GNATCOLL.Refcount is
       function Was_Freed (Self : Weak_Ref'Class) return Boolean is
       begin
          return Self.Data = null
-            or else Self.Data.Element = System.Null_Address;
+           or else Self.Data.Element = System.Null_Address;
       end Was_Freed;
 
       ---------
@@ -236,9 +298,14 @@ package body GNATCOLL.Refcount is
       ------------
 
       overriding procedure Adjust (Self : in out Ref) is
+         use type Atomic_Counter;
+         RC : Atomic_Counter;
       begin
          if Self.Data /= null then
-            Inc_Ref (Pools.Header_Of (Self.Data), Atomic_Counters);
+            RC := Inc_Ref (Pools.Header_Of (Self.Data), Atomic_Counters);
+
+            pragma Assert
+              (RC > 1, "Unexpected reference counter after adjust" & RC'Img);
          end if;
       end Adjust;
 
@@ -258,12 +325,8 @@ package body GNATCOLL.Refcount is
       --------------
 
       overriding procedure Finalize (Self : in out Weak_Ref) is
-         Data : Weak_Data_Access := Self.Data;
       begin
-         if Data /= null then
-            Self.Data := null;
-            Finalize (Data, Atomic_Counters);
-         end if;
+         Finalize (Self.Data, Atomic_Counters);
       end Finalize;
 
       --------------
@@ -273,26 +336,38 @@ package body GNATCOLL.Refcount is
       overriding procedure Finalize (Self : in out Ref) is
          R    : Counters_Access;
          Data : Pools.Element_Access := Self.Data;
-         Tmp  : Boolean;
       begin
          if Data /= null then
             Self.Data := null;
 
             R := Pools.Header_Of (Data);
-            if Atomic_Counters then
-               Tmp := Decrement (R.Refcount);
-            else
-               Tmp := Unsafe_Decrement (R.Refcount);
-            end if;
 
-            if Tmp then
+            if (if Atomic_Counters
+                then Decrement (R.Refcount)
+                else Unsafe_Decrement (R.Refcount))
+            then
                if R.Weak_Data /= null then
-                  R.Weak_Data.Element := System.Null_Address;
+                  R.Weak_Data.Element := Null_Address;
+
+                  --  Spinlock to wait until all Set Ref from Weak_Ref
+                  --  operations completed.
+
+                  while R.Weak_Data.Lock /= 0
+                    or else not Sync_Bool_Compare_And_Swap_Counter
+                                  (R.Weak_Data.Lock'Access, 0, 1)
+                  loop
+                     --  Would be better to use GCC _mm_pause instruction
+                     --  instead of zero delay but it is not supported in GCC
+                     --  for all platforms.
+
+                     delay 0.0;
+                  end loop;
+
                   Finalize (R.Weak_Data, Atomic_Counters);
                end if;
 
                Release (Data.all);
-               Unchecked_Free (Data);  --  using storage_pool
+               Unchecked_Free (Data); -- using storage_pool
             end if;
          end if;
       end Finalize;

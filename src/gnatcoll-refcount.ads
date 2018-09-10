@@ -69,16 +69,16 @@ package GNATCOLL.Refcount is
 
    type Weak_Data is record
       Element  : System.Address := System.Null_Address;
-      Refcount : aliased GNATCOLL.Atomic.Atomic_Counter;
-      pragma Volatile (Refcount);
+      Refcount : aliased Atomic.Atomic_Counter;
+      Lock     : aliased Atomic.Atomic_Counter;
+      --  To resolve the race condition between the last Ref disappearing and
+      --  the new Ref creation from Weak_Ref.
    end record;
    type Weak_Data_Access is access all Weak_Data;
 
    type Counters is record
-      Refcount      : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
-      pragma Volatile (Refcount);
-
-      Weak_Data     : aliased Weak_Data_Access := null;
+      Refcount  : aliased Atomic.Atomic_Counter := 1;
+      Weak_Data : aliased Weak_Data_Access;
       --  A pointer to the weak pointers'data. This data is created the
       --  first time we create a weak pointer. We hold a reference to that
       --  data, so that it can never be freed while at least one reference
@@ -393,7 +393,7 @@ package GNATCOLL.Refcount is
 private
 
    type Refcounted is abstract tagged record
-      Refcount : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
+      Refcount : aliased Atomic.Atomic_Counter := 0;
    end record;
    --  This requires, as a result, that all refcounted types also be tagged
    --  types (thus adding the size of a tag and the size of an integer to each
