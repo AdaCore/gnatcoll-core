@@ -865,6 +865,24 @@ package body GNATCOLL.Traces is
       return Handle;
    end Create_Internal;
 
+   ------------
+   -- Exists --
+   ------------
+
+   function Exists (Unit_Name : String) return Boolean is
+      Is_Star    : constant Boolean := Starts_With (Unit_Name, "*.")
+        or else Ends_With (Unit_Name, ".*");
+      Handle     : Trace_Handle;
+      Upper_Case : constant String := To_Upper (Unit_Name);
+   begin
+      Handle := Find_Handle
+        ((if Is_Star then Global.Wildcard_Handles_List
+          else Global.Handles_List),
+         Upper_Case);
+
+      return Handle /= null;
+   end Exists;
+
    --------------------
    -- Cache_Settings --
    --------------------

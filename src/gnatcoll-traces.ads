@@ -390,6 +390,11 @@ package GNATCOLL.Traces is
    --  by the compiler, so that you can have logs till the last minute.
    --  See also the "DEBUG.FINALIZE_TRACES" configuration.
 
+   function Exists (Unit_Name : String) return Boolean;
+   --  Return True if the handle has been created in some other part of the
+   --  code. If Unit_Name starts and/or finishes by '*' then this function
+   --  will check if a corresponding wildcard handle exists.
+
    function Unit_Name
       (Handle : not null access Trace_Handle_Record'Class) return String;
    --  Return the unit name (upper-cased) for this handle. This can be used for
