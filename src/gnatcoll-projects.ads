@@ -1806,6 +1806,11 @@ package GNATCOLL.Projects is
    -- Editing scenario variables --
    --------------------------------
 
+   --  After calling most of the following routines local variables pointing
+   --  to Scenario Variables become obsolete and need to be reassigned again
+   --  through a call to Scenario_Variables. Otherwise expected updates,
+   --  such as lists of possible values, will not be observed.
+
    procedure Delete_Scenario_Variable
      (Tree                     : Project_Tree'Class;
       External_Name            : String;
