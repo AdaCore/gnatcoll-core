@@ -61,7 +61,7 @@ package body GNATCOLL.Refcount is
      (Refcounted'Class, Refcounted_Access);
 
    procedure Finalize (Data : in out Weak_Data_Access; Atomic : Boolean);
-   --  Decrease refcount, and free memory if needed
+   --  Decrease refcount and free memory if needed
 
    function Sync_Bool_Compare_And_Swap is new Atomic.Sync_Bool_Compare_And_Swap
      (Weak_Data, Weak_Data_Access);
@@ -128,10 +128,6 @@ package body GNATCOLL.Refcount is
 
    procedure Finalize (Data : in out Weak_Data_Access; Atomic : Boolean) is
    begin
-      if Data = null then
-         return;
-      end if;
-
       if Atomic then
          if Decrement (Data.Refcount) then
             Unchecked_Free (Data);
@@ -326,7 +322,14 @@ package body GNATCOLL.Refcount is
 
       overriding procedure Finalize (Self : in out Weak_Ref) is
       begin
-         Finalize (Self.Data, Atomic_Counters);
+         if Self.Data /= null then
+            Finalize (Self.Data, Atomic_Counters);
+
+            --  Make Finalize idempotent, since it could be called several
+            --  times for the same instance (RM 7.6.1(24)).
+
+            Self.Data := null;
+         end if;
       end Finalize;
 
       --------------
