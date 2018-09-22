@@ -626,12 +626,15 @@ package body GNATCOLL.Traces is
               (Var : String; Quoted : Boolean) return String
             is
                pragma Unreferenced (Quoted);
-               use Ada.Environment_Variables;
+               --  No way to "use Ada.Environment_Variables;" because of
+               --  visibility conflict with Traces.Exists and GNAT can't
+               --  discover it, see R924-001.
             begin
-               if Exists (Var) then
-                  return Value (Var);
+               if Ada.Environment_Variables.Exists (Var) then
+                  return Ada.Environment_Variables.Value (Var);
+               else
+                  raise Invalid_Substitution;
                end if;
-               raise Invalid_Substitution;
             end Substitute_Cb;
 
             N : constant String := Normalize_Pathname
