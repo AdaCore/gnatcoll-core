@@ -1,0 +1,10 @@
+abstract project B is
+
+   type Var_B1_Type is
+      ("VALUE_2", "VALUE_1");
+   Var_B1 : Var_B1_Type := external ("VAR_B1", "VALUE_1");
+
+   Var_B2 := External ("VAR_B2", "default");
+   
+end B;
+

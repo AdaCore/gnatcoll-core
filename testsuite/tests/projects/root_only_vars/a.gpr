@@ -1,0 +1,11 @@
+with "b.gpr";
+project A is
+
+   type Var_A1_Type is
+      ("VALUE_2", "VALUE_1");
+   Var_A1 : Var_A1_Type := external ("VAR_A1", "VALUE_1");
+
+   Var_A2 := External ("VAR_A2", "default");
+   
+end A;
+

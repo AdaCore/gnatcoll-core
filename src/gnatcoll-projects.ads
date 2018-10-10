@@ -1241,9 +1241,12 @@ package GNATCOLL.Projects is
    Empty_Untyped_Variable_Array : aliased constant Untyped_Variable_Array;
 
    function Scenario_Variables
-     (Self : Project_Tree) return Scenario_Variable_Array;
+     (Self      : Project_Tree;
+      Root_Only : Boolean := False) return Scenario_Variable_Array;
    --  Return the list of scenario variables used in the whole project
-   --  tree. The result is cached for efficiency
+   --  tree, unless Root_Only is set to True. In the latter case only
+   --  variables declared in the root project are returned.
+   --  The result of whole tree computation is cached for efficiency.
    --  Two variables are considered the same if they reference the same
    --  environment variable. The reason is that they might not have the same
    --  name internally in imported projects, however, they will always have the
@@ -1252,27 +1255,39 @@ package GNATCOLL.Projects is
    --  project was loaded.
 
    function Untyped_Variables
-     (Self : Project_Tree) return Untyped_Variable_Array;
-   --  Return the list of untyped variables used in the whole project
-   --  tree. The result is cached for efficiency.
+     (Self      : Project_Tree;
+      Root_Only : Boolean := False) return Untyped_Variable_Array;
+   --  Return the list of scenario variables used in the whole project
+   --  tree, unless Root_Only is set to True. In the latter case only
+   --  variables declared in the root project are returned.
 
    function Scenario_Variables
-     (Self : Project_Tree; External_Name : String) return Scenario_Variable;
+     (Self          : Project_Tree;
+      External_Name : String;
+      Root_Only     : Boolean := False) return Scenario_Variable;
    --  Return the scenario variable associated with External_Name.
    --  If you call Value on the result, you get the current value it had when
    --  the project was loaded.
    --  If the project does not contain such a variable (for instance because
    --  you call this function before loading the project), a new variable is
    --  created.
+   --  If Root_Only is set to True and the root project does not have such
+   --  a variable (even if it is declared in the project tree in some other
+   --  project), No_Variable is returned.
 
    function Get_Untyped_Variable
-     (Self : Project_Tree; External_Name : String) return Untyped_Variable;
+     (Self          : Project_Tree;
+      External_Name : String;
+      Root_Only     : Boolean := False) return Untyped_Variable;
    --  Return the scenario variable associated with External_Name.
    --  If you call Value on the result, you get the current value it had when
    --  the project was loaded.
    --  If the project does not contain such a variable (for instance because
    --  you call this function before loading the project), a new variable is
    --  created.
+   --  If Root_Only is set to True and the root project does not have such
+   --  a variable (even if it is declared in the project tree in some other
+   --  project), No_Untyped_Variable is returned.
 
    function External_Name (Var : Scenario_Variable) return String;
    function External_Name (Var : Untyped_Variable) return String;
@@ -2303,12 +2318,14 @@ private
    --  Internal version of Project_From_Path
 
    function Scenario_Variables
-     (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array;
+     (Tree      : Project_Tree_Data_Access;
+      Root_Only : Boolean := False) return Scenario_Variable_Array;
    pragma Inline (Scenario_Variables);
    --  Internal version of Scenario_Variables
 
    function Untyped_Variables
-     (Tree : Project_Tree_Data_Access) return Untyped_Variable_Array;
+     (Tree      : Project_Tree_Data_Access;
+      Root_Only : Boolean := False) return Untyped_Variable_Array;
    pragma Inline (Untyped_Variables);
    --  Internal version of Untyped_Variables
 

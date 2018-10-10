@@ -1,0 +1,6 @@
+description: >
+  Properly return the variables from root project
+  only and not disturb the globally computed variables.
+data:
+    - "a.gpr"
+    - "b.gpr"

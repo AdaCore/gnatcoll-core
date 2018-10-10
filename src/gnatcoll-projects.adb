@@ -367,8 +367,9 @@ package body GNATCOLL.Projects is
    --  Reset and free the internal data of the project view
 
    procedure Compute_Scenario_Variables
-     (Tree   : Project_Tree_Data_Access;
-      Errors : Error_Report := null);
+     (Tree      : Project_Tree_Data_Access;
+      Recursive : Boolean := True;
+      Errors    : Error_Report := null);
    --  Compute (and cache) the whole list of scenario variables for the
    --  project tree.
    --  This also ensures that each external reference actually exists
@@ -4832,8 +4833,9 @@ package body GNATCOLL.Projects is
    --------------------------------
 
    procedure Compute_Scenario_Variables
-     (Tree   : Project_Tree_Data_Access;
-      Errors : Error_Report := null)
+     (Tree      : Project_Tree_Data_Access;
+      Recursive : Boolean := True;
+      Errors    : Error_Report := null)
    is
       Typed_List   : Scenario_Variable_Array_Access;
       Untyped_List : Untyped_Variable_Array_Access;
@@ -4925,7 +4927,8 @@ package body GNATCOLL.Projects is
 
       begin
          For_Each_External_Variable_Declaration
-           (Tree.Root, Recursive => True, Callback => Cb'Unrestricted_Access);
+           (Tree.Root, Recursive => Recursive,
+            Callback => Cb'Unrestricted_Access);
          return Count;
       end Count_Vars;
 
@@ -5398,7 +5401,7 @@ package body GNATCOLL.Projects is
       U_Curr := Untyped_List'First;
 
       For_Each_External_Variable_Declaration
-        (Tree.Root, Recursive => True,
+        (Tree.Root, Recursive => Recursive,
          Callback => Register_Var'Unrestricted_Access);
 
       if Inconsistent_SC_Externals.Length = 0 then
@@ -5453,9 +5456,12 @@ package body GNATCOLL.Projects is
    ------------------------
 
    function Scenario_Variables
-     (Self : Project_Tree) return Scenario_Variable_Array is
+     (Self      : Project_Tree;
+      Root_Only : Boolean := False)
+      return Scenario_Variable_Array
+   is
    begin
-      return Scenario_Variables (Self.Data);
+      return Scenario_Variables (Self.Data, Root_Only);
    end Scenario_Variables;
 
    -----------------------
@@ -5463,9 +5469,10 @@ package body GNATCOLL.Projects is
    -----------------------
 
    function Untyped_Variables
-     (Self : Project_Tree) return Untyped_Variable_Array is
+     (Self      : Project_Tree;
+      Root_Only : Boolean := False) return Untyped_Variable_Array is
    begin
-      return Untyped_Variables (Self.Data);
+      return Untyped_Variables (Self.Data, Root_Only);
    end Untyped_Variables;
 
    ------------------------
@@ -5473,11 +5480,37 @@ package body GNATCOLL.Projects is
    ------------------------
 
    function Scenario_Variables
-     (Tree : Project_Tree_Data_Access) return Scenario_Variable_Array
+     (Tree      : Project_Tree_Data_Access;
+      Root_Only : Boolean := False) return Scenario_Variable_Array
    is
+      SVs : Scenario_Variable_Array_Access;
+      UVs : Untyped_Variable_Array_Access;
    begin
       if Tree = null or else Tree.Is_Aggregated then
          return (1 .. 0 => <>);
+      end if;
+
+      if Root_Only then
+         --  We need to save the actual values because otherwise
+         --  Compute_Scenario_Variables will overwrite them.
+
+         SVs := Tree.Env.Scenario_Variables;
+         UVs := Tree.Env.Untyped_Variables;
+         Tree.Env.Scenario_Variables := null;
+         Tree.Env.Untyped_Variables  := null;
+
+         Compute_Scenario_Variables (Tree, Recursive => False);
+
+         declare
+            Result : constant Scenario_Variable_Array :=
+              Tree.Env.Scenario_Variables.all;
+         begin
+            Unchecked_Free (Tree.Env.Scenario_Variables);
+            Unchecked_Free (Tree.Env.Untyped_Variables);
+            Tree.Env.Scenario_Variables := SVs;
+            Tree.Env.Untyped_Variables := UVs;
+            return Result;
+         end;
       end if;
 
       if Tree.Env.Scenario_Variables = null then
@@ -5498,11 +5531,37 @@ package body GNATCOLL.Projects is
    -----------------------
 
    function Untyped_Variables
-     (Tree : Project_Tree_Data_Access) return Untyped_Variable_Array
+     (Tree      : Project_Tree_Data_Access;
+      Root_Only : Boolean := False) return Untyped_Variable_Array
    is
+      SVs : Scenario_Variable_Array_Access;
+      UVs : Untyped_Variable_Array_Access;
    begin
       if Tree = null or else Tree.Is_Aggregated then
          return (1 .. 0 => <>);
+      end if;
+
+      if Root_Only then
+         --  We need to save the actual values because otherwise
+         --  Compute_Scenario_Variables will overwrite them.
+
+         SVs := Tree.Env.Scenario_Variables;
+         UVs := Tree.Env.Untyped_Variables;
+         Tree.Env.Scenario_Variables := null;
+         Tree.Env.Untyped_Variables  := null;
+
+         Compute_Scenario_Variables (Tree, Recursive => False);
+
+         declare
+            Result : constant Untyped_Variable_Array :=
+              Tree.Env.Untyped_Variables.all;
+         begin
+            Unchecked_Free (Tree.Env.Scenario_Variables);
+            Unchecked_Free (Tree.Env.Untyped_Variables);
+            Tree.Env.Scenario_Variables := SVs;
+            Tree.Env.Untyped_Variables := UVs;
+            return Result;
+         end;
       end if;
 
       if Tree.Env.Untyped_Variables = null then
@@ -5523,15 +5582,50 @@ package body GNATCOLL.Projects is
    ------------------------
 
    function Scenario_Variables
-     (Self : Project_Tree; External_Name : String)
-      return Scenario_Variable
+     (Self          : Project_Tree;
+      External_Name : String;
+      Root_Only     : Boolean := False) return Scenario_Variable
    is
       E : constant String := External_Name;
       Ext  : Name_Id;
       List : Scenario_Variable_Array_Access;
       Var  : Scenario_Variable;
+
+      SVs : Scenario_Variable_Array_Access;
+      UVs : Untyped_Variable_Array_Access;
+
+      SV : Scenario_Variable;
    begin
       Ext := Get_String (E);
+
+      if Root_Only then
+         --  We need to save the actual values because otherwise
+         --  Compute_Scenario_Variables will overwrite them.
+
+         SVs := Self.Data.Env.Scenario_Variables;
+         UVs := Self.Data.Env.Untyped_Variables;
+         Self.Data.Env.Scenario_Variables := null;
+         Self.Data.Env.Untyped_Variables  := null;
+
+         Compute_Scenario_Variables (Self.Data, Recursive => False);
+
+         for V of Self.Data.Env.Scenario_Variables.all loop
+            if V.Ext_Name = Ext then
+               SV := V;
+               Unchecked_Free (Self.Data.Env.Scenario_Variables);
+               Unchecked_Free (Self.Data.Env.Untyped_Variables);
+               Self.Data.Env.Scenario_Variables := SVs;
+               Self.Data.Env.Untyped_Variables := UVs;
+               return SV;
+            end if;
+         end loop;
+
+         Unchecked_Free (Self.Data.Env.Scenario_Variables);
+         Unchecked_Free (Self.Data.Env.Untyped_Variables);
+         Self.Data.Env.Scenario_Variables := SVs;
+         Self.Data.Env.Untyped_Variables := UVs;
+         return No_Variable;
+      end if;
 
       if Self.Data.Env.Scenario_Variables = null then
          Compute_Scenario_Variables (Self.Data);
@@ -5566,13 +5660,49 @@ package body GNATCOLL.Projects is
    --------------------------
 
    function Get_Untyped_Variable
-     (Self : Project_Tree; External_Name : String) return Untyped_Variable
+     (Self          : Project_Tree;
+      External_Name : String;
+      Root_Only     : Boolean := False) return Untyped_Variable
    is
       Ext  : Name_Id;
       List : Untyped_Variable_Array_Access;
       Var  : Untyped_Variable;
+
+      SVs : Scenario_Variable_Array_Access;
+      UVs : Untyped_Variable_Array_Access;
+
+      UV : Untyped_Variable;
    begin
       Ext := Get_String (External_Name);
+
+      if Root_Only then
+         --  We need to save the actual values because otherwise
+         --  Compute_Scenario_Variables will overwrite them.
+
+         SVs := Self.Data.Env.Scenario_Variables;
+         UVs := Self.Data.Env.Untyped_Variables;
+         Self.Data.Env.Scenario_Variables := null;
+         Self.Data.Env.Untyped_Variables  := null;
+
+         Compute_Scenario_Variables (Self.Data, Recursive => False);
+
+         for V of Self.Data.Env.Untyped_Variables.all loop
+            if V.Name = Ext then
+               UV := V;
+               Unchecked_Free (Self.Data.Env.Scenario_Variables);
+               Unchecked_Free (Self.Data.Env.Untyped_Variables);
+               Self.Data.Env.Scenario_Variables := SVs;
+               Self.Data.Env.Untyped_Variables := UVs;
+               return UV;
+            end if;
+         end loop;
+
+         Unchecked_Free (Self.Data.Env.Scenario_Variables);
+         Unchecked_Free (Self.Data.Env.Untyped_Variables);
+         Self.Data.Env.Scenario_Variables := SVs;
+         Self.Data.Env.Untyped_Variables := UVs;
+         return No_Untyped_Variable;
+      end if;
 
       if Self.Data.Env.Scenario_Variables = null then
          Compute_Scenario_Variables (Self.Data);
@@ -8647,7 +8777,7 @@ package body GNATCOLL.Projects is
       --  all to fully parse all project trees and create instances of all
       --  projects.
 
-      Compute_Scenario_Variables (Self.Data, Errors);
+      Compute_Scenario_Variables (Self.Data, Errors => Errors);
 
       Parse_Source_Files (Self);
       Initialize_Source_Records;
