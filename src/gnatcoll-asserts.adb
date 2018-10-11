@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -187,7 +187,7 @@ package body GNATCOLL.Asserts is
                and then not ("<" (Left, Right) or else "=" (Left, Right))
             then
                Report.On_Assertion_Failed
-                  (Details  => Image (Left) & " = " & Image (Right),
+                  (Details  => Image (Left) & " <= " & Image (Right),
                    Msg      => Msg,
                    Location => Location,
                    Entity   => Entity);
@@ -208,7 +208,7 @@ package body GNATCOLL.Asserts is
                and then "<" (Left, Right)
             then
                Report.On_Assertion_Failed
-                  (Details  => Image (Left) & " = " & Image (Right),
+                  (Details  => Image (Left) & " >= " & Image (Right),
                    Msg      => Msg,
                    Location => Location,
                    Entity   => Entity);
@@ -229,7 +229,7 @@ package body GNATCOLL.Asserts is
                and then ("<" (Left, Right) or else "=" (Left, Right))
             then
                Report.On_Assertion_Failed
-                  (Details  => Image (Left) & " = " & Image (Right),
+                  (Details  => Image (Left) & " > " & Image (Right),
                    Msg      => Msg,
                    Location => Location,
                    Entity   => Entity);
