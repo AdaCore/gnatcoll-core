@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2017, AdaCore                     --
+--                     Copyright (C) 2007-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,6 +22,8 @@
 ------------------------------------------------------------------------------
 
 with Ada.IO_Exceptions;
+with Ada.Unchecked_Conversion;
+with Interfaces.C;
 with System; use System;
 
 with GNAT.OS_Lib; use GNAT.OS_Lib;
@@ -42,6 +44,9 @@ package body GNATCOLL.Mmap.System is
    MAP_SHARED  : constant Mmap_Flags := 16#01#;
    MAP_PRIVATE : constant Mmap_Flags := 16#02#;
 
+   function From_Advice is new Ada.Unchecked_Conversion
+      (Use_Advice, Interfaces.C.int);
+
    function Mmap (Start  : Standard.System.Address := Null_Address;
                   Length : File_Size;
                   Prot   : Mmap_Prot := PROT_READ;
@@ -56,8 +61,7 @@ package body GNATCOLL.Mmap.System is
 
    procedure Madvise (Addr   : Standard.System.Address;
                       Length : File_Size;
-                      Advice : Use_Advice);
-   pragma Import (C, Madvise, "gnatcoll_madvise");
+                      Advice : Use_Advice) with Inline;
    --  Allows a process that has knowledge of its memory behavior to
    --  describe it to the system. This advice applies to the mapped
    --  region at address Addr, and for the given Length. If Length
@@ -70,6 +74,23 @@ package body GNATCOLL.Mmap.System is
    function Is_Mapping_Available return Boolean;
    --  Wheter memory mapping is actually available on this system. It is an
    --  error to use Create_Mapping and Dispose_Mapping if this is False.
+
+   -------------
+   -- Madvise --
+   -------------
+
+   procedure Madvise (Addr   : Standard.System.Address;
+                      Length : File_Size;
+                      Advice : Use_Advice)
+   is
+      procedure Internal
+         (Addr   : Standard.System.Address;
+          Length : File_Size;
+          Advice : Interfaces.C.int);
+      pragma Import (C, Internal, "gnatcoll_madvise");
+   begin
+      Internal (Addr, Length, From_Advice (Advice));
+   end Madvise;
 
    ---------------
    -- Open_Read --

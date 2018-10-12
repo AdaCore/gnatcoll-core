@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -48,17 +48,17 @@ private
      (Alignment : System.Storage_Elements.Storage_Count)
      is new System.Storage_Pools.Root_Storage_Pool with null record;
 
-   function Storage_Size
+   overriding function Storage_Size
      (Pool : Unbounded_No_Reclaim_Align_Pool)
       return System.Storage_Elements.Storage_Count;
 
-   procedure Allocate
+   overriding procedure Allocate
      (Pool         : in out Unbounded_No_Reclaim_Align_Pool;
       Address      : out System.Address;
       Storage_Size : System.Storage_Elements.Storage_Count;
       Alignment    : System.Storage_Elements.Storage_Count);
 
-   procedure Deallocate
+   overriding procedure Deallocate
      (Pool         : in out Unbounded_No_Reclaim_Align_Pool;
       Address      : System.Address;
       Storage_Size : System.Storage_Elements.Storage_Count;

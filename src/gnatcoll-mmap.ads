@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2017, AdaCore                     --
+--                     Copyright (C) 2007-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -146,6 +146,7 @@ package GNATCOLL.Mmap is
       (Use_Normal,
        Use_Random,
        Use_Sequential);
+   for Use_Advice'Size use Interfaces.C.int'Size;
    for Use_Advice use
       (Use_Normal      => 1,
        Use_Random      => 2,
