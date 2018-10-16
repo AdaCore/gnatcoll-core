@@ -99,7 +99,7 @@ package body GNATCOLL.Email is
    -- "=" --
    ---------
 
-   function "=" (Addr1, Addr2 : Email_Address) return Boolean is
+   overriding function "=" (Addr1, Addr2 : Email_Address) return Boolean is
    begin
       return To_Lower (To_String (Addr1.Address))
            = To_Lower (To_String (Addr2.Address));
@@ -438,7 +438,7 @@ package body GNATCOLL.Email is
    -- Adjust --
    ------------
 
-   procedure Adjust (Msg : in out Message) is
+   overriding procedure Adjust (Msg : in out Message) is
    begin
       if Msg.Contents /= null then
          Msg.Contents.Ref_Count := Msg.Contents.Ref_Count + 1;
@@ -449,7 +449,7 @@ package body GNATCOLL.Email is
    -- Finalize --
    --------------
 
-   procedure Finalize (Msg : in out Message) is
+   overriding procedure Finalize (Msg : in out Message) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Message_Record, Message_Access);
       Contents : Message_Access := Msg.Contents;
@@ -2169,7 +2169,7 @@ package body GNATCOLL.Email is
    -- Adjust --
    ------------
 
-   procedure Adjust   (H : in out Header) is
+   overriding procedure Adjust   (H : in out Header) is
    begin
       if H.Contents /= null then
          H.Contents.Ref_Count := H.Contents.Ref_Count + 1;
@@ -2180,7 +2180,7 @@ package body GNATCOLL.Email is
    -- Finalize --
    --------------
 
-   procedure Finalize (H : in out Header) is
+   overriding procedure Finalize (H : in out Header) is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (Header_Record, Header_Access);
    begin

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2017, AdaCore                     --
+--                     Copyright (C) 2010-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -91,6 +91,12 @@ package GNATCOLL.Atomic is
    --      2 (both threads have read 0, then added 2)
    --      4 (thread 1 has read and incremented, then thread 2)
    --  If you use the other operations above, you always end up with 4.
+
+   function ">" (Left, Right : Atomic_Counter) return Boolean
+      is (System.Atomic_Counters.">" (Left, Right));
+   --  Compare two counters.
+   --  Note that by the time this function returns, and in a multi threaded
+   --  application, either of the two counters might have changed.
 
    function "="
       (Left, Right : Atomic_Counter) return Boolean

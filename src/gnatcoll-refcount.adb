@@ -294,7 +294,6 @@ package body GNATCOLL.Refcount is
       ------------
 
       overriding procedure Adjust (Self : in out Ref) is
-         use type Atomic_Counter;
          RC : Atomic_Counter;
       begin
          if Self.Data /= null then

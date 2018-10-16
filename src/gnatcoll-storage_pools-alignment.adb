@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -36,7 +36,7 @@ package body GNATCOLL.Storage_Pools.Alignment is
    -- Allocate --
    --------------
 
-   procedure Allocate
+   overriding procedure Allocate
      (Pool         : in out Unbounded_No_Reclaim_Align_Pool;
       Address      : out System.Address;
       Storage_Size : Storage_Count;
@@ -77,7 +77,7 @@ package body GNATCOLL.Storage_Pools.Alignment is
    -- Deallocate --
    ----------------
 
-   procedure Deallocate
+   overriding procedure Deallocate
      (Pool         : in out Unbounded_No_Reclaim_Align_Pool;
       Address      : System.Address;
       Storage_Size : Storage_Count;
@@ -114,7 +114,7 @@ package body GNATCOLL.Storage_Pools.Alignment is
    -- Storage_Size --
    ------------------
 
-   function Storage_Size
+   overriding function Storage_Size
      (Pool  : Unbounded_No_Reclaim_Align_Pool) return Storage_Count
    is
       pragma Unreferenced (Pool);

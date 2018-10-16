@@ -114,8 +114,14 @@ package body GNATCOLL.Storage_Pools.Headers is
          function Header_Of
             (Element : Element_Access) return Header_Access
          is
-            F : constant Integer := Element.all'Finalization_Size;
-            --  If the element_type is a controlled type, this constant will
+            F : Integer;
+         begin
+            if Element = null then
+               return null;
+            end if;
+
+            F := Element.all'Finalization_Size;
+            --  If the element_type is a controlled type, this will
             --  be the number of extra bytes requested by the compiler in
             --  calls to Allocate and Deallocate (see the memory layout
             --  description in the specs).
@@ -125,16 +131,11 @@ package body GNATCOLL.Storage_Pools.Headers is
             --  Header_Of so we need to take them into account when looking
             --  for the our own header.
 
-            H : constant Header_Access :=
-               (if Element = null
-                then null
-                else Convert
-                   (Address_Header_Of
-                      (Element.all'Address
-                       - Storage_Offset (F)
-                       - Element_Type'Descriptor_Size)));
-         begin
-            return H;
+            return Convert
+               (Address_Header_Of
+                  (Element.all'Address
+                   - Storage_Offset (F)
+                   - Element_Type'Descriptor_Size));
          end Header_Of;
 
       end Typed;

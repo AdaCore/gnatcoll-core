@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -140,7 +140,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- First --
    -----------
 
-   function First (Self : Mbox) return Cursor'Class is
+   overriding function First (Self : Mbox) return Cursor'Class is
    begin
       declare
          Cur : Cursor'Class := Mbox_Cursor'
@@ -159,7 +159,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Has_Element --
    -----------------
 
-   function Has_Element (Self : Mbox_Cursor) return Boolean is
+   overriding function Has_Element (Self : Mbox_Cursor) return Boolean is
    begin
       return Self.Stop <= Self.Max;
    end Has_Element;
@@ -168,7 +168,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Get_Message --
    -----------------
 
-   procedure Get_Message
+   overriding procedure Get_Message
      (Self : in out Mbox_Cursor;
       Box  : Mailbox'Class;
       Msg  : out Message)
@@ -202,7 +202,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Next --
    ----------
 
-   procedure Next
+   overriding procedure Next
      (Self : in out Mbox_Cursor;
       Box  : Mailbox'Class)
    is
@@ -310,7 +310,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Finalize --
    --------------
 
-   procedure Finalize (Self : in out Mailbox) is
+   overriding procedure Finalize (Self : in out Mailbox) is
       pragma Unreferenced (Self);
    begin
       null;
@@ -320,7 +320,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Finalize --
    --------------
 
-   procedure Finalize (Self : in out Mbox) is
+   overriding procedure Finalize (Self : in out Mbox) is
    begin
       if Self.On_Close /= null and then Self.Fp /= null then
          Self.On_Close (Self.Fp);
@@ -381,7 +381,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- First --
    -----------
 
-   function First (Self : Stored_Mailbox) return Cursor'Class is
+   overriding function First (Self : Stored_Mailbox) return Cursor'Class is
    begin
       return First (Self, Recurse => False);
    end First;
@@ -445,7 +445,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Has_Element --
    -----------------
 
-   function Has_Element
+   overriding function Has_Element
      (Self : Stored_Mailbox_Cursor) return Boolean
    is
    begin
@@ -456,7 +456,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Get_Message --
    -----------------
 
-   procedure Get_Message
+   overriding procedure Get_Message
      (Self : in out Stored_Mailbox_Cursor;
       Box  : Mailbox'Class;
       Msg  : out Message)
@@ -489,7 +489,7 @@ package body GNATCOLL.Email.Mailboxes is
    -- Next --
    ----------
 
-   procedure Next
+   overriding procedure Next
      (Self : in out Stored_Mailbox_Cursor;
       Box  : Mailbox'Class)
    is
