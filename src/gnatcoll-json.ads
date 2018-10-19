@@ -245,7 +245,8 @@ package GNATCOLL.JSON is
       Less : access function (Left, Right : JSON_Value) return Boolean);
    --  If Val is a JSON array or a JSON object, reorder its elements/fields
    --  such that they are sorted smallest first according to the strict
-   --  comparison that Less implements.
+   --  comparison that Less implements. Note that for JSON objects, field
+   --  values are compared, not field names.
 
    procedure Append (Arr : JSON_Value; Item : JSON_Value)
       with Pre => Arr.Kind = JSON_Array_Type;
