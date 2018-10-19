@@ -4945,6 +4945,10 @@ package body GNATCOLL.Projects is
       is
          V : Variable_Value;
 
+         Name : constant String :=
+           Get_Name_String (GPR.Tree.Name_Of (Var, T));
+         --  For diagnostic purposes.
+
          Proj : Project_Type    := Tree.Root;
          Expr : Project_Node_Id := Expression_Of (Var, T);
 
@@ -5060,7 +5064,7 @@ package body GNATCOLL.Projects is
          end loop;
 
          if Active (Me_SV) then
-            Trace (Me, "We will try to compute default of:");
+            Trace (Me_SV, "We will try to compute default of:");
             Pretty_Print
               (Var, T, Backward_Compatibility => False);
          end if;
@@ -5078,6 +5082,14 @@ package body GNATCOLL.Projects is
             Kind                    =>
               Expression_Kind_Of (Expr, T));
          return V.Value;
+      exception
+         when Ex : others =>
+            Trace
+              (Me_SV, "Error when computing default for "
+               & Name & " from project " & Project.Name & ":");
+            Trace
+              (Me_SV, Exception_Information (Ex));
+            return GPR.No_Name;
       end External_Default;
 
       -----------------
