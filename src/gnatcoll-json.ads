@@ -358,7 +358,8 @@ package GNATCOLL.JSON is
 
    procedure Unset_Field
      (Val        : JSON_Value;
-      Field_Name : UTF8_String);
+      Field_Name : UTF8_String)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Assuming Val is a JSON object, remove its field whose name matches
    --  Field_Name. Do nothing if there is no such a field.
 
