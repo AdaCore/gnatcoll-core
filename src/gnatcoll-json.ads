@@ -196,47 +196,47 @@ package GNATCOLL.JSON is
    -- Creation of JSON values --
    -----------------------------
 
-   function Create return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Null_Type);
+   function Create return JSON_Value
+      with Post => Create'Result.Kind = JSON_Null_Type;
    --  Create a 'null' JSON value
 
-   function Create (Val : Boolean) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Boolean_Type);
+   function Create (Val : Boolean) return JSON_Value
+      with Post => Create'Result.Kind = JSON_Boolean_Type;
    --  Create a boolean-typed JSON value
 
-   function Create (Val : Integer) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
-   function Create (Val : Long_Integer) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
-   function Create (Val : Long_Long_Integer) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Int_Type);
+   function Create (Val : Integer) return JSON_Value
+      with Post => Create'Result.Kind = JSON_Int_Type;
+   function Create (Val : Long_Integer) return JSON_Value
+      with Post => Create'Result.Kind = JSON_Int_Type;
+   function Create (Val : Long_Long_Integer) return JSON_Value
+      with Post => Create'Result.Kind = JSON_Int_Type;
    --  Create an integer-typed JSON value
 
-   function Create (Val : Float) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Float_Type);
+   function Create (Val : Float) return JSON_Value
+      with Post => Create'Result.Kind = JSON_Float_Type;
    --  Create a float-typed JSON value
 
-   function Create (Val : Long_Float) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Float_Type);
+   function Create (Val : Long_Float) return JSON_Value
+      with Post => Create'Result.Kind = JSON_Float_Type;
 
-   function Create (Val : UTF8_String) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
+   function Create (Val : UTF8_String) return JSON_Value
+      with Post => Create'Result.Kind = JSON_String_Type;
    --  Create a string-typed JSON value
 
-   function Create (Val : UTF8_Unbounded_String) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
+   function Create (Val : UTF8_Unbounded_String) return JSON_Value
+      with Post => Create'Result.Kind = JSON_String_Type;
    --  Create a string-typed JSON value
 
-   function Create (Val : UTF8_XString) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_String_Type);
+   function Create (Val : UTF8_XString) return JSON_Value
+      with Post => Create'Result.Kind = JSON_String_Type;
    --  Create a string-typed JSON value
 
-   function Create (Val : JSON_Array) return JSON_Value;
-   pragma Postcondition (Kind (Create'Result) = JSON_Array_Type);
+   function Create (Val : JSON_Array) return JSON_Value
+      with Post => Create'Result.Kind = JSON_Array_Type;
    --  Create a JSON value from the JSON array
 
-   function Create_Object return JSON_Value;
-   pragma Postcondition (Kind (Create_Object'Result) = JSON_Object_Type);
+   function Create_Object return JSON_Value
+      with Post => Create_Object'Result.Kind = JSON_Object_Type;
    --  Create an empty object. Values need to be added using the below
    --  Set_Field methods.
 
@@ -247,8 +247,8 @@ package GNATCOLL.JSON is
    --  such that they are sorted smallest first according to the strict
    --  comparison that Less implements.
 
-   procedure Append (Arr : JSON_Value; Item : JSON_Value);
-   pragma Precondition (Arr.Kind = JSON_Array_Type);
+   procedure Append (Arr : JSON_Value; Item : JSON_Value)
+      with Pre => Arr.Kind = JSON_Array_Type;
    --  Assuming Arr is a JSON array, append Item to it
 
    function Clone (Val : JSON_Value) return JSON_Value;
@@ -266,16 +266,16 @@ package GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : JSON_Value);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : JSON_Value)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Assuming Val is a JSON object, add a new field or modify the existing
    --  one for the given Field_Name. The field value is Field afterwards.
 
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_XString;
-      Field      : JSON_Value);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : JSON_Value)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Assuming Val is a JSON object, add a new field or modify the existing
    --  one for the given Field_Name. The field value is Field afterwards.
 
@@ -286,72 +286,72 @@ package GNATCOLL.JSON is
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : Boolean);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : Boolean)
+      with Pre => Val.Kind = JSON_Object_Type;
 
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : Integer);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : Integer)
+      with Pre => Val.Kind = JSON_Object_Type;
 
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : Long_Integer);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : Long_Integer)
+      with Pre => Val.Kind = JSON_Object_Type;
 
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : Float);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : Float)
+      with Pre => Val.Kind = JSON_Object_Type;
 
    procedure Set_Field_Long_Float
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : Long_Float);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : Long_Float)
+      with Pre => Val.Kind = JSON_Object_Type;
 
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : UTF8_String);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : UTF8_String)
+      with Pre => Val.Kind = JSON_Object_Type;
 
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : UTF8_Unbounded_String);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : UTF8_Unbounded_String)
+      with Pre => Val.Kind = JSON_Object_Type;
 
    procedure Set_Field
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : JSON_Array);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : JSON_Array)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  This performs a a shallow copy of Field, so any change you do to the
    --  passed array for Field afterwards will not impact Val.
 
    procedure Set_Field_If_Not_Empty
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : UTF8_Unbounded_String);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : UTF8_Unbounded_String)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Set Field only if it is not empty string
 
    procedure Set_Field_If_Not_Empty
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : UTF8_String);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : UTF8_String)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Set Field only if it is not empty string
 
    procedure Set_Field_If_Not_Empty
      (Val        : JSON_Value;
       Field_Name : UTF8_String;
-      Field      : JSON_Array);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      Field      : JSON_Array)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Set Field only if it is not empty array.
    --  This performs a a shallow copy of Field, so any change you do to the
    --  passed array for Field afterwards will not impact Val.
@@ -369,85 +369,77 @@ package GNATCOLL.JSON is
    function Kind (Val : JSON_Value) return JSON_Value_Type;
    --  Return the kind corresponding to the Val JSON value
 
-   function Get (Val : JSON_Value) return Boolean;
-   pragma Precondition (Kind (Val) = JSON_Boolean_Type);
+   function Get (Val : JSON_Value) return Boolean
+      with Pre => Val.Kind = JSON_Boolean_Type;
 
-   function Get (Val : JSON_Value) return Integer;
-   pragma Precondition (Kind (Val) = JSON_Int_Type);
+   function Get (Val : JSON_Value) return Integer
+      with Pre => Val.Kind = JSON_Int_Type;
 
-   function Get (Val : JSON_Value) return Long_Integer;
-   pragma Precondition (Kind (Val) = JSON_Int_Type);
+   function Get (Val : JSON_Value) return Long_Integer
+      with Pre => Val.Kind = JSON_Int_Type;
 
-   function Get (Val : JSON_Value) return Long_Long_Integer;
-   pragma Precondition (Kind (Val) = JSON_Int_Type);
+   function Get (Val : JSON_Value) return Long_Long_Integer
+      with Pre => Val.Kind = JSON_Int_Type;
 
-   function Get (Val : JSON_Value) return Float;
-   pragma Precondition (Kind (Val) = JSON_Float_Type);
+   function Get (Val : JSON_Value) return Float
+      with Pre => Val.Kind = JSON_Float_Type;
 
-   function Get_Long_Float (Val : JSON_Value) return Long_Float;
-   pragma Precondition (Kind (Val) = JSON_Float_Type);
+   function Get_Long_Float (Val : JSON_Value) return Long_Float
+      with Pre => Val.Kind = JSON_Float_Type;
 
-   function Get (Val : JSON_Value) return UTF8_String;
-   pragma Precondition (Kind (Val) = JSON_String_Type);
+   function Get (Val : JSON_Value) return UTF8_String
+      with Pre => Val.Kind = JSON_String_Type;
 
-   function Get (Val : JSON_Value) return UTF8_Unbounded_String;
-   pragma Precondition (Kind (Val) = JSON_String_Type);
+   function Get (Val : JSON_Value) return UTF8_Unbounded_String
+      with Pre => Val.Kind = JSON_String_Type;
 
-   function Get (Val : JSON_Value) return UTF8_XString;
-   pragma Precondition (Kind (Val) = JSON_String_Type);
+   function Get (Val : JSON_Value) return UTF8_XString
+      with Pre => Val.Kind = JSON_String_Type;
 
-   function Get (Val : JSON_Value) return JSON_Array;
-   pragma Precondition (Kind (Val) = JSON_Array_Type);
+   function Get (Val : JSON_Value) return JSON_Array
+      with Pre => Val.Kind = JSON_Array_Type;
 
-   function Has_Field (Val : JSON_Value; Field : UTF8_String) return Boolean;
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+   function Has_Field (Val : JSON_Value; Field : UTF8_String) return Boolean
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Assuming Val is a JSON object, return whether it contains a field whose
    --  name is Field.
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return JSON_Value;
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+   function Get (Val : JSON_Value; Field : UTF8_String) return JSON_Value
+      with Pre => Val.Kind = JSON_Object_Type;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return Boolean;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_Boolean_Type);
+   function Get (Val : JSON_Value; Field : UTF8_String) return Boolean
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_Boolean_Type;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return Integer;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_Int_Type);
+   function Get (Val : JSON_Value; Field : UTF8_String) return Integer
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_Int_Type;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return Long_Integer;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_Int_Type);
+   function Get (Val : JSON_Value; Field : UTF8_String) return Long_Integer
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_Int_Type;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return Float;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_Float_Type);
+   function Get (Val : JSON_Value; Field : UTF8_String) return Float
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_Float_Type;
 
    function Get_Long_Float
-      (Val : JSON_Value; Field : UTF8_String) return Long_Float;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_Float_Type);
+      (Val : JSON_Value; Field : UTF8_String) return Long_Float
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_Float_Type;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return UTF8_String;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_String_Type);
+   function Get (Val : JSON_Value; Field : UTF8_String) return UTF8_String
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_String_Type;
 
    function Get
-     (Val : JSON_Value; Field : UTF8_String) return UTF8_Unbounded_String;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_String_Type);
+     (Val : JSON_Value; Field : UTF8_String) return UTF8_Unbounded_String
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_String_Type;
 
-   function Get (Val : JSON_Value; Field : UTF8_String) return JSON_Array;
-   pragma Precondition
-     (Kind (Val) = JSON_Object_Type
-      and then Kind (Get (Val, Field)) = JSON_Array_Type);
+   function Get (Val : JSON_Value; Field : UTF8_String) return JSON_Array
+      with Pre => Val.Kind = JSON_Object_Type
+                  and then Get (Val, Field).Kind = JSON_Array_Type;
 
    ---------------
    -- Iteration --
@@ -455,8 +447,8 @@ package GNATCOLL.JSON is
 
    procedure Map_JSON_Object
      (Val : JSON_Value;
-      CB  : access procedure (Name : UTF8_String; Value : JSON_Value));
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      CB  : access procedure (Name : UTF8_String; Value : JSON_Value))
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Assuming Val is a JSON object, call CB on all its fields
 
    generic
@@ -467,8 +459,8 @@ package GNATCOLL.JSON is
         (User_Object : in out Mapped;
          Name        : UTF8_String;
          Value       : JSON_Value);
-      User_Object : in out Mapped);
-   pragma Precondition (Kind (Val) = JSON_Object_Type);
+      User_Object : in out Mapped)
+      with Pre => Val.Kind = JSON_Object_Type;
    --  Assuming Val is a JSON object, call CB on all its field, passing the
    --  given User_Object from call to call.
 
