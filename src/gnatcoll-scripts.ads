@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1561,7 +1561,7 @@ private
    --  Return the list of user data stored for this instance. Depending on the
    --  scripting language, this list might be stored in various places (as a
    --  python attribute, directly in Ada for the shell,...) This list is shared
-   --  amonst the scripting languages.
+   --  amongst the scripting languages.
 
    package CI_Pointers is new Smart_Pointers (Class_Instance_Record);
    type Class_Instance is record
