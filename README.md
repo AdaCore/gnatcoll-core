@@ -34,6 +34,8 @@ General:
 
 * `BUILD`: control the build options: `PROD` (default) or `DEBUG`
 
+* `LIBRARY_TYPE`: `relocatable`, `static`, pr `static-pic`
+
 * `PROCESSORS` : parallel compilation (default is 0, which uses all available
   cores)
 
