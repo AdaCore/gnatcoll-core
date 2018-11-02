@@ -1,6 +1,11 @@
-with GNATCOLL.Traces;     use GNATCOLL.Traces;
+with GNATCOLL.Traces;
+with Test_Assert;
 
-procedure Test is
+function Test return Integer is
+   package Traces renames GNATCOLL.Traces;
+   package A renames Test_Assert;
 begin
-   Parse_Config_File ("my.cfg");
+   Traces.Parse_Config_File ("my.cfg");
+   A.Assert (True, "should not raise an exception");
+   return A.Report;
 end Test;
