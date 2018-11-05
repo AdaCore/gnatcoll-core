@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -62,7 +62,7 @@ private package GNATCOLL.Path is
    function Is_Absolute_Path
      (FS   : FS_Type;
       Path : FS_String) return Boolean;
-   --  Tell wether the path is absolute
+   --  Tell whether the path is absolute
 
    ------------------------
    -- Path manipulations --

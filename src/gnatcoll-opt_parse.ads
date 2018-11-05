@@ -115,7 +115,7 @@ package GNATCOLL.Opt_Parse is
      (Self      : in out Argument_Parser;
       Arguments : XString_Array := No_Arguments;
       Result    : out Parsed_Arguments) return Boolean;
-   --  Parse command line arguments for Self. Return arguments explictly.
+   --  Parse command line arguments for Self. Return arguments explicitly.
 
    function Create_Argument_Parser
      (Help : String; Command_Name : String := "") return Argument_Parser;

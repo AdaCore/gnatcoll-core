@@ -42,7 +42,7 @@ package GNATCOLL.Locks is
    --  alive, and release it when it is finalized.
    --
    --  It provides a useful idiom to protect a subprogram or a part of a
-   --  subprogram from data races via a critical seciton. Here is code without
+   --  subprogram from data races via a critical section. Here is code without
    --  a scoped lock::
    --
    --     A : Integer := 0;

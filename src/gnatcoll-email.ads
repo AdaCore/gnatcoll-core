@@ -43,7 +43,7 @@ package GNATCOLL.Email is
    end record;
    Null_Charset_String : constant Charset_String;
    --  This type represents a string and its charset. Contents must be
-   --  interpreted relatively to Charset, ie characters above 127 must be
+   --  interpreted relatively to Charset, i.e. characters above 127 must be
    --  read from that charset. For instance character 161 is an inverted
    --  exclamation mark in iso-8859-1, but a latin letter A with ogonek in
    --  iso-8859-2.
@@ -155,13 +155,13 @@ package GNATCOLL.Email is
    --  used for the Content-Type header, to store the file name, or the
    --  boundary for instance. They appear as:
    --      Content-Type: text/plain; charset="iso-8859-1"
-   --  If such a parameter is already set, it is replaced in-place, ie the
+   --  If such a parameter is already set, it is replaced in-place, i.e. the
    --  order of parameters is preserved.
 
    function Get_Param (H : Header'Class; Param_Name : String) return String;
    --  Get the value for one of H's parameters, or "" if there is no such
    --  param.
-   --  This automatically handles continuation headers, ie cases where the
+   --  This automatically handles continuation headers, i.e. cases where the
    --  value of the parameter was split onto several lines, as in:
    --     filename*0="value1";
    --     filename*1="value2"
@@ -276,7 +276,7 @@ package GNATCOLL.Email is
    --  converted to a string. If it returns True, that part is displayed.
    --  When the filter is unspecified to To_String, all payloads are output.
    --  This filter only applies in the case of multipart messages, and only to
-   --  the toplevel attachments (ie if an attachment is itself a message with
+   --  the toplevel attachments (i.e. if an attachment is itself a message with
    --  other attachments, the filter will not be applied for these).
 
    procedure To_String
@@ -314,7 +314,7 @@ package GNATCOLL.Email is
    --  Set the "From " line used for the envelope of the message
 
    function Date_From_Envelope (Msg : Message'Class) return Ada.Calendar.Time;
-   --  Return the date read in the envelope of the message. It is recommanded
+   --  Return the date read in the envelope of the message. It is recommended
    --  that you get the date from the 'Date:' header when available instead.
 
    function Sender_From_Envelope (Msg : Message'Class) return String;
@@ -541,7 +541,7 @@ package GNATCOLL.Email is
 
    procedure Set_Preamble (Msg : in out Message'Class; Preamble : String);
    --  Set the preamble of the MIME message.
-   --  This text will be inserted before the first boundary, ie the first
+   --  This text will be inserted before the first boundary, i.e. the first
    --  attached file.
    --  Normally, in MIME aware mailers, this preamble will not be visible. It
    --  will only be visible by viewing the full text of the message.
@@ -558,10 +558,10 @@ package GNATCOLL.Email is
                           Payload : Message;
                           First : Boolean := False);
    --  Add a new part to a multipart message. Msg is first converted to
-   --  multipart if necessary. Payload itself is stored in Msg, ie modifying
+   --  multipart if necessary. Payload itself is stored in Msg, i.e. modifying
    --  Payload later on will impact Msg. This procedure cannot be used when
    --  attaching a real mail message, see Attach_Msg instead.
-   --  If First is True, then add the new part at the begining.  Otherwise,
+   --  If First is True, then add the new part at the beginning.  Otherwise,
    --  add it at the end.
 
    procedure Attach_Msg

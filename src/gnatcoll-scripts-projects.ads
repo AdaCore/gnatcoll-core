@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -34,7 +34,7 @@ package GNATCOLL.Scripts.Projects is
    --  Get current project tree
 
    function Project_Tree return GNATCOLL.Projects.Project_Tree_Access;
-   --  Get project tree from assigned project tree retriver pointer
+   --  Get project tree from assigned project tree retriever pointer
 
    procedure Register_Commands
      (Repo  : not null access Scripts_Repository_Record'Class;

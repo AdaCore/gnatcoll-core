@@ -79,7 +79,7 @@ package GNATCOLL.Refcount is
    type Counters is record
       Refcount  : aliased Atomic.Atomic_Counter := 1;
       Weak_Data : aliased Weak_Data_Access;
-      --  A pointer to the weak pointers'data. This data is created the
+      --  A pointer to the weak pointer's data. This data is created the
       --  first time we create a weak pointer. We hold a reference to that
       --  data, so that it can never be freed while at least one reference
       --  exists.
@@ -266,7 +266,7 @@ package GNATCOLL.Refcount is
       --  and the simple fact that Self is a parameter ensures it retains at
       --  least one reference during the execution of Process.
       --
-      --  If you want to always be on the safe side and prevevent users from
+      --  If you want to always be on the safe side and prevent users from
       --  using Get, you could add the following configuration pragma to your
       --  compilation:
       --     pragma Restrictions

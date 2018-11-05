@@ -59,7 +59,7 @@ package GNATCOLL.Email.Utils is
       Show_Time    : Boolean := True;
       Show_Seconds : Boolean := True;
       Show_Day     : Boolean := True) return String;
-   --  Format the date as a RFC 2822 string, eg:
+   --  Format the date as a RFC 2822 string, e.g.:
    --     Fri, 09 Nov 2001 01:08:47 -0000
 
    --  If Use_GMT is true, the time stamp is rendered in UTC, and the time zone
@@ -123,7 +123,7 @@ package GNATCOLL.Email.Utils is
    --  addresses of Separator has its default value.
    --  If Address_Only is true, then the real names are never shown in the
    --  string.
-   --  Charset is passed to Format_Address to format indivudual addresses.
+   --  Charset is passed to Format_Address to format individual addresses.
 
    function Get_Recipients
      (Msg : Message'Class; Include_From : Boolean := False)
@@ -164,7 +164,7 @@ package GNATCOLL.Email.Utils is
 
    function Login_From_Address (Email : String) return String;
    function Login_From_Address (Email : Email_Address) return String;
-   --  Return the login name from the given email address, ie the part before
+   --  Return the login name from the given email address, i.e. the part before
    --  the '@'. In the first case, Email must only contain the address, not the
    --  real name.
 
@@ -191,8 +191,8 @@ package GNATCOLL.Email.Utils is
       Where         : Region := Text;
       Result        : out Unbounded_String);
    --  Encode Str in quoted-printable format, as per RFC 2045/2047.
-   --  This should be used for ascii-like charsets, like all iso-8859-*
-   --  charsets, ie when most of the characters are already in the ASCII
+   --  This should be used for ASCII-like charsets, like all ISO-8859-*
+   --  charsets, i.e. when most of the characters are already in the ASCII
    --  charset (0 through 127).
 
    procedure Quoted_Printable_Decode
@@ -201,7 +201,7 @@ package GNATCOLL.Email.Utils is
       Where  : Region := Text);
    --  Decode Str as a quoted-printable encoded string as per RFC 2045.
    --     The returned value may contain non - ASCII characters, their
-   --  interpretation is left to the called (ie the charset is unknown).
+   --  interpretation is left to the called (i.e. the charset is unknown).
    --  If the optional argument header is present and true, underscore will be
    --  decoded as space. This is used to decode "Q" encoded headers as
    --  described in RFC 2047: "MIME (Multipurpose Internet Mail Extensions)
@@ -215,7 +215,7 @@ package GNATCOLL.Email.Utils is
       Result          : out Unbounded_String);
    --  Encode Str in base64 format, as defined by RFC 2045.
    --  This should be used for charsets that have little similarity with
-   --  ASCII, for instance asian charsets.
+   --  ASCII, for instance Asian charsets.
 
    procedure Base64_Encode
      (Str           : String;

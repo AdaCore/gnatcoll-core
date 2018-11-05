@@ -50,7 +50,7 @@ package body GNATCOLL.Refcount is
 
    function Inc_Ref (R : access Counters; Atomic : Boolean) return Boolean;
    --  Increase the refcount only if it was non-zero, returns True if the
-   --  increment has occured.
+   --  increment has occurred.
 
    procedure Inc_Ref (R : access Weak_Data; Atomic : Boolean) with Inline;
    --  Increase the refcount

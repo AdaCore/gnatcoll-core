@@ -222,7 +222,7 @@
 --  "DEBUG.SPLIT_LINES"  (default: true)
 --  Whether long messages should be split at each ASCII.LF character. When
 --  we do this, the trace handle name and decorators are replicated at the
---  beginning of each followup line. This results in a slow down.
+--  beginning of each follow-up line. This results in a slow down.
 
 --  Example
 --  =======

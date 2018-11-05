@@ -57,7 +57,7 @@ package GNATCOLL.Formatters is
    --  Width is the width limit of the output.
    --  Put_Line is the callback routine to take output line by line.
    --  Pad is the character filling the space after words to have same size in
-   --  column for next column to be alligned.
+   --  column for next column to be aligned.
    --  Delimiter is string delimiting the columns.
 
    generic

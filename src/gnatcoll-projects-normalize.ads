@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2017, AdaCore                     --
+--                     Copyright (C) 2002-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,11 +25,11 @@
 
 --  Project files can be written freely by the user (through any standard
 --  editor). However, although we are able to import them whatever form they
---  have, these can'be easily manipulated, and a different form needs to be
+--  have, these can't be easily manipulated, and a different form needs to be
 --  used, called normalized project files.
 --
---  Projects are normalized only the first time they are actually modified (ie
---  if they are open in the project browser but never modified, then we don't
+--  Projects are normalized only the first time they are actually modified
+--  (i.e. if they are open in the project browser but never modified, we don't
 --  need to modify what the user did, since GPR.Proc.Process can of course work
 --  with any form of projects).
 --
@@ -161,7 +161,7 @@ private package GNATCOLL.Projects.Normalize is
      (Tree   : GPR.Tree.Project_Node_Tree_Ref;
       Parent : GPR.Project_Node_Id;
       Node   : GPR.Project_Node_Id);
-   --  Add Node at the begining of the list for Parent.
+   --  Add Node at the beginning of the list for Parent.
    --  Node can also be a N_Declarative_Item (or a list of them).
 
    procedure Normalize_Cases

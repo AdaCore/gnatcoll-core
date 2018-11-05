@@ -34,7 +34,7 @@
 --  considered in that order:
 --
 --  1- comment
---  2- assigment
+--  2- assignment
 --  3- section declaration
 --
 --  Thus for example:

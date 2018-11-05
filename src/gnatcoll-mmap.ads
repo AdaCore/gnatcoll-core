@@ -119,7 +119,7 @@ package GNATCOLL.Mmap is
      (Filename              : String;
       Use_Mmap_If_Available : Boolean := True) return Mapped_File;
    --  Open a file for reading. The same file can be shared by multiple
-   --  processes, that will see each others's changes as they occur.
+   --  processes, that will see each others' changes as they occur.
    --  Any attempt to write the data might result in a segmentation fault,
    --  depending on how the file is open.
    --  Name_Error is raised if the file does not exist.
@@ -228,7 +228,7 @@ package GNATCOLL.Mmap is
    function Offset (Region : Mapped_Region) return File_Size
       with Inline;
    --  Return the offset, in the physical file on disk, corresponding to the
-   --  requested mapped region. The first byte in the file has offest 0.
+   --  requested mapped region. The first byte in the file has offset 0.
 
    function Offset (File : Mapped_File) return File_Size
       with Inline, Obsolescent;
@@ -349,7 +349,7 @@ package GNATCOLL.Mmap is
 
    function Is_Mutable (Region : Mapped_Region) return Boolean;
    --  Return whether it is safe to change bytes in Data (Region). This is true
-   --  for regions from writeable files, for regions mapped with the "Mutable"
+   --  for regions from writable files, for regions mapped with the "Mutable"
    --  flag set, and for regions that are copied in a buffer. Note that it is
    --  not specified whether empty regions are mutable or not, since there is
    --  no byte no modify.
@@ -360,7 +360,7 @@ package GNATCOLL.Mmap is
    --  or equivalent. This is in general irrelevant to your application, unless
    --  the file can be accessed by multiple concurrent processes or tasks. In
    --  such a case, and if the file is indeed mmap-ed, then the various parts
-   --  of the file can be written simulatenously, and thus you cannot ensure
+   --  of the file can be written simultaneously, and thus you cannot ensure
    --  the integrity of the file. If the file is not mmapped, the latest
    --  process to Close it overwrite what other processes have done.
 

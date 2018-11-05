@@ -23,7 +23,7 @@
 
 with System;
 
---  OS pecularities abstraction package for Win32 systems.
+--  OS peculiarities abstraction package for Win32 systems.
 
 package GNATCOLL.Mmap.System is
 
@@ -218,7 +218,7 @@ package GNATCOLL.Mmap.System is
    --  Create a memory mapping for the given File, for the area starting at
    --  Offset and containing Length bytes. Store it to Mapping.
    --  Note that Offset and Length may be modified according to the system
-   --  needs (for boudaries, for instance). The caller must cope with actually
+   --  needs (for boundaries, for instance). The caller must cope with actually
    --  wider mapped areas.
 
    procedure Dispose_Mapping

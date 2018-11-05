@@ -139,9 +139,9 @@ package GNATCOLL.Projects is
    --  Allocate a new environment (if Self is null) and initialize internal
    --  data.
    --  IDE_Mode turns on some additional functionality such as extra error
-   --  message filtering that is only relevant for interactive aplications such
-   --  as GPS. Most of the tools that do a single pass on the project should
-   --  not turn on this flag.
+   --  message filtering that is only relevant for interactive applications
+   --  such as IDE. Most of the tools that do a single pass on the project
+   --  should not turn on this flag.
 
    procedure Free (Self : in out Project_Environment_Access);
    procedure Free (Self : in out Project_Tree_Access);
@@ -224,7 +224,7 @@ package GNATCOLL.Projects is
    --
    --  If Report_Missing_Dirs is true, then a warning will be issued when a
    --  project file's object directory does not exist yet. Note that this flag
-   --  will be stored in the project environment and will have an effet on
+   --  will be stored in the project environment and will have an effect on
    --  further calls to Recompute_View with the same project environment.
 
    procedure Set_Trusted_Mode
@@ -302,7 +302,7 @@ package GNATCOLL.Projects is
    --  To make it easier to store instances of Project_Type in a data
    --  structure, that type is not visibly tagged (you do not have to store an
    --  access to Project_Type'Class and find out when you can free it).
-   --  However, it might be convient to associate your own custom data with a
+   --  However, it might be convenient to associate your own custom data with a
    --  project (for instance extra caches for attributes that your application
    --  uses often, or other type of data).
    --  To do so, you should subclass Project_Data, as well as Project_Tree. For
@@ -571,7 +571,7 @@ package GNATCOLL.Projects is
       Exclude_Externally  : Boolean := False) return GNATCOLL.VFS.File_Array;
    --  Return the object path for this project. The empty string is returned
    --  if the project doesn't have any object directory (i.e. the user
-   --  explicitely set it to the empty string). If Including_Libraries is
+   --  explicitly set it to the empty string). If Including_Libraries is
    --  True and Project is a library project, it returns both object and ALI
    --  paths (in that order) or only ALI path if project doesn't have object
    --  directory. If Exclude_Externall is True and Project is externally built
@@ -603,7 +603,7 @@ package GNATCOLL.Projects is
    ---------------
 
    type Unit_Parts is (Unit_Body, Unit_Spec, Unit_Separate);
-   --  A unit is usally composed of two parts: the spec and the body.
+   --  A unit is usually composed of two parts: the spec and the body.
    --    - Unit_Spec represents package/subprogram/generic declarations
    --    - Unit_Body represents package/subprogram/generic bodies and subunits.
    --    - Unit_Separate is used for additional implementation code in Ada
@@ -744,7 +744,7 @@ package GNATCOLL.Projects is
    --  absolute path if it currently is a base name.
    --
    --  If Name is an absolute path, it is returned as is. Otherwise, only the
-   --  base name is used (ie we remove any directory information from Name).
+   --  base name is used (i.e. we remove any directory information from Name).
    --
    --  If a source file matches Name and Use_Source_Path is true, it is always
    --  returned, whether it is part of Project or not. This is the most
@@ -1115,7 +1115,7 @@ package GNATCOLL.Projects is
    --  It will process Root_Project and all its subprojects, recursively, but
    --  without processing the same project twice.
    --
-   --  The project nodes are returned sorted topologically (ie first the
+   --  The project nodes are returned sorted topologically (i.e. first the
    --  projects that don't depend on anything, then their parents, and so on
    --  until the root project). Extended projects are always returned before
    --  their extending project.
@@ -1479,7 +1479,7 @@ package GNATCOLL.Projects is
    --  explicitly defined the attribute in his project, use Has_Attribute
    --  instead.
    --
-   --  It is the responsability of the caller to free the memory.
+   --  It is the responsibility of the caller to free the memory.
    --  The corresponding attribute would have been set in the project as:
    --      for Attribute use ("value1", "value2");
    --  or
@@ -1788,7 +1788,7 @@ package GNATCOLL.Projects is
       Case_Sensitive_Index : Boolean := False) return String;
    --  Register a new attribute that will be allowed in projects.
    --  This prevents error messages when loading the project.
-   --  Attributes can only be added to packages, not at the toplevel of a
+   --  Attributes can only be added to packages, not at the top level of a
    --  project.
    --  Returns a non-empty string if there is an error creating the attribute
 
@@ -1834,7 +1834,7 @@ package GNATCOLL.Projects is
    --  Remove all scenario variables that reference External_Name.
    --  All the case constructions where this variable occur are replaced by
    --  the case item corresponding to Keep_Choice.
-   --  If Delete_Direct_References is True, then all direct references (ie
+   --  If Delete_Direct_References is True, then all direct references (i.e.
    --  external() statements in the project file) to External_Name are also
    --  removed, in addition to the scenario variables that reference it.
    --
@@ -1868,7 +1868,7 @@ package GNATCOLL.Projects is
       Old_Value     : String;
       New_Value     : String);
    --  Rename one of the choices in the list of possible values for the
-   --  scenario variables asociated with External_Name. This also changes
+   --  scenario variables associated with External_Name. This also changes
    --  the default value for external references.
 
    procedure Remove_Value
@@ -2135,7 +2135,7 @@ private
 
       First_Project_Path : GPR.Path_Name_Type;
       --  First project in which corresponding controlling external has been
-      --  dicovered. Used for diagnostic message when types of other Scenario
+      --  discovered. Used for diagnostic message when types of other Scenario
       --  Variables controlled by same external do not match.
    end record;
 
@@ -2280,7 +2280,7 @@ private
    Stack_Switches_Attribute   : constant Attribute_Pkg_List :=
                                   "stack#switches";
 
-   --  For backward compatiblity
+   --  For backward compatibility
    Old_Specification_Attribute  : constant Attribute_Pkg_String :=
                                     "naming#specification";
    Old_Implementation_Attribute : constant Attribute_Pkg_String :=

@@ -1,41 +1,35 @@
 ------------------------------------------------------------------------------
+--                             G N A T C O L L                              --
 --                                                                          --
---                            G N A T C O L L                               --
+--                     Copyright (C) 2008-2018, AdaCore                     --
 --                                                                          --
---                      Copyright (C) 2008-2017, AdaCore                    --
+-- This library is free software;  you can redistribute it and/or modify it --
+-- under terms of the  GNU General Public License  as published by the Free --
+-- Software  Foundation;  either version 3,  or (at your  option) any later --
+-- version. This library is distributed in the hope that it will be useful, --
+-- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
+-- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
 --                                                                          --
--- GNAT is free software;  you can  redistribute it  and/or modify it under --
--- terms of the  GNU General Public License as published  by the Free Soft- --
--- ware  Foundation;  either version 2,  or (at your option) any later ver- --
--- sion.  GNAT is distributed in the hope that it will be useful, but WITH- --
--- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
--- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
--- for  more details.  You should have  received  a copy of the GNU General --
--- Public License  distributed with GNAT;  see file COPYING.  If not, write --
--- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
--- Boston, MA 02110-1301, USA.                                              --
+-- As a special exception under Section 7 of GPL version 3, you are granted --
+-- additional permissions described in the GCC Runtime Library Exception,   --
+-- version 3.1, as published by the Free Software Foundation.               --
 --                                                                          --
--- As a special exception,  if other files  instantiate  generics from this --
--- unit, or you link  this unit with other files  to produce an executable, --
--- this  unit  does not  by itself cause  the resulting  executable  to  be --
--- covered  by the  GNU  General  Public  License.  This exception does not --
--- however invalidate  any other reasons why  the executable file  might be --
--- covered by the  GNU Public License.                                      --
---                                                                          --
--- GNAT was originally developed  by the GNAT team at  New York University. --
--- Extensive contributions were provided by Ada Core Technologies Inc.      --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
+-- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
 
 --  A simple archetype of a Ravenscar-compliant sporadic task. The task is
---  meant to enforce a minimum interelease interval and to execute at a contant
---  priority level (a part when subject to the immediate priority ceiling
---  protocol). The suspension/release mechanism is managed by a protected
---  object. In the worst case, the task behaviour is identical to the behaviour
---  of a cyclic task (GNAT.Ravenscar.Simple_Cyclic_Task) with Period =
+--  meant to enforce a minimum inter-release interval and to execute at a
+--  constant priority level (a part when subject to the immediate priority
+--  ceiling protocol). The suspension/release mechanism is managed by a
+--  protected object. In the worst case, the task behavior is identical to the
+--  behavior of a cyclic task (GNAT.Ravenscar.Simple_Cyclic_Task) with Period =
 --  Minimum_Interelease_Time.
 --
---  The task timing behaviour can be analyzed with the most common timing
+--  The task timing behavior can be analyzed with the most common timing
 --  analysis techniques.
 --
 --  A typical example of usage is the following:
@@ -74,7 +68,7 @@ generic
    --  The minimum time between two consecutive releases
 
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
-   --  the system-wide relase time
+   --  the system-wide release time
 
    Protocol_Ceiling : System.Any_Priority;
    --  the ceiling priority of the protected object used to post and fetch

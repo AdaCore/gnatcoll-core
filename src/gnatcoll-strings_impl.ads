@@ -637,7 +637,7 @@ package GNATCOLL.Strings_Impl is
 
       function Hash (Self : XString) return Ada.Containers.Hash_Type;
       --  Return a hash value suitable for the standard containers map.
-      --  This is not a cryptographica hash.
+      --  This is not a cryptographic hash.
 
       function Hash_Case_Insensitive
          (Self : XString) return Ada.Containers.Hash_Type;

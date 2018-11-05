@@ -1,33 +1,27 @@
 ------------------------------------------------------------------------------
+--                             G N A T C O L L                              --
 --                                                                          --
---                         G N A T C O L L                                  --
+--                     Copyright (C) 2008-2018, AdaCore                     --
 --                                                                          --
---                      Copyright (C) 2008-2017, AdaCore                    --
+-- This library is free software;  you can redistribute it and/or modify it --
+-- under terms of the  GNU General Public License  as published by the Free --
+-- Software  Foundation;  either version 3,  or (at your  option) any later --
+-- version. This library is distributed in the hope that it will be useful, --
+-- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
+-- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
 --                                                                          --
--- GNAT is free software;  you can  redistribute it  and/or modify it under --
--- terms of the  GNU General Public License as published  by the Free Soft- --
--- ware  Foundation;  either version 2,  or (at your option) any later ver- --
--- sion.  GNAT is distributed in the hope that it will be useful, but WITH- --
--- OUT ANY WARRANTY;  without even the  implied warranty of MERCHANTABILITY --
--- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License --
--- for  more details.  You should have  received  a copy of the GNU General --
--- Public License  distributed with GNAT;  see file COPYING.  If not, write --
--- to  the  Free Software Foundation,  51  Franklin  Street,  Fifth  Floor, --
--- Boston, MA 02110-1301, USA.                                              --
+-- As a special exception under Section 7 of GPL version 3, you are granted --
+-- additional permissions described in the GCC Runtime Library Exception,   --
+-- version 3.1, as published by the Free Software Foundation.               --
 --                                                                          --
--- As a special exception,  if other files  instantiate  generics from this --
--- unit, or you link  this unit with other files  to produce an executable, --
--- this  unit  does not  by itself cause  the resulting  executable  to  be --
--- covered  by the  GNU  General  Public  License.  This exception does not --
--- however invalidate  any other reasons why  the executable file  might be --
--- covered by the  GNU Public License.                                      --
---                                                                          --
--- GNAT was originally developed  by the GNAT team at  New York University. --
--- Extensive contributions were provided by Ada Core Technologies Inc.      --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
+-- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  This version of a Ravenscar-compliant cyclic server extends the behaviour
+--  This version of a Ravenscar-compliant cyclic server extends the behavior
 --  of GNAT.Ravenscar.Simple_Cyclic_Task by accepting multiple types of
 --  requests reified in a single variant type; if no requests have been posted
 --  during the previous period, the server executes its nominal operation
@@ -99,7 +93,7 @@ generic
    --  the priority of the server
 
    Period : Millisecond;
-   --  the constant perios of the server
+   --  the constant period of the server
 
    System_Start_Time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
    --  the absolute instant in time for the release of the systems as a whole
@@ -108,7 +102,7 @@ generic
    --  the phase of the server
 
    with procedure Cyclic_Operation;
-   --  the nominal operation which is executed if no requestests have been
+   --  the nominal operation which is executed if no requests have been
    --  posted within the previous cycle
 
    Protocol_Ceiling : System.Any_Priority;
@@ -119,7 +113,7 @@ generic
    --  the size of accepted requests
 
    type Request_Kind is (<>);
-   --  an enumeration type identificng the possible kinds of request
+   --  an enumeration type identifying the possible kinds of request
 
    type Request is private;
    --  the reified request type

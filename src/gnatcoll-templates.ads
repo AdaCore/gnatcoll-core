@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2017, AdaCore                     --
+--                     Copyright (C) 2008-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -49,11 +49,11 @@ package GNATCOLL.Templates is
                Quoted : Boolean) return String;
    --  A callback for Substitute below. It is called once for each '%...'
    --  parameter found in the string. Name doesn't include the delimiter.
-   --  Quoted indicate whether the parameter was quoted, ie the '%...' was
-   --  found as part of a quoted subtrings (for instance
+   --  Quoted indicate whether the parameter was quoted, i.e. the '%...' was
+   --  found as part of a quoted substring (for instance
    --       a "quoted %version substring" b
    --  The reason is that the substituted version could be different in such
-   --  a case, and the subtituted value might need to protect quote symbols
+   --  a case, and the substituted value might need to protect quote symbols
    --  in its replacement string.
    --  Should raise Invalid_Substitution if Name cannot be substituted
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -42,12 +42,12 @@ package GNATCOLL.Email.Parser is
    --  the message.
 
    procedure Parse_No_Payload (Str : String; Msg : out Message);
-   --  Parse the message, but store its body unparsed (ie nested parts are
+   --  Parse the message, but store its body unparsed (i.e. nested parts are
    --  not analyzed).
 
    procedure Parse_No_Payload_Minimal_Headers
      (Str : String; Msg : out Message);
-   --  Parse the message, but store its body unparsed (ie nested parts are
+   --  Parse the message, but store its body unparsed (i.e. nested parts are
    --  not analyzed). Ignore headers that are generally not useful to
    --  manipulate a message.
 
@@ -71,7 +71,7 @@ package GNATCOLL.Email.Parser is
    --  stored. If Store_Headers is False, no header is stored.
    --  If Store_Payload is False, then the payload is not analyzed nor parsed,
    --  simply ignored. When the payload is stored, it can additionally be
-   --  parsed, ie when it is a multipart message, each of the part is
+   --  parsed, i.e. when it is a multi-part message, each of the part is
    --  extracted separately. To save time, they are not MIME-decoded though.
 
    procedure Full_Parse_From_File

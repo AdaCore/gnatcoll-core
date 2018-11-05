@@ -24,8 +24,8 @@
 --  This module provides various types and subprograms to integrate various
 --  external scripting languages.
 --  This API was designed so that multiple scripting languages can be used with
---  your application, and so that the core of the applicatoin and all the
---  various modules remain as independant as possible from the specific
+--  your application, and so that the core of the application and all the
+--  various modules remain as independent as possible from the specific
 --  language.
 
 pragma Ada_2012;
@@ -58,7 +58,7 @@ package GNATCOLL.Scripts is
 
    type Callback_Data is abstract tagged private;
    type Callback_Data_Access is access all Callback_Data'Class;
-   --  Data used to communicate with the scripting language engine, to marshall
+   --  Data used to communicate with the scripting language engine, to marshal
    --  the parameters and return values.
 
    type Class_Instance is private;
@@ -131,7 +131,7 @@ package GNATCOLL.Scripts is
    function Get_Name
      (Subprogram : access Subprogram_Record) return String is abstract;
    --  Return the name of the subprogram, as a string that can be displayed for
-   --  the user. This is used when analysing the contents of a hook for
+   --  the user. This is used when analyzing the contents of a hook for
    --  instance
 
    ------------------
@@ -154,7 +154,7 @@ package GNATCOLL.Scripts is
       Qualified_Name : String) return Module_Type;
    --  Lookup an existing module or create it if needed.
    --  The qualified name uses '.' as the separator, and all intermediate
-   --  levels are created as needed. The name of the toplevel module must be
+   --  levels are created as needed. The name of the top-level module must be
    --  included, so even if you passed "MyApp" as the Module name to
    --  Register_Python_Scripting, the qualified name here should look like
    --       MyApp.Module1.Module2
@@ -912,7 +912,7 @@ package GNATCOLL.Scripts is
       return Callback_Data_Access;
    --  Return the data for a given script.
    --  The returned value should not be freed by the caller, it is the
-   --  responsability of the callback_data_list to do so.
+   --  responsibility of the callback_data_list to do so.
 
    procedure Set
      (Repo   : access Scripts_Repository_Record'Class;
@@ -1215,7 +1215,7 @@ package GNATCOLL.Scripts is
       Hide_Output  : Boolean := False;
       Show_Command : Boolean := True;
       Errors       : access Boolean) return String;
-   --  Same as above, working direcly on a String. This String is interpreted
+   --  Same as above, working directly on a String. This String is interpreted
    --  as a command line using the mechanism described in
    --  GNATCOLL.Command_Lines.
    --  These are only provided for backward compatibility and you should use
@@ -1349,7 +1349,7 @@ package GNATCOLL.Scripts is
 
    Equal_Method        : constant String;
    --  Should return a boolean, testing for equality.
-   --  Note that in python, at least, definining this will not automatically
+   --  Note that at least in python, defining this will not automatically
    --  define the inequality, so it might be better to use Comparison_Method
    --  instead.
 

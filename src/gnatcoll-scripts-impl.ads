@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2018, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -39,7 +39,7 @@ package GNATCOLL.Scripts.Impl is
      (Script  : access Scripting_Language_Record'Class;
       Console : Virtual_Console := null;
       Txt     : String);
-   --  Display txt either on the specified console or on the scripts' default
+   --  Display Txt either on the specified console or on the scripts' default
    --  console if Console is set to null.
    --  If Hide is set to True, the text is not displayed on the console after
    --  all, although it will be displayed in the log instead.

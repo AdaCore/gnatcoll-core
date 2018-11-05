@@ -311,7 +311,7 @@ package GNATCOLL.VFS is
      (File : Virtual_File;
       Host : String := Local_Host) return GNAT.Strings.String_Access;
    --  Convert the File to a String Access that can be used as argument for
-   --  spawning a process on "Host". The returned value needs to be freeed by
+   --  spawning a process on "Host". The returned value needs to be freed by
    --  the caller.
 
    ------------------------
@@ -571,9 +571,9 @@ package GNATCOLL.VFS is
    function Write_File
      (File   : Virtual_File;
       Append : Boolean := False) return Writable_File;
-   --  Open File for writing. The returned handler can be used for writting.
+   --  Open File for writing. The returned handler can be used for writing.
    --  You must close it, otherwise the file will not actually be written in
-   --  some cases. If Append is True then writting will be done at the end of
+   --  some cases. If Append is True then writing will be done at the end of
    --  the file if the file exists otherwise the file is created.
    --  Return Invalid_File is the file couldn't be open for writing
    --
