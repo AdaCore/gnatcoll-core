@@ -17,10 +17,8 @@ Windows  | [![Build status](https://ci.appveyor.com/api/projects/status/31a7dh52
 Dependencies
 ------------
 
-This module depends on the following external components, that should be
-available on your system:
-
-- GPRbuild
+GNATCOLL only depends on a recent GNAT compiler. Building it also requires
+GPRbuild.
 
 Configuring the build process
 -----------------------------
@@ -69,25 +67,17 @@ $ make prefix=/opt/libgnatcoll BUILD=DEBUG install
 Building
 --------
 
-GNATcoll Core Module is built using a GPR project file, to build it is as
-simple as:
-
-```sh
-$ gprbuild gnatcoll.gpr
-```
-
-Though, to build all versions of the library (static, relocatable and
-static-pic) it is simpler to use the provided Makefile:
-
-```sh
-$ make
-```
-
-Then, to install it:
+Building all versions of the GNATCOLL Core Packages (static, relocatable and
+static-pic) is as easy as running `make` in the top directory. Then, to install
+it:
 
 ```sh
 $ make install
 ```
+
+Note that underneath, this Makefile uses a GPR project file: `gnatcoll.gpr`.
+You can build GNATCOLL using it with GPRbuild, but make sure to use the same
+command-line options.
 
 
 Bug reports
