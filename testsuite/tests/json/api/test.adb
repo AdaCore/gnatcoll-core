@@ -141,7 +141,7 @@ begin
    Check_Image (Create (True), "true");
 
    Check_Image (Create (Integer'(0)), "0");
-   Check_Image (Create (Long_Integer'(10_000_000_000)), "10000000000");
+   Check_Image (Create (Long_Integer'(1_000_000_000)), "1000000000");
    Check_Image (Create (Long_Long_Integer'(10_000_000_000)), "10000000000");
 
    Check_Image (Create (Float'(1.0)), Float_1_Image);
