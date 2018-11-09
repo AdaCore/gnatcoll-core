@@ -233,14 +233,13 @@ package body GNATCOLL.Projects is
       Path : Path_Name_Type) return GPR.Project_Id;
    --  Return the project view for the project Name
 
-   type External_Variable_Callback is access function
+   type External_Variable_Callback is access procedure
      (Variable : Project_Node_Id;
       Prj      : Project_Node_Id;
       Pkg      : Project_Node_Id;
-      Project  : Project_Type) return Boolean;
+      Project  : Project_Type);
    --  Called for a typed variable declaration that references an external
    --  variable in GPR.
-   --  Stops iterating if this subprogram returns False.
 
    type Get_Directory_Path_Callback is access function
      (Project : GPR.Project_Id) return Path_Information;
@@ -4859,41 +4858,44 @@ package body GNATCOLL.Projects is
          --  Checks that an untyped variable with same name
          --  has not been registered yet.
 
-      function Register_Var
+      procedure Register_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
-         Project  : Project_Type) return Boolean;
+         Project  : Project_Type);
       --  Wrapper that calls either Register_Scenario_Var or
       --  Register_Untyped_Var depending on the kind of the variable.
 
-      function Register_Scenario_Var
+      procedure Register_Scenario_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
          Project  : Project_Type;
-         Errors   : Error_Report := null) return Boolean;
+         Errors   : Error_Report := null);
       --  Add the variable to the list of scenario variables, if not there yet
       --  (see the documentation for Scenario_Variables for the exact rules
       --  used to detect aliases).
 
-      function Register_Untyped_Var
+      procedure Register_Untyped_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
-         Project  : Project_Type) return Boolean;
+         Project  : Project_Type);
       --  Likewise, add the variable to the list of untyped variables.
 
       function External_Default
-        (Project : Project_Type;
-         Var     : Project_Node_Id;
-         Pkg     : Project_Node_Id;
-         T       : GPR.Project_Node_Tree_Ref)
+        (Project     : Project_Type;
+         Var         : Project_Node_Id;
+         Pkg         : Project_Node_Id;
+         T           : GPR.Project_Node_Tree_Ref;
+         Nested_Expr : Project_Node_Id := Empty_Project_Node)
          return Name_Id;
       --  Return the default value for the variable. Var must be a variable
       --  declaration or a variable reference. This routine supports only
       --  all kinds of expressions, but for composite values it will set on
       --  the Uses_Variables flag for the root project.
+      --  Expr is only used for nested external references in the variable
+      --  declaration to evaluate the proper expression.
 
       ----------------
       -- Count_Vars --
@@ -4902,27 +4904,47 @@ package body GNATCOLL.Projects is
       function Count_Vars return Natural is
          Count : Natural := 0;
 
-         function Cb
+         procedure Cb
            (Variable : Project_Node_Id;
             Prj      : Project_Node_Id;
             Pkg      : Project_Node_Id;
-            Project  : Project_Type) return Boolean;
+            Project  : Project_Type);
          --  Increment the total number of variables
 
          --------
          -- Cb --
          --------
 
-         function Cb
+         procedure Cb
            (Variable : Project_Node_Id;
             Prj      : Project_Node_Id;
             Pkg      : Project_Node_Id;
-            Project  : Project_Type) return Boolean
+            Project  : Project_Type)
          is
-            pragma Unreferenced (Variable, Prj, Pkg, Project);
+            pragma Unreferenced (Prj, Pkg);
+            Node_Tree : constant  GPR.Project_Node_Tree_Ref :=
+              Project.Data.Tree.Tree;
+            Expr : Project_Node_Id := Expression_Of (Variable, Node_Tree);
          begin
-            Count := Count + 1;
-            return True;
+            while Expr /= Empty_Project_Node loop
+
+               Expr := First_Term (Expr, Node_Tree);
+               if Next_Term (Expr, Node_Tree) /= Empty_Project_Node then
+                  --  Non-canonical nesting, we do not care.
+                  return;
+               end if;
+
+               Expr := Current_Term (Expr, Node_Tree);
+
+               if Kind_Of (Expr, Node_Tree) = N_External_Value then
+                  Count := Count + 1;
+                  --  That is nesting, we need to iterate deeper.
+                  Expr := External_Default_Of (Expr, Node_Tree);
+               else
+                  --  End of nesting.
+                  return;
+               end if;
+            end loop;
          end Cb;
 
       begin
@@ -4937,10 +4959,11 @@ package body GNATCOLL.Projects is
       ----------------------
 
       function External_Default
-        (Project : Project_Type;
-         Var     : Project_Node_Id;
-         Pkg     : Project_Node_Id;
-         T       : GPR.Project_Node_Tree_Ref)
+        (Project     : Project_Type;
+         Var         : Project_Node_Id;
+         Pkg         : Project_Node_Id;
+         T           : GPR.Project_Node_Tree_Ref;
+         Nested_Expr : Project_Node_Id := Empty_Project_Node)
          return Name_Id
       is
          V : Variable_Value;
@@ -4950,7 +4973,11 @@ package body GNATCOLL.Projects is
          --  For diagnostic purposes.
 
          Proj : Project_Type    := Tree.Root;
-         Expr : Project_Node_Id := Expression_Of (Var, T);
+         Expr : Project_Node_Id :=
+           (if Nested_Expr = Empty_Project_Node then
+               Expression_Of (Var, T)
+            else
+               Nested_Expr);
 
          procedure Check_Complexity (Expression : Project_Node_Id);
          --  Check wether or not the default value is a simple one,
@@ -5064,7 +5091,14 @@ package body GNATCOLL.Projects is
          end loop;
 
          if Active (Me_SV) then
-            Trace (Me_SV, "We will try to compute default of:");
+            if Nested_Expr = Empty_Project_Node then
+               Trace (Me_SV, "We will try to compute default of:");
+            else
+               Trace
+                 (Me_SV,
+                  "We will try to compute default "
+                  & "of a nested sub-expression from:");
+            end if;
             Pretty_Print
               (Var, T, Backward_Compatibility => False);
          end if;
@@ -5081,6 +5115,7 @@ package body GNATCOLL.Projects is
                 (Expr, T),
             Kind                    =>
               Expression_Kind_Of (Expr, T));
+         Trace (Me_SV, "Value is: " & Get_Name_String (V.Value));
          return V.Value;
       exception
          when Ex : others =>
@@ -5114,11 +5149,11 @@ package body GNATCOLL.Projects is
       -- Register_Var --
       ------------------
 
-      function Register_Var
+      procedure Register_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
-         Project  : Project_Type) return Boolean
+         Project  : Project_Type)
       is
          T : constant  GPR.Project_Node_Tree_Ref :=
            Project.Data.Tree.Tree;
@@ -5146,6 +5181,7 @@ package body GNATCOLL.Projects is
             Expr := First_Term   (Expr, T);
             Expr := Current_Term (Expr, T);
             Expr := External_Default_Of (Expr, T);
+
             if Expr /= Empty_Project_Node and then
               Kind_Of (Expr, T) /= N_Literal_String
             then
@@ -5164,18 +5200,19 @@ package body GNATCOLL.Projects is
          Trace
            (Me_SV, "Project: " & Project.Project_Path.Display_Full_Name);
          case Kind_Of (Variable, T) is
+
             when N_Variable_Declaration =>
-               return Register_Untyped_Var (Variable, Proj, Pkg, Project);
+               Register_Untyped_Var (Variable, Proj, Pkg, Project);
+
             when N_Typed_Variable_Declaration =>
                if Is_Simple_Scenario_Variable then
-                  return Register_Scenario_Var
+                  Register_Scenario_Var
                     (Variable, Proj, Pkg, Project, Errors);
                else
-                  return Register_Untyped_Var (Variable, Proj, Pkg, Project);
+                  Register_Untyped_Var (Variable, Proj, Pkg, Project);
                end if;
             when others =>
                Trace (Me, "Unexpected kind of variable");
-               return True;
          end case;
       end Register_Var;
 
@@ -5183,24 +5220,38 @@ package body GNATCOLL.Projects is
       -- Register_Scenario_Var --
       ---------------------------
 
-      function Register_Scenario_Var
+      procedure Register_Scenario_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
          Project  : Project_Type;
-         Errors   : Error_Report := null) return Boolean
+         Errors   : Error_Report := null)
       is
          pragma Unreferenced (Proj);
          T : constant  GPR.Project_Node_Tree_Ref :=
            Project.Data.Tree.Tree;
 
-         V            : constant Name_Id :=
+         V        : constant Name_Id :=
            External_Reference_Of (Variable, T);
-         N            : constant String := Get_String (V);
-         Var, Old_Var : Scenario_Variable;
-         Is_Valid     : Boolean;
+         N        : constant String := Get_String (V);
+         Var      : Scenario_Variable;
+
+         Is_Valid, Duplicate_Found : Boolean;
+
+         function "<" (L, R : String_Access) return Boolean is (L.all < R.all);
+         procedure Sort_Values is new
+           Ada.Containers.Generic_Array_Sort
+             (Positive, String_Access, String_List);
 
          procedure Report_SV_Type_Mismatch (S : String);
+         --  Send info on type mismatch to the best available output.
+
+         procedure Look_For_Duplicate_SVs
+           (Ext_Ref_Name :     String;
+            Found        : out Boolean);
+         --  Compare current Var with all already stored Scenario Variables
+         --  and if found check that they have same set of possible values.
+
          procedure Report_SV_Type_Mismatch (S : String) is
          begin
             if Errors = null then
@@ -5210,10 +5261,96 @@ package body GNATCOLL.Projects is
             end if;
          end Report_SV_Type_Mismatch;
 
-         function "<" (L, R : String_Access) return Boolean is (L.all < R.all);
-         procedure Sort_Values is new
-           Ada.Containers.Generic_Array_Sort
-             (Positive, String_Access, String_List);
+         procedure Look_For_Duplicate_SVs
+           (Ext_Ref_Name :     String;
+            Found        : out Boolean)
+         is
+            Old_Var : Scenario_Variable := No_Variable;
+
+            Dummy : Project_Tree;
+            --  Possible_Values_Of doesn't reference the Tree parameter
+            --  that has been left only for compatibility.
+         begin
+            for Index in 1 .. T_Curr - 1 loop
+               if External_Name (Typed_List (Index)) = Ext_Ref_Name then
+                  Trace (Me_SV, "Same external already registered,"
+                         & " comparing set of possible values");
+                  Old_Var := Typed_List (Index);
+
+                  declare
+                     Old_Values : String_List_Access :=
+                       new String_List'(Possible_Values_Of (Dummy, Old_Var));
+                     New_Values : String_List_Access :=
+                       new String_List'(Possible_Values_Of (Dummy, Var));
+
+                     Values_Identical : Boolean := True;
+                  begin
+                     if Old_Values.all'Length /= New_Values.all'Length then
+                        Trace (Me_SV, "different ammount of values");
+                        Values_Identical := False;
+                     else
+                        Sort_Values (Old_Values.all);
+                        Sort_Values (New_Values.all);
+                        for I in Old_Values'Range loop
+                           if Old_Values (I).all /= New_Values (I).all then
+                              Trace
+                                (Me_SV,
+                                 "Unmatching values: " & Old_Values (I).all
+                                 & " and " & New_Values (I).all);
+                              Values_Identical := False;
+                              exit;
+                           end if;
+                        end loop;
+                     end if;
+
+                     Free (Old_Values);
+                     Free (New_Values);
+
+                     if not Values_Identical then
+                        if
+                          Old_Var.First_Project_Path = Var.First_Project_Path
+                        then
+                           --  Same project
+
+                           Report_SV_Type_Mismatch
+                             (Project.Project_Path.Display_Full_Name
+                              & ": Scenario variables "
+                              & Get_Name_String (Old_Var.Var_Name)
+                              & " and "
+                              & Get_Name_String (Var.Var_Name)
+                              & " controlled by same external "
+                              & External_Name (Var)
+                              & " have different sets of possible values"
+                              & ASCII.LF);
+                        else
+                           --  Aggregated projects with same name
+                           Report_SV_Type_Mismatch
+                             ("Scenario variables "
+                              & Get_Name_String (Old_Var.First_Project_Path)
+                              & ": "
+                              & Get_Name_String (Old_Var.Var_Name)
+                              & " and "
+                              & Project.Project_Path.Display_Full_Name
+                              & ": "
+                              & Get_Name_String (Var.Var_Name)
+                              & " controlled by same external "
+                              & External_Name (Var)
+                              & " have different sets of possible values"
+                              & ASCII.LF);
+                        end if;
+
+                        Inconsistent_SC_Externals.Include (Old_Var.Ext_Name);
+                     end if;
+                  end;
+
+                  Found := True;
+                  return;
+               end if;
+            end loop;
+
+            Found := False;
+         end Look_For_Duplicate_SVs;
+
       begin
          Trace
            (Me_SV, "Register_Scenario_Var " &
@@ -5231,85 +5368,12 @@ package body GNATCOLL.Projects is
                  External_Default (Project, Variable, Pkg, T)),
             First_Project_Path => Project.Data.View.Path.Display_Name);
 
-         for Index in 1 .. T_Curr - 1 loop
-            if External_Name (Typed_List (Index)) = N then
-               Trace (Me_SV, "Same external already registered,"
-                      & " comparing set of possible values");
-               Old_Var := Typed_List (Index);
-
-               declare
-                  Dummy : Project_Tree;
-                  --  Possible_Values_Of doesn't reference the Tree parameter
-                  --  that has been left only for compatibility.
-
-                  Old_Values : String_List_Access :=
-                    new String_List'(Possible_Values_Of (Dummy, Old_Var));
-                  New_Values : String_List_Access :=
-                    new String_List'(Possible_Values_Of (Dummy, Var));
-
-                  Values_Identical : Boolean := True;
-               begin
-                  if Old_Values.all'Length /= New_Values.all'Length then
-                     Trace (Me_SV, "different ammount of values");
-                     Values_Identical := False;
-                  else
-                     Sort_Values (Old_Values.all);
-                     Sort_Values (New_Values.all);
-                     for I in Old_Values'Range loop
-                        if Old_Values (I).all /= New_Values (I).all then
-                           Trace
-                             (Me_SV,
-                              "Unmatching values: " & Old_Values (I).all
-                              & " and " & New_Values (I).all);
-                           Values_Identical := False;
-                           exit;
-                        end if;
-                     end loop;
-                  end if;
-
-                  Free (Old_Values);
-                  Free (New_Values);
-
-                  if not Values_Identical then
-                     if
-                       Old_Var.First_Project_Path = Var.First_Project_Path
-                     then
-                        --  Same project
-
-                        Report_SV_Type_Mismatch
-                           (Project.Project_Path.Display_Full_Name
-                            & ": Scenario variables "
-                            & Get_Name_String (Old_Var.Var_Name)
-                            & " and "
-                            & Get_Name_String (Var.Var_Name)
-                            & " controlled by same external "
-                            & External_Name (Var)
-                            & " have different sets of possible values"
-                            & ASCII.LF);
-                     else
-                        --  Aggregated projects with same name
-                        Report_SV_Type_Mismatch
-                          ("Scenario variables "
-                           & Get_Name_String (Old_Var.First_Project_Path)
-                           & ": "
-                           & Get_Name_String (Old_Var.Var_Name)
-                           & " and "
-                           & Project.Project_Path.Display_Full_Name
-                           & ": "
-                           & Get_Name_String (Var.Var_Name)
-                           & " controlled by same external "
-                           & External_Name (Var)
-                           & " have different sets of possible values"
-                           & ASCII.LF);
-                     end if;
-
-                     Inconsistent_SC_Externals.Include (Old_Var.Ext_Name);
-                  end if;
-               end;
-
-               return True;
-            end if;
-         end loop;
+         Look_For_Duplicate_SVs (N, Duplicate_Found);
+         if Duplicate_Found then
+            --  Nothing to add for the root one, however there may be some new
+            --  nested ones.
+            goto Unwind;
+         end if;
 
          Typed_List (T_Curr) := Var;
 
@@ -5353,18 +5417,72 @@ package body GNATCOLL.Projects is
          end if;
 
          T_Curr := T_Curr + 1;
-         return True;
+
+         <<Unwind>>
+         --  Unwinding nested external references if any.
+         Increase_Indent (Me_SV, "Unwind nested external references");
+         declare
+            Expression : Project_Node_Id;
+
+            Expr       : Project_Node_Id :=
+              Expression_Of (Variable, T);
+            Ref        : Name_Id;
+         begin
+            Expr :=
+              External_Default_Of
+                (Current_Term
+                   (First_Term
+                      (Expr, T),
+                    T),
+                 T);
+            Expression := Expr;
+            while Expr /= Empty_Project_Node loop
+               Expr := First_Term (Expr, T);
+               if Next_Term (Expr, T) /= Empty_Project_Node then
+                  Decrease_Indent (Me_SV,
+                                   "Unwind terminated: Not canonical nesting");
+                  return;
+               end if;
+
+               Expr := Current_Term (Expr, T);
+               if Kind_Of (Expr, T) = N_External_Value then
+                  Ref := String_Value_Of (External_Reference_Of (Expr, T), T);
+                  Trace (Me_SV,
+                         "Nested external reference: "
+                         & Get_Name_String (Ref));
+
+                  Look_For_Duplicate_SVs
+                    (Get_Name_String (Ref), Duplicate_Found);
+                  if not Duplicate_Found then
+
+                     Var.Ext_Name := Ref;
+                     Var.Default :=
+                       External_Default
+                         (Project, Variable, Pkg, T, Expression);
+
+                     Typed_List (T_Curr) := Var;
+                     T_Curr := T_Curr + 1;
+                  end if;
+
+                  Expr := External_Default_Of (Expr, T);
+                  Expression := Expr;
+               else
+                  Decrease_Indent (Me_SV, "Unwind finished");
+                  return;
+               end if;
+            end loop;
+         end;
       end Register_Scenario_Var;
 
       --------------------------
       -- Register_Untyped_Var --
       --------------------------
 
-      function Register_Untyped_Var
+      procedure Register_Untyped_Var
         (Variable : Project_Node_Id;
          Proj     : Project_Node_Id;
          Pkg      : Project_Node_Id;
-         Project  : Project_Type) return Boolean
+         Project  : Project_Type)
       is
          pragma Unreferenced (Proj);
          T : constant  GPR.Project_Node_Tree_Ref :=
@@ -5381,7 +5499,7 @@ package body GNATCOLL.Projects is
          for Index in 1 .. U_Curr - 1 loop
             if External_Name (Untyped_List (Index)) = N then
                --  Nothing to do
-               return True;
+               return;
             end if;
          end loop;
 
@@ -5396,7 +5514,6 @@ package body GNATCOLL.Projects is
          Untyped_List (U_Curr) := Var;
 
          U_Curr := U_Curr + 1;
-         return True;
       end Register_Untyped_Var;
 
       use Name_Id_Sets;
@@ -5954,11 +6071,11 @@ package body GNATCOLL.Projects is
                if Kind_Of (Var, Tree) in
                    N_Typed_Variable_Declaration | N_Variable_Declaration
                  and then Is_External_Variable (Var, Tree)
-                 and then not Callback (Var, Prj, Pkg, Current_Project)
                then
-                  exit;
+                  Callback (Var, Prj, Pkg, Current_Project);
+               end if;
 
-               elsif Kind_Of (Var, Tree) = N_Variable_Declaration
+               if Kind_Of (Var, Tree) = N_Variable_Declaration
                  or else
                    (Kind_Of (Var, Tree) = N_Typed_Variable_Declaration
                     and then not Is_External_Variable (Var, Tree))

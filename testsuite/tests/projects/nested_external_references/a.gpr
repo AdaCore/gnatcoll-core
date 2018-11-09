@@ -1,0 +1,32 @@
+project A is
+
+   --  Simple case
+   type ABCD0 is ("a", "b", "c", "d");
+   VAR0 : ABCD0 := external ("A0", external ("B0", external ("C0", external ("D0", "d"))));
+
+   --  Duplicating SVs before nesting:
+   type ABCD1 is ("a", "b", "c", "d");
+   VAR1_A : ABCD1 := external ("A1", "a");
+   VAR1_B : ABCD1 := external ("B1", "b");
+   VAR1 : ABCD1 := external ("A1", external ("B1", external ("C1", external ("D1", "d"))));
+
+   --  Duplicating SVs after nesting:
+   type ABCD2 is ("a", "b", "c", "d");
+   VAR2 : ABCD2 := external ("A2", external ("B2", external ("C2", external ("D2", "d"))));
+   VAR2_A : ABCD2 := external ("A2", "a");
+   VAR2_B : ABCD2 := external ("B2", "b");
+
+   --  Same external, different value sets:
+   type ABCD3 is ("a", "b", "c", "d");
+   VAR3 : ABCD3 := external ("A3", external ("B3", external ("C3", external ("D3", "d"))));
+   type E3 is ("e");
+   VAR3_B : E3 := external ("B3", "e");
+
+   --  Non-canonical nesting
+   type ABCD4 is ("4a", "4b", "4c", "4d");
+   VAR4 : ABCD4 := external ("A4", external ("B4", "4" & external ("C4", external ("D4", "d"))));
+
+   --  No default expression
+   type No_Def is ("no_def");
+   No_Def_Var : No_Def := external ("NO_DEF");
+end A;
