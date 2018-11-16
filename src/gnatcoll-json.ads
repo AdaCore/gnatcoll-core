@@ -174,7 +174,25 @@ package GNATCOLL.JSON is
    -- Serialization/deserialization primitives --
    ----------------------------------------------
 
-   --  TODO??? allow not to display the error on the standard output
+   type Parsing_Error is record
+      Line, Column : Positive;
+      --  Line and column numbers at which a parsing error is detected
+
+      Message : UTF8_Unbounded_String;
+      --  Short description of the parsing error
+   end record;
+
+   function Format_Parsing_Error (Error : Parsing_Error) return String;
+   --  Return a human-readable string to describe Error
+
+   type Read_Result (Success : Boolean := True) is record
+      case Success is
+         when True =>
+            Value : JSON_Value;
+         when False =>
+            Error : Parsing_Error;
+      end case;
+   end record;
 
    function Read
      (Strm     : Ada.Strings.Unbounded.Unbounded_String;
@@ -185,6 +203,12 @@ package GNATCOLL.JSON is
    --  Parse the JSON document in Strm and return it. On parsing error, print
    --  an error message referencing Filename on the standard output and raise
    --  an Invalid_JSON_Stream exception.
+
+   function Read
+     (Strm : Ada.Strings.Unbounded.Unbounded_String) return Read_Result;
+   function Read (Strm : String) return Read_Result;
+   --  Parse the JSON document in Strm and return it. If there is a parsing
+   --  error, return the corresponding error information.
 
    function Write (Item : JSON_Value; Compact : Boolean := True) return String;
    function Write (Item : JSON_Value; Compact : Boolean := True)

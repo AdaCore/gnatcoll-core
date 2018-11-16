@@ -16,6 +16,10 @@ function Test return Integer is
    procedure Check_Image (Val : JSON_Value; Expected_Image : String);
    --  Assert that the compact image for Val is Expected_Image
 
+   procedure Check_Error (Result : Read_Result; Expected_Error : String);
+   --  Assert that Result comes from an unsuccessful read and compare its error
+   --  information formatted by Format_Parsing_Error to Expected_Error.
+
    -----------------
    -- Check_Image --
    -----------------
@@ -25,6 +29,22 @@ function Test return Integer is
    begin
       A.Assert (Img = Expected_Image, "Check image: " & Img);
    end Check_Image;
+
+   -----------------
+   -- Check_Error --
+   -----------------
+
+   procedure Check_Error (Result : Read_Result; Expected_Error : String) is
+      Label : constant String := "Checking error: " & Expected_Error;
+   begin
+      A.Assert (not Result.Success, Label & " (parsing error)");
+
+      declare
+         Error : constant String := Format_Parsing_Error (Result.Error);
+      begin
+         A.Assert (Error = Expected_Error, Label & " (error message)");
+      end;
+   end Check_Error;
 
    ----------
    -- Less --
@@ -129,8 +149,18 @@ begin
    A.Assert (not Int_0.Is_Empty);
    A.Assert (not Hello_World.Is_Empty);
 
-   -- Serialization/deserialization primitives get their own testing outside of
-   -- this testcase.
+   ----------------------------------------------
+   -- Serialization/deserialization primitives --
+   ----------------------------------------------
+
+   -- Exception-based serialization/deserialization primitives get their own
+   -- testing outside of this testcase.
+
+   Check_Image (Read ("{}").Value, "{}");
+   Check_Image (Read (To_Unbounded_String ("{}")).Value, "{}");
+
+   Check_Error (Read ("{"), "1:2: empty stream");
+   Check_Error (Read (To_Unbounded_String ("{")), "1:2: empty stream");
 
    -----------------------------
    -- Creation of JSON values --

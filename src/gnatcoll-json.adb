@@ -23,6 +23,7 @@
 
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Containers;          use Ada.Containers;
+with Ada.Exceptions;
 with Ada.Strings.Unbounded;   use Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
@@ -74,11 +75,6 @@ package body GNATCOLL.JSON is
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Object_Internal, JSON_Object_Access);
 
-   procedure Report_Error (File : String; Line, Col : Natural; Msg : String)
-      with No_Return;
-   --  Report an error on the standard output and raise an Invalid_JSON_Stream
-   --  exception.
-
    procedure Write
      (Item    : JSON_Value;
       Compact : Boolean;
@@ -86,43 +82,51 @@ package body GNATCOLL.JSON is
       Ret     : in out Unbounded_String);
    --  Auxiliary write function
 
-   function Read
-     (Strm      : String;
-      Filename  : String;
+   procedure Read
+     (Result    : in out Read_Result;
+      Strm      : String;
       Pos       : in out Text_Position;
       Kind      : out Token_Kind;
       Check_EOF : Boolean := False)
-      return JSON_Value;
-   --  Read and decode a JSON value.
+      with Pre => Result.Success;
+   --  Read and decode a JSON value. On success, this returns a Read_Result
+   --  with Success => True, otherwise it returns an error with a Success =>
+   --  False record.
    --
-   --  If Check_EOF is true, raise an error if we haven't reached the end of
+   --  If Check_EOF is true, return an error if we haven't reached the end of
    --  the input string upon returning. If Check_EOF if false and no value
    --  could be decoded but we still managed to read a token, just skip this
    --  token: in that case, a null JSON value is returned.
    --
    --  Strm is the content to decode,
    --
-   --  Filename is the filename of the decoded content, used for error
-   --  reporting.
-   --
    --  Pos is the position in Strm from which we start reading. It is updated
    --  to point past that token.
    --
    --  Kind is set to the last read token kind,
+   --
+   --  Note that we use an IN OUT parameter instead of a mere return value for
+   --  the result to avoid a noticeable runtime penalty, probably due to
+   --  the secondary stack management involved.
+
+   type Read_Token_Result (Success : Boolean := True) is record
+      case Success is
+         when True =>
+            Kind : Token_Kind;
+         when False =>
+            Error : Parsing_Error;
+      end case;
+   end record;
 
    function Read_Token
      (Strm        : String;
-      Filename    : String;
       Pos         : in out Text_Position;
       Token_Start : out Text_Position;
       Token_End   : out Text_Position)
-      return Token_Kind;
+      return Read_Token_Result;
    --  Read a token.
    --
    --  Strm is the content to decode,
-   --
-   --  Filename is the filename of the decoded content, used for error
-   --  reporting.
    --
    --  Pos is the position in Strm from which the token is read. It is updated
    --  to point past that token.
@@ -131,7 +135,8 @@ package body GNATCOLL.JSON is
    --  first and last character of the token (outside boundaries of Strm if the
    --  return token is J_EOF).
    --
-   --  If a parsing error is detected, this calls Report_Error.
+   --  If a parsing error is detected, this returns a Read_Token_Error record
+   --  with Success => False, including the relevant parsing error information.
 
    ------------
    -- Append --
@@ -156,27 +161,19 @@ package body GNATCOLL.JSON is
       end case;
    end Is_Empty;
 
-   ------------------
-   -- Report_Error --
-   ------------------
+   --------------------------
+   -- Format_Parsing_Error --
+   --------------------------
 
-   procedure Report_Error (File : String; Line, Col : Natural; Msg : String) is
-      L : constant String := Line'Img;
-      C : constant String := Col'Img;
+   function Format_Parsing_Error (Error : Parsing_Error) return String is
+      L : constant String := Error.Line'Img;
+      C : constant String := Error.Column'Img;
    begin
-      Ada.Text_IO.New_Line;
-
-      if File = "" then
-         Ada.Text_IO.Put ("<stream>:");
-      else
-         Ada.Text_IO.Put (File & ":");
-      end if;
-
-      Ada.Text_IO.Put_Line
-        (L (L'First + 1 .. L'Last) & ":" & C (C'First + 1 .. C'Last) & ": " &
-           Msg);
-      raise Invalid_JSON_Stream with Msg;
-   end Report_Error;
+      return
+        (L (L'First + 1 .. L'Last) & ":"
+         & C (C'First + 1 .. C'Last) & ": "
+         & To_String (Error.Message));
+   end Format_Parsing_Error;
 
    ----------------
    -- Read_Token --
@@ -184,16 +181,16 @@ package body GNATCOLL.JSON is
 
    function Read_Token
      (Strm        : String;
-      Filename    : String;
       Pos         : in out Text_Position;
       Token_Start : out Text_Position;
       Token_End   : out Text_Position)
-      return Token_Kind
+      return Read_Token_Result
    is
       procedure Next_Char;
       --  Update Pos to point to next character in Strm
 
-      function Next_Char (Result : Token_Kind) return Token_Kind with Inline;
+      function Next_Char (Result : Token_Kind) return Read_Token_Result
+         with Inline;
       --  Shortcut to call the Next_Char procedure after returning Result
 
       function Is_Whitespace return Boolean with Inline;
@@ -211,21 +208,26 @@ package body GNATCOLL.JSON is
       --    * the current character is a whitespace;
       --    * the current character is a structural token.
 
-      procedure Error (Msg : String) with No_Return;
-      --  Shortcut for local calls to Report_Error
+      function Error (Msg : String) return Read_Token_Result;
+      --  Return a parsing error for the current position and the given error
+      --  message.
 
-      procedure Delimit_Keyword (Kw : String);
+      function Delimit_Keyword
+        (Kw : String; Kind : Token_Kind) return Read_Token_Result;
       --  Advance Pos until we reach the next token separator, updating
-      --  Token_End to designate the last character. Raise an error if the
-      --  token in Token_Start .. Token_End isn't equal to Kw.
+      --  Token_End to designate the last character. Return the resulting token
+      --  if it matches Kw/Kind, otherwise raise an error.
 
       -----------
       -- Error --
       -----------
 
-      procedure Error (Msg : String) is
+      function Error (Msg : String) return Read_Token_Result is
       begin
-         Report_Error (Filename, Pos.Line, Pos.Column, Msg);
+         return (Success => False,
+                 Error   => (Line    => Pos.Line,
+                             Column  => Pos.Column,
+                             Message => To_Unbounded_String (Msg)));
       end Error;
 
       ---------------
@@ -245,10 +247,10 @@ package body GNATCOLL.JSON is
          end if;
       end Next_Char;
 
-      function Next_Char (Result : Token_Kind) return Token_Kind is
+      function Next_Char (Result : Token_Kind) return Read_Token_Result is
       begin
          Next_Char;
-         return Result;
+         return (Success => True, Kind => Result);
       end Next_Char;
 
       -------------------
@@ -288,15 +290,18 @@ package body GNATCOLL.JSON is
       -- Delimit_Keyword --
       ---------------------
 
-      procedure Delimit_Keyword (Kw : String) is
+      function Delimit_Keyword
+        (Kw : String; Kind : Token_Kind) return Read_Token_Result is
       begin
          while not Is_Token_Sep loop
             Token_End := Pos;
             Next_Char;
          end loop;
          if Strm (Token_Start.Index .. Token_End.Index) /= Kw then
-            Error ("invalid keyword starting with: " &
-                     Strm (Token_Start.Index .. Token_End.Index));
+            return Error ("invalid keyword starting with: "
+                          & Strm (Token_Start.Index .. Token_End.Index));
+         else
+            return (Success => True, Kind => Kind);
          end if;
       end Delimit_Keyword;
 
@@ -321,7 +326,7 @@ package body GNATCOLL.JSON is
       --  If we reached the end of the input string, just return a EOF token
 
       if Pos.Index > Strm'Last then
-         return J_EOF;
+         return (Success => True, Kind => J_EOF);
       end if;
 
       --  Otherwise, all depends on the first non-whitespace character to read
@@ -342,15 +347,9 @@ package body GNATCOLL.JSON is
 
       --  Only named value tokens can start with a letter
 
-      when 'n' =>
-         Delimit_Keyword ("null");
-         return J_NULL;
-      when 'f' =>
-         Delimit_Keyword ("false");
-         return J_FALSE;
-      when 't' =>
-         Delimit_Keyword ("true");
-         return J_TRUE;
+      when 'n' => return Delimit_Keyword ("null", J_NULL);
+      when 'f' => return Delimit_Keyword ("false", J_FALSE);
+      when 't' => return Delimit_Keyword ("true", J_TRUE);
 
       when '"' =>
 
@@ -365,7 +364,7 @@ package body GNATCOLL.JSON is
             CC := Strm (Pos.Index);
 
             if CC in ASCII.NUL .. ASCII.US then
-               Error ("control character not allowed in string");
+               return Error ("control character not allowed in string");
             end if;
 
             if CC = '\' then
@@ -376,7 +375,7 @@ package body GNATCOLL.JSON is
                Next_Char;
 
                if Pos.Index > Strm'Last then
-                  Error ("non terminated string");
+                  return Error ("non terminated string");
                end if;
 
                case Strm (Pos.Index) is
@@ -385,11 +384,11 @@ package body GNATCOLL.JSON is
                      for Idx in 1 .. 4 loop
                         Next_Char;
                         if Pos.Index > Strm'Last then
-                           Error ("non terminated string");
+                           return Error ("non terminated string");
                         elsif Strm (Pos.Index) not in
                            'a' .. 'f' | 'A' .. 'F' | '0' .. '9'
                         then
-                           Error ("invalid unicode escape sequence");
+                           return Error ("invalid unicode escape sequence");
                         end if;
                      end loop;
 
@@ -398,7 +397,7 @@ package body GNATCOLL.JSON is
                      null;
 
                   when others =>
-                     Error ("invalid escape sequence");
+                     return Error ("invalid escape sequence");
                end case;
             end if;
             Next_Char;
@@ -408,7 +407,7 @@ package body GNATCOLL.JSON is
          --  string: this is an error.
 
          if Pos.Index > Strm'Last then
-            Error ("non terminated string");
+            return Error ("non terminated string");
          end if;
 
          Token_End := Pos;
@@ -418,9 +417,9 @@ package body GNATCOLL.JSON is
 
          Next_Char;
          if not Is_Token_Sep then
-            Error ("invalid syntax");
+            return Error ("invalid syntax");
          end if;
-         return J_STRING;
+         return (Success => True, Kind => J_STRING);
 
       when '-' | '0' .. '9' =>
 
@@ -430,7 +429,7 @@ package body GNATCOLL.JSON is
          if CC = '-' then
             Next_Char;
             if Pos.Index > Strm'Last then
-               Error ("invalid number");
+               return Error ("invalid number");
             end if;
          end if;
 
@@ -453,20 +452,20 @@ package body GNATCOLL.JSON is
             end loop;
 
          when others =>
-            Error ("invalid number");
+            return Error ("invalid number");
          end case;
 
          if Is_Token_Sep then
 
             --  The token stops here, so we have a valid integer number
 
-            return J_INTEGER;
+            return (Success => True, Kind => J_INTEGER);
 
          elsif Strm (Pos.Index) not in '.' | 'e' | 'E' then
 
             --  At this point, we allow only an exponent or a decimal number
 
-            Error ("invalid number");
+            return Error ("invalid number");
          end if;
 
          --  If present, handle the decimals
@@ -478,7 +477,7 @@ package body GNATCOLL.JSON is
             if Pos.Index > Strm'Last or else
               Strm (Pos.Index) not in '0' .. '9'
             then
-               Error ("invalid number");
+               return Error ("invalid number");
             end if;
 
             while Pos.Index <= Strm'Last and then
@@ -496,7 +495,7 @@ package body GNATCOLL.JSON is
             Token_End := Pos;
             Next_Char;
             if Pos.Index > Strm'Last then
-               Error ("invalid number");
+               return Error ("invalid number");
             end if;
 
             --  Skip the sign, if present
@@ -517,7 +516,7 @@ package body GNATCOLL.JSON is
 
             if Pos.Index > Strm'Last or else Strm (Pos.Index) not in '0' .. '9'
             then
-               Error ("invalid number");
+               return Error ("invalid number");
             end if;
 
             while Pos.Index <= Strm'Last
@@ -532,13 +531,15 @@ package body GNATCOLL.JSON is
 
             --  The token stops here, so we have a valid integer number
 
-            return (if Can_Be_Integer then J_INTEGER else J_NUMBER);
+            return
+              (Success => True,
+               Kind    => (if Can_Be_Integer then J_INTEGER else J_NUMBER));
          else
-            Error ("invalid number");
+            return Error ("invalid number");
          end if;
 
       when others =>
-         Error ("Unexpected character '" & CC & ''');
+         return Error ("Unexpected character '" & CC & ''');
       end case;
    end Read_Token;
 
@@ -546,55 +547,81 @@ package body GNATCOLL.JSON is
    -- Read --
    ----------
 
-   function Read
-     (Strm      : String;
-      Filename  : String;
+   procedure Read
+     (Result    : in out Read_Result;
+      Strm      : String;
       Pos       : in out Text_Position;
       Kind      : out Token_Kind;
       Check_EOF : Boolean := False)
-      return JSON_Value
    is
 
-      procedure Error (Msg : String) with No_Return;
-      --  Shortcut for local calls to Report_Error
+      function Error (Msg : String) return Read_Result;
+      --  Return a parsing error for the current position and the given error
+      --  message.
+
+      function Error (Result : Read_Token_Result) return Read_Result
+         with Pre => not Result.Success;
+      --  Transform a parsing error from Read_Token into a Read_Result
 
       -----------
       -- Error --
       -----------
 
-      procedure Error (Msg : String) is
+      function Error (Msg : String) return Read_Result is
       begin
-         Report_Error (Filename, Pos.Line, Pos.Column, Msg);
+         return (Success => False,
+                 Error   => (Line    => Pos.Line,
+                             Column  => Pos.Column,
+                             Message => To_Unbounded_String (Msg)));
+      end Error;
+
+      function Error (Result : Read_Token_Result) return Read_Result is
+      begin
+         return (Success => False, Error => Result.Error);
       end Error;
 
       Token_Start, Token_End : Text_Position;
       --  Boundaries for the currently analyzed token
 
-      Result : JSON_Value;
-      --  Root JSON value to return
+      Token_Result : Read_Token_Result;
+      --  Buffer for token reads
    begin
       --  The first token we get determines the kind of JSON value to return
 
-      Kind := Read_Token (Strm, Filename, Pos, Token_Start, Token_End);
+      Token_Result := Read_Token (Strm, Pos, Token_Start, Token_End);
+      if not Token_Result.Success then
+         Result := Error (Token_Result);
+         Kind := J_EOF;
+         return;
+      end if;
+      Kind := Token_Result.Kind;
+
       case Kind is
          when J_EOF =>
-            Error ("empty stream");
+            Result := Error ("empty stream");
+            return;
 
          when J_NULL =>
-            Result := Create;
+            Result.Value := Create;
 
          when J_FALSE =>
-            Result := Create (False);
+            Result.Value := Create (False);
 
          when J_TRUE =>
-            Result := Create (True);
+            Result.Value := Create (True);
 
          when J_STRING =>
-            declare
-               Str_Value : constant UTF8_XString := Utility.Un_Escape_String
-                 (Strm, Token_Start.Index, Token_End.Index);
             begin
-               Result := Create (Str_Value);
+               declare
+                  Str_Value : constant UTF8_XString := Utility.Un_Escape_String
+                    (Strm, Token_Start.Index, Token_End.Index);
+               begin
+                  Result.Value := Create (Str_Value);
+               end;
+            exception
+               when Exc : Invalid_JSON_Stream =>
+                  Result := Error (Ada.Exceptions.Exception_Message (Exc));
+                  return;
             end;
 
          when J_ARRAY =>
@@ -608,7 +635,7 @@ package body GNATCOLL.JSON is
                ST : Token_Kind;
                --  Buffer for the kind of tokens we read
 
-               Element : JSON_Value;
+               Element : Read_Result;
                --  Buffer for the JSON values that constitute array elements
 
                Is_First : Boolean := True;
@@ -619,21 +646,35 @@ package body GNATCOLL.JSON is
                --  token ("]").
 
                loop
-                  Element := Read (Strm, Filename, Pos, ST);
+                  Read (Element, Strm, Pos, ST);
+                  if not Element.Success then
+                     Free (Arr);
+                     Result := Element;
+                     return;
+                  end if;
+
                   case ST is
                   when J_ARRAY_END =>
                      exit when Is_First;
-                     Error ("syntax error");
+                     Free (Arr);
+                     Result := Error ("syntax error");
+                     return;
 
                   when Value_Token =>
                      --  We got a new array element: append it
 
-                     Append (Arr.Arr, Element);
+                     Append (Arr.Arr, Element.Value);
 
                      --  Now see what is next: the end of the array or a comma
                      --  (hence another array element after).
 
-                     Element := Read (Strm, Filename, Pos, ST);
+                     Read (Element, Strm, Pos, ST);
+                     if not Element.Success then
+                        Free (Arr);
+                        Result := Element;
+                        return;
+                     end if;
+
                      case ST is
                      when J_ARRAY_END =>
                         exit;
@@ -645,41 +686,44 @@ package body GNATCOLL.JSON is
                         null;
 
                      when others =>
-                        Error ("comma expected");
+                        Free (Arr);
+                        Result := Error ("comma expected");
+                        return;
                      end case;
 
                   when others =>
-                     Error ("syntax error");
+                     Free (Arr);
+                     Result := Error ("syntax error");
+                     return;
                   end case;
 
                   Is_First := False;
                end loop;
 
-               Result := (Ada.Finalization.Controlled with
-                          Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
-            exception
-               when others =>
-                  Free (Arr);
-                  raise;
+               Result.Value :=
+                 (Ada.Finalization.Controlled with
+                  Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
             end;
 
          when J_OBJECT =>
             declare
-               Is_First   : Boolean := True;
+               Is_First : Boolean := True;
                --  True if we are still reading the first object member. False
                --  afterwards.
 
                ST : Token_Kind;
                --  Buffer for the kind of tokens we read
 
-               Key, Value : JSON_Value;
+               Key, Value : Read_Result;
                --  Buffer for the JSON values that constitute keys and member
                --  values.
             begin
                --  Allocate internal container for the result
 
-               Result.Data := (Kind => JSON_Object_Type,
-                            Obj_Value => new JSON_Object_Internal);
+               Result.Value :=
+                 (Ada.Finalization.Controlled with
+                  Data => (Kind      => JSON_Object_Type,
+                           Obj_Value => new JSON_Object_Internal));
 
                --  Read all members for this object until we reach the closing
                --  token ("}").
@@ -687,23 +731,37 @@ package body GNATCOLL.JSON is
                loop
                   --  First try to read the key for the next member
 
-                  Key := Read (Strm, Filename, Pos, ST);
+                  Read (Key, Strm, Pos, ST);
+                  if not Key.Success then
+                     Result := Key;
+                     return;
+                  end if;
 
                   case ST is
                   when J_OBJECT_END =>
                      exit when Is_First;
-                     Error ("string value expected");
+                     Result := Error ("string value expected");
+                     return;
 
                   when J_STRING =>
                      --  Consume the colon token, then get the member value
 
-                     Value := Read (Strm, Filename, Pos, ST);
-                     if ST /= J_COLON then
-                        Error ("colon expected");
+                     Read (Value, Strm, Pos, ST);
+                     if not Value.Success then
+                        Result := Value;
+                        return;
+                     elsif ST /= J_COLON then
+                        Result := Error ("colon expected");
+                        return;
                      end if;
-                     Value := Read (Strm, Filename, Pos, ST);
-                     if ST not in Value_Token then
-                        Error ("non expected token");
+
+                     Read (Value, Strm, Pos, ST);
+                     if not Value.Success then
+                        Result := Value;
+                        return;
+                     elsif ST not in Value_Token then
+                        Result := Error ("non expected token");
+                        return;
                      end if;
 
                      --  Register this new member.
@@ -713,15 +771,19 @@ package body GNATCOLL.JSON is
                      --  fail.
 
                      declare
-                        Key_Str : constant UTF8_XString := Get (Key);
+                        Key_Str : constant UTF8_XString := Get (Key.Value);
                      begin
-                        Set_Field (Result, Key_Str, Value);
+                        Set_Field (Result.Value, Key_Str, Value.Value);
                      end;
 
                      --  Now see what is next: the end of the object or a comma
                      --  (hence another object member after).
 
-                     Value := Read (Strm, Filename, Pos, ST);
+                     Read (Value, Strm, Pos, ST);
+                     if not Value.Success then
+                        Result := Value;
+                        return;
+                     end if;
                      case ST is
                      when J_OBJECT_END =>
                         exit;
@@ -733,11 +795,13 @@ package body GNATCOLL.JSON is
                         null;
 
                      when others =>
-                        Error ("comma expected");
+                        Result := Error ("comma expected");
+                        return;
                      end case;
 
                   when others =>
-                     Error ("string value expected");
+                     Result := Error ("string value expected");
+                     return;
                   end case;
                   Is_First := False;
                end loop;
@@ -754,7 +818,7 @@ package body GNATCOLL.JSON is
                      Result_Int : Long_Long_Integer;
                   begin
                      Result_Int := Long_Long_Integer'Value (Number_Str);
-                     Result := Create (Result_Int);
+                     Result.Value := Create (Result_Int);
                      Has_Integer := True;
                   exception
                      when Constraint_Error =>
@@ -764,28 +828,32 @@ package body GNATCOLL.JSON is
 
                if not Has_Integer then
                   begin
-                     Result := Create (Long_Float'Value (Number_Str));
+                     Result.Value := Create (Long_Float'Value (Number_Str));
                   exception
                      when Constraint_Error =>
-                        Error ("cannot convert JSON number to Long_Float");
+                        Result := Error
+                          ("cannot convert JSON number to Long_Float");
+                        return;
                   end;
                end if;
             end;
 
          when others =>
             if Check_EOF then
-               Error ("invalid JSON stream");
+               Result := Error ("invalid JSON stream");
+               return;
             else
-               Result := Create;
+               Result.Value := Create;
             end if;
       end case;
 
-      if Check_EOF and then Read_Token
-           (Strm, Filename, Pos, Token_Start, Token_End) /= J_EOF
-      then
-         Error ("additional data after end of JSON stream");
+      if Check_EOF then
+         Token_Result := Read_Token (Strm, Pos, Token_Start, Token_End);
+         if not Token_Result.Success or else Token_Result.Kind /= J_EOF then
+            Result := Error ("additional data after end of JSON stream");
+            return;
+         end if;
       end if;
-      return Result;
    end Read;
 
    function Read
@@ -800,10 +868,38 @@ package body GNATCOLL.JSON is
      (Strm     : String;
       Filename : String := "<data>") return JSON_Value
    is
-      Pos : Text_Position := (Strm'First, 1, 1);
-      Kind : Token_Kind;
+      Result : constant Read_Result := Read (Strm);
    begin
-      return Read (Strm, Filename, Pos, Kind, Check_EOF => True);
+      if Result.Success then
+         return Result.Value;
+      else
+         Ada.Text_IO.New_Line;
+
+         if Filename = "" then
+            Ada.Text_IO.Put ("<stream>:");
+         else
+            Ada.Text_IO.Put (Filename & ":");
+         end if;
+
+         Ada.Text_IO.Put_Line (Format_Parsing_Error (Result.Error));
+         raise Invalid_JSON_Stream with To_String (Result.Error.Message);
+      end if;
+   end Read;
+
+   function Read
+     (Strm : Ada.Strings.Unbounded.Unbounded_String) return Read_Result
+   is
+   begin
+      return Read (To_String (Strm));
+   end Read;
+
+   function Read (Strm : String) return Read_Result is
+      Pos    : Text_Position := (Strm'First, 1, 1);
+      Kind   : Token_Kind;
+      Result : Read_Result := (Success => True, others => <>);
+   begin
+      Read (Result, Strm, Pos, Kind, Check_EOF => True);
+      return Result;
    end Read;
 
    -----------
