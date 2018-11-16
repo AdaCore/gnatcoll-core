@@ -59,10 +59,9 @@ package body GNATCOLL.JSON is
    --  a J_NUMBER token that "might" be represented as an integer. Special
    --  token J_EOF means that end of stream has been reached.
 
-   function Is_Value (TK : Token_Kind) return Boolean;
-   pragma Inline (Is_Value);
-   --  Return True if the token kind is a JSON value: null, false, true,
-   --  a string, a number, an array or an object.
+   subtype Value_Token is Token_Kind range J_NULL .. J_OBJECT;
+   --  Subset of token kinds for JSON values: null, false, true, a string, a
+   --  number, an array or an object.
 
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Array_Internal, JSON_Array_Access);
@@ -134,21 +133,6 @@ package body GNATCOLL.JSON is
          when others           => return False;
       end case;
    end Is_Empty;
-
-   --------------
-   -- Is_Value --
-   --------------
-   function Is_Value (TK : Token_Kind) return Boolean is
-   begin
-      return TK = J_NULL or else
-        TK = J_TRUE or else
-        TK = J_FALSE or else
-        TK = J_STRING or else
-        TK = J_ARRAY or else
-        TK = J_OBJECT or else
-        TK = J_INTEGER or else
-        TK = J_NUMBER;
-   end Is_Value;
 
    ------------------
    -- Report_Error --
@@ -551,7 +535,7 @@ package body GNATCOLL.JSON is
                   Element := Read (Strm, Pos, ST, Filename);
                   if Is_First and then ST = J_ARRAY_END then
                      exit;
-                  elsif Is_Value (ST) then
+                  elsif ST in Value_Token then
                      Append (Arr.Arr, Element);
                      Element := Read (Strm, Pos, ST, Filename);
                      if ST = J_ARRAY_END then
@@ -592,7 +576,7 @@ package body GNATCOLL.JSON is
                         Error ("colon expected");
                      end if;
                      Value := Read (Strm, Pos, ST, Filename);
-                     if not Is_Value (ST) then
+                     if ST not in Value_Token then
                         Error ("non expected token");
                      end if;
                      Key_Str := Get (Key);
