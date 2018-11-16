@@ -33,9 +33,15 @@ with GNATCOLL.Strings;        use GNATCOLL.Strings;
 package body GNATCOLL.JSON is
 
    type Text_Position is record
-      Index  : Natural := 0;
-      Line   : Natural := 0;
+      Index : Natural := 0;
+      --  Array index in the input string. For valid positions, this is
+      --  positive.
+
+      Line : Natural := 0;
+      --  Logical line number. For valid positions, this is positive.
+
       Column : Natural := 0;
+      --  Logical column number. For valid positions, this is positive.
    end record;
    --  Record to represent position in a given text
 
@@ -68,8 +74,10 @@ package body GNATCOLL.JSON is
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Object_Internal, JSON_Object_Access);
 
-   procedure Report_Error (File : String; Line, Col : Natural; Msg : String);
-   pragma No_Return (Report_Error);
+   procedure Report_Error (File : String; Line, Col : Natural; Msg : String)
+      with No_Return;
+   --  Report an error on the standard output and raise an Invalid_JSON_Stream
+   --  exception.
 
    procedure Write
      (Item    : JSON_Value;
@@ -80,20 +88,27 @@ package body GNATCOLL.JSON is
 
    function Read
      (Strm      : String;
+      Filename  : String;
       Pos       : in out Text_Position;
       Kind      : out Token_Kind;
-      Filename  : String;
       Check_EOF : Boolean := False)
       return JSON_Value;
-   --  Internal function that reads a JSON stream.
+   --  Read and decode a JSON value.
+   --
+   --  If Check_EOF is true, raise an error if we haven't reached the end of
+   --  the input string upon returning. If Check_EOF if false and no value
+   --  could be decoded but we still managed to read a token, just skip this
+   --  token: in that case, a null JSON value is returned.
    --
    --  Strm is the content to decode,
-   --  Pos is the current position in the Strm,
+   --
+   --  Filename is the filename of the decoded content, used for error
+   --  reporting.
+   --
+   --  Pos is the position in Strm from which we start reading. It is updated
+   --  to point past that token.
+   --
    --  Kind is set to the last read token kind,
-   --  Filename is the filename of corresponding to the content Strm (used for
-   --  for error reporting only).
-   --  If Check_EOF is set to True, check before returning the JSON value that
-   --  we have reached the end of the stream.
 
    function Read_Token
      (Strm        : String;
@@ -102,14 +117,21 @@ package body GNATCOLL.JSON is
       Token_Start : out Text_Position;
       Token_End   : out Text_Position)
       return Token_Kind;
-   --  Read a token
+   --  Read a token.
    --
    --  Strm is the content to decode,
-   --  Filename is the filename of the decoded content (error reporting)
-   --  Pos is the current position in Strm
-   --  Token_Start are Token_End are respectively the position of the first and
-   --  last character of the token (outside boundaries of Strm if the return
-   --  token is J_EOF).
+   --
+   --  Filename is the filename of the decoded content, used for error
+   --  reporting.
+   --
+   --  Pos is the position in Strm from which the token is read. It is updated
+   --  to point past that token.
+   --
+   --  Token_Start are Token_End are set respectively to the position of the
+   --  first and last character of the token (outside boundaries of Strm if the
+   --  return token is J_EOF).
+   --
+   --  If a parsing error is detected, this calls Report_Error.
 
    ------------
    -- Append --
@@ -166,28 +188,36 @@ package body GNATCOLL.JSON is
       Pos         : in out Text_Position;
       Token_Start : out Text_Position;
       Token_End   : out Text_Position)
-       return Token_Kind
+      return Token_Kind
    is
       procedure Next_Char;
-      --  Update Pos to point to next char
+      --  Update Pos to point to next character in Strm
 
-      function Is_Whitespace return Boolean;
-      pragma Inline (Is_Whitespace);
-      --  Return True of current character is a whitespace
+      function Next_Char (Result : Token_Kind) return Token_Kind with Inline;
+      --  Shortcut to call the Next_Char procedure after returning Result
 
-      function Is_Structural_Token return Boolean;
-      pragma Inline (Is_Structural_Token);
-      --  Return True if current character is one of the structural tokens
+      function Is_Whitespace return Boolean with Inline;
+      --  Return True of current character is a whitespace: line feed, carriage
+      --  return, space or horizontal tabulation.
 
-      function Is_Token_Sep return Boolean;
-      pragma Inline (Is_Token_Sep);
-      --  Return True if current character is a token separator
+      function Is_Structural_Token return Boolean with Inline;
+      --  Return True if current character is one of the structural tokens:
+      --  brackets, parens, comma or colon.
 
-      procedure Error (Msg : String);
-      pragma No_Return (Error);
+      function Is_Token_Sep return Boolean with Inline;
+      --  Return True if at least of of the following is true:
+      --
+      --    * we reached the end of input string;
+      --    * the current character is a whitespace;
+      --    * the current character is a structural token.
+
+      procedure Error (Msg : String) with No_Return;
+      --  Shortcut for local calls to Report_Error
 
       procedure Delimit_Keyword (Kw : String);
-      --  Helper function to parse tokens such as null, false and true
+      --  Advance Pos until we reach the next token separator, updating
+      --  Token_End to designate the last character. Raise an error if the
+      --  token in Token_Start .. Token_End isn't equal to Kw.
 
       -----------
       -- Error --
@@ -215,17 +245,21 @@ package body GNATCOLL.JSON is
          end if;
       end Next_Char;
 
+      function Next_Char (Result : Token_Kind) return Token_Kind is
+      begin
+         Next_Char;
+         return Result;
+      end Next_Char;
+
       -------------------
       -- Is_Whitespace --
       -------------------
 
       function Is_Whitespace return Boolean is
       begin
-         return Pos.Index <= Strm'Last and then
-           (Strm (Pos.Index) = ASCII.LF or else
-            Strm (Pos.Index) = ASCII.CR or else
-            Strm (Pos.Index) = ASCII.HT or else
-            Strm (Pos.Index) = ' ');
+         return
+           (Pos.Index <= Strm'Last
+            and then Strm (Pos.Index) in ASCII.LF | ASCII.CR | ASCII.HT | ' ');
       end Is_Whitespace;
 
       -------------------------
@@ -234,13 +268,9 @@ package body GNATCOLL.JSON is
 
       function Is_Structural_Token return Boolean is
       begin
-         return Pos.Index <= Strm'Last and then
-           (Strm (Pos.Index) = '[' or else
-            Strm (Pos.Index) = ']' or else
-            Strm (Pos.Index) = '{' or else
-            Strm (Pos.Index) = '}' or else
-            Strm (Pos.Index) = ',' or else
-            Strm (Pos.Index) = ':');
+         return
+           (Pos.Index <= Strm'Last
+            and then Strm (Pos.Index) in '[' | ']' | '{' | '}' | ',' | ':');
       end Is_Structural_Token;
 
       ------------------
@@ -249,9 +279,9 @@ package body GNATCOLL.JSON is
 
       function Is_Token_Sep return Boolean is
       begin
-         return Pos.Index > Strm'Last or else
-           Is_Whitespace or else
-           Is_Structural_Token;
+         return (Pos.Index > Strm'Last
+                 or else Is_Whitespace
+                 or else Is_Structural_Token);
       end Is_Token_Sep;
 
       ---------------------
@@ -270,86 +300,103 @@ package body GNATCOLL.JSON is
          end if;
       end Delimit_Keyword;
 
-      CC             : Character;
+      CC : Character;
+      --  Buffer for the currently analyzed character
+
       Can_Be_Integer : Boolean := True;
+      --  When reading a number token, this is true if that number can be an
+      --  integer: otherwise, it must be interpreted as a decimal number.
    begin
       --  Skip leading whitespaces
+
       while Is_Whitespace loop
          Next_Char;
       end loop;
 
       --  Initialize token delimiters
+
       Token_Start := Pos;
       Token_End   := Pos;
 
-      --  End of stream reached
+      --  If we reached the end of the input string, just return a EOF token
+
       if Pos.Index > Strm'Last then
          return J_EOF;
       end if;
 
-      CC := Strm (Pos.Index);
+      --  Otherwise, all depends on the first non-whitespace character to read
+      --  next...
 
-      if CC = '[' then
-         Next_Char;
-         return J_ARRAY;
-      elsif CC = ']' then
-         Next_Char;
-         return J_ARRAY_END;
-      elsif CC = '{' then
-         Next_Char;
-         return J_OBJECT;
-      elsif CC = '}' then
-         Next_Char;
-         return J_OBJECT_END;
-      elsif CC = ',' then
-         Next_Char;
-         return J_COMMA;
-      elsif CC = ':' then
-         Next_Char;
-         return J_COLON;
-      elsif CC = 'n' then
+      CC := Strm (Pos.Index);
+      case CC is
+
+      --  Structual tokens are unambiguously designated by standalone
+      --  characters.
+
+      when '[' => return Next_Char (J_ARRAY);
+      when ']' => return Next_Char (J_ARRAY_END);
+      when '{' => return Next_Char (J_OBJECT);
+      when '}' => return Next_Char (J_OBJECT_END);
+      when ',' => return Next_Char (J_COMMA);
+      when ':' => return Next_Char (J_COLON);
+
+      --  Only named value tokens can start with a letter
+
+      when 'n' =>
          Delimit_Keyword ("null");
          return J_NULL;
-      elsif CC = 'f' then
+      when 'f' =>
          Delimit_Keyword ("false");
          return J_FALSE;
-      elsif CC = 't' then
+      when 't' =>
          Delimit_Keyword ("true");
          return J_TRUE;
-      elsif CC = '"' then
-         --  We expect a string
-         --  Just scan till the end the of the string but do not attempt
-         --  to decode it. This means that even if we get a string token
-         --  it might not be a valid string from the ECMA 404 point of
-         --  view.
+
+      when '"' =>
+
+         --  We expect a string.
+         --
+         --  Just scan till the end the of the string but do not attempt to
+         --  decode it. This means that even if we get a string token it might
+         --  not be a valid string from the ECMA 404 point of view.
+
          Next_Char;
          while Pos.Index <= Strm'Last and then Strm (Pos.Index) /= '"' loop
-            if Strm (Pos.Index) in ASCII.NUL .. ASCII.US then
+            CC := Strm (Pos.Index);
+
+            if CC in ASCII.NUL .. ASCII.US then
                Error ("control character not allowed in string");
             end if;
 
-            if Strm (Pos.Index) = '\' then
+            if CC = '\' then
+
+               --  This is an escape sequence. Make sure we have at least one
+               --  more character to read.
+
                Next_Char;
+
                if Pos.Index > Strm'Last then
-                  Error ("non terminated string token");
+                  Error ("non terminated string");
                end if;
 
                case Strm (Pos.Index) is
                   when 'u' =>
+                     --  This is a unicode escape sequence ("\uXXXX")
                      for Idx in 1 .. 4 loop
                         Next_Char;
-                        if Pos.Index > Strm'Last or else
-                          (Strm (Pos.Index) not in 'a' .. 'f' and then
-                           Strm (Pos.Index) not in 'A' .. 'F' and then
-                           Strm (Pos.Index) not in '0' .. '9')
+                        if Pos.Index > Strm'Last then
+                           Error ("non terminated string");
+                        elsif Strm (Pos.Index) not in
+                           'a' .. 'f' | 'A' .. 'F' | '0' .. '9'
                         then
                            Error ("invalid unicode escape sequence");
                         end if;
-
                      end loop;
 
                   when '\' | '/' | '"' | 'b' | 'f' | 'n' | 'r' | 't' =>
+                     --  This is a single-character escape sequence
                      null;
+
                   when others =>
                      Error ("invalid escape sequence");
                end case;
@@ -357,59 +404,73 @@ package body GNATCOLL.JSON is
             Next_Char;
          end loop;
 
-         --  No quote found report and error
+         --  We could not find a closing quote before the end of the input
+         --  string: this is an error.
+
          if Pos.Index > Strm'Last then
-            Error ("non terminated string token");
+            Error ("non terminated string");
          end if;
 
          Token_End := Pos;
 
-         --  Go to next char and ensure that this is separator. Indeed
-         --  construction such as "string1""string2" are not allowed
+         --  Go to next char and ensure that this is separator. Indeed,
+         --  construction such as "string1""string2" are not allowed.
+
          Next_Char;
          if not Is_Token_Sep then
             Error ("invalid syntax");
          end if;
          return J_STRING;
-      elsif CC = '-' or else CC in '0' .. '9' then
-         --  We expect a number
+
+      when '-' | '0' .. '9' =>
+
+         --  We expect a number. If it's a negative one, just discard the
+         --  leading dash.
+
          if CC = '-' then
             Next_Char;
+            if Pos.Index > Strm'Last then
+               Error ("invalid number");
+            end if;
          end if;
 
-         if Pos.Index > Strm'Last then
-            Error ("invalid number");
-         end if;
+         --  Parse the integer part of a number. Leading zeros (except a mere
+         --  "0" of course) are not allowed.
 
-         --  Parse integer part of a number. Superfluous leading zeros are not
-         --  allowed.
-         if Strm (Pos.Index) = '0' then
+         case Strm (Pos.Index) is
+         when '0' =>
             Token_End := Pos;
             Next_Char;
-         elsif Strm (Pos.Index) in '1' .. '9' then
+
+         when '1' .. '9' =>
             Token_End := Pos;
             Next_Char;
-            while Pos.Index <= Strm'Last and then
-              Strm (Pos.Index) in '0' .. '9'
+            while Pos.Index <= Strm'Last
+                  and then Strm (Pos.Index) in '0' .. '9'
             loop
                Token_End := Pos;
                Next_Char;
             end loop;
-         else
+
+         when others =>
             Error ("invalid number");
-         end if;
+         end case;
 
          if Is_Token_Sep then
-            --  Valid integer number
+
+            --  The token stops here, so we have a valid integer number
+
             return J_INTEGER;
-         elsif Strm (Pos.Index) /= '.' and then
-           Strm (Pos.Index) /= 'e' and then
-           Strm (Pos.Index) /= 'E'
-         then
+
+         elsif Strm (Pos.Index) not in '.' | 'e' | 'E' then
+
+            --  At this point, we allow only an exponent or a decimal number
+
             Error ("invalid number");
          end if;
 
-         --  Check for a fractional part
+         --  If present, handle the decimals
+
          if Strm (Pos.Index) = '.' then
             Can_Be_Integer := False;
             Token_End := Pos;
@@ -429,34 +490,38 @@ package body GNATCOLL.JSON is
 
          end if;
 
-         --  Check for exponent part
-         if Pos.Index <= Strm'Last and then
-           (Strm (Pos.Index) = 'e' or else Strm (Pos.Index) = 'E')
-         then
+         --  If present, handle the exponent
+
+         if Pos.Index <= Strm'Last and then Strm (Pos.Index) in 'e' | 'E' then
             Token_End := Pos;
             Next_Char;
             if Pos.Index > Strm'Last then
                Error ("invalid number");
             end if;
 
-            if Strm (Pos.Index) = '-' then
-               --  Also a few corner cases can lead to an integer, assume that
-               --  the number is not an integer.
-               Can_Be_Integer := False;
-            end if;
+            --  Skip the sign, if present
 
-            if Strm (Pos.Index) = '-' or else Strm (Pos.Index) = '+' then
-               Next_Char;
-            end if;
+            case Strm (Pos.Index) is
+               when '-' =>
 
-            if Pos.Index > Strm'Last or else
-              Strm (Pos.Index) not in '0' .. '9'
+                  --  The exponent is negative. Even though several corner
+                  --  cases (such as having "1" as the prefix) can lead to an
+                  --  integer, assume that the number is not an integer.
+
+                  Can_Be_Integer := False;
+                  Next_Char;
+
+               when '+'   => Next_Char;
+               when others => null;
+            end case;
+
+            if Pos.Index > Strm'Last or else Strm (Pos.Index) not in '0' .. '9'
             then
                Error ("invalid number");
             end if;
 
-            while Pos.Index <= Strm'Last and then
-              Strm (Pos.Index) in '0' .. '9'
+            while Pos.Index <= Strm'Last
+                  and then Strm (Pos.Index) in '0' .. '9'
             loop
                Token_End := Pos;
                Next_Char;
@@ -464,18 +529,17 @@ package body GNATCOLL.JSON is
          end if;
 
          if Is_Token_Sep then
-            --  Valid decimal number
-            if Can_Be_Integer then
-               return J_INTEGER;
-            else
-               return J_NUMBER;
-            end if;
+
+            --  The token stops here, so we have a valid integer number
+
+            return (if Can_Be_Integer then J_INTEGER else J_NUMBER);
          else
             Error ("invalid number");
          end if;
-      else
+
+      when others =>
          Error ("Unexpected character '" & CC & ''');
-      end if;
+      end case;
    end Read_Token;
 
    ----------
@@ -484,15 +548,15 @@ package body GNATCOLL.JSON is
 
    function Read
      (Strm      : String;
+      Filename  : String;
       Pos       : in out Text_Position;
       Kind      : out Token_Kind;
-      Filename  : String;
       Check_EOF : Boolean := False)
       return JSON_Value
    is
 
-      procedure Error (Msg : String);
-      pragma No_Return (Error);
+      procedure Error (Msg : String) with No_Return;
+      --  Shortcut for local calls to Report_Error
 
       -----------
       -- Error --
@@ -504,50 +568,93 @@ package body GNATCOLL.JSON is
       end Error;
 
       Token_Start, Token_End : Text_Position;
-      TK                     : Token_Kind;
-      Result                 : JSON_Value;
+      --  Boundaries for the currently analyzed token
+
+      Result : JSON_Value;
+      --  Root JSON value to return
    begin
-      TK := Read_Token (Strm, Filename, Pos, Token_Start, Token_End);
-      if TK = J_EOF then
-         Error ("empty stream");
-      end if;
+      --  The first token we get determines the kind of JSON value to return
 
-      Kind := TK;
+      Kind := Read_Token (Strm, Filename, Pos, Token_Start, Token_End);
+      case Kind is
+         when J_EOF =>
+            Error ("empty stream");
 
-      case TK is
          when J_NULL =>
-            Result :=  Create;
+            Result := Create;
+
          when J_FALSE =>
             Result := Create (False);
+
          when J_TRUE =>
             Result := Create (True);
+
          when J_STRING =>
-            Result := Create (Utility.Un_Escape_String
-                              (Strm, Token_Start.Index, Token_End.Index));
+            declare
+               Str_Value : constant UTF8_XString := Utility.Un_Escape_String
+                 (Strm, Token_Start.Index, Token_End.Index);
+            begin
+               Result := Create (Str_Value);
+            end;
+
          when J_ARRAY =>
             declare
-               Arr      : JSON_Array_Access := new JSON_Array_Internal;
-               ST       : Token_Kind;
-               Element  : JSON_Value;
+               --  In order to avoid the costly array copy in Create
+               --  (JSON_Array), we use an aggregate below in order to build
+               --  the result, so directly allocate the JSON_Array_Access here.
+
+               Arr : JSON_Array_Access := new JSON_Array_Internal;
+
+               ST : Token_Kind;
+               --  Buffer for the kind of tokens we read
+
+               Element : JSON_Value;
+               --  Buffer for the JSON values that constitute array elements
+
                Is_First : Boolean := True;
+               --  True if we are still reading the first array element. False
+               --  afterwards.
             begin
+               --  Read all elements in the array until we reach the closing
+               --  token ("]").
+
                loop
-                  Element := Read (Strm, Pos, ST, Filename);
-                  if Is_First and then ST = J_ARRAY_END then
-                     exit;
-                  elsif ST in Value_Token then
-                     Append (Arr.Arr, Element);
-                     Element := Read (Strm, Pos, ST, Filename);
-                     if ST = J_ARRAY_END then
-                        exit;
-                     elsif ST /= J_COMMA then
-                        Error ("comma expected");
-                     end if;
-                  else
+                  Element := Read (Strm, Filename, Pos, ST);
+                  case ST is
+                  when J_ARRAY_END =>
+                     exit when Is_First;
                      Error ("syntax error");
-                  end if;
+
+                  when Value_Token =>
+                     --  We got a new array element: append it
+
+                     Append (Arr.Arr, Element);
+
+                     --  Now see what is next: the end of the array or a comma
+                     --  (hence another array element after).
+
+                     Element := Read (Strm, Filename, Pos, ST);
+                     case ST is
+                     when J_ARRAY_END =>
+                        exit;
+
+                     when J_COMMA =>
+                        --  We have a comma, so we expect another element in
+                        --  the array. Continue reading.
+
+                        null;
+
+                     when others =>
+                        Error ("comma expected");
+                     end case;
+
+                  when others =>
+                     Error ("syntax error");
+                  end case;
+
                   Is_First := False;
                end loop;
+
                Result := (Ada.Finalization.Controlled with
                           Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
             exception
@@ -555,54 +662,94 @@ package body GNATCOLL.JSON is
                   Free (Arr);
                   raise;
             end;
+
          when J_OBJECT =>
             declare
                Is_First   : Boolean := True;
-               ST         : Token_Kind;
-               Ret        : JSON_Value;
+               --  True if we are still reading the first object member. False
+               --  afterwards.
+
+               ST : Token_Kind;
+               --  Buffer for the kind of tokens we read
+
                Key, Value : JSON_Value;
-               Key_Str : UTF8_XString;
+               --  Buffer for the JSON values that constitute keys and member
+               --  values.
             begin
-               --  Allocate internal container
-               Ret.Data := (Kind => JSON_Object_Type,
+               --  Allocate internal container for the result
+
+               Result.Data := (Kind => JSON_Object_Type,
                             Obj_Value => new JSON_Object_Internal);
+
+               --  Read all members for this object until we reach the closing
+               --  token ("}").
+
                loop
-                  Key := Read (Strm, Pos, ST, Filename);
-                  if Is_First and then ST = J_OBJECT_END then
-                     exit;
-                  elsif ST = J_STRING then
-                     Value := Read (Strm, Pos, ST, Filename);
+                  --  First try to read the key for the next member
+
+                  Key := Read (Strm, Filename, Pos, ST);
+
+                  case ST is
+                  when J_OBJECT_END =>
+                     exit when Is_First;
+                     Error ("string value expected");
+
+                  when J_STRING =>
+                     --  Consume the colon token, then get the member value
+
+                     Value := Read (Strm, Filename, Pos, ST);
                      if ST /= J_COLON then
                         Error ("colon expected");
                      end if;
-                     Value := Read (Strm, Pos, ST, Filename);
+                     Value := Read (Strm, Filename, Pos, ST);
                      if ST not in Value_Token then
                         Error ("non expected token");
                      end if;
-                     Key_Str := Get (Key);
-                     Set_Field (Ret, Key_Str, Value);
 
-                     Value := Read (Strm, Pos, ST, Filename);
-                     if ST = J_OBJECT_END then
+                     --  Register this new member.
+                     --
+                     --  As we checked above that reading Key parsed a string
+                     --  token, we know that coercing Key to a string cannot
+                     --  fail.
+
+                     declare
+                        Key_Str : constant UTF8_XString := Get (Key);
+                     begin
+                        Set_Field (Result, Key_Str, Value);
+                     end;
+
+                     --  Now see what is next: the end of the object or a comma
+                     --  (hence another object member after).
+
+                     Value := Read (Strm, Filename, Pos, ST);
+                     case ST is
+                     when J_OBJECT_END =>
                         exit;
-                     elsif ST /= J_COMMA then
+
+                     when J_COMMA =>
+                        --  We have a comma, so we expect another member in the
+                        --  object. Continue reading.
+
+                        null;
+
+                     when others =>
                         Error ("comma expected");
-                     end if;
-                  else
+                     end case;
+
+                  when others =>
                      Error ("string value expected");
-                  end if;
+                  end case;
                   Is_First := False;
                end loop;
-               Result := Ret;
             end;
+
          when J_NUMBER | J_INTEGER =>
-            --  This is a number
             declare
-               Number_Str : constant String :=
-                 Strm (Token_Start.Index .. Token_End.Index);
+               Number_Str  : constant String :=
+                  Strm (Token_Start.Index .. Token_End.Index);
                Has_Integer : Boolean := False;
             begin
-               if TK = J_INTEGER then
+               if Kind = J_INTEGER then
                   declare
                      Result_Int : Long_Long_Integer;
                   begin
@@ -624,6 +771,7 @@ package body GNATCOLL.JSON is
                   end;
                end if;
             end;
+
          when others =>
             if Check_EOF then
                Error ("invalid JSON stream");
@@ -632,8 +780,8 @@ package body GNATCOLL.JSON is
             end if;
       end case;
 
-      if Check_EOF and then
-        Read_Token (Strm, Filename, Pos, Token_Start, Token_End) /= J_EOF
+      if Check_EOF and then Read_Token
+           (Strm, Filename, Pos, Token_Start, Token_End) /= J_EOF
       then
          Error ("additional data after end of JSON stream");
       end if;
@@ -655,7 +803,7 @@ package body GNATCOLL.JSON is
       Pos : Text_Position := (Strm'First, 1, 1);
       Kind : Token_Kind;
    begin
-      return Read (Strm, Pos, Kind, Filename, Check_EOF => True);
+      return Read (Strm, Filename, Pos, Kind, Check_EOF => True);
    end Read;
 
    -----------
