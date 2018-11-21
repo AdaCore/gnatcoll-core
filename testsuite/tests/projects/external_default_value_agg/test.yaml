@@ -1,0 +1,8 @@
+description: >
+  Default value of external reference in an aggregated project
+  is a reference of another variable declared in same
+  aggregated subtree.
+data:
+    - "p.gpr"
+    - "agg.gpr"
+    - "abst.gpr"

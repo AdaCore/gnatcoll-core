@@ -1,0 +1,6 @@
+abstract project abst is
+
+   Val := "val";
+   Architecture  := external ("VAL", Val);
+
+end abst;

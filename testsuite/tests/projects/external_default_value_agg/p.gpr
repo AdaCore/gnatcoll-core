@@ -1,0 +1,7 @@
+with "abst.gpr";
+
+project p is
+
+   for Source_Dirs use (".");
+
+end p;

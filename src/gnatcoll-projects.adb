@@ -5015,6 +5015,8 @@ package body GNATCOLL.Projects is
                         Proj := Project_Type
                           (Project_From_Name
                              (Tree, GPR.Tree.Name_Of (In_Prj, T)));
+                     else
+                        Proj := Project;
                      end if;
 
                      --  Look for Var declaration into the project
