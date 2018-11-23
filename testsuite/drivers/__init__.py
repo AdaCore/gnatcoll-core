@@ -15,6 +15,8 @@ TESTSUITE_ROOT_DIR = os.path.dirname(
     os.path.dirname(os.path.abspath(__file__)))
 GNATCOLL_ROOT_DIR = os.path.dirname(TESTSUITE_ROOT_DIR)
 
+DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
+
 
 def make_gnatcoll(work_dir, gcov=False):
     """Build gnatcoll core with or without gcov instrumentation.
@@ -49,11 +51,11 @@ def make_gnatcoll(work_dir, gcov=False):
         make_gnatcoll_cmd += ['BUILD=PROD']
 
     # Build & Install
-    p = Run(make_gnatcoll_cmd, cwd=build_dir)
+    p = Run(make_gnatcoll_cmd, cwd=build_dir, timeout=DEFAULT_TIMEOUT)
     assert p.status == 0, "gnatcoll build failed:\n%s" % p.out
 
     p = Run(make_gnatcoll_cmd + ['prefix=%s' % install_dir, 'install'],
-            cwd=build_dir)
+            cwd=build_dir, timeout=DEFAULT_TIMEOUT)
     assert p.status == 0, "gnatcoll installation failed:\n%s" % p.out
 
     return (os.path.join(install_dir, 'share', 'gpr'),
@@ -67,6 +69,7 @@ def gprbuild(driver,
              gcov=False,
              scenario=None,
              gpr_project_path=None,
+             timeout=DEFAULT_TIMEOUT,
              **kwargs):
     """Launch gprbuild.
 
@@ -124,6 +127,7 @@ def gprbuild(driver,
         cwd=cwd,
         env=env,
         ignore_environ=False,
+        timeout=timeout,
         **kwargs)
     # If we get there it means the build succeeded.
     return True
@@ -131,6 +135,8 @@ def gprbuild(driver,
 
 class GNATcollTestDriver(TestDriver):
     """Abstract class to share some common facilities."""
+
+    DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
     def should_skip(self):
         """Handle of 'skip' in test.yaml.
@@ -153,3 +159,8 @@ class GNATcollTestDriver(TestDriver):
                     logging.error(traceback.format_exc())
                     return TestStatus.ERROR
         return None
+
+    @property
+    def process_timeout(self):
+        """Timeout (in seconds) for subprocess to launch."""
+        return self.test_env.get('timeout', self.DEFAULT_TIMEOUT)

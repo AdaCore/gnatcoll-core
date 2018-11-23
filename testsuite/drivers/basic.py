@@ -64,7 +64,8 @@ class BasicTestDriver(GNATcollTestDriver):
         process = check_call_valgrind(
             self,
             [os.path.join(self.test_env['working_dir'],
-                          self.test_env['test_exe'])])
+                          self.test_env['test_exe'])],
+            timeout=self.process_timeout)
         if '<=== TEST PASSED ===>' not in process.out:
             self.result.set_status(TestStatus.FAIL)
         else:
