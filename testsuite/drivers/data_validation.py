@@ -1,12 +1,11 @@
 from e3.fs import rm
-from e3.testsuite.driver import TestDriver
 from e3.testsuite.result import TestStatus, TestResult
-from drivers import gprbuild
+from drivers import GNATcollTestDriver, gprbuild
 from drivers.valgrind import check_call_valgrind
 import os
 
 
-class DataValidationDriver(TestDriver):
+class DataValidationDriver(GNATcollTestDriver):
     """Data validation driver.
 
     For each test program call the program with data file defined in
