@@ -1757,10 +1757,10 @@ package body GNATCOLL.Traces is
           & "([^\s=:>+-]+)" & S           --  1 = name
           & "(?:=" & S & "(yes|no))?" & S --  2 = active?
           & "(:[^\s>]+)?" & S             --  3 = options
-          & "(?:>" & S & "(\S+))?" & S    --  4 = stream
+          & "(?:>>?" & S & "(\S+))?" & S    --  4 = stream
 
           & "|"
-          & "(>\S+)?" & S                 --  5 = default stream
+          & "(>>?\S+)?" & S                 --  5 = default stream
 
           & "|"
           & "(\+)" & S                    --  6 = "+"
