@@ -1,4 +1,6 @@
 with Ada.Exceptions;            use Ada.Exceptions;
+with Ada.Real_Time;             use Ada.Real_Time;
+with Ada.Task_Identification;
 with Ada.Text_IO;               use Ada.Text_IO;
 with GNATCOLL.Refcount;
 with System.Address_Image;
@@ -9,7 +11,7 @@ function Test return Integer is
    use Shared_Holders;
 
    task type Weak_Tester is
-      entry Take (Ptr : Weak_Ref);
+      entry Take (Ptr : Ref);
       entry Stop;
    end Weak_Tester;
 
@@ -20,26 +22,35 @@ function Test return Integer is
       W : Weak_Ref;
    begin
       Main_Loop : for J in Processing_Range loop
-         select
-            accept Take (Ptr : Weak_Ref) do
-               W := Ptr;
-            end Take;
-         or
-            accept Stop do
-               Stop_It := True;
-            end Stop;
-         end select;
+         declare
+            R : Ref;
+         begin
+            select
+               accept Take (Ptr : Ref) do
+                  R := Ptr;
+               end Take;
+            or
+               accept Stop do
+                  Stop_It := True;
+               end Stop;
+            end select;
+
+            W := R.Weak;
+         end;
 
          exit Main_Loop when Stop_It;
 
          for K in Natural'Range loop
             declare
+               use Ada.Task_Identification;
                R : Ref;
             begin
                R.Set (W);
                if R = Null_Ref then
                   if K = 0 then
-                     Put_Line ("Taken null at first time " & J'Img);
+                     Put_Line
+                       ("Taken null at first time " & J'Img & ' '
+                        & Image (Current_Task));
                   end if;
 
                   if J rem 9999 = 0 then
@@ -62,7 +73,8 @@ function Test return Integer is
          Assert (False, "Task " & Exception_Information (E));
    end Weak_Tester;
 
-   Test : array (1 .. 3) of Weak_Tester;
+   Test  : array (1 .. 3) of Weak_Tester;
+   Stamp : Time := Clock;
 
 begin
    for J in Processing_Range loop
@@ -72,11 +84,21 @@ begin
          R.Set (J);
 
          for J in Test'Range loop
-            Test (J).Take (Weak (R));
+            Test (J).Take (R);
          end loop;
 
          delay 0.00001;
       end;
+
+      if To_Duration (Clock - Stamp) > 200.0 then
+         Put_Line ("Too busy test machine, stop the test.");
+
+         for J in Test'Range loop
+            Test (J).Stop;
+         end loop;
+
+         exit;
+      end if;
    end loop;
 
    return Test_Assert.Report;
