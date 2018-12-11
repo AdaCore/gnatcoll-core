@@ -514,7 +514,8 @@ package GNATCOLL.VFS is
    --  those entries, according to filter. The list of files returned
    --  includes directories in systems providing a hierarchical directory
    --  structure, including . (the current directory) and .. (the parent
-   --  directory) in systems providing these entries.
+   --  directory) in systems providing these entries. Note that entries
+   --  are not sorted.
    --  The result must be freed by the caller.
 
    function Read_Dir_Recursive
@@ -523,7 +524,8 @@ package GNATCOLL.VFS is
       Filter    : Read_Dir_Filter := All_Files) return File_Array_Access;
    --  Reads all entries from the directory, recursively, and returns all
    --  files with the given extension (if specified) that match the filter.
-   --  The entries "." and ".." are never returned.
+   --  The entries "." and ".." are never returned. Note that entries
+   --  are not sorted.
    --  The result must be freed by the caller.
 
    procedure Remove_Dir
