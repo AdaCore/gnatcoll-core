@@ -113,11 +113,14 @@
 --      supported for standard output or standard error, and syslog does
 --      not support colors).
 --
---        * "buffer_size": the size of the buffer. The logs are
---          synchronized with the disk when this buffer is full.
---          Setting this to 0 means that synchronization appears after
---          every output line, which is slow but might help when
---          debugging a crashing application.
+--        * "buffer_size": the size of the buffer. The logs are synchronized
+--          with the disk when this buffer is full.
+--          Setting this to 0 means that synchronization appears after every
+--          write operation into log file. Value 1 means synchronization after
+--          every output line, which is the same as buffer_size=0 in the
+--          current implementation. Bigger buffer_size value improves the trace
+--          performance but can result in loss of information on application
+--          crash. The default buffer_size value is 1.
 --
 --        * "colors": whether to allow colors on this stream.
 --          This combines with the DEBUG.COLORS settings.

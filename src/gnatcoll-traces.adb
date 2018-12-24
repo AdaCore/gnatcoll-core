@@ -489,7 +489,7 @@ package body GNATCOLL.Traces is
       Term  : GNATCOLL.Terminal.Terminal_Info;
 
       Supports_Buffer : Boolean := True;
-      Buf_Size : size_t := 2**10;
+      Buf_Size : size_t := 1; -- Line buffering by default
 
    begin
       if Name = "" then
@@ -523,8 +523,10 @@ package body GNATCOLL.Traces is
                begin
                   Buf_Size := size_t'Value (A (A'First + 12 .. A'Last));
                exception
-                  when others =>
-                     Buf_Size := 2**10;
+                  when Constraint_Error =>
+                     --  Ignore not numeric buffer_size value and Buf_Size
+                     --  remains default.
+                     null;
                end;
 
             elsif Starts_With (A.all, "colors=") then
