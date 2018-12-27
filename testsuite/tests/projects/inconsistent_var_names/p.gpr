@@ -1,0 +1,18 @@
+project P is
+   type T_1_1 is ("a", "b");
+   V_P_1_1 : T_1_1 := external ("VAR1", external ("NESTED1", "a"));
+
+   type T_1_2 is ("a", "b", "c");
+   V_P_1_2 : T_1_2 := external ("NESTED1", "a");
+   V_P_1_3 : T_1_2 := external ("VAR1_2", external ("NESTED1", "a"));
+
+   type T_2_1 is ("a", "b");
+   V_P_2_1 : T_2_1 := external ("NESTED2", "a");
+
+   type T_2_2 is ("a", "b", "c");
+   V_P_2_2 : T_2_2 := external ("VAR2", external ("NESTED2", "a"));
+   V_P_2_3 : T_2_2 := external ("NESTED2", "a");
+
+   for source_dirs use ();
+
+end P;

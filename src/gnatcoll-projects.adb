@@ -5321,7 +5321,7 @@ package body GNATCOLL.Projects is
                               & " and "
                               & Get_Name_String (Var.Var_Name)
                               & " controlled by same external "
-                              & External_Name (Var)
+                              & Ext_Ref_Name
                               & " have different sets of possible values"
                               & ASCII.LF);
                         else
@@ -5336,7 +5336,7 @@ package body GNATCOLL.Projects is
                               & ": "
                               & Get_Name_String (Var.Var_Name)
                               & " controlled by same external "
-                              & External_Name (Var)
+                              & Ext_Ref_Name
                               & " have different sets of possible values"
                               & ASCII.LF);
                         end if;
