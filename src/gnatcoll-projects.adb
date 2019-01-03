@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2018, AdaCore                     --
+--                     Copyright (C) 2002-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -5229,7 +5229,7 @@ package body GNATCOLL.Projects is
          Project  : Project_Type;
          Errors   : Error_Report := null)
       is
-         pragma Unreferenced (Proj);
+         pragma Unreferenced (Proj, Errors);
          T : constant  GPR.Project_Node_Tree_Ref :=
            Project.Data.Tree.Tree;
 
@@ -5245,23 +5245,11 @@ package body GNATCOLL.Projects is
            Ada.Containers.Generic_Array_Sort
              (Positive, String_Access, String_List);
 
-         procedure Report_SV_Type_Mismatch (S : String);
-         --  Send info on type mismatch to the best available output.
-
          procedure Look_For_Duplicate_SVs
            (Ext_Ref_Name :     String;
             Found        : out Boolean);
          --  Compare current Var with all already stored Scenario Variables
          --  and if found check that they have same set of possible values.
-
-         procedure Report_SV_Type_Mismatch (S : String) is
-         begin
-            if Errors = null then
-               Trace (Me_SV, S);
-            else
-               Errors (S);
-            end if;
-         end Report_SV_Type_Mismatch;
 
          procedure Look_For_Duplicate_SVs
            (Ext_Ref_Name :     String;
@@ -5313,32 +5301,32 @@ package body GNATCOLL.Projects is
                           Old_Var.First_Project_Path = Var.First_Project_Path
                         then
                            --  Same project
-
-                           Report_SV_Type_Mismatch
-                             (Project.Project_Path.Display_Full_Name
-                              & ": Scenario variables "
-                              & Get_Name_String (Old_Var.Var_Name)
-                              & " and "
-                              & Get_Name_String (Var.Var_Name)
-                              & " controlled by same external "
-                              & Ext_Ref_Name
-                              & " have different sets of possible values"
-                              & ASCII.LF);
+                           Trace (Me_SV,
+                                  Project.Project_Path.Display_Full_Name
+                                   & ": Scenario variables "
+                                   & Get_Name_String (Old_Var.Var_Name)
+                                   & " and "
+                                   & Get_Name_String (Var.Var_Name)
+                                   & " controlled by same external "
+                                   & Ext_Ref_Name
+                                   & " have different sets of possible values"
+                                   & ASCII.LF);
                         else
                            --  Aggregated projects with same name
-                           Report_SV_Type_Mismatch
-                             ("Scenario variables "
-                              & Get_Name_String (Old_Var.First_Project_Path)
-                              & ": "
-                              & Get_Name_String (Old_Var.Var_Name)
-                              & " and "
-                              & Project.Project_Path.Display_Full_Name
-                              & ": "
-                              & Get_Name_String (Var.Var_Name)
-                              & " controlled by same external "
-                              & Ext_Ref_Name
-                              & " have different sets of possible values"
-                              & ASCII.LF);
+                           Trace
+                             (Me_SV,
+                              "Scenario variables "
+                               & Get_Name_String (Old_Var.First_Project_Path)
+                               & ": "
+                               & Get_Name_String (Old_Var.Var_Name)
+                               & " and "
+                               & Project.Project_Path.Display_Full_Name
+                               & ": "
+                               & Get_Name_String (Var.Var_Name)
+                               & " controlled by same external "
+                               & Ext_Ref_Name
+                               & " have different sets of possible values"
+                               & ASCII.LF);
                         end if;
 
                         Inconsistent_SC_Externals.Include (Old_Var.Ext_Name);
