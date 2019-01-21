@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2018, AdaCore                     --
+--                     Copyright (C) 2010-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -230,7 +230,7 @@ package GNATCOLL.Refcount is
       --  pointer itself, not the encapsulated value.
 
       function Unchecked_Get (Self : Ref'Class) return Element_Access
-         with Inline_Always;
+         with Inline;
       --  A version that returns directly the element access. This is meant
       --  for easy conversion of existing code, but its use is discouraged
       --  in new code, where Get should be used instead.
@@ -241,7 +241,7 @@ package GNATCOLL.Refcount is
 
       function Get (Self : Ref'Class) return Reference_Type
          is ((Element => Unchecked_Get (Self)))
-         with Inline_Always;
+         with Inline;
       --  A safer version of Unchecked_Get.
       --  There is no performance penalty, since the compiler knows that a
       --  Reference_Type is in fact always of the same size and can be
