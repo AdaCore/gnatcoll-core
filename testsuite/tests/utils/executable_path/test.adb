@@ -1,0 +1,37 @@
+with GNATCOLL.Utils;
+with Test_Assert;
+with Ada.Text_IO;
+with Ada.Environment_Variables;
+with Ada.Directories;
+with GNAT.OS_Lib;
+
+function Test return Integer is
+   package GU renames GNATCOLL.Utils;
+   package A renames Test_Assert;
+   package IO renames Ada.Text_IO;
+   package Env renames Ada.Environment_Variables;
+   package Dir renames Ada.Directories;
+   package OS renames GNAT.OS_Lib;
+
+begin
+   declare
+      Exe_Path : constant String := GU.Executable_Path;
+      Process_Status : Integer;
+      Success : Boolean;
+   begin
+      A.Assert (OS.Is_Regular_File (Exe_Path));
+      if not OS.Is_Directory ("Bin") then
+         Dir.Create_Directory("Bin");
+         OS.Copy_File (Exe_Path, "Bin", Success, Preserve => OS.Full);
+         Process_Status := OS.Spawn ("Bin/test", Args => (1 .. 0 => null));
+         A.Assert (Process_Status = 0);
+      end if;
+      Dir.Set_Directory ("..");
+      Env.Set("PATH", "");
+      A.Assert (Exe_Path, GU.Executable_Path,
+                "Ensure that executable path is not impacted by environment changes");
+      A.Assert (OS.Is_Directory (GU.Executable_Location));
+   end;
+
+   return A.Report;
+end Test;

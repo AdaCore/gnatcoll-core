@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2018, AdaCore                     --
+--                     Copyright (C) 2008-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -254,11 +254,17 @@ package GNATCOLL.Utils is
    --  (so if you are running "prefix/bin/my_exe", you would get "prefix/").
    --  The returned directory always ends with a directory separator.
 
-   function Is_Directory_Separator (C : Character) return Boolean;
-   --  Returns True if C is a directory separator
+   function Executable_Path return String;
+   --  Returns absolute path to the current executable.
+   --
+   --  On Linux, Windows and MacOS the procedure is safe and will return always
+   --  the right executable. For other platforms the function might return
+   --  an incorrect value if environment is modified (executable parameters,
+   --  current directory and/or PATH variable).
 
-   procedure Set_OpenVMS_Host (Setting : Boolean := True);
-   --  Set whether the host is an OpenVMS host
+   function Is_Directory_Separator (C : Character) return Boolean;
+   pragma Inline (Is_Directory_Separator);
+   --  Returns True if C is a directory separator
 
    -----------
    -- Dates --

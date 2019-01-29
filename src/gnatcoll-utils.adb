@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2018, AdaCore                     --
+--                     Copyright (C) 2008-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -30,10 +30,9 @@ with GNAT.Calendar.Time_IO;
 with GNAT.Case_Util;
 with GNAT.OS_Lib;
 with GNAT.Strings;               use GNAT.Strings;
+with System;
 
 package body GNATCOLL.Utils is
-
-   OpenVMS_Host : Boolean := False;
 
    function Count_For_Split
      (Str              : String;
@@ -391,103 +390,125 @@ package body GNATCOLL.Utils is
    function Is_Directory_Separator (C : Character) return Boolean is
    begin
       --  In addition to the default directory_separator allow the '/' to
-      --  act as separator since this is allowed in MS-DOS, Windows 95/NT,
-      --  and OS2 ports. On VMS, the situation is more complicated because
-      --  there are two characters to check for.
-
-      return C = GNAT.OS_Lib.Directory_Separator
-        or else C = '/'
-        or else (OpenVMS_Host and then (C = ']' or else C = ':'));
+      --  act as separator since this a valid path separator on Windows
+      --  systems.
+      return C = GNAT.OS_Lib.Directory_Separator or else C = '/';
    end Is_Directory_Separator;
-
-   ----------------------
-   -- Set_OpenVMS_Host --
-   ----------------------
-
-   procedure Set_OpenVMS_Host (Setting : Boolean := True) is
-   begin
-      OpenVMS_Host := Setting;
-   end Set_OpenVMS_Host;
 
    -------------------------
    -- Executable_Location --
    -------------------------
 
    function Executable_Location return String is
-      Exec_Name : constant String := Ada.Command_Line.Command_Name;
-
-      function Get_Install_Dir (S : String) return String;
-      --  S is the executable name preceded by the absolute or relative
-      --  path, e.g. "c:\usr\bin\gcc.exe" or "..\bin\gcc". Returns the absolute
-      --  or relative directory where "bin" lies (in the example "C:\usr"
-      --  or ".."). If the executable is not in the "bin" directory, returns
-      --  directory itself.
-
-      ---------------------
-      -- Get_Install_Dir --
-      ---------------------
-
-      function Get_Install_Dir (S : String) return String is
-         Exec      : String  := GNAT.OS_Lib.Normalize_Pathname
-            (S, Resolve_Links => True);
-         Path_Last : Integer := 0;
-
-      begin
-         for J in reverse Exec'Range loop
-            if Is_Directory_Separator (Exec (J)) then
-               Path_Last := J - 1;
-               exit;
-            end if;
-         end loop;
-
-         if Path_Last >= Exec'First + 2 then
-            GNAT.Case_Util.To_Lower (Exec (Path_Last - 2 .. Path_Last));
-         end if;
-
-         --  If we are not in a bin/ directory
-
-         if Path_Last < Exec'First + 2
-           or else Exec (Path_Last - 2 .. Path_Last) /= "bin"
-           or else (Path_Last - 3 >= Exec'First
-                    and then not Is_Directory_Separator (Exec (Path_Last - 3)))
-         then
-            return Exec (Exec'First .. Path_Last)
-               & GNAT.OS_Lib.Directory_Separator;
-
-         else
-            --  Skip bin/, but keep the last directory separator
-            return Exec (Exec'First .. Path_Last - 3);
-         end if;
-      end Get_Install_Dir;
-
-   --  Beginning of Executable_Location
-
+      Exec_Path : constant String := Executable_Path;
+      Path_Last : Integer := -1;
    begin
-      --  First determine if a path prefix was placed in front of the
-      --  executable name.
-
-      for J in reverse Exec_Name'Range loop
-         if Is_Directory_Separator (Exec_Name (J)) then
-            return Get_Install_Dir (Exec_Name);
+      --  Find the directory containing the executable
+      for J in reverse Exec_Path'Range loop
+         if Is_Directory_Separator (Exec_Path (J)) then
+            Path_Last := J - 1;
+            exit;
          end if;
       end loop;
 
-      --  If you are here, the user has typed the executable name with no
-      --  directory prefix.
-      --  There is a potential issue here (see K112-046) where GNAT.OS_Lib
-      --  will in fact return any non-executable file found in the PATH,
-      --  whereas shells only consider executable files. As a result, the
-      --  user might end up with a wrong directory, not matching the one
-      --  found by the shell.
+      --  Handle special case for which we did not find any directory
+      --  (can occur for some platforms if the path to the executable
+      --  can not be found).
+      if Path_Last = -1 then
+         return "";
+      end if;
 
-      declare
-         Ex  : String_Access := GNAT.OS_Lib.Locate_Exec_On_Path (Exec_Name);
-         Dir : constant String := Get_Install_Dir (Ex.all);
-      begin
-         Free (Ex);
-         return Dir;
-      end;
+      --  Check if we can strip bin directory. As some systems are
+      --  case insensitive perform a case insensitive comparison.
+      if Path_Last >= Exec_Path'First + 3 then
+         declare
+            Dir_Element : String := Exec_Path (Path_Last - 2 .. Path_Last);
+         begin
+            GNAT.Case_Util.To_Lower (Dir_Element);
+            if Dir_Element = "bin" and then
+               Is_Directory_Separator (Exec_Path (Path_Last - 3))
+            then
+               return Exec_Path (Exec_Path'First .. Path_Last - 3);
+            else
+               return Exec_Path (Exec_Path'First .. Path_Last + 1);
+            end if;
+         end;
+      else
+         return Exec_Path (Exec_Path'First .. Path_Last + 1);
+      end if;
    end Executable_Location;
+
+   ---------------------
+   -- Executable_Path --
+   ---------------------
+
+   function Executable_Path return String is
+      function Internal
+         (Str : System.Address; Length : Integer) return Integer;
+      pragma Import (C, Internal, "c_executable_path");
+
+      --  Allocate a buffer of size 32K (maximum path on windows platform when
+      --  prefixing the path with \?. This should also cover Linux and MacOS.
+      Result    : String (1 .. 32768);
+
+      --  Length of returned path by system low level functions
+      Allocated : Integer;
+   begin
+      Allocated := Internal (Result'Address, Result'Length);
+
+      if Allocated = 0 or else Allocated >= Result'Length then
+         --  If we cannot get the executable name through system API, fallback
+         --  on argv[0] which is less accurate.
+         declare
+            Command_Name : constant String := Ada.Command_Line.Command_Name;
+         begin
+
+            --  Check if the argument contains some directory information.
+            for Idx in Command_Name'Range loop
+               if Is_Directory_Separator (Command_Name (Idx)) then
+                  --  We have some path information. Note that in case the
+                  --  path is relative and the application changed the current
+                  --  directory then the returned path will be incorrect.
+                  return GNAT.OS_Lib.Normalize_Pathname
+                     (Command_Name, Resolve_Links => True);
+               end if;
+            end loop;
+
+            --  If you are here, the user has typed the executable name with no
+            --  directory prefix.
+            --  There is a potential issue here (see K112-046) where
+            --  GNAT.OS_Lib will in fact return any non-executable file found
+            --  in the PATH, whereas shells only consider executable files.
+            --  As a result, the user might end up with a wrong path, not
+            --  matching the one found by the shell.
+            --  PATH variable might also have been modified by application or
+            --  not passed with the same value to the executable itself.
+            declare
+               Executable_Path : String_Access :=
+                  GNAT.OS_Lib.Locate_Exec_On_Path (Command_Name);
+            begin
+               if Executable_Path /= null then
+                  declare
+                     Result : constant String := Executable_Path.all;
+                  begin
+                     Free (Executable_Path);
+                     return GNAT.OS_Lib.Normalize_Pathname
+                        (Result, Resolve_Links => True);
+                  end;
+               else
+                  --  In case PATH was modified on launching the app or by the
+                  --  app itself we might end in a case in which we cannot get
+                  --  the original executable path. In that case return the
+                  --  command name.
+                  return Command_Name;
+               end if;
+            end;
+         end;
+      else
+         return GNAT.OS_Lib.Normalize_Pathname
+            (Result (Result'First .. Allocated), Resolve_Links => True);
+      end if;
+   end Executable_Path;
 
    -----------------
    -- Skip_Blanks --
