@@ -24,12 +24,14 @@
 with Ada.Calendar.Formatting;
 with Ada.Characters.Handling;    use Ada.Characters.Handling;
 with Ada.Command_Line;
+with Ada.Environment_Variables;
 with Ada.Strings.Fixed;          use Ada.Strings;
 with Ada.Strings.Maps;           use Ada.Strings.Maps;
 with GNAT.Calendar.Time_IO;
 with GNAT.Case_Util;
 with GNAT.OS_Lib;
 with GNAT.Strings;               use GNAT.Strings;
+with GNATCOLL.String_Builders;
 with System;
 
 package body GNATCOLL.Utils is
@@ -1049,5 +1051,104 @@ package body GNATCOLL.Utils is
          Index := Forward_UTF8_Char (Str, Natural (Index));
       end loop;
    end Skip_To_Column;
+
+   ---------------
+   -- Join_Path --
+   ---------------
+
+   function Join_Path
+     (Path : String; Path1, Path2, Path3, Path4 : String := "")
+      return String
+   is
+      use String_Builders;
+      Sep    : constant Character := GNAT.OS_Lib.Directory_Separator;
+      Result : Static_String_Builder
+         (Path'Length + Path1'Length + Path2'Length +
+          Path3'Length + Path4'Length + 4 + 1);
+      --  Maximum length for the returned path is the sum of paths
+      --  passed as argument, 4 directory separators and 1 character
+      --  to let room for a null character.
+
+      procedure Append_Path_Element (Path_Elmt : String);
+
+      --------------------------
+      --  Append_Path_Element --
+      --------------------------
+
+      procedure Append_Path_Element (Path_Elmt : String) is
+      begin
+         if Path_Elmt /= "" then
+            if GNAT.OS_Lib.Is_Absolute_Path (Path_Elmt) then
+               --  If the element to add is an absolute path then reset the
+               --  result.
+               Set (Result, Path_Elmt);
+            else
+               --  If not at the beginning of the resulting path ensure that a
+               --  directory separator is inserted.
+               if Length (Result) > 0 and then
+                  not Is_Directory_Separator
+                     (Element (Result, Length (Result)))
+               then
+                  Append (Result, Sep);
+               end if;
+
+               Append (Result, Path_Elmt);
+            end if;
+         end if;
+      end Append_Path_Element;
+
+   begin
+      Append_Path_Element (Path);
+      Append_Path_Element (Path1);
+      Append_Path_Element (Path2);
+      Append_Path_Element (Path3);
+      Append_Path_Element (Path4);
+      return As_String (Result);
+   end Join_Path;
+
+   ---------------------
+   -- Add_Search_Path --
+   ---------------------
+
+   procedure Add_Search_Path (Variable : String; Path : String)
+   is
+      use String_Builders;
+      package Env renames Ada.Environment_Variables;
+      Original_Value : constant String := Env.Value (Variable, "");
+      Result         : Static_String_Builder
+         (Original_Value'Length + Path'Length + 1 + 1);
+      Start          : Integer := Original_Value'First;
+   begin
+      --  Do nothing if path is empty
+      if Path = "" then
+         return;
+      end if;
+
+      --  Add the new path
+      Set (Result, Path);
+
+      --  Scan original value and remove any duplicate of the new path
+      for Idx in Original_Value'Range loop
+         if Original_Value (Idx) = GNAT.OS_Lib.Path_Separator then
+            if Original_Value (Start .. Idx - 1) /= Path then
+               Append (Result, GNAT.OS_Lib.Path_Separator);
+               Append (Result, Original_Value (Start .. Idx - 1));
+               Start := Idx + 1;
+            end if;
+            if Idx = Original_Value'Last then
+               Append (Result, GNAT.OS_Lib.Path_Separator);
+            end if;
+         elsif Idx = Original_Value'Last and then
+            Start <= Original_Value'Last
+         then
+            if Original_Value (Start .. Idx) /= Path then
+               Append (Result, GNAT.OS_Lib.Path_Separator);
+               Append (Result, Original_Value (Start .. Idx));
+            end if;
+         end if;
+      end loop;
+
+      Env.Set (Variable, As_String (Result));
+   end Add_Search_Path;
 
 end GNATCOLL.Utils;

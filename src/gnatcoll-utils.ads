@@ -266,6 +266,16 @@ package GNATCOLL.Utils is
    pragma Inline (Is_Directory_Separator);
    --  Returns True if C is a directory separator
 
+   function Join_Path
+      (Path : String; Path1, Path2, Path3, Path4 : String := "") return String;
+   --  Join one or more path into a single one. Note that if one argument is an
+   --  absolute path then previous arguments will be ignored.
+
+   procedure Add_Search_Path (Variable : String; Path : String);
+   --  Prepend a path to an environment variable containing a list of paths.
+   --  If Path is already in the search list, subsequent occurences will be
+   --  removed and thus limit final path value size.
+
    -----------
    -- Dates --
    -----------
