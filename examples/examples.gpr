@@ -2,7 +2,7 @@ with "gnatcoll_python";
 project Examples is
    for Object_Dir use "obj";
    for Exec_Dir use ".";
-   for Main use ("tb64", "newclass.adb", "base64_coder.adb");
+   for Main use ("newclass.adb", "base64_coder.adb");
    for Source_Dirs use (".");
 
    package Compiler is

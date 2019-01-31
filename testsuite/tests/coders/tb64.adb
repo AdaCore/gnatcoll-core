@@ -24,28 +24,45 @@
 --  Test base64 encoder and decoder
 
 with Ada.Streams;            use Ada.Streams;
+with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 with Ada.Text_IO;            use Ada.Text_IO;
 with GNATCOLL.Coders.Base64; use GNATCOLL.Coders;
+with GNATCOLL.Email.Utils;   use GNATCOLL.Email.Utils;
+with Test_Assert;
 with GNAT.Random_Numbers;    use GNAT.Random_Numbers;
 
 procedure TB64 is
 
-   Encoder  : Base64.Encoder_Type;
-   Decoder  : Base64.Decoder_Type;
-   Sample   : Stream_Element_Array (1 .. 4096);
-   Coded    : Stream_Element_Array (1 .. Sample'Last * 5 / 3 + 1);
-   Result   : Stream_Element_Array (Sample'First .. Sample'Last + 1);
-   In_Last  : Stream_Element_Offset;
-   Cod_Last : Stream_Element_Offset;
-   Res_Last : Stream_Element_Offset;
-   Gen      : Generator;
+   package A renames Test_Assert;
+
+   Encoder   : Base64.Encoder_Type;
+   Decoder   : Base64.Decoder_Type;
+   Sample    : Stream_Element_Array (1 .. 4096);
+   Text      : String (1 .. Sample'Length);
+   for Text'Address use Sample'Address;
+   Coded     : Stream_Element_Array (1 .. Sample'Last * 5 / 3 + 1);
+   Coded_S   : String (1 .. Coded'Length);
+   for Coded_S'Address use Coded'Address;
+   Coded_U   : Unbounded_String;
+   Result    : Stream_Element_Array (Sample'First .. Sample'Last + 1);
+   Result_U  : Unbounded_String;
+   In_Last   : Stream_Element_Offset;
+   Cod_Last  : Stream_Element_Offset;
+   Res_Last  : Stream_Element_Offset;
+   Gen       : Generator;
+   Printable : constant Boolean := False;
 
 begin
    Reset (Gen);
+   Coded (1) := Stream_Element'Val (Character'Pos ('a'));
 
    for J in Sample'Range loop
-      Sample (J) := Stream_Element
-        (Stream_Element'Mod (Integer'(Random (Gen))));
+      if Printable then
+         Sample (1 .. J) := Coded (1 .. J);
+      else
+         Sample (J) := Stream_Element
+           (Stream_Element'Mod (Integer'(Random (Gen))));
+      end if;
 
       Encoder.Initialize
         (Wrap => (if Integer'(Random (Gen)) rem 8 = 0 then 0
@@ -62,9 +79,7 @@ begin
          Out_Last => Cod_Last,
          Flush    => Finish);
 
-      if In_Last /= J then
-         raise Program_Error with "In_Last /= J ";
-      end if;
+      A.Assert (In_Last = J, "In_Last /= J");
 
       Decoder.Transcode
         (In_Data  => Coded (1 .. Cod_Last),
@@ -73,19 +88,23 @@ begin
          Out_Last => Res_Last,
          Flush    => Finish);
 
-      if In_Last /= Cod_Last then
-         raise Program_Error with "In_Last /= Cod_Last";
-      end if;
+      A.Assert (In_Last = Cod_Last, "In_Last /= Cod_Last");
 
-      if J /= Res_Last then
-         raise Program_Error with "J /= Res_Last";
-      end if;
+      A.Assert (J = Res_Last, "J /= Res_Last");
 
-      if Sample (1 .. J) /= Result (1 .. J) then
-         raise Program_Error with "Sample /= Result";
-      end if;
+      A.Assert (Sample (1 .. J) = Result (1 .. J), "Sample /= Result");
 
       Encoder.Close;
       Decoder.Close;
+
+      Base64_Encode
+        (Text (1 .. Integer (J)), "",
+         Max_Block_Len => Random (Gen) rem 64 + 16,
+         Result        => Coded_U);
+      Base64_Decode (To_String (Coded_U), Result_U);
+
+      A.Assert
+        (Result_U = Text (1 .. Integer (J)),
+         "Result_U /= Text (1 .. Integer (J))");
    end loop;
 end TB64;

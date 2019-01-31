@@ -26,6 +26,7 @@
 with Ada.Streams;             use Ada.Streams;
 with GNATCOLL.Coders.Streams; use GNATCOLL.Coders;
 with GNATCOLL.Coders.Base64;
+with Tb64;
 with Test_Streams;
 with Test_Assert;
 
@@ -137,6 +138,8 @@ begin
          exit Main_Loop when not Test_Iteration (End_Mode, Tail);
       end loop;
    end loop Main_Loop;
+
+   Tb64;
 
    return A.Report;
 end Test;

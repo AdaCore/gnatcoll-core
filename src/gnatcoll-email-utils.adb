@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2018, AdaCore                     --
+--                     Copyright (C) 2006-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,9 +27,10 @@ with Ada.Calendar;            use Ada.Calendar;
 with Ada.Calendar.Time_Zones; use Ada.Calendar.Time_Zones;
 with Ada.Calendar.Formatting; use Ada.Calendar.Formatting;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
+with Ada.Streams;
 with Ada.Strings.Hash_Case_Insensitive;
+with GNATCOLL.Coders.Base64;  use GNATCOLL.Coders;
 with GNATCOLL.Utils;          use GNATCOLL.Utils;
-with Interfaces;              use Interfaces;
 with System.WCh_Con;          use System.WCh_Con;
 with GNAT.Decode_String;
 
@@ -173,34 +174,6 @@ package body GNATCOLL.Email.Utils is
       'A' => 10, 'B' => 11, 'C' => 12, 'D' => 13, 'E' => 14, 'F' => 15,
       'a' => 10, 'b' => 11, 'c' => 12, 'd' => 13, 'e' => 14, 'f' => 15,
       others => -1);
-
-   type Byte is mod 256;
-   Base64_Convert : constant array (Character) of Byte :=
-     ('+' => 62, '/' => 63, '0' => 52, '1' => 53, '2' => 54, '3' => 55,
-      '4' => 56, '5' => 57, '6' => 58, '7' => 59, '8' => 60, '9' => 61,
-      'A' => 0,  'B' => 1,  'C' => 2,  'D' => 3,  'E' => 4,  'F' => 5,
-      'G' => 6,  'H' => 7,  'I' => 8,  'J' => 9,  'K' => 10, 'L' => 11,
-      'M' => 12, 'N' => 13, 'O' => 14, 'P' => 15, 'Q' => 16, 'R' => 17,
-      'S' => 18, 'T' => 19, 'U' => 20, 'V' => 21, 'W' => 22, 'X' => 23,
-      'Y' => 24, 'Z' => 25, 'a' => 26, 'b' => 27, 'c' => 28, 'd' => 29,
-      'e' => 30, 'f' => 31, 'g' => 32, 'h' => 33, 'i' => 34, 'j' => 35,
-      'k' => 36, 'l' => 37, 'm' => 38, 'n' => 39, 'o' => 40, 'p' => 41,
-      'q' => 42, 'r' => 43, 's' => 44, 't' => 45, 'u' => 46, 'v' => 47,
-      'w' => 48, 'x' => 49, 'y' => 50, 'z' => 51, others => -1);
-
-   type Mod64 is mod 2 ** 6;
-   To_Base64 : constant array (Mod64) of Character :=
-     (00 => 'A',  1 => 'B',  2 => 'C',  3 => 'D',  4 => 'E',  5 => 'F',
-       6 => 'G',  7 => 'H',  8 => 'I',  9 => 'J', 10 => 'K', 11 => 'L',
-      12 => 'M', 13 => 'N', 14 => 'O', 15 => 'P', 16 => 'Q', 17 => 'R',
-      18 => 'S', 19 => 'T', 20 => 'U', 21 => 'V', 22 => 'W', 23 => 'X',
-      24 => 'Y', 25 => 'Z', 26 => 'a', 27 => 'b', 28 => 'c', 29 => 'd',
-      30 => 'e', 31 => 'f', 32 => 'g', 33 => 'h', 34 => 'i', 35 => 'j',
-      36 => 'k', 37 => 'l', 38 => 'm', 39 => 'n', 40 => 'o', 41 => 'p',
-      42 => 'q', 43 => 'r', 44 => 's', 45 => 't', 46 => 'u', 47 => 'v',
-      48 => 'w', 49 => 'x', 50 => 'y', 51 => 'z', 52 => '0', 53 => '1',
-      54 => '2', 55 => '3', 56 => '4', 57 => '5', 58 => '6', 59 => '7',
-      60 => '8', 61 => '9', 62 => '+', 63 => '/');
 
    Hex_Chars : constant array (0 .. 15) of Character := "0123456789ABCDEF";
 
@@ -1532,19 +1505,21 @@ package body GNATCOLL.Email.Utils is
       Where         : Region := Text;
       Put_Parts     : not null access procedure (Part : String))
    is
-      Block_Prefix    : constant String :=
-        (if Where in Any_Header then "=?" & Charset & "?b?" else "");
-      Block_Suffix    : constant String :=
-        (if Where in Any_Header then "?=" else "");
-      Block_Separator : constant String :=
-        (if Where in Any_Header then " " else (1 => ASCII.LF));
-      --  In Text, use a soft line break as line separator
+      use Ada.Streams;
+
+      Block_Prefix    : constant String := "=?" & Charset & "?b?";
+      Block_Suffix    : constant String := "?=";
+      Block_Separator : constant String := " ";
+
+      In_Bytes : Stream_Element_Array (Stream_Element_Offset (Str'First)
+                                       .. Stream_Element_Offset (Str'Last))
+        with Import;
+      for In_Bytes'Address use Str'Address;
 
       Max : constant Natural :=
         Integer'Max
           (1,
-           (Integer'Min
-              (Max_Block_Len, (if Where in Any_Header then 75 else 76))
+           (Integer'Min (Max_Block_Len, 75)
             - Block_Prefix'Length - Block_Suffix'Length) / 4) * 3;
       --  Length of the original data producing output of Max_Block_Len.
       --  Divide by 4 and multiply by 3 because base64 encoder takes 3
@@ -1554,88 +1529,49 @@ package body GNATCOLL.Email.Utils is
       --  Note: block separator does not contain any printable character, so
       --  does not count against the limit.
 
-      Left     : Unsigned_16 := 0;
-      Leftbits : Natural := 0;
-      Ch       : Mod64;
+      Coder : Base64.Encoder_Type;
 
-      procedure Encode_Append (Str : String; Last_One : Boolean);
+      procedure Encode_Append
+        (First, Last : Stream_Element_Offset; Last_One : Boolean);
       --  Encode Str and append result to output, splitting if necessary.
       --  If Where is Any_Header, then never split Str across two different
       --  blocks.
-
-      function Flush return String;
-      --  Take pending bits to flush with padding characters if necessary
 
       -------------------
       -- Encode_Append --
       -------------------
 
-      procedure Encode_Append (Str : String; Last_One : Boolean) is
-         Out_Chars : String (1 .. (Leftbits + Str'Length * 8 + 5) / 6);
-         Last      : Natural := Out_Chars'First - 1;
+      procedure Encode_Append
+        (First, Last : Stream_Element_Offset; Last_One : Boolean)
+      is
+         In_Last   : Stream_Element_Offset;
+         Out_Last  : Stream_Element_Offset;
+         Out_Chars : String (1 .. (Str'Length + 2) * 4 / 3);
+         Out_Bytes : Stream_Element_Array (1 .. Out_Chars'Length) with Import;
+         for Out_Bytes'Address use Out_Chars'Address;
       begin
-         if Where in Any_Header then
-            Put_Parts (Block_Prefix);
-         end if;
+         Put_Parts (Block_Prefix);
 
-         for J in Str'Range loop
-            Left     := Shift_Left (Left, 8) or Character'Pos (Str (J));
-            Leftbits := Leftbits + 8;
+         Coder.Initialize;
 
-            while Leftbits >= 6 loop
-               Leftbits := Leftbits - 6;
-               Ch       := Mod64 ((Shift_Right (Left, Leftbits)) and 16#3F#);
-               Last     := Last + 1;
-               Out_Chars (Last) := To_Base64 (Ch);
-            end loop;
-         end loop;
+         Coder.Transcode
+           (In_Bytes (First .. Last), In_Last, Out_Bytes, Out_Last, Finish);
+
+         Coder.Close;
 
          Put_Parts
-           (Out_Chars (1 .. Last)
-            & (if Where in Any_Header or else Last_One then Flush else "")
-            & Block_Suffix & (if Last_One then "" else Block_Separator));
+           (Out_Chars (1 .. Natural (Out_Last)) & Block_Suffix
+            & (if Last_One then "" else Block_Separator));
       end Encode_Append;
-
-      -----------
-      -- Flush --
-      -----------
-
-      function Flush return String is
-         Eqeq : constant String := "==";
-         Leq  : Positive;
-      begin
-         case Leftbits is
-            when 0 =>
-               return "";
-
-            when 2 =>
-               Ch := Mod64 (Shift_Left (Left and 3, 4));
-               Leq := 2;
-
-            when 4 =>
-               Ch := Mod64 (Shift_Left (Left and 16#F#, 2));
-               Leq := 1;
-
-            when others =>
-               raise Program_Error with "invalid Base64 encoder state";
-         end case;
-
-         Left := 0;
-         Leftbits := 0;
-
-         return To_Base64 (Ch) & Eqeq (1 .. Leq);
-
-      end Flush;
 
       Start, Next, Fit : Integer;
       --  Start of current encoded sequence,
       --  start of next encoded sequence,
       --  last element of previous encoded sequence.
 
-      Next_Char : constant Next_Char_Acc :=
-        (if Where in Any_Header
-         then Next_Char_For_Charset (Charset)
-         else Single_Byte_Next_Char'Access);
+      Index : Stream_Element_Offset := In_Bytes'First;
+
+      Next_Char : constant Next_Char_Acc := Next_Char_For_Charset (Charset);
       --  In message bodies, multi-byte encodings can be
       --  split across multiple lines; in headers, they can't
       --  be split across multiple encoded words.
@@ -1644,20 +1580,58 @@ package body GNATCOLL.Email.Utils is
 
    begin
       Fit := Str'First;
-      while Fit <= Str'Last loop
-         Start := Fit;
-         Next  := Fit;
 
-         while Next - Start <= Max loop
-            Fit := Next;
+      if Where in Any_Header then
+         while Fit <= Str'Last loop
+            Start := Fit;
+            Next  := Fit;
 
-            exit when Fit > Str'Last;
+            while Next - Start <= Max loop
+               Fit := Next;
 
-            Next_Char_Ignore_Invalid (Next_Char, Str, Next);
+               exit when Fit > Str'Last;
+
+               Next_Char_Ignore_Invalid (Next_Char, Str, Next);
+            end loop;
+
+            Encode_Append
+              (First    => Stream_Element_Offset (Start),
+               Last     => Stream_Element_Offset (Fit - 1),
+               Last_One => Fit > Str'Last);
          end loop;
 
-         Encode_Append (Str (Start .. Fit - 1), Last_One => Fit > Str'Last);
-      end loop;
+      else
+         Coder.Initialize;
+
+         loop
+            declare
+               Out_Last : Stream_Element_Offset;
+               Text     : String (1 .. Integer'Min (Max_Block_Len, 76));
+               Buffer   : Stream_Element_Array (1 .. Text'Length) with Import;
+               for Buffer'Address use Text'Address;
+               Flush : constant Flush_Mode :=
+                         (if Index > In_Bytes'Last - Text'Length * 3 / 4 + 1
+                          then Finish else No_Flush);
+               First : constant Boolean := Index = In_Bytes'First;
+            begin
+               Coder.Transcode
+                 (In_Bytes (Index .. In_Bytes'Last), Index, Buffer, Out_Last,
+                  Flush => Flush);
+
+               if 1 <= Out_Last then
+                  Put_Parts
+                    ((if First then "" else (1 => ASCII.LF))
+                     & Text (1 .. Natural (Out_Last)));
+               end if;
+
+               exit when Flush = Finish;
+
+               Index := Index + 1;
+            end;
+         end loop;
+
+         Coder.Close;
+      end if;
    end Base64_Encode;
 
    -------------------
@@ -1668,61 +1642,39 @@ package body GNATCOLL.Email.Utils is
      (Str    : String;
       Result : out Unbounded_String)
    is
-      type Phase_Type is mod 4;
-      --  We must use the heap rather than the stack here. In some
-      --  cases, we'll be able to avoid a copy of the string anyway,
-      --  and in case where this code is run in a multi-threaded
-      --  application, the stack size is generally too small anyway
-      Output   : Ada.Strings.Unbounded.String_Access :=
-         new String (1 .. Str'Length * 6 / 8);
-      Index    : Integer := Output'First;
-
-      Phase    : Phase_Type := 0;
-      D, Dlast : Byte := 0;
-
+      use Ada.Streams;
+      Decoder : Base64.Decoder_Type;
+      Src     : Stream_Element_Array (1 .. Str'Length) with Import;
+      for Src'Address use Str'Address;
+      Index   : Stream_Element_Offset := Src'First;
+      Dest    : Stream_Element_Array (1 .. 4096);
+      Last    : Stream_Element_Offset;
+      Text    : String (1 .. Dest'Length);
+      for Text'Address use Dest'Address;
+      Flush   : Flush_Mode := No_Flush;
    begin
-      for S in Str'First .. Str'Last loop
-         if Str (S) = ASCII.LF
-           or else Str (S) = ASCII.CR
-         then
-            Phase := 0;
-            Dlast := 0;
+      Decoder.Initialize;
+      Result := Null_Unbounded_String;
 
-         else
-            D := Base64_Convert (Str (S));
-            if D /= -1 then
-               case Phase is
-                  when 0 =>
-                     Phase := Phase + 1;
-                  when 1 =>
-                     Output (Index) := Character'Val
-                       (Dlast * 4 or ((D and 16#30#) / 16));
-                     Index := Index + 1;
-                     Phase := Phase + 1;
-                  when 2 =>
-                     Output (Index) := Character'Val
-                       (((Dlast and 16#F#) * 16) or ((D and 16#3C#) / 4));
-                     Index := Index + 1;
-                     Phase := Phase + 1;
-                  when 3 =>
-                     Output (Index) := Character'Val
-                       (((Dlast and 16#3#) * 64) or D);
-                     Index := Index + 1;
-                     Phase := 0;
-               end case;
-
-               Dlast := D;
-            end if;
+      while Index <= Src'Last loop
+         if Index > Src'Last - Dest'Length then
+            Flush := Finish;
          end if;
+
+         Decoder.Transcode
+           (In_Data  => Src (Index .. Src'Last),
+            In_Last  => Index,
+            Out_Data => Dest,
+            Out_Last => Last,
+            Flush    => Flush);
+
+         Append (Result, Text (1 .. Integer (Last)));
+         exit when Flush = Finish;
+
+         Index := Index + 1;
       end loop;
 
-      if Index - 1 = Output'Last then
-         Set_Unbounded_String (Result, Output.all);
-      else
-         Set_Unbounded_String (Result, Output (Output'First .. Index - 1));
-      end if;
-
-      Free (Output);
+      Decoder.Close;
    end Base64_Decode;
 
    ------------
