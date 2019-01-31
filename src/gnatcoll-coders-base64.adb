@@ -82,10 +82,7 @@ package body GNATCOLL.Coders.Base64 is
       Coder         := Encoder_Type'(others => <>);
       Coder.To_Char := Base64 (Mode)'Access;
       Coder.Align   := Mode = MIME;
-
-      if Wrap > 0 then
-         Coder.Wrap := Wrap + 1;
-      end if;
+      Coder.Wrap    := (if Wrap > 0 then Wrap + 1 else 0);
    end Initialize;
 
    ---------------
@@ -271,23 +268,23 @@ package body GNATCOLL.Coders.Base64 is
 
       while Out_Last < Out_Data'Last loop
          if In_Last = In_Data'Last then
-            exit when Flush /= Finish or else (Coder.Finish and not Coder.Has);
+            exit when Flush /= Finish or else Coder.Finish;
 
-            if Coder.Finish then
+            Coder.Finish := True;
+
+            if Coder.Has then
+               Append (Coder.Bits);
                Coder.Has := False;
-            else
-               Coder.Finish := True;
             end if;
+
+            exit;
 
          else
             In_Last := In_Last + 1;
             Bits := Decoder (In_Data (In_Last));
          end if;
 
-         if Bits = Unsigned_8'Last then
-            Coder.Trush := Coder.Trush + 1;
-
-         else
+         if Bits /= Unsigned_8'Last then
             State := Integer (Coder.In_Count rem 4);
 
             case State is
@@ -300,7 +297,7 @@ package body GNATCOLL.Coders.Base64 is
                     (Coder.Bits or Shift_Right (Bits, Shift_1_2 (State, 1)));
 
                   Coder.Bits := Shift_Left (Bits, Shift_1_2 (State, 2));
-                  Coder.Has := True;
+                  Coder.Has := False;
 
                when others =>
                   Append (Coder.Bits or Bits);

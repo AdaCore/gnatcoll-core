@@ -120,19 +120,18 @@ private
    end record;
 
    type Encoder_Type is new Coder_Type with record
-      Lines     : Stream_Element_Count := 1; -- Number of lines
       To_Char   : access constant Base64_Encode_Array;
+      Lines     : Stream_Element_Count := 1; -- Number of lines
       Left      : Unsigned_16          := 0;
       Left_Bits : Integer              := 0;
-      Align     : Boolean := False;
+      Align     : Boolean              := False;
       Wrap      : Natural;
    end record;
 
    type Decoder_Type is new Coder_Type with record
       Bits  : Unsigned_8 := 0;
       Has   : Boolean    := False;
-      Open  : Boolean := False;
-      Trush : Stream_Element_Count;
+      Open  : Boolean    := False;
    end record;
 
 end GNATCOLL.Coders.Base64;
