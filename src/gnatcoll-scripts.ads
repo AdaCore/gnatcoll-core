@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2018, AdaCore                     --
+--                     Copyright (C) 2003-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -213,8 +213,6 @@ package GNATCOLL.Scripts is
    --  the first time the class is created (typically just before the matching
    --  calls to Register_Command), and can be left to its default value
    --  afterward.
-   --  Description of the new class must be put in the file shell_commands.xml,
-   --  which is read dynamically when generating the documentation.
 
    function Get_Name (Class : Class_Type) return String;
    --  Return the name of the class (module.name)
@@ -1430,10 +1428,6 @@ package GNATCOLL.Scripts is
    --  and 1 if the first is greater than the second.
    --
    --  Destructor_Method is called just before the instance is destroyed
-   --
-   --  Description of the new command must be put in the file
-   --  shell_commands.xml, which is read dynamically when generating the
-   --  documentation.
    --
    --  If the command has some graphical output (dialog,...), it must run in
    --  a separate main loop (Gtk.Main.Gtk_Main or modal dialogs).
