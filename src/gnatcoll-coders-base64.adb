@@ -21,8 +21,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces; use Interfaces;
-
 package body GNATCOLL.Coders.Base64 is
 
    --  The base64 character set
