@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2018, AdaCore                     --
+--                     Copyright (C) 2009-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1107,7 +1107,7 @@ package body GNATCOLL.Opt_Parse is
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Long'Last + 2, Args (Pos).Length);
 
-      elsif Args (Pos).Starts_With (Short) then
+      elsif Short /= "" and then Args (Pos).Starts_With (Short) then
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Short'Last + 1, Args (Pos).Length);
       else
