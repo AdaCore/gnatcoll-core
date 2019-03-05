@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2018, AdaCore                     --
+--                     Copyright (C) 2003-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -241,7 +241,17 @@ package body GNATCOLL.VFS is
             return +Full_Filename;
          end if;
 
-         return GNATCOLL.Path.Normalize (FS, +Full_Filename);
+         if GNATCOLL.Path.Is_Absolute_Path (FS, +Full_Filename) then
+            return GNATCOLL.Path.Normalize (FS, +Full_Filename);
+         else
+            declare
+               Full_Path : constant Virtual_File :=
+                  Get_Current_Dir (Host => Host) / Full_Filename;
+            begin
+               return GNATCOLL.Path.Normalize (FS,
+                                               +Full_Path.Full_Name);
+            end;
+         end if;
       end Internal_Get_Path;
 
    begin

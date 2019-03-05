@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2018, AdaCore                     --
+--                     Copyright (C) 2003-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -148,7 +148,8 @@ package GNATCOLL.VFS is
    --  The latter can be found, for source files, through the functions in
    --  projects-registry.ads.
    --  If Normalize is set, then the VFS is created using the normalized
-   --  Full_Filename.
+   --  Full_Filename. In that case note that the path passed is transformed
+   --  into an absolute path.
 
    function Create_From_Dir
      (Dir       : Virtual_File;
