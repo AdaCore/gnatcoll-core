@@ -1,0 +1,4 @@
+project foo1 is
+   for Source_Dirs use ("src");
+   for Main use ("foo.adb");
+end foo1;

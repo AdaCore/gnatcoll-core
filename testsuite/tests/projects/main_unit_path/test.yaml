@@ -1,0 +1,6 @@
+description: >
+  Check that Is_Main_Unit correctly handles
+  absolute and relative path names.
+data:
+    - "foo1.gpr"
+    - "foo.adb"

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2018, AdaCore                     --
+--                     Copyright (C) 2002-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -826,6 +826,9 @@ package GNATCOLL.Projects is
       File           : GNATCOLL.VFS.Filesystem_String;
       Case_Sensitive : Boolean := True) return Boolean;
    --  Return True if File is one of the main files of Project.
+   --  If File is an absolute path, additionally checks if it is a source of
+   --  Project, otherwise just the base name is used to compare against the
+   --  list of Main units specified in the project.
    --  Case_Sensitive indicates whether the build machine is case sensitive.
    --  In general, this machine is the local machine on which the application
    --  is running, but sometimes you might actually want to process the project

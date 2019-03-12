@@ -3712,12 +3712,34 @@ package body GNATCOLL.Projects is
       File           : GNATCOLL.VFS.Filesystem_String;
       Case_Sensitive : Boolean := True) return Boolean
    is
-      Value : String_List_Access :=
+      Value :           String_List_Access :=
                 Project.Attribute_Value (Attribute    => Main_Attribute,
                                          Use_Extended => True);
+      B_File : constant GNATCOLL.VFS.Filesystem_String := Base_Name (File);
+      Files  :          VFS.File_Array_Access;
+      Source : Boolean := False;
    begin
+      Trace (Me, (+File) & " vs " & (+B_File));
+
+      if GNATCOLL.VFS_Utils.Is_Absolute_Path (File) then
+         --  Check that given file is a source of Project first.
+         Files := Project.Source_Files (Recursive => False);
+         for F of Files.all loop
+            if F.Full_Name = File then
+               Source := True;
+               exit;
+            end if;
+         end loop;
+         Unchecked_Free (Files);
+         if not Source then
+            return False;
+         end if;
+      end if;
+
       for V in Value'Range loop
-         if Equal (Value (V).all, +File, Case_Sensitive => Case_Sensitive) then
+         if Equal
+           (Value (V).all, +B_File, Case_Sensitive => Case_Sensitive)
+         then
             Free (Value);
             return True;
          end if;
