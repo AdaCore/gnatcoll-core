@@ -21,14 +21,11 @@ begin
    Copy (Create ("foo.adb"), "src", Dummy);
    Copy (Create ("foo.adb"), "not_src", Dummy);
    Initialize (Env);
---
---     Parse_Config_File (".gnatdebug1");
 
    GNATCOLL.Projects.Load
      (PT,
       Root_Project_Path => Create ("foo1.gpr"),
       Env => Env);
-
 
    Test_Assert.Assert
      (PT.Root_Project.Is_Main_File ("foo.adb"),

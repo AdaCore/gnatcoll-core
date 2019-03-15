@@ -3732,6 +3732,7 @@ package body GNATCOLL.Projects is
          end loop;
          Unchecked_Free (Files);
          if not Source then
+            Free (Value);
             return False;
          end if;
       end if;
