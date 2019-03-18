@@ -21,15 +21,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Text_IO; use Ada.Text_IO;
-
+with Ada.Text_IO;        use Ada.Text_IO;
 with GNATCOLL.Opt_Parse; use GNATCOLL.Opt_Parse;
-with GNATCOLL.Strings; use GNATCOLL.Strings;
+with GNATCOLL.Strings;   use GNATCOLL.Strings;
 
 with Test_Assert;
 
 function Test return Integer is
-   package IO renames Ada.Text_IO;
    package A renames Test_Assert;
 
    function "+"
@@ -103,7 +101,8 @@ begin
 
    A.Assert (Arg.Parser.Parse ((+"-j", +"12", +"a")), "Integer value");
 
-   A.Assert (not Arg.Parser.Parse ((+"-j", +"lol", +"a")), "Invalid integer value");
+   A.Assert (not Arg.Parser.Parse ((+"-j", +"lol", +"a")),
+             "Invalid integer value");
 
    A.Assert (not Arg.Parser.Parse ((+"a", +"-j")), "Incomplete option");
 
@@ -112,6 +111,7 @@ begin
    if Arg.Parser.Parse ((+"--quiet", +"a", +"b")) then
       A.Assert (Arg.Quiet.Get, "Get flag with explicit val");
       A.Assert (Arg.Charset.Get = "latin-1", "Get option with default val");
+      A.Assert (Arg.Jobs.Get = 1, "Check default job value");
    else
       A.Assert (False);
    end if;
