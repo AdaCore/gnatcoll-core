@@ -27,4 +27,8 @@ lib/
 *.pyc
 /gnat_src
 
+testsuite/gcov
+testsuite/gnatcov
+testsuite/out
+
 examples/library/obj
