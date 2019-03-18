@@ -10,8 +10,10 @@ package body Support is
       (Data : in out Callback_Data'Class; Command : String);
 
    Prop    : Integer := 0;
-   Ro_Prop : Integer := 0;
+   Ro_Prop : constant Integer := 0;
+   pragma Warnings (Off);
    Wo_Prop : Integer := 0;
+   pragma Warnings (On);
    --  Imagine these are fields of a class. We simplify the test case by
    --  using global variables
 

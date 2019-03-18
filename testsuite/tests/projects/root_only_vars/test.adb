@@ -1,4 +1,3 @@
-with Text_IO; use Text_IO;
 with GNATCOLL.Projects; use GNATCOLL.Projects;
 with GNATCOLL.Projects.Aux;
 with GNATCOLL.VFS;      use GNATCOLL.VFS;
@@ -12,8 +11,8 @@ begin
    PT.Load (GNATCOLL.VFS.Create ("a.gpr"), Env);
 
    declare
-      SVs : Scenario_Variable_Array := PT.Scenario_Variables;
-      UVs : Untyped_Variable_Array  := PT.Untyped_Variables;
+      SVs : constant Scenario_Variable_Array := PT.Scenario_Variables;
+      UVs : constant Untyped_Variable_Array  := PT.Untyped_Variables;
    begin
       Test_Assert.Assert
         (SVs'Length = 2, "checking initial quantity of SVs");
@@ -22,8 +21,8 @@ begin
    end;
 
    declare
-      SVs : Scenario_Variable_Array := PT.Scenario_Variables (True);
-      UVs : Untyped_Variable_Array  := PT.Untyped_Variables (True);
+      SVs : constant Scenario_Variable_Array := PT.Scenario_Variables (True);
+      UVs : constant Untyped_Variable_Array  := PT.Untyped_Variables (True);
    begin
       Test_Assert.Assert
         (SVs'Length = 1, "checking root-only quantity of SVs");
@@ -32,8 +31,8 @@ begin
    end;
 
    declare
-      SVs : Scenario_Variable_Array := PT.Scenario_Variables;
-      UVs : Untyped_Variable_Array  := PT.Untyped_Variables;
+      SVs : constant Scenario_Variable_Array := PT.Scenario_Variables;
+      UVs : constant Untyped_Variable_Array  := PT.Untyped_Variables;
    begin
       Test_Assert.Assert
         (SVs'Length = 2, "checking quantity of SVs after root-only call");

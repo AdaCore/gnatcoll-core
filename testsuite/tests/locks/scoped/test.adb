@@ -31,6 +31,8 @@ function Test return Integer is
    M : aliased Mutual_Exclusion;
    Counter : Natural := 0;
 
+   procedure Increment;
+
    procedure Increment is
       Dummy : Scoped_Lock (M'Access);
    begin

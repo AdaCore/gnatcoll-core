@@ -3,7 +3,6 @@ with Ada.Real_Time;             use Ada.Real_Time;
 with Ada.Task_Identification;
 with Ada.Text_IO;               use Ada.Text_IO;
 with GNATCOLL.Refcount;
-with System.Address_Image;
 with Test_Assert;               use Test_Assert;
 
 function Test return Integer is
@@ -74,7 +73,7 @@ function Test return Integer is
    end Weak_Tester;
 
    Test  : array (1 .. 3) of Weak_Tester;
-   Stamp : Time := Clock;
+   Stamp : constant Time := Clock;
 
 begin
    for J in Processing_Range loop

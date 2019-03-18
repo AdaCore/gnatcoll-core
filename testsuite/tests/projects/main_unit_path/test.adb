@@ -4,9 +4,8 @@ with GNATCOLL.Projects.Aux;
 with Test_Assert;
 
 function Test return Integer is
-   PT  : Project_Tree;
-   Root  : Project_Type;
-   Env : Project_Environment_Access;
+   PT    : Project_Tree;
+   Env   : Project_Environment_Access;
    Dummy : Boolean;
 
    VF_Full_Good : constant Virtual_File :=

@@ -1,7 +1,6 @@
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 with Ada.Directories;
 with Test_Assert;
-with Ada.Text_IO; use Ada.Text_IO;
 
 function Test return Integer is
    package Dir renames Ada.Directories;

@@ -1,5 +1,4 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-with Ada.Text_IO;
 
 with GNATCOLL.JSON;    use GNATCOLL.JSON;
 with GNATCOLL.Strings; use GNATCOLL.Strings;
@@ -7,7 +6,6 @@ with GNATCOLL.Strings; use GNATCOLL.Strings;
 with Test_Assert;
 
 function Test return Integer is
-   package IO renames Ada.Text_IO;
    package A renames Test_Assert;
 
    function Less (Left, Right : JSON_Value) return Boolean;
@@ -153,8 +151,8 @@ begin
    -- Serialization/deserialization primitives --
    ----------------------------------------------
 
-   -- Exception-based serialization/deserialization primitives get their own
-   -- testing outside of this testcase.
+   --  Exception-based serialization/deserialization primitives get their own
+   --  testing outside of this testcase.
 
    Check_Image (Read ("{}").Value, "{}");
    Check_Image (Read (To_Unbounded_String ("{}")).Value, "{}");
@@ -213,7 +211,7 @@ begin
    -----------------------------------------
 
    declare
-      Arr    : JSON_Value := Create (Empty_Array);
+      Arr    : constant JSON_Value := Create (Empty_Array);
       Cloned : JSON_Value;
    begin
       Check_Image (Arr, "[]");

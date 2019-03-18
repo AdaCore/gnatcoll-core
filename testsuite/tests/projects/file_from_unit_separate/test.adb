@@ -1,4 +1,3 @@
-with Text_IO; use Text_IO;
 with GNATCOLL.Projects; use GNATCOLL.Projects;
 with GNATCOLL.VFS;      use GNATCOLL.VFS;
 with Test_Assert;

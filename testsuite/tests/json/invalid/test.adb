@@ -15,9 +15,11 @@ function Test return Integer is
    procedure Test (JSON_String : String) is
    begin
       declare
+         pragma Warnings (Off);
          V : JSON.JSON_Value;
+         pragma Warning (On);
       begin
-         V := JSON.Read(JSON_String);
+         V := JSON.Read (JSON_String);
          A.Assert (False, "invalid json (exception not raised)");
       exception
          when JSON.Invalid_JSON_Stream =>
@@ -28,9 +30,10 @@ function Test return Integer is
       end;
    end Test;
 
-   File_Content : GNAT.Strings.String_Access := VFS.Read_File (VFS.Create(VFS."+"(Ada.Command_Line.Argument (1))));
+   File_Content : GNAT.Strings.String_Access :=
+      VFS.Read_File (VFS.Create (VFS."+" (Ada.Command_Line.Argument (1))));
 begin
-   Test (File_Content.all); 
+   Test (File_Content.all);
    GNAT.Strings.Free (File_Content);
    return A.Report;
 end Test;

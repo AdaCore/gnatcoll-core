@@ -7,15 +7,23 @@ with Support;
 with Test_Assert;
 
 function Test return Integer is
-   package A renames Test_Assert; 
+   package A renames Test_Assert;
    Repo    : Scripts_Repository := new Scripts_Repository_Record;
    Console : aliased Test_Console;
 
-   function Completions (Input : String; Lang : Scripting_Language)
-     return String is
+   function Completions
+      (Input : String;
+       Lang  : Scripting_Language)
+      return String;
+
+   function Completions
+      (Input : String;
+       Lang  : Scripting_Language)
+     return String
+   is
       use String_Lists;
       Completions : String_Lists.List;
-      Result : Unbounded_String;
+      Result      : Unbounded_String;
    begin
       Complete (Lang, Input, Completions);
       for E of Completions loop
@@ -37,7 +45,11 @@ begin
    Set_Default_Console (Sh, Console'Unchecked_Access);
 
    A.Assert (Completions ("C1", Sh) = "C1, C1.method, ", "C1");
-   A.Assert (Completions ("", Sh) = "C1, C1.method, Console.clear, Console.flush, Console.isatty, Console.read, Console.readline, Console.write, MyList.dump, clear_cache, echo, echo_error, hello, load, print_float, ", """""");
+   A.Assert (Completions ("", Sh) =
+             "C1, C1.method, Console.clear, Console.flush, Console.isatty, " &
+             "Console.read, Console.readline, Console.write, MyList.dump, " &
+             "clear_cache, echo, echo_error, hello, load, print_float, ",
+             """""");
    A.Assert (Completions ("Ba", Sh) = "", "Ba");
 
    Free (Console);

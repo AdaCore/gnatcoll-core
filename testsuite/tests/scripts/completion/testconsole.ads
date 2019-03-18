@@ -2,7 +2,8 @@ with GNATCOLL.Scripts;
 
 package TestConsole is
 
-   type Test_Console is new GNATCOLL.Scripts.Virtual_Console_Record with private;
+   type Test_Console is
+      new GNATCOLL.Scripts.Virtual_Console_Record with private;
    overriding procedure Insert_Text
      (Console : access Test_Console; Txt : String);
    overriding procedure Insert_Prompt
@@ -12,7 +13,8 @@ package TestConsole is
    overriding procedure Insert_Log
      (Console : access Test_Console; Txt : String);
    overriding procedure Set_Data_Primitive
-     (Instance : GNATCOLL.Scripts.Class_Instance; Console : access Test_Console);
+     (Instance : GNATCOLL.Scripts.Class_Instance;
+      Console  : access Test_Console);
    overriding function Get_Instance
      (Script  : access GNATCOLL.Scripts.Scripting_Language_Record'Class;
       Console : access Test_Console) return GNATCOLL.Scripts.Class_Instance;

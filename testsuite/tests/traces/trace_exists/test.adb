@@ -11,7 +11,8 @@ begin
    Test_Assert.Assert (not Active (Trace), "The trace should be disabled");
    Test_Assert.Assert (Exists (Name), "The trace should be defined");
    Trace := Create (Name, On);
-   Test_Assert.Assert (not Active (Trace), "The trace should still be disabled");
+   Test_Assert.Assert (not Active (Trace),
+                       "The trace should still be disabled");
    Test_Assert.Assert (Exists (Name), "The trace should be defined");
    return Test_Assert.Report;
 end Test;

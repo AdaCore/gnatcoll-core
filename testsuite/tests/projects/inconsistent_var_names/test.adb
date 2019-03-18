@@ -30,7 +30,7 @@ begin
            Errors => Errors'Unrestricted_Access);
 
    declare
-      UVs : Untyped_Variable_Array  := PT.Untyped_Variables;
+      UVs : constant Untyped_Variable_Array  := PT.Untyped_Variables;
    begin
       for UV of UVs loop
          Test_Assert.Assert

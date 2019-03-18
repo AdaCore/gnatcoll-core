@@ -1,12 +1,10 @@
 with GNATCOLL.Tribooleans; use GNATCOLL.Tribooleans;
-with Ada.Text_IO;          use Ada.Text_IO;
 with Test_Assert;
 
 function Test return Integer is
-   package IO renames Ada.Text_IO;
    package A renames Test_Assert;
-   BT : Boolean := True;
-   BF : Boolean := False;
+   BT : constant Boolean := True;
+   BF : constant Boolean := False;
 
    T : constant Triboolean := True;
    F : constant Triboolean := False;

@@ -1,17 +1,13 @@
 with GNATCOLL.Projects; use GNATCOLL.Projects;
 with GNATCOLL.VFS;      use GNATCOLL.VFS;
 with Ada.Strings.Fixed; use Ada.Strings.Fixed;
-with GNATCOLL.Traces;   use GNATCOLL.Traces;
 with GNATCOLL.Projects.Aux;
 with Ada.Containers.Indefinite_Doubly_Linked_Lists;
 
 with Test_Assert;
 
-with Ada.Text_IO; use Ada.Text_IO;
-
 function Test return Integer is
    PT              : Project_Tree;
-   My_Root_Project : Project_Type;
    Env             : Project_Environment_Access;
 
    package String_Lists is new

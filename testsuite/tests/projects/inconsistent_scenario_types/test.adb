@@ -1,12 +1,12 @@
-with Gnatcoll.Projects; use GNATCOLL.Projects;
-with Gnatcoll.VFS; use GNATCOLL.VFS;
+with GNATCOLL.Projects; use GNATCOLL.Projects;
+with GNATCOLL.VFS;      use GNATCOLL.VFS;
 with GNATCOLL.Projects.Aux;
 
 with Test_Assert;
 
 function Test return Integer is
-   Env  : Gnatcoll.Projects.Project_Environment_Access;
-   Tree : Gnatcoll.Projects.Project_Tree;
+   Env  : GNATCOLL.Projects.Project_Environment_Access;
+   Tree : GNATCOLL.Projects.Project_Tree;
 
 begin
    Initialize (Env);
@@ -14,8 +14,8 @@ begin
          Env    => Env);
 
    declare
-      SVs : Scenario_Variable_Array := Tree.Scenario_Variables;
-      UVs : Untyped_Variable_Array  := Tree.Untyped_Variables;
+      SVs : constant Scenario_Variable_Array := Tree.Scenario_Variables;
+      UVs : constant Untyped_Variable_Array  := Tree.Untyped_Variables;
    begin
       Test_Assert.Assert
         (SVs'Length = 0, "check Scenario Variables amount");

@@ -1,12 +1,11 @@
-with Gnat.Strings;      use Gnat.Strings;
-with Gnatcoll.Projects; use Gnatcoll.Projects;
-with Gnatcoll.VFS;      use Gnatcoll.VFS;
+with GNATCOLL.Projects; use GNATCOLL.Projects;
+with GNATCOLL.VFS;      use GNATCOLL.VFS;
 
 with Test_Assert;
 
 function Test return Integer is
-   Env  : Gnatcoll.Projects.Project_Environment_Access;
-   Tree : Gnatcoll.Projects.Project_Tree;
+   Env  : GNATCOLL.Projects.Project_Environment_Access;
+   Tree : GNATCOLL.Projects.Project_Tree;
 begin
    Initialize (Env);
    Load (Tree, Env => Env, Root_Project_Path => Create (+"test1.gpr"));

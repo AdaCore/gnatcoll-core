@@ -59,7 +59,7 @@ begin
    A.Assert (Pool.Get ("key3", Section => "section1"), "value 3",
              "check that trailing spaces are ignored");
    A.Assert (Pool.Get ("section1.key2",
-                       Section=> Cfg.Section_From_Key),
+                       Section => Cfg.Section_From_Key),
              "value2",
              "check that sections1.key2=value2 (dot notation)");
    A.Assert (Pool.Get ("section1.key4"),
@@ -111,7 +111,7 @@ begin
 
    --  Test Config_Key creation
    declare
-      CK1 : Cfg.Config_Key := Cfg.Create ("key1");
+      CK1 : constant Cfg.Config_Key := Cfg.Create ("key1");
    begin
       A.Assert (CK1.Get (Pool), "value1_2", "basic config_key test");
    end;
@@ -133,11 +133,11 @@ begin
       Ini3.Open ("test5.ini");
       Pool.Fill (Ini3);
       A.Assert (True, "parsing test5.ini");
-      A.Assert (Pool.Get("#comment") /= "key",
+      A.Assert (Pool.Get ("#comment") /= "key",
                 "ensure comment was parsed correctly");
-      A.Assert (Pool.Get("key5_1") /= "value2",
+      A.Assert (Pool.Get ("key5_1") /= "value2",
                 "ensure section was parsed correctly");
-      A.Assert (Pool.Get("tion#key5_2", Section => "sec") /= "value3",
+      A.Assert (Pool.Get ("tion#key5_2", Section => "sec") /= "value3",
                 "ensure # is not considered as a special character");
    exception
       when others =>

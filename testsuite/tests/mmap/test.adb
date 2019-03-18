@@ -1,15 +1,14 @@
 with Ada.Unchecked_Conversion;
 with GNAT.Directory_Operations;
 with GNAT.OS_Lib;
-with GNATcoll.Mmap;
-with Interfaces;
+with GNATCOLL.Mmap;
 with System;
 with Test_Assert;
 
 function Test return Integer is
 
    package A renames Test_Assert;
-   package Mmap renames GNATcoll.Mmap;
+   package Mmap renames GNATCOLL.Mmap;
 
    use type Mmap.Mapped_File;
    use type Mmap.Mapped_Region;
@@ -42,7 +41,7 @@ function Test return Integer is
           Size  : Long_Long_Integer)
          return Integer;
       --  internal C function. Return 0 in case of failure.
-      pragma Import(C, C_Create_File, "c_create_file");
+      pragma Import (C, C_Create_File, "c_create_file");
 
       F : aliased String := Filename & ASCII.NUL;
       Status : Integer;
@@ -88,9 +87,10 @@ function Test return Integer is
       A.Assert (Mmap.Last (Mr) = 3, "expect size 3, got" & Mmap.Last (Mr)'Img);
 
       --  Free resources
-      GNATCOLL.Mmap.Free (mr);
+      GNATCOLL.Mmap.Free (Mr);
       GNATCOLL.Mmap.Close (Fd);
       GNAT.OS_Lib.Delete_File (Name, Delete_Status);
+      A.Assert (Delete_Status);
       A.Assert (True, "end of test for size" & Size'Img);
    end Test_For_Size;
 

@@ -21,12 +21,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Text_IO;
 with GNATCOLL.Refcount;
 with Test_Assert;
 
 function Test return Integer is
-   package IO renames Ada.Text_IO;
    package A renames Test_Assert;
 
    package Int_Refs

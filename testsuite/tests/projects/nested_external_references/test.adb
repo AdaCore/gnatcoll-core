@@ -25,9 +25,9 @@ begin
    PT.Load (GNATCOLL.VFS.Create ("a.gpr"), Env);
 
    declare
-      SVs : Scenario_Variable_Array := PT.Scenario_Variables;
-      UVs : Untyped_Variable_Array  := PT.Untyped_Variables;
-      SV : Scenario_Variable;
+      SVs : constant Scenario_Variable_Array := PT.Scenario_Variables;
+      UVs : constant Untyped_Variable_Array  := PT.Untyped_Variables;
+      SV  : Scenario_Variable;
    begin
       for SV of SVs loop
          Test_Assert.Assert

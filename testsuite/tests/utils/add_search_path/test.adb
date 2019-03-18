@@ -1,8 +1,6 @@
 with GNATCOLL.Utils;
 with Test_Assert;
-with Ada.Text_IO;
 with Ada.Environment_Variables;
-with Ada.Directories;
 with GNAT.OS_Lib;
 
 function Test return Integer is
