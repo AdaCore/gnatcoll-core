@@ -37,6 +37,7 @@ class DataValidationDriver(GNATcollTestDriver):
             [os.path.join(self.test_env['working_dir'],
                           self.test_env.get('validator', 'obj/test')),
              os.path.join(self.test_env['test_dir'], data_file)],
+            test_name=test_name,
             result=result,
             timeout=self.process_timeout)
 
