@@ -1,7 +1,6 @@
 from e3.fs import rm
 from e3.testsuite.result import TestStatus, TestResult
 from drivers import GNATcollTestDriver, gprbuild
-from drivers.valgrind import check_call_valgrind
 import os
 
 
@@ -34,8 +33,7 @@ class DataValidationDriver(GNATcollTestDriver):
         if not previous_values['build']:
             return TestStatus.FAIL
 
-        process = check_call_valgrind(
-            self,
+        process = self.run_test_program(
             [os.path.join(self.test_env['working_dir'],
                           self.test_env.get('validator', 'obj/test')),
              os.path.join(self.test_env['test_dir'], data_file)],

@@ -1,12 +1,13 @@
+import logging
+import os
+import traceback
+
 from e3.fs import mkdir
 from e3.os.process import Run
 from e3.os.fs import df
 from e3.testsuite.driver import TestDriver
 from e3.testsuite.process import check_call
 from e3.testsuite.result import TestStatus
-import os
-import logging
-import traceback
 
 
 # Root directory of respectively the testsuite and the gnatcoll
@@ -18,20 +19,32 @@ GNATCOLL_ROOT_DIR = os.path.dirname(TESTSUITE_ROOT_DIR)
 DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
 
-def make_gnatcoll(work_dir, gcov=False):
+def make_gnatcoll(work_dir, gcov=False, gnatcov=False):
     """Build gnatcoll core with or without gcov instrumentation.
 
-    :param work_dir: working directory. gnatcoll is built in `build` subdir
-        and installed in `install` subdir
-    :type work_dir: str
-    :param gcov: if False then build gcov in PROD mode, otherwise
-        build it with gcov instrumentation in DEBUG mode
-    :type gcov: bool
-    :return: a triplet (project path, source path, object path)
+    :param str work_dir: Working directory. GNATcoll is built in `build` subdir
+        and installed in `install` subdir.
+
+    :param bool gcov: If False then build GNATcoll in PROD mode, otherwise
+        build it with gcov instrumentation in DEBUG mode.
+
+    :param bool gnatcov: If False then build GNATcoll in PROD mode. Otherwise,
+        build it with the compile options that GNATcoverage requires in DEBUG
+        mode.
+
+    :return: A triplet (project path, source path, object path).
     :rtype: (str, str, str)
-    :raise AssertError: in case compilation of installation fails
+    :raise AssertError: In case compilation of installation fails.
     """
-    logging.info('Compiling gnatcoll (gcov=%s)' % gcov)
+    assert not (gcov and gnatcov)
+
+    if gcov:
+        tag = ' (gcov)'
+    elif gnatcov:
+        tag = ' (gnatcov)'
+    else:
+        tag = ''
+    logging.info('Compiling gnatcoll{}'.format(tag))
 
     # Create build tree structure
     build_dir = os.path.join(work_dir, 'build')
@@ -47,6 +60,11 @@ def make_gnatcoll(work_dir, gcov=False):
         make_gnatcoll_cmd += [
             'BUILD=DEBUG',
             'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage -gargs']
+    elif gnatcov:
+        make_gnatcoll_cmd += [
+            'BUILD=DEBUG',
+            'GPRBUILD_OPTIONS=-cargs -fdump-scos -fpreserve-control-flow'
+            ' -gargs']
     else:
         make_gnatcoll_cmd += ['BUILD=PROD']
 
@@ -164,3 +182,20 @@ class GNATcollTestDriver(TestDriver):
     def process_timeout(self):
         """Timeout (in seconds) for subprocess to launch."""
         return self.test_env.get('timeout', self.DEFAULT_TIMEOUT)
+
+    def run_test_program(self, cmd, test_name=None, result=None, **kwargs):
+        """
+        Run a test program. This dispatches to running it under Valgrind or
+        "gnatcov run", depending on the testsuite options.
+        """
+        from drivers.gnatcov import gnatcov_run
+        from drivers.valgrind import check_call_valgrind
+
+        if self.env.valgrind:
+            wrapper = check_call_valgrind
+        elif self.env.gnatcov:
+            wrapper = gnatcov_run
+        else:
+            wrapper = check_call
+
+        return wrapper(self, cmd, test_name, result, **kwargs)
