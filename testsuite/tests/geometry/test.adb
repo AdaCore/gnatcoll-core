@@ -132,8 +132,10 @@ function Test return Integer is
       is
          SR : constant G.Segment := (S (2), S (1));
       begin
-         A.Assert (G.Inside (P, G.To_Line (S)) = On_Line, Error & " (line test)");
-         A.Assert (G.Inside (P, G.To_Line (SR)) = On_Line, Error & " (reverse line test)");
+         A.Assert (G.Inside (P, G.To_Line (S)) = On_Line,
+                   Error & " (line test)");
+         A.Assert (G.Inside (P, G.To_Line (SR)) = On_Line,
+                   Error & " (reverse line test)");
          A.Assert (G.Inside (P, S) = On_Segment,
                  Error & " (segment test)");
          A.Assert (G.Inside (P, SR) = On_Segment,
@@ -148,9 +150,12 @@ function Test return Integer is
          T2 : constant G.Triangle := (T (3), T (2), T (1));
       begin
          A.Assert (G.Inside (P, T) = Result, Error & " (triangle test)");
-         A.Assert (G.Inside (P, T2) = Result, Error & " (reverse triangle test)");
-         A.Assert (G.Inside (P, G.Polygon (T)) = Result, Error & " (polygon test)");
-         A.Assert (G.Inside (P, G.Polygon (T2)) = Result, Error & " (reverse polygon test)");
+         A.Assert (G.Inside (P, T2) = Result,
+                   Error & " (reverse triangle test)");
+         A.Assert (G.Inside (P, G.Polygon (T)) = Result,
+                   Error & " (polygon test)");
+         A.Assert (G.Inside (P, G.Polygon (T2)) = Result,
+                   Error & " (reverse polygon test)");
       end Assert_Inside_Triangle;
 
       procedure Assert_Intersection
@@ -160,9 +165,11 @@ function Test return Integer is
          Error      : String)
       is
       begin
-         A.Assert (G.Intersection (G.To_Line (S1), G.To_Line (S2)) = On_Line,
+         A.Assert (G.Intersection (G.To_Line (S1),
+                   G.To_Line (S2)) = On_Line,
                    Error & " (line test)");
-         A.Assert (G.Intersection (G.To_Line (S2), G.To_Line (S1)) = On_Line,
+         A.Assert (G.Intersection (G.To_Line (S2),
+                   G.To_Line (S1)) = On_Line,
                    Error & " (reverse line test)");
          A.Assert (G.Intersection (S1, S2) = On_Segment,
                    Error & " (segment test)");
@@ -191,8 +198,13 @@ function Test return Integer is
       procedure Assert_Same_Side
         (P1, P2 : G.Point; S : G.Segment; Result : Boolean; Error : String) is
       begin
-         A.Assert (G.Same_Side (P1, P2, S) = Result, Error & " (segment test)");
-         A.Assert (G.Same_Side (P1, P2, G.To_Line (S)) = Result, Error & " (line test)");
+         A.Assert (G.Same_Side (P1, P2, S) = Result,
+                   Error & " (segment test)");
+         A.Assert (G.Same_Side (P1, P2, G.To_Line (S)) = Result,
+                   Error & " (line test)");
+      exception
+         when others =>
+            A.Assert (False, Error & " (exception raised)");
       end Assert_Same_Side;
 
       procedure Assert (D1, D2 : Coordinate'Base; Error : String) is
@@ -213,7 +225,8 @@ function Test return Integer is
       is
          SR : constant G.Segment := (S (2), S (1));
       begin
-         A.Assert (G.Distance (P, G.To_Line (S)) = On_Line, Error & " (line test)");
+         A.Assert (G.Distance (P, G.To_Line (S)) = On_Line,
+                   Error & " (line test)");
          A.Assert (G.Distance (P, G.To_Line (SR)) = On_Line,
                  Error & " (reverse line test)");
          A.Assert (G.Distance (P, S) = On_Segment,
@@ -408,6 +421,7 @@ function Test return Integer is
    end Tests;
 
 begin
+   IO.Put_Line ("==== Coordinates = Float ====");
    declare
       subtype Coordinate is Float;
       procedure Float_Tests is new Tests (Coordinate);
@@ -417,6 +431,7 @@ begin
 
    --  Check we can instantiate with more restricted types
 
+   IO.Put_Line ("==== Coordinates = -500.0 .. 500.0 ====");
    declare
       type Coordinate is digits 1 range -500.0 .. 500.0;
       procedure Float_Tests is new Tests (Coordinate);
@@ -424,6 +439,7 @@ begin
       Float_Tests;
    end;
 
+   IO.Put_Line ("==== Coordinates = -500.0 .. 200.0 ====");
    declare
       type Coordinate is digits 1 range -500.0 .. -200.0;
       package Geom is new GNATCOLL.Geometry (Coordinate);
