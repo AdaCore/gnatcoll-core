@@ -37,7 +37,7 @@ class MyTestsuite(Testsuite):
             action="store_true")
         self.main.argument_parser.add_argument(
             '--recompile',
-            help="recompile production version of gnatcoll for testing",
+            help="recompile debug version of gnatcoll for testing",
             default=False,
             action="store_true")
 
@@ -85,13 +85,13 @@ class MyTestsuite(Testsuite):
             self.env.gnatcoll_gpr_dir = None
 
         if self.main.args.recompile:
-            work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'prod')
-            gpr_dir, _, _ = make_gnatcoll(work_dir)
-            self.env.gnatcoll_prod_gpr_dir = gpr_dir
+            work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'debug')
+            gpr_dir, _, _ = make_gnatcoll(work_dir, debug=True)
+            self.env.gnatcoll_debug_gpr_dir = gpr_dir
             if self.env.gnatcoll_gpr_dir is None:
                 self.env.gnatcoll_gpr_dir = gpr_dir
         else:
-            self.env.gnatcoll_prod_gpr_dir = None
+            self.env.gnatcoll_debug_gpr_dir = None
 
     def tear_down(self):
         wd = TESTSUITE_ROOT_DIR

@@ -19,18 +19,21 @@ GNATCOLL_ROOT_DIR = os.path.dirname(TESTSUITE_ROOT_DIR)
 DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
 
-def make_gnatcoll(work_dir, gcov=False, gnatcov=False):
+def make_gnatcoll(work_dir, debug=False, gcov=False, gnatcov=False):
     """Build gnatcoll core with or without gcov instrumentation.
 
     :param str work_dir: Working directory. GNATcoll is built in `build` subdir
         and installed in `install` subdir.
 
-    :param bool gcov: If False then build GNATcoll in PROD mode, otherwise
-        build it with gcov instrumentation in DEBUG mode.
+    :param bool debug: Whether to build GNATCOLL in debug mode. Otherwise, use
+        the prod mode. Note that gcov and gnatcov modes automatically enable
+        debug mode.
 
-    :param bool gnatcov: If False then build GNATcoll in PROD mode. Otherwise,
-        build it with the compile options that GNATcoverage requires in DEBUG
-        mode.
+    :param bool gcov: If true, build GNATCOLL with gcov instrumentation in
+        debgu mode.
+
+    :param bool gnatcov: If True, build GNATCOLL with the compile options that
+        GNATcoverage require in debug mode.
 
     :return: A triplet (project path, source path, object path).
     :rtype: (str, str, str)
@@ -55,18 +58,15 @@ def make_gnatcoll(work_dir, gcov=False, gnatcov=False):
     # Compute make invocation
     make_gnatcoll_cmd = [
         'make', '-f', os.path.join(GNATCOLL_ROOT_DIR, 'Makefile'),
-        'ENABLE_SHARED=no']
+        'ENABLE_SHARED=no',
+        'BUILD={}'.format('DEBUG' if debug or gcov or gnatcov else 'PROD')]
     if gcov:
         make_gnatcoll_cmd += [
-            'BUILD=DEBUG',
             'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage -gargs']
     elif gnatcov:
         make_gnatcoll_cmd += [
-            'BUILD=DEBUG',
             'GPRBUILD_OPTIONS=-cargs -fdump-scos -fpreserve-control-flow'
             ' -gargs']
-    else:
-        make_gnatcoll_cmd += ['BUILD=PROD']
 
     # Build & Install
     p = Run(make_gnatcoll_cmd, cwd=build_dir, timeout=DEFAULT_TIMEOUT)

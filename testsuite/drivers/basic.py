@@ -45,7 +45,7 @@ class BasicTestDriver(GNATcollTestDriver):
             return False
 
         if self.test_env.get('no-coverage'):
-            gpr_project_path = self.env.gnatcoll_prod_gpr_dir
+            gpr_project_path = self.env.gnatcoll_debug_gpr_dir
         else:
             gpr_project_path = self.env.gnatcoll_gpr_dir
         return gprbuild(self, gcov=self.env.gcov,
