@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,6 +25,8 @@ with GNAT.Strings;
 
 package GNATCOLL.Scripts.Utils is
 
+   use type GNAT.Strings.String_List_Access;
+
    function Argument_List_To_Quoted_String
      (Args            : GNAT.Strings.String_List;
       Quote           : Character := '"';
@@ -44,7 +46,8 @@ package GNATCOLL.Scripts.Utils is
    --  As above but for a single argument
 
    function Argument_String_To_List_With_Triple_Quotes
-     (Arg_String : String) return GNAT.Strings.String_List_Access;
+     (Arg_String : String) return GNAT.Strings.String_List_Access
+      with Post => Argument_String_To_List_With_Triple_Quotes'Result /= null;
    --  This is similar to GNAT.OS_Lib.Argument_String_To_List, except that
    --  if part of the string is surrounded by triple quotes, any special
    --  character is ignored till the closing triple quotes. This is the same
