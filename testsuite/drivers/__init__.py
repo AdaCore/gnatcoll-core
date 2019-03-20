@@ -130,6 +130,12 @@ def gprbuild(driver,
     if gcov:
         gprbuild_cmd += ['-largs', '-lgcov', '-cargs',
                          '-fprofile-arcs', '-ftest-coverage', '-g']
+    elif driver.env.gnatcov:
+        # TODO: GNATcoverage relies on debug info to do its magic. It needs
+        # consistent paths to source files in the debug info, so do not build
+        # tests with debug info, as they will reference installed sources
+        # (while GNATCOLL objects reference original sources).
+        gprbuild_cmd += ['-g0']
 
     # Adjust process environment
     env = None
