@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -35,7 +35,8 @@ package body GNATCOLL.Arg_Lists is
 
    procedure Parse_Command_Line_String
      (CL   : in out Arg_List;
-      Text : String);
+      Text : String)
+      with Pre => CL.Mode = Separate_Args;
    --  Factor code between variants of Parse_String.
    --  This processes Text as if it were passed on a command line (for instance
    --  the bash command line) and adds the arguments to CL.
@@ -71,8 +72,11 @@ package body GNATCOLL.Arg_Lists is
      (CL   : in out Arg_List;
       Text : String)
    is
-      function Process (A : String) return Argument_Type;
-      --  Post-process on each argument returned by Argument_String_To_List
+      function Process (A : String) return Argument_Type
+         with Pre => A'Length > 0;
+      --  Post-process on each argument returned by Argument_String_To_List.
+      --  Note that Argument_String_To_List_With_Triple_Quotes never returns
+      --  empty arguments.
 
       -------------
       -- Process --
@@ -80,10 +84,6 @@ package body GNATCOLL.Arg_Lists is
 
       function Process (A : String) return Argument_Type is
       begin
-         if A = "" then
-            return (One_Arg, Null_Unbounded_String);
-         end if;
-
          --  Argument_String_To_List does not remove single quotes around an
          --  argument: do this now.
          if A (A'First) = '"' and then A (A'Last) = '"' then
@@ -99,27 +99,17 @@ package body GNATCOLL.Arg_Lists is
         (Argument_List, Argument_List_Access);
    begin
 
-      --  If we are parsing an argument in Separate_Args mode, get rid of the
-      --  leading spaces, as this would result in multiple arguments in
-      --  the call to Argument_String_To_List_With_Triple_Quotes
-      --  Also remove trailing spaces, since otherwise the last argument on
-      --  the command line, when surrounded with quotes, will be seen by
-      --  Process as ending with ASCII.LF, and therefore the quotes will not be
-      --  removed.
+      --  Get rid of the leading spaces, as this would result in multiple
+      --  arguments in the call to Argument_String_To_List_With_Triple_Quotes
+      --  Also remove trailing spaces, since otherwise the last argument on the
+      --  command line, when surrounded with quotes, will be seen by Process as
+      --  ending with ASCII.LF, and therefore the quotes will not be removed.
 
-      if CL.Mode = Separate_Args then
-         Local_Args := Argument_String_To_List_With_Triple_Quotes
-           (Trim
-              (Text,
-               Left  => To_Set (' ' & ASCII.LF & ASCII.HT),
-               Right => To_Set (' ' & ASCII.LF & ASCII.HT)));
-      else
-         Local_Args := Argument_String_To_List_With_Triple_Quotes (Text);
-      end if;
-
-      if Local_Args = null then
-         return;
-      end if;
+      Local_Args := Argument_String_To_List_With_Triple_Quotes
+        (Trim
+           (Text,
+            Left  => To_Set (' ' & ASCII.LF & ASCII.HT),
+            Right => To_Set (' ' & ASCII.LF & ASCII.HT)));
 
       for J in Local_Args'Range loop
          CL.V.Append (Process (Local_Args (J).all));
