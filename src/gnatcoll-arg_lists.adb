@@ -362,7 +362,7 @@ package body GNATCOLL.Arg_Lists is
 
          J := S'First;
          while J <= S'Last loop
-            if S (J) = Char then
+            if S (J) = Char and then J < S'Last then
                --  Skip to the next separator
                J := J + 1;
                Beg := J;
