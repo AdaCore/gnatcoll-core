@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -105,11 +105,14 @@ package GNATCOLL.Arg_Lists is
 
    type Substitution_Function is access
      function (Param : String; Mode : Command_Line_Mode) return Arg_List;
+   --  This type is preserved for backwards compatibility: it used to be the
+   --  type of the Callback formal below.
 
    procedure Substitute
      (CL       : in out Arg_List;
       Char     : Character;
-      Callback : Substitution_Function);
+      Callback : access function
+                   (Param : String; Mode : Command_Line_Mode) return Arg_List);
    --  Substitute all parameters that start with Char using the mechanisms
    --  specified in Callback.
 

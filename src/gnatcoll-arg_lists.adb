@@ -334,7 +334,8 @@ package body GNATCOLL.Arg_Lists is
    procedure Substitute
      (CL       : in out Arg_List;
       Char     : Character;
-      Callback : Substitution_Function)
+      Callback : access function
+                   (Param : String; Mode : Command_Line_Mode) return Arg_List)
    is
       New_CL  : Arg_List;
 
