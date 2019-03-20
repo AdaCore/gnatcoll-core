@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -33,19 +33,24 @@ package body Test_Assert is
    procedure Assert
       (Success  : Boolean;
        Msg      : String := "";
-       Location : String := SI.Source_Location)
-   is
+       Location : String := SI.Source_Location) is
    begin
-      IO.Put (Location & ": ");
+      --  Start with an indicator about test status so that it is easy to
+      --  quickly spot failing tests.
+
       if Success then
-         IO.Put ("PASSED:");
+         IO.Put ("OK  ");
       else
-         IO.Put ("FAILED:");
+         IO.Put ("FAIL");
          Final_Status := 1;
       end if;
+
+      --  Then tell where the failure happened, and add the given message (if
+      --  any).
+
+      IO.Put (" " & Location);
       if Msg'Length > 0 then
-         IO.Put (" ");
-         IO.Put (Msg);
+         IO.Put (" " & Msg);
       end if;
       IO.New_Line;
    end Assert;
