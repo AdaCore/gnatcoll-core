@@ -26,6 +26,10 @@ with Ada.Text_IO;
 package body Test_Assert is
    package IO renames Ada.Text_IO;
 
+   procedure Put_Indented (Indent_Columns : Natural; Lines : String);
+   --  Put Lines on the standard output. This also indents all but the first
+   --  line with Indent_Column spaces.
+
    ------------
    -- Assert --
    ------------
@@ -55,6 +59,24 @@ package body Test_Assert is
       IO.New_Line;
    end Assert;
 
+   ------------------
+   -- Put_Indented --
+   ------------------
+
+   procedure Put_Indented (Indent_Columns : Natural; Lines : String) is
+      Starting_Line : Boolean := False;
+   begin
+      for C of Lines loop
+         if C = ASCII.LF then
+            Starting_Line := True;
+         elsif Starting_Line then
+            Starting_Line := False;
+            IO.Put ((1 .. Indent_Columns => ' '));
+         end if;
+         IO.Put (C);
+      end loop;
+   end Put_Indented;
+
    ------------
    -- Assert --
    ------------
@@ -65,17 +87,26 @@ package body Test_Assert is
        Location    : String := SI.Source_Location)
    is
       Success : constant Boolean := Left = Right;
+
+      Expected_Prefix : constant String := "expected: ";
+      Got_Prefix      : constant String := "got:      ";
+      Indent          : constant Natural := Expected_Prefix'Length;
+
    begin
       Assert (Success, Msg, Location);
       if not Success then
          if Right'Length > 0 then
-            IO.Put_Line ("expected: " & Right);
+            IO.Put (Expected_Prefix);
+            Put_Indented (Indent, Right);
+            IO.New_Line;
          else
             IO.Put_Line ("expected empty string");
          end if;
 
          if Left'Length > 0 then
-            IO.Put_Line ("got:      " & Left);
+            IO.Put (Got_Prefix);
+            Put_Indented (Indent, Left);
+            IO.New_Line;
          else
             IO.Put_Line ("got empty string");
          end if;
