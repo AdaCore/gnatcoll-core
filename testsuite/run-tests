@@ -154,7 +154,8 @@ class MyTestsuite(Testsuite):
             list_to_file(find(self.env.checkpoints_dir, '*.ckpt'),
                          checkpoint_list)
             produce_report(os.path.join(wd, 'gnatcov', 'results'),
-                           checkpoint_list)
+                           checkpoint_list,
+                           self.env.gnatcoll_src_dir)
 
         super(MyTestsuite, self).tear_down()
 
