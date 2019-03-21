@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                   Copyright (C) 2018-2019, AdaCore                       --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -24,6 +24,8 @@
 --  Helper package to implement tests that comply with the expectations
 --  of the default test driver.
 
+with Ada.Strings.UTF_Encoding;
+with Ada.Calendar; use Ada.Calendar;
 with GNAT.Source_Info;
 with GNATCOLL.VFS;
 
@@ -31,6 +33,7 @@ package Test_Assert is
 
    package SI renames GNAT.Source_Info;
    package VFS renames GNATCOLL.VFS;
+   package UTF8 renames Ada.Strings.UTF_Encoding;
 
    Final_Status : Natural := 0;
 
@@ -43,6 +46,30 @@ package Test_Assert is
 
    procedure Assert
       (Left, Right : String;
+       Msg         : String := "";
+       Location    : String := SI.Source_Location);
+   --  If Left = Right then test case is considered PASSED, otherwise
+   --  the test status is FAILED and Final_Status set to 1.
+
+   procedure Assert
+      (Left     : Wide_String;
+       Right    : UTF8.UTF_8_String;
+       Msg      : String := "";
+       Location : String := SI.Source_Location);
+   --  If Left = Right then test case is considered PASSED, otherwise
+   --  the test status is FAILED and Final_Status set to 1.
+
+   procedure Assert_Inferior
+      (Left     : Time;
+       Right    : Time;
+       Msg      : String := "";
+       Location : String := SI.Source_Location);
+   --  If Left <= Right then test case is considred PASSED, otherwise
+   --  the test status is FAILED and Final_Status set to 1.
+
+   procedure Assert
+      (Left        : Integer;
+       Right       : Integer;
        Msg         : String := "";
        Location    : String := SI.Source_Location);
    --  If Left = Right then test case is considered PASSED, otherwise

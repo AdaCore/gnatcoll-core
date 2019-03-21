@@ -1,7 +1,5 @@
-with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Strings.Unbounded;
 
-with GNAT.Os_Lib;
 with GNAT.Source_Info;
 with GNAT.Strings;
 
@@ -169,7 +167,7 @@ function Test return Integer is
       end loop;
 
       declare
-         List : String_List := To_List (Args, Include_Command);
+         List : constant String_List := To_List (Args, Include_Command);
       begin
          A.Assert (List'Length = Expected'Length,
                    Msg      => "checking length",
@@ -196,6 +194,7 @@ function Test return Integer is
    function Substitution_Callback
      (Param : String; Mode : Command_Line_Mode) return Arg_List
    is
+      pragma Unreferenced (Mode);
       Result : Arg_List;
    begin
       Append_Argument (Result, "<<", One_Arg);
@@ -252,8 +251,8 @@ begin
    -- Get_Command/Create --
    ------------------------
 
-   A.Assert ("foo", Get_Command (Create ("foo")));
-   A.Assert ("", Get_Command (Empty_Command_Line));
+   A.Assert (Get_Command (Create ("foo")), "foo");
+   A.Assert (Get_Command (Empty_Command_Line), "");
 
    -----------------------------
    -- Argument_List_To_String --
@@ -416,13 +415,13 @@ begin
       Args : Arg_List := Empty_Command_Line;
    begin
       Substitute (Args, '%', Substitution_Callback'Access);
-      A.Assert (Args = Empty_Command_line);
+      A.Assert (Args = Empty_Command_Line);
    end;
 
    --  Make sure that substitute does nothing when passed a null callback
 
    declare
-      Args     : Arg_List := Parse_String ("cmd", "%a");
+      Args     : constant Arg_List := Parse_String ("cmd", "%a");
       New_Args : Arg_List := Args;
    begin
       Substitute (New_Args, '%', null);

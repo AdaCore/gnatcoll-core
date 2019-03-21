@@ -22,9 +22,13 @@
 ------------------------------------------------------------------------------
 
 with Ada.Text_IO;
+with Ada.Strings.UTF_Encoding.Wide_Strings;
+with Ada.Calendar.Conversions; use Ada.Calendar.Conversions;
+with Ada.Calendar.Formatting; use Ada.Calendar.Formatting;
 
 package body Test_Assert is
    package IO renames Ada.Text_IO;
+   package UTF renames Ada.Strings.UTF_Encoding.Wide_Strings;
 
    procedure Put_Indented (Indent_Columns : Natural; Lines : String);
    --  Put Lines on the standard output. This also indents all but the first
@@ -118,6 +122,40 @@ package body Test_Assert is
    ------------
 
    procedure Assert
+      (Left        : Wide_String;
+       Right       : UTF8.UTF_8_String;
+       Msg         : String := "";
+       Location    : String := SI.Source_Location)
+   is
+      UTF_Left : constant UTF8.UTF_8_String := UTF.Encode (Left);
+   begin
+      Assert (UTF_Left, Right, Msg, Location);
+   end Assert;
+
+   ------------
+   -- Assert --
+   ------------
+
+   procedure Assert
+      (Left        : Integer;
+       Right       : Integer;
+       Msg         : String := "";
+       Location    : String := SI.Source_Location)
+   is
+      Success : constant Boolean := Left = Right;
+   begin
+      Assert (Success, Msg, Location);
+      if not Success then
+         IO.Put_Line ("expected: " & Right'Img);
+         IO.Put_Line ("got:      " & Left'Img);
+      end if;
+   end Assert;
+
+   ------------
+   -- Assert --
+   ------------
+
+   procedure Assert
       (Left, Right : VFS.Virtual_File;
        Msg         : String := "";
        Location    : String := SI.Source_Location)
@@ -132,6 +170,27 @@ package body Test_Assert is
       end if;
    end Assert;
 
+   ---------------------
+   -- Assert_Inferior --
+   ---------------------
+
+   procedure Assert_Inferior
+      (Left     : Time;
+       Right    : Time;
+       Msg      : String := "";
+       Location : String := SI.Source_Location)
+   is
+      Success : constant Boolean := Left < Right;
+   begin
+      Assert (Success, Msg, Location);
+      if not Success then
+         IO.Put_Line ("left:  " & Image (Left) &
+                      " (" & To_Unix_Nano_Time (Left)'Img & ")");
+         IO.Put_Line ("right: " & Image (Right) &
+                      " (" & To_Unix_Nano_Time (Right)'Img & ")");
+      end if;
+   end Assert_Inferior;
+
    ------------
    -- Report --
    ------------
@@ -141,7 +200,7 @@ package body Test_Assert is
       if Final_Status = 0 then
          IO.Put_Line ("<=== TEST PASSED ===>");
       else
-         IO.PUT_Line ("<=== TEST FAILED ===>");
+         IO.Put_Line ("<=== TEST FAILED ===>");
       end if;
       return Final_Status;
    end Report;
