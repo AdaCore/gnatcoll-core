@@ -5,7 +5,7 @@ from drivers.json_validation import JSONValidationDriver
 from drivers.data_validation import DataValidationDriver
 from drivers.gnatcov import list_to_file, produce_report
 from e3.testsuite import Testsuite
-from e3.fs import mkdir, ls, find
+from e3.fs import mkdir, ls, find, rm
 from e3.os.process import Run
 import re
 import os
@@ -70,9 +70,12 @@ class MyTestsuite(Testsuite):
             self.env.gnatcoll_obj_dir = obj_dir
 
             if self.env.gnatcov:
-                # Prepare a directory to host checkpoint files
+                # Prepare a directory to host checkpoint files. Make sure it's
+                # empty so that we don't re-use coverage data from previous
+                # runs.
                 self.env.checkpoints_dir = os.path.join(
                     TESTSUITE_ROOT_DIR, 'gnatcov', 'checkpoints')
+                rm(self.env.checkpoints_dir, recursive=True)
                 mkdir(self.env.checkpoints_dir)
 
                 # Gather the list of ALI files
