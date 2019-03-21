@@ -686,15 +686,14 @@ package body GNATCOLL.Opt_Parse is
       if Args (Pos) = Self.Long or else Args (Pos) = Self.Short then
 
          declare
-            Res : constant access Flag_Parser_Result
+            Res : constant Parser_Result_Access
               :=
                 new Flag_Parser_Result'
                   (Start_Pos => Pos,
                    End_Pos   => Pos,
                    Result    =>  True);
          begin
-            Result.Ref.Get.Results
-              (Self.Position) := Res.all'Unchecked_Access;
+            Result.Ref.Get.Results (Self.Position) := Res;
          end;
 
          return Parser_Return (Pos + 1);
