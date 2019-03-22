@@ -94,7 +94,6 @@ function Test return Integer is
       A.Assert (True, "end of test for size" & Size'Img);
    end Test_For_Size;
 
-
 begin
    --  close tests
    declare

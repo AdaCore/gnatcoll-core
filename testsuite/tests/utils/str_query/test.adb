@@ -168,7 +168,6 @@ function Test return Integer is
           S1'Length + 6,
                 Msg => "P on the CR of the 3rd LFCR");
 
-
       A.Assert (GNATCOLL.Utils.Line_Start (S_6CRLF, S1'Length + 13) =
           S1'Length + 13,
                 Msg => "P after last CRLF");
@@ -198,7 +197,6 @@ function Test return Integer is
 
       A.Assert (GNATCOLL.Utils.Next_Line (S1, S1'Length - 2) = S1'Length,
            Msg => "one line, P in string");
-
 
       A.Assert (GNATCOLL.Utils.Next_Line (S_CRLF, S1'Length + 1) =
       S1'Length + 3,
@@ -235,7 +233,6 @@ function Test return Integer is
       A.Assert (GNATCOLL.Utils.Previous_Line (S1, S1'Length - 2) = S1'First,
            Msg => "one line, P in string");
 
-
       A.Assert (GNATCOLL.Utils.Previous_Line (S_CRLF, S1'Length + 5) =
       S1'First,
            Msg => "In a string, after a CRLF");
@@ -249,7 +246,6 @@ function Test return Integer is
       A.Assert (GNATCOLL.Utils.Previous_Line (S_LFCR, S1'Length + 2) =
       S1'First,
            Msg => "P on a CR of a string with LFCR");
-
 
       A.Assert (GNATCOLL.Utils.Previous_Line (S_CRLF, S1'Length + 1) =
       S1'First,

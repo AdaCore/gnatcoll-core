@@ -14,6 +14,9 @@ project Test is
    package Compiler is
       --  Building test programs in debug mode makes it easier to work with
       --  tests.
-      for Default_Switches ("Ada") use ("-g");
+      for Switches ("Ada") use
+        ("-g", "-O1", "-gnata", "-gnatyg", "-gnateE",
+         "-gnatwaCJe", "-fstack-check", "-gnatw.P");
+      for Switches ("C") use ("-g", "-Wunreachable-code");
    end Compiler;
 end Test;

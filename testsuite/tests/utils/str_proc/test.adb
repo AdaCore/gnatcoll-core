@@ -128,7 +128,6 @@ function Test return Integer is
 
    end Test_Join;
 
-
 begin
    IO.New_Line;
    IO.Put_Line ("GNATCOLL.UTILS");
@@ -138,7 +137,6 @@ begin
    Test_Capitalize;
    IO.New_Line;
    Test_Join;
-
 
    return A.Report;
 end Test;

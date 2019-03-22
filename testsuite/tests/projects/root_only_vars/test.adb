@@ -40,7 +40,6 @@ begin
         (UVs'Length = 2, "checking quantity of UVs after root-only call");
    end;
 
-
    declare
       SV1, SV2, SV3, SV4 : Scenario_Variable;
       UV1, UV2, UV3, UV4 : Untyped_Variable;

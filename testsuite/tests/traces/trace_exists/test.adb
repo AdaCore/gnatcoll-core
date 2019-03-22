@@ -16,4 +16,3 @@ begin
    Test_Assert.Assert (Exists (Name), "The trace should be defined");
    return Test_Assert.Report;
 end Test;
-
