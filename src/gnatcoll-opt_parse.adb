@@ -508,6 +508,8 @@ package body GNATCOLL.Opt_Parse is
          Results : Result_Array_Access;
       end record;
 
+      type Internal_Result_Access is access all Internal_Result;
+
       overriding procedure Release (Self : in out Internal_Result);
 
       Self_Val : aliased Positional_Arg_List_Parser :=
@@ -563,15 +565,13 @@ package body GNATCOLL.Opt_Parse is
             end loop;
 
             declare
-               Res : constant access Internal_Result
-                 :=
-                   new Internal_Result'
-                (Start_Pos => Pos,
-                 End_Pos   => Last,
-                 Results   => new Result_Array'(R));
+               Res : constant Internal_Result_Access := new Internal_Result'
+                 (Start_Pos => Pos,
+                  End_Pos   => Last,
+                  Results   => new Result_Array'(R));
             begin
-               Result.Ref.Get.Results (Self.Position)
-                 := Res.all'Unchecked_Access;
+               Result.Ref.Get.Results (Self.Position) :=
+                  Res.all'Unchecked_Access;
             end;
 
          end;
@@ -616,6 +616,8 @@ package body GNATCOLL.Opt_Parse is
          Result : Arg_Type;
       end record;
 
+      type Internal_Result_Access is access all Internal_Result;
+
       overriding procedure Release (Self : in out Internal_Result) is null;
 
       Self_Val : aliased Positional_Arg_Parser :=
@@ -652,15 +654,14 @@ package body GNATCOLL.Opt_Parse is
          end if;
 
          declare
-            Res : constant Arg_Type := Convert (+Args (Pos));
-            Int_Res : constant access Internal_Result :=
-              new Internal_Result'
-                (Start_Pos => Pos,
-                 End_Pos   => Pos,
-                 Result    =>  Res);
+            Res     : constant Arg_Type := Convert (+Args (Pos));
+            Int_Res : constant Internal_Result_Access := new Internal_Result'
+              (Start_Pos => Pos,
+               End_Pos   => Pos,
+               Result    => Res);
          begin
             Result.Ref.Get.Results (Self.Position) :=
-              Int_Res.all'Unchecked_Access;
+               Int_Res.all'Unchecked_Access;
          end;
 
          return Parser_Return (Pos + 1);
@@ -686,12 +687,10 @@ package body GNATCOLL.Opt_Parse is
       if Args (Pos) = Self.Long or else Args (Pos) = Self.Short then
 
          declare
-            Res : constant Parser_Result_Access
-              :=
-                new Flag_Parser_Result'
-                  (Start_Pos => Pos,
-                   End_Pos   => Pos,
-                   Result    =>  True);
+            Res : constant Parser_Result_Access := new Flag_Parser_Result'
+              (Start_Pos => Pos,
+               End_Pos   => Pos,
+               Result    =>  True);
          begin
             Result.Ref.Get.Results (Self.Position) := Res;
          end;
@@ -771,6 +770,8 @@ package body GNATCOLL.Opt_Parse is
          Result : Arg_Type;
       end record;
 
+      type Internal_Result_Access is access all Internal_Result;
+
       procedure Release (Self : in out Internal_Result) is null;
 
       Self_Val : aliased Option_Parser :=
@@ -816,15 +817,13 @@ package body GNATCOLL.Opt_Parse is
 
          if New_Pos /= Error_Return then
             declare
-               Res : constant access Internal_Result
-                 :=
-                   new Internal_Result'
-                     (Start_Pos => Pos,
-                      End_Pos   => Pos,
-                      Result    => Convert (+Raw));
+               Res : constant Internal_Result_Access :=
+                 new Internal_Result'(Start_Pos => Pos,
+                                      End_Pos   => Pos,
+                                      Result    => Convert (+Raw));
             begin
                Result.Ref.Get.Results (Self.Position) :=
-                 Res.all'Unchecked_Access;
+                  Res.all'Unchecked_Access;
             end;
          end if;
 
@@ -873,6 +872,8 @@ package body GNATCOLL.Opt_Parse is
       type Internal_Result is new Parser_Result with record
          Results : Result_Vectors.Vector;
       end record;
+
+      type Internal_Result_Access is access all Internal_Result;
 
       procedure Release (Self : in out Internal_Result) is null;
 
@@ -924,7 +925,7 @@ package body GNATCOLL.Opt_Parse is
          Res  : Parser_Result_Access
          renames Result.Ref.Get.Results (Self.Position);
 
-         Tmp : access Internal_Result := null;
+         Tmp : Internal_Result_Access := null;
 
       begin
          if Accumulate then
