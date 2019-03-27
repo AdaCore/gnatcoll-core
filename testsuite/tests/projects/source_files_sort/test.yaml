@@ -1,0 +1,6 @@
+description: Source_Files result sorted alphabetically
+data:
+    - "foo.gpr"
+    - "foo1.gpr"
+    - "foo_a"
+    - "foo_b"

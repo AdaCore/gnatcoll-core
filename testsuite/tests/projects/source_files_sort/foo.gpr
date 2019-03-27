@@ -1,0 +1,5 @@
+with "foo1";
+
+project foo is
+   for Source_Dirs use ("foo_a");
+end foo;

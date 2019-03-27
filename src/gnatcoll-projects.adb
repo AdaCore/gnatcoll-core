@@ -2165,6 +2165,8 @@ package body GNATCOLL.Projects is
             Next (Iter);
          end loop;
 
+         Sort (Sources.all);
+
          return Sources;
       end;
    end Source_Files;

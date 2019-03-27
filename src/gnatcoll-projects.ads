@@ -681,7 +681,8 @@ package GNATCOLL.Projects is
       Recursive : Boolean := False;
       Include_Externally_Built : Boolean := True)
       return GNATCOLL.VFS.File_Array_Access;
-   --  Return the list of source files belonging to the project.
+   --  Return the list of source files belonging to the project. The list is
+   --  alphabetically sorted by the full paths of the files.
    --  If Recursive is False, only the direct sources of the project are
    --  returned. Otherwise, the sources from imported projects are returned as
    --  well.
