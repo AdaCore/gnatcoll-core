@@ -1,0 +1,8 @@
+description: >
+  Check that languages specified in different projects
+  with different casing do not lead to duplicating entries
+  in Languages query and resulting language names
+  are normalized.
+data:
+    - "t1.gpr"
+    - "t2.gpr"

@@ -1,0 +1,5 @@
+project T1 is
+
+   for Languages use ("Ada", "C");
+
+end T1;

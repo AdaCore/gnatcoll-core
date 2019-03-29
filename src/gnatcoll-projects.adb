@@ -3365,15 +3365,21 @@ package body GNATCOLL.Projects is
       ------------------
 
       procedure Add_Language
-        (Lang : in out String_List; Index : in out Natural; Str : String) is
+        (Lang : in out String_List; Index : in out Natural; Str : String)
+      is
+         Normalized :          String  := Str;
+         Idx        : constant Integer := Normalized'First;
       begin
+         To_Lower (Normalized);
+         Normalized (Idx) := GNAT.Case_Util.To_Upper (Normalized (Idx));
+
          for L in Lang'First .. Index - 1 loop
-            if Lang (L).all = Str then
+            if Lang (L).all = Normalized then
                return;
             end if;
          end loop;
 
-         Lang (Index) := new String'(Str);
+         Lang (Index) := new String'(Normalized);
          Index := Index + 1;
       end Add_Language;
 
