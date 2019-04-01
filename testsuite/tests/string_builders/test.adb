@@ -7,8 +7,8 @@ function Test return Integer is
    package A renames Test_Assert;
    package IO renames Ada.Text_IO;
 
-   function C_Len (Str : SB.CString) return Integer;
-   pragma Import (C, C_Len, "c_strlen");
+   function C_Len (Str : SB.CString) return Integer
+      with Import, Convention => C, External_Name => "c_strlen";
 begin
    IO.Put_Line ("String_Builder tests");
    declare
@@ -17,13 +17,15 @@ begin
       S_Object_Size : constant Integer := SB.String_Builder'Object_Size / 8;
       Short_String  : constant String := "short string";
       Long_String   : constant String := "lonnnnnnnnnnnnnnnnnnnnnnnng string";
-      C             : Character;
+      Dummy_C       : Character;
    begin
       IO.Put_Line ("String_Builder size:" & S_Size'Img);
       IO.Put_Line ("String_Builder object size:" & S_Object_Size'Img);
+      pragma Warnings (Off, """S"" may be referenced before it has a value");
       A.Assert (SB.Length (S) = 0);
       A.Assert (SB.As_String (S) = "");
       A.Assert (C_Len (SB.As_CString (S)) = 0);
+      pragma Warnings (On, """S"" may be referenced before it has a value");
       SB.Append (S, Short_String);
       SB.Append (S, 'A');
       SB.Append (S, "");
@@ -32,8 +34,9 @@ begin
       SB.Append (S, 'B');
       SB.Append (S, Long_String);
       SB.Append (S, Long_String);
-      A.Assert (SB.As_String (S),
-                Short_String & 'A' & Long_String & 'B' & Long_String & Long_String);
+      A.Assert
+        (SB.As_String (S),
+         Short_String & 'A' & Long_String & 'B' & Long_String & Long_String);
       A.Assert (SB.Element (S, 7) = 's');
       A.Assert (SB.Length (S) = C_Len (SB.As_CString (S)));
       SB.Set (S, "hello");
@@ -41,7 +44,7 @@ begin
       A.Assert (SB.Element (S, 5) = 'o');
       A.Assert (SB.Length (S) = C_Len (SB.As_CString (S)));
       begin
-         C := SB.Element (S, 6);
+         Dummy_C := SB.Element (S, 6);
          A.Assert (False, "no exception");
       exception
          when Constraint_Error =>
@@ -56,11 +59,13 @@ begin
    declare
       S            : SB.Static_String_Builder (30 + 1);
       Short_String : constant String := "0123456789";
-      C            : Character;
+      Dummy_C      : Character;
       S1           : SB.Static_String_Builder (1);
    begin
+      pragma Warnings (Off, """S"" may be referenced before it has a value");
       A.Assert (SB.Length (S) = 0);
       A.Assert (SB.As_String (S), "");
+      pragma Warnings (On, """S"" may be referenced before it has a value");
       SB.Append (S, Short_String);
       SB.Append (S, Short_String);
       SB.Append (S, "");
@@ -75,7 +80,7 @@ begin
 
       A.Assert (SB.Element (S, 2) = 'A');
       begin
-         C := SB.Element (S, 3);
+         Dummy_C := SB.Element (S, 3);
          A.Assert (False, "no exception");
       exception
          when Constraint_Error =>
