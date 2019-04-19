@@ -257,6 +257,16 @@ package GNATCOLL.Projects is
    --  later replace with an actual project.
    --  A default version of Env will be created if null is passed.
 
+   procedure Load_Implicit_Project
+     (Self : in out Project_Tree;
+      Env  : Project_Environment_Access := null;
+      Recompute_View : Boolean := True);
+   --  Load special project _default.gpr that is used by gprbuild when invoked
+   --  without -P switch. When implicit project file is used current directory
+   --  is considered to be a source dir and an object dir.
+   --  This mode is needed when you want to get easy access to Ada sources
+   --  located in current dir without creating a temporary project file.
+
    procedure Recompute_View
      (Self   : in out Project_Tree;
       Errors : Error_Report := null);

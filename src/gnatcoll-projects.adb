@@ -400,7 +400,8 @@ package body GNATCOLL.Projects is
       Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View         : Boolean := True;
       Test_With_Missing_With : Boolean := True;
-      Report_Missing_Dirs    : Boolean := True);
+      Report_Missing_Dirs    : Boolean := True;
+      Implicit_Project       : Boolean);
    --  Internal implementation of load. This doesn't reset the tree at all,
    --  but will properly setup the GNAT project manager so that error messages
    --  are redirected and fatal errors do not kill GPS.
@@ -7360,7 +7361,8 @@ package body GNATCOLL.Projects is
          Project              => Project,
          Packages_To_Check    => Packages_To_Check,
          Recompute_View       => False,
-         Report_Missing_Dirs  => Report_Missing_Dirs);
+         Report_Missing_Dirs  => Report_Missing_Dirs,
+         Implicit_Project     => False);
 
       GPR.Err.Initialize;  --  Clear errors
 
@@ -7401,7 +7403,8 @@ package body GNATCOLL.Projects is
          Project              => Project,
          Packages_To_Check    => Packages_To_Check,
          Recompute_View       => Recompute_View,
-         Report_Missing_Dirs  => Report_Missing_Dirs);
+         Report_Missing_Dirs  => Report_Missing_Dirs,
+         Implicit_Project     => False);
 
       if Previous_Status = Default then
          Trace (Me, "Remove previous default project on disk, no longer used");
@@ -7954,7 +7957,8 @@ package body GNATCOLL.Projects is
       Packages_To_Check      : GNAT.Strings.String_List_Access := All_Packs;
       Recompute_View         : Boolean := True;
       Test_With_Missing_With : Boolean := True;
-      Report_Missing_Dirs    : Boolean := True)
+      Report_Missing_Dirs    : Boolean := True;
+      Implicit_Project       : Boolean)
    is
       Block_Me : constant Block_Trace_Handle := Create (Me);
 
@@ -8058,7 +8062,8 @@ package body GNATCOLL.Projects is
          Store_Comments    => True,
          Is_Config_File    => False,
          Env               => Tree.Data.Env.Env,
-         Current_Directory => Get_Current_Dir);
+         Current_Directory => Get_Current_Dir,
+         Implicit_Project  => Implicit_Project);
 
       if not Active (Me_Aggregate_Support)
         and then Project /= Empty_Project_Node
@@ -8129,7 +8134,8 @@ package body GNATCOLL.Projects is
                Recompute_View         => Recompute_View,
                Packages_To_Check      => Packages_To_Check,
                Test_With_Missing_With => False,
-               Report_Missing_Dirs    => Report_Missing_Dirs);
+               Report_Missing_Dirs    => Report_Missing_Dirs,
+               Implicit_Project       => Implicit_Project);
 
             GPR.Com.Fail := null;
             GPR.Output.Cancel_Special_Output;
@@ -8160,7 +8166,8 @@ package body GNATCOLL.Projects is
             Recompute_View         => Recompute_View,
             Packages_To_Check      => Packages_To_Check,
             Test_With_Missing_With => False,
-            Report_Missing_Dirs    => Report_Missing_Dirs);
+            Report_Missing_Dirs    => Report_Missing_Dirs,
+            Implicit_Project       => Implicit_Project);
 
          GPR.Com.Fail := null;
          GPR.Output.Cancel_Special_Output;
@@ -8229,7 +8236,8 @@ package body GNATCOLL.Projects is
                Recompute_View         => Recompute_View,
                Packages_To_Check      => Packages_To_Check,
                Test_With_Missing_With => False,
-               Report_Missing_Dirs    => Report_Missing_Dirs);
+               Report_Missing_Dirs    => Report_Missing_Dirs,
+               Implicit_Project       => Implicit_Project);
 
             GPR.Com.Fail := null;
             GPR.Output.Cancel_Special_Output;
@@ -9205,6 +9213,63 @@ package body GNATCOLL.Projects is
          Project_Tree'Class (Self).Recompute_View;
       end if;
    end Load_Empty_Project;
+
+   ---------------------------
+   -- Load_Implicit_Project --
+   ---------------------------
+
+   procedure Load_Implicit_Project
+     (Self : in out Project_Tree;
+      Env  : Project_Environment_Access := null;
+      Recompute_View : Boolean := True)
+   is
+      Project_File  : Virtual_File;
+      Gprbuild_Path : Filesystem_String_Access;
+      Project       : Project_Node_Id;
+
+      Implicit_Project_File_Path : constant String :=
+        "share" &
+        Directory_Separator &
+        "gpr" &
+        Directory_Separator &
+        '_' &
+        Default_Project_File_Name;
+   begin
+      Trace (Me, "Loading implicit project ");
+
+      Project_Tree'Class (Self).Unload;
+
+      Reset (Self, Env);
+
+      Gprbuild_Path := Locate_Exec_On_Path ("gprbuild");
+      if Gprbuild_Path = null then
+         Trace (Me, "Gprbuild not found on path");
+         return;
+      end if;
+      Project_File := Get_Parent (Create (Dir_Name (Gprbuild_Path.all)));
+      Project_File := Join (Project_File, +Implicit_Project_File_Path);
+      Free (Gprbuild_Path);
+
+      if not Project_File.Is_Regular_File then
+         Trace (Me, "_default.gpr not found in expected location");
+         return;
+      end if;
+
+      Trace (Me, "Implicit project found " & Project_File.Display_Full_Name);
+
+      Internal_Load
+        (Self, Project_File, null,
+         Report_Syntax_Errors => True,   --  _default.gpr is safe
+         Project              => Project,
+         Packages_To_Check    => No_Packs,
+         Recompute_View       => Recompute_View,
+         Implicit_Project     => True);
+
+      if Project = Empty_Project_Node then
+         Trace (Me, "Cannot load implicit project");
+         return;
+      end if;
+   end Load_Implicit_Project;
 
    ------------------------
    -- Parse_Source_Files --
