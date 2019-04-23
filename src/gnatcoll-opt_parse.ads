@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2018, AdaCore                     --
+--                     Copyright (C) 2009-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -151,14 +151,14 @@ package GNATCOLL.Opt_Parse is
    --------------------------------
 
    generic
-      Parser      : in out Argument_Parser;
+      Parser : in out Argument_Parser;
       --  Argument_Parser owning this argument.
 
-      Name        : String;
+      Name : String;
       --  Name of the argument in the parser. Used mainly to formal the help
       --  output.
 
-      Help        : String;
+      Help : String;
       --  Help string for the argument.
 
       Allow_Empty : Boolean := False;
@@ -188,11 +188,11 @@ package GNATCOLL.Opt_Parse is
       Parser : in out Argument_Parser;
       --  Argument_Parser owning this argument.
 
-      Name   : String;
+      Name : String;
       --  Name of the argument in the parser. Used mainly to formal the help
       --  output.
 
-      Help   : String := "";
+      Help : String := "";
       --  Help string for the argument.
 
       type Arg_Type is private;
@@ -213,14 +213,14 @@ package GNATCOLL.Opt_Parse is
       Parser : in out Argument_Parser;
       --  Argument_Parser owning this argument.
 
-      Short   : String := "";
+      Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
 
-      Long    : String;
+      Long : String;
       --  Long form for this flag. Should start with two dashes.
 
-      Help    : String := "";
+      Help : String := "";
       --  Help string for the argument.
    package Parse_Flag is
       function Get
@@ -233,14 +233,14 @@ package GNATCOLL.Opt_Parse is
       Parser : in out Argument_Parser;
       --  Argument_Parser owning this argument.
 
-      Short   : String := "";
+      Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
 
-      Long    : String;
+      Long : String;
       --  Long form for this flag. Should start with two dashes.
 
-      Help    : String := "";
+      Help : String := "";
       --  Help string for the argument.
 
       type Arg_Type is private;
@@ -262,17 +262,17 @@ package GNATCOLL.Opt_Parse is
    --  takes the default value.
 
    generic
-      Parser     : in out Argument_Parser;
+      Parser : in out Argument_Parser;
       --  Argument_Parser owning this argument.
 
-      Short   : String := "";
+      Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
 
-      Long    : String;
+      Long : String;
       --  Long form for this flag. Should start with two dashes.
 
-      Help    : String := "";
+      Help : String := "";
       --  Help string for the argument.
 
       Accumulate : Boolean := False;
@@ -315,19 +315,19 @@ private
    package XString_Vectors is new Ada.Containers.Vectors (Positive, XString);
 
    type Parser_Type is abstract tagged record
-      Name     : XString;
+      Name : XString;
       --  Name of the parser
 
-      Help     : XString;
+      Help : XString;
       --  Help string for the parser
 
       Position : Positive;
       --  Position of this parser in its enclosing Arguments_Parser
 
-      Opt      : Boolean := True;
+      Opt : Boolean := True;
       --  Whether this parser is optional or not
 
-      Parser   : Argument_Parser_Data_Access;
+      Parser : Argument_Parser_Data_Access;
    end record;
 
    subtype Parser_Return is Integer range -1 .. Integer'Last;
@@ -385,7 +385,7 @@ private
         := No_Parsed_Arguments;
       Help_Flag                             : Parser_Access := null;
 
-      Mutex                                 : aliased Mutual_Exclusion;
+      Mutex : aliased Mutual_Exclusion;
       --  Mutex used to make Get_Result thread safe
    end record;
 
