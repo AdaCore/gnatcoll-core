@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2018, AdaCore                     --
+--                     Copyright (C) 2003-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -591,37 +591,18 @@ package body GNATCOLL.Scripts.Projects is
    function Scenario_Variables_Cmd_Line (Prefix : String) return String is
       Scenario_Vars : constant Scenario_Variable_Array :=
         Project_Tree.Scenario_Variables;
-
-      function Concat
-        (Current : String; Index : Natural; Set_Var : String) return String;
-      --  Concat the command line line for the Index-nth variable and the
-      --  following ones to Current, and return the result.
-
-      ------------
-      -- Concat --
-      ------------
-
-      function Concat
-        (Current : String; Index : Natural; Set_Var : String) return String is
-      begin
-         if Index > Scenario_Vars'Last then
-            return Current;
-         end if;
-
-         return Concat
-           (Current
-            & Set_Var & External_Name (Scenario_Vars (Index))
-            & "=" & Value (Scenario_Vars (Index))
-            & " ",
-            Index + 1,
-            Set_Var);
-      end Concat;
-
+      Untyped_Vars : constant Untyped_Variable_Array :=
+        Project_Tree.Untyped_Variables;
+      Res : Unbounded_String;
    begin
-      --  A recursive function is probably not the most efficient way, but this
-      --  prevents limits on the command line lengths. This also avoids the use
-      --  of unbounded strings.
-      return Concat ("", Scenario_Vars'First, Prefix);
+      for Var of Scenario_Vars loop
+         Append (Res, Prefix & External_Name (Var) & "=" & Value (Var) & " ");
+      end loop;
+
+      for Var of Untyped_Vars loop
+         Append (Res, Prefix & External_Name (Var) & "=" & Value (Var) & " ");
+      end loop;
+      return To_String (Res);
    end Scenario_Variables_Cmd_Line;
 
    --------------
