@@ -43,6 +43,10 @@ package GNATCOLL.Opt_Parse is
    --  Here is a small example of how to create a command line argument parser
    --  and how to use it:
    --
+   --  with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+   --  with Ada.Text_IO;           use Ada.Text_IO;
+   --  with GNATCOLL.Opt_Parse;    use GNATCOLL.Opt_Parse;
+   --
    --  procedure Main is
    --
    --     package Arg is
