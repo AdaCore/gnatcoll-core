@@ -8501,6 +8501,14 @@ package body GNATCOLL.Projects is
             Create_Attribute
               (Name_Body_Suffix, ".adb", "ada",     Pkg => Naming);
             Create_Attribute
+              (Name_Spec_Suffix, ".h", "c",     Pkg => Naming);
+            Create_Attribute
+              (Name_Body_Suffix, ".c", "c",     Pkg => Naming);
+            Create_Attribute
+              (Name_Spec_Suffix, ".hh", "c++",     Pkg => Naming);
+            Create_Attribute
+              (Name_Body_Suffix, ".cpp", "c++",     Pkg => Naming);
+            Create_Attribute
               (Name_Dot_Replacement, "-",           Pkg => Naming);
             Create_Attribute
               (Name_Casing,          "lowercase",   Pkg => Naming);

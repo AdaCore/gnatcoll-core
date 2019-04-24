@@ -1,0 +1,6 @@
+description: >
+  Check default extensions for C and C++ in case when
+  autoconf is not enabled and naming scheme comes from
+  predefined in-memory cgpr.
+data:
+    - "p.gpr"
