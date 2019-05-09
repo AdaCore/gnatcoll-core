@@ -130,12 +130,15 @@ package body GNATCOLL.Storage_Pools.Headers is
             --  the compiler when calling Deallocate, but not when calling
             --  Header_Of so we need to take them into account when looking
             --  for the our own header.
+            --
+            --  Place the Descriptor_Size within the type conversion to
+            --  prevent a potential ambiguity in address manipulation when
+            --  System.Aux_Dec is present.
 
             return Convert
                (Address_Header_Of
                   (Element.all'Address
-                   - Storage_Offset (F)
-                   - Element_Type'Descriptor_Size));
+                   - Storage_Offset (F - Element_Type'Descriptor_Size)));
          end Header_Of;
 
       end Typed;
