@@ -68,6 +68,8 @@ with GPR.PP;                      use GPR.PP;
 with GPR.Tree;                    use GPR.Tree;
 with GPR.Sinput;
 with GPR.Snames;                  use GPR.Snames;
+with GPR.Knowledge;
+with GPR.Sdefault;
 
 package body GNATCOLL.Projects is
 
@@ -463,6 +465,13 @@ package body GNATCOLL.Projects is
    --  Register specific attributes like IDE'Artifact_Dir but only once per
    --  program run. Second attempt at registering the attribute leads to an
    --  error in libgpr.
+
+   Host_Targets_List     : GPR.Knowledge.String_Lists.List :=
+     GPR.Knowledge.String_Lists.Empty_List;
+   Host_Targets_List_Set : Boolean := False;
+   procedure Set_Host_Targets_List;
+   --  Populate the list of host targets that include the host target itself
+   --  and may as well have corresponding fallback targets.
 
    -----------
    -- Lists --
@@ -7291,6 +7300,8 @@ package body GNATCOLL.Projects is
          GPR.Current_Verbosity := GPR.High;
       end if;
 
+      Set_Host_Targets_List;
+
       if Self.Data /= null and then Self.Data.Root /= No_Project then
          Previous_Project := Self.Root_Project.Project_Path;
          Previous_Status  := Self.Data.Status;
@@ -7618,11 +7629,22 @@ package body GNATCOLL.Projects is
       --  Compute the default 'gnatls' command to spawn
 
       function Default_Gnatls return String is
+         No_Prefix : Boolean := False;
       begin
+
+         for Tgt of Host_Targets_List loop
+            if Target = Tgt then
+               No_Prefix := True;
+               exit;
+            end if;
+         end loop;
+
          if Runtime /= Unset
             or else Target /= Unset
          then
-            return (if Target /= Unset then Target & '-' else "")
+            return
+              (if Target /= Unset
+               and then not No_Prefix then Target & '-' else "")
                & "gnatls"
                & (if Runtime /= Unset then " --RTS=" & Runtime else "");
          else
@@ -11068,6 +11090,51 @@ package body GNATCOLL.Projects is
    begin
       Self.TTY_Process_Descriptor_Disabled := Disabled;
    end Set_Disable_Use_Of_TTY_Process_Descriptor;
+
+   ---------------------------
+   -- Set_Host_Targets_List --
+   ---------------------------
+
+   procedure Set_Host_Targets_List is
+      Gprbuild_Path : Filesystem_String_Access;
+      KB_Dir        : GNATCOLL.VFS.Virtual_File;
+
+      KB : GPR.Knowledge.Knowledge_Base;
+
+      use GPR.Knowledge;
+      use GPR.Knowledge.String_Lists;
+
+      TS_Id         : GPR.Knowledge.Targets_Set_Id;
+
+   begin
+      Trace (Me, "Set_Host_Targets_List");
+      if Host_Targets_List_Set then
+         --  No point reparsing KB more than once.
+         return;
+      end if;
+
+      Host_Targets_List_Set := True;
+
+      Gprbuild_Path := Locate_Exec_On_Path ("gprbuild");
+      if Gprbuild_Path = null then
+         Trace (Me, "Gprbuild not found on path");
+         return;
+      end if;
+
+      KB_Dir := Get_Parent (Create (Dir_Name (Gprbuild_Path.all)));
+      KB_Dir := Join (Join (KB_Dir, "share"), "gprconfig");
+      Free (Gprbuild_Path);
+      GPR.Knowledge.Parse_Knowledge_Base
+        (KB, KB_Dir.Display_Full_Name, Parse_Compiler_Info => False);
+      GPR.Knowledge.Get_Targets_Set (KB, GPR.Sdefault.Hostname, TS_Id);
+
+      Host_Targets_List := GPR.Knowledge.Get_Fallback_List
+        (Base      => KB,
+         On_Target => TS_Id);
+      Host_Targets_List.Append
+        (GPR.Knowledge.Normalized_Target (KB, TS_Id));
+
+   end Set_Host_Targets_List;
 
 begin
 --     GPR.Initialize;
