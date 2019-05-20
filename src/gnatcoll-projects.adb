@@ -1319,7 +1319,7 @@ package body GNATCOLL.Projects is
                then
                   --  Corresponding source is not from current project, but
                   --  current project is an extends all project, so any
-                  --  library file for a sourse of any project of the subtree
+                  --  library file for a source of any project of the subtree
                   --  belongs to current project.
 
                   List.Append
@@ -1334,9 +1334,9 @@ package body GNATCOLL.Projects is
                                (Element (Info_Cursor)))));
 
                   if Exclude_Overridden then
-                     --  Also so that we do not include corresponding overriden
-                     --  ALI file from the corresponding project, we need to
-                     --  store it's name explicitly.
+                     --  Also so that we do not include corresponding
+                     --  overridden ALI file from the corresponding project,
+                     --  we need to store its name explicitly.
                      Added.Include (Element (Info_Cursor).File);
                   end if;
 
@@ -4672,7 +4672,7 @@ package body GNATCOLL.Projects is
          Include_Extended => True,   --  ??? Should this be configurable
          Current          => Project.Data.Importing_Projects'Last + 1);
 
-      --  The project iself is always at index 'Last
+      --  The project itself is always at index 'Last
       if not Include_Self then
          Iter.Current := Iter.Current - 1;
       end if;
@@ -5021,7 +5021,7 @@ package body GNATCOLL.Projects is
                Nested_Expr);
 
          procedure Check_Complexity (Expression : Project_Node_Id);
-         --  Check wether or not the default value is a simple one,
+         --  Check whether or not the default value is a simple one,
          --  and mark project tree not editable, if the value is complex.
 
          procedure Check_Complexity (Expression : Project_Node_Id) is
@@ -5203,8 +5203,8 @@ package body GNATCOLL.Projects is
 
          function Is_Simple_Scenario_Variable return Boolean;
          --  Check whether or not given variable is a simple canonical
-         --  Scebario Variable, that is there are no concatenations in the
-         --  defaulr value or after the external variable declaration
+         --  Scenario Variable, that is there are no concatenations in the
+         --  default value or after the external variable declaration
          --  and so on.
 
          function Is_Simple_Scenario_Variable return Boolean is
@@ -5317,7 +5317,7 @@ package body GNATCOLL.Projects is
                      Values_Identical : Boolean := True;
                   begin
                      if Old_Values.all'Length /= New_Values.all'Length then
-                        Trace (Me_SV, "different ammount of values");
+                        Trace (Me_SV, "different amount of values");
                         Values_Identical := False;
                      else
                         Sort_Values (Old_Values.all);
@@ -5326,7 +5326,7 @@ package body GNATCOLL.Projects is
                            if Old_Values (I).all /= New_Values (I).all then
                               Trace
                                 (Me_SV,
-                                 "Unmatching values: " & Old_Values (I).all
+                                 "Unmatched values: " & Old_Values (I).all
                                  & " and " & New_Values (I).all);
                               Values_Identical := False;
                               exit;
@@ -8107,7 +8107,7 @@ package body GNATCOLL.Projects is
 
          --  Some "with" were found that could not be resolved. Check whether
          --  the user has specified a "gnatlist" switch. For this, we need to
-         --  do phase1 of the processing (ie not look for sources).
+         --  do phase1 of the processing (i.e. not look for sources).
 
          declare
             Success : Boolean;
@@ -8221,7 +8221,7 @@ package body GNATCOLL.Projects is
 
          --  Just clearing the projects htable is not enough, the memory will
          --  not be freed unless we set corresponding tree fields to null.
-         --  Then finalize recognises those project instances as useless
+         --  Then finalize recognizes those project instances as useless
          --  and cleans them up.
          declare
             Cur : Project_Htables.Cursor := Tree.Data.Projects.First;
@@ -8392,7 +8392,7 @@ package body GNATCOLL.Projects is
          Tree : Project_Tree_Ref;
          Project_Node : Project_Node_Id;
          Project : Project_Id);
-      --  Creates project instancies for given project tree.
+      --  Creates project instances for given project tree.
       --  This is called once per aggregated project tree
 
       procedure Free (S : in out GPR.Sinput.Source_File_Record);
@@ -8504,7 +8504,7 @@ package body GNATCOLL.Projects is
             Create_Attribute (Name_Target, "");
 
             --  Setup Ada support (Ada is the default language here, since this
-            --  is only called when no config file existed initially, ie for
+            --  is only called when no config file existed initially, i.e. for
             --  gnatmake).
 
             Create_Attribute (Name_Default_Language, "ada");
@@ -10606,7 +10606,7 @@ package body GNATCOLL.Projects is
       Tree_Node : constant GPR.Project_Node_Tree_Ref := Tree.Data.Tree;
 
       procedure Callback (Project, Parent, Node, Choice : Project_Node_Id);
-      --  Called for each mtching node for the env. variable
+      --  Called for each matching node for the environment variable
 
       --------------
       -- Callback --
@@ -10656,7 +10656,7 @@ package body GNATCOLL.Projects is
       Tree_Node : constant GPR.Project_Node_Tree_Ref := Tree.Data.Tree;
 
       procedure Callback (Project, Parent, Node, Choice : Project_Node_Id);
-      --  Called for each mtching node for the env. variable
+      --  Called for each matching node for the environment variable
 
       --------------
       -- Callback --
@@ -10706,7 +10706,7 @@ package body GNATCOLL.Projects is
       N      : constant Name_Id := Get_String (External_Name);
 
       procedure Callback (Project, Parent, Node, Choice : Project_Node_Id);
-      --  Called for each mtching node for the env. variable
+      --  Called for each matching node for the environment variable
 
       --------------
       -- Callback --
@@ -10788,7 +10788,7 @@ package body GNATCOLL.Projects is
       Ext_Var         : constant Name_Id := Get_String (External_Name);
 
       procedure Callback (Project, Parent, Node, Choice : Project_Node_Id);
-      --  Called for each matching node for the env. variable
+      --  Called for each matching node for the environment variable
 
       --------------
       -- Callback --
