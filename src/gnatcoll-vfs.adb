@@ -23,6 +23,7 @@
 
 with Ada.Calendar;              use Ada.Calendar;
 with Ada.Characters.Handling;   use Ada.Characters.Handling;
+with Ada.Numerics.Discrete_Random;
 with Ada.Exceptions;            use Ada.Exceptions;
 with Ada.Tags;                  use Ada.Tags;
 with Ada.Strings.Hash;
@@ -1216,6 +1217,52 @@ package body GNATCOLL.VFS is
    is
       use type GNAT.OS_Lib.File_Descriptor;
       W  : Writable_File;
+
+      function Temporary_File (From : Virtual_File) return Virtual_File;
+      --  Return a temporary file on the host as From.
+      --  Return No_File if we couldn't create one.
+
+      --------------------
+      -- Temporary_File --
+      --------------------
+
+      function Temporary_File (From : Virtual_File) return Virtual_File is
+         use GNAT.OS_Lib;
+
+         subtype Lowercase is Character range 'a' .. 'z';
+         package Random_Char is new Ada.Numerics.Discrete_Random (Lowercase);
+
+         Gen     : Random_Char.Generator;
+
+         Tmp_Dir : constant Virtual_File := Get_Tmp_Directory (From.Get_Host);
+         Pid_Int : constant Integer := Pid_To_Integer (Current_Process_Id);
+         Pid     : constant Filesystem_String := +Integer'Image (Pid_Int);
+
+      begin
+         Random_Char.Reset (Gen);
+
+         --  Make 10 attempts to find a random name that isn't already taken
+         for J in 1 .. 10 loop
+            declare
+               R   : constant Filesystem_String (1 .. 8) :=
+                 (others => Random_Char.Random (Gen));
+               Temp : Virtual_File;
+            begin
+               --  Bake in "vfs" and the PID in the temporary file name,
+               --  potentially useful for development and debugging.
+               Temp := Create_From_Dir
+                 (Tmp_Dir, "vfs-" & Pid (Pid'First + 1 .. Pid'Last) & "-" & R);
+
+               if not Temp.Is_Regular_File then
+                  --  A file with that name doesn't already exist? use it.
+                  return Temp;
+               end if;
+            end;
+         end loop;
+         --  ... If all these files existed, return an error
+         return No_File;
+      end Temporary_File;
+
    begin
       if File.Value = null then
          return Invalid_File;
@@ -1226,9 +1273,19 @@ package body GNATCOLL.VFS is
       W.Success := True;
 
       if not Append or else not File.Is_Regular_File then
-         W.Tmp_File := Create
-           (File.Full_Name.all & "~",
-            Host => File.Get_Host);
+         --  Not appending, or appending to a file that doesn't exist
+         --  yet: write to a temporary file first.
+
+         W.Tmp_File := Temporary_File (File);
+
+         --  Check whether we could actually create the temporary file
+         if W.Tmp_File = No_File then
+            return X : Writable_File := Invalid_File do
+               X.Error := Ada.Strings.Unbounded.To_Unbounded_String
+                 ("Could not create a temporary file");
+            end return;
+         end if;
+
          W.Tmp_File.Value.Open_Write
            (Append => False, FD => W.FD, Error => W.Error);
 
@@ -1263,6 +1320,10 @@ package body GNATCOLL.VFS is
       if File.Success then
          Written := GNAT.OS_Lib.Write (File.FD, Str'Address, Str'Length);
          File.Success := Written = Str'Length;
+         if not File.Success then
+            File.Error := Ada.Strings.Unbounded.To_Unbounded_String
+              ("Disk full");
+         end if;
 
          if Written > 0 then
             --  File has been overwritten on the disk anyway
@@ -1293,6 +1354,10 @@ package body GNATCOLL.VFS is
          Len := Integer (Strlen (Str));
          Written := GNAT.OS_Lib.Write (File.FD, To_Address (Str), Len);
          File.Success := Written = Len;
+         if not File.Success then
+            File.Error := Ada.Strings.Unbounded.To_Unbounded_String
+              ("Disk full");
+         end if;
          if Written > 0 then
             File.File.Value.Kind := GNATCOLL.IO.File;
          end if;
@@ -1304,6 +1369,7 @@ package body GNATCOLL.VFS is
    -----------
 
    procedure Close (File : in out Writable_File) is
+      use Ada.Strings.Unbounded;
       Norm : Virtual_File;
       Success : Boolean;
 
@@ -1315,7 +1381,9 @@ package body GNATCOLL.VFS is
       if File.Success then
          if File.Tmp_File /= No_File then
             File.Tmp_File.Value.Close (File.FD, File.Success);
-            if File.Success then
+            if not File.Success then
+               File.Error := To_Unbounded_String ("close() failed");
+            else
                --  Look past symbolic links. We do not want to impact the
                --  normalized name saved in File, so we need to use local
                --  copies.
@@ -1353,6 +1421,10 @@ package body GNATCOLL.VFS is
                      File.Tmp_File.Delete (Success);
                      --  ignore Success, that's fine if the temp file is
                      --  still there.
+                  else
+                     File.Error := To_Unbounded_String
+                       (+("Copy failed from " & File.Tmp_File.Full_Name.all
+                        & " to " & Norm.Full_Name.all));
                   end if;
                end if;
             end if;
@@ -1363,7 +1435,10 @@ package body GNATCOLL.VFS is
       end if;
 
       if not File.Success then
-         raise Ada.Text_IO.Use_Error with "Error while writing to the file";
+         raise Ada.Text_IO.Use_Error with "Error while writing to the file"
+           & (if File.Error /= Null_Unbounded_String
+              then " (" & To_String (File.Error) & ")"
+              else "");
       end if;
    end Close;
 
