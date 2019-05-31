@@ -3721,6 +3721,26 @@ package body GNATCOLL.Projects is
       return "";
    end Get_Runtime;
 
+   -------------------------
+   -- Target_Same_As_Host --
+   -------------------------
+
+   function Target_Same_As_Host (Project : Project_Type) return Boolean is
+      Tgt : constant String := Project.Get_Target;
+   begin
+      if Tgt = "" then
+         return True;
+      end if;
+
+      for T of Host_Targets_List loop
+         if T = Tgt then
+            return True;
+         end if;
+      end loop;
+
+      return False;
+   end Target_Same_As_Host;
+
    ------------------
    -- Is_Main_File --
    ------------------

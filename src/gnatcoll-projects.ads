@@ -1402,6 +1402,10 @@ package GNATCOLL.Projects is
    --  Return the runtime configured in the project, if any, and the empty
    --  string otherwise. This concerns only the runtime for Ada.
 
+   function Target_Same_As_Host (Project : Project_Type) return Boolean;
+   --  Return true when specified Target is either the same as the host
+   --  or belongs to the set of corresponding fallback targets.
+
    --------------
    -- Switches --
    --------------
