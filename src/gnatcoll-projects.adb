@@ -11153,6 +11153,7 @@ package body GNATCOLL.Projects is
          On_Target => TS_Id);
       Host_Targets_List.Append
         (GPR.Knowledge.Normalized_Target (KB, TS_Id));
+      Free_Knowledge_Base (KB);
 
    end Set_Host_Targets_List;
 
