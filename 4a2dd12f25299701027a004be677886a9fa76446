@@ -1,0 +1,7 @@
+Code-Review-1: CI Builder <ci-builder@adacore.com>
+Code-Review+2: Nicolas Setton <setton@adacore.com>
+Submitted-by: Nicolas Setton <setton@adacore.com>
+Submitted-at: Mon, 10 Jun 2019 14:08:05 +0200
+Reviewed-on: https://git.adacore.com/55493
+Project: gnatcoll-core
+Branch: refs/heads/master
