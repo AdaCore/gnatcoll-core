@@ -4,6 +4,9 @@
 pragma Extend_System (Aux_DEC);
 
 with GNATCOLL.Storage_Pools.Headers;  use GNATCOLL.Storage_Pools.Headers;
+with Ada.Text_IO;                     use Ada.Text_IO;
+
+with System.Address_Image;
 
 with Test_Assert;
 
@@ -27,7 +30,10 @@ begin
    --  and access its header
 
    Str := new String'("foo");
+   Put_Line (System.Address_Image (Str.all'Address));
+
    Hdr := String_Pools.Header_Of (Str);
+   Put_Line (System.Address_Image (Hdr.all'Address));
 
    String_Pools.Header_Of (Str).all.Refcount := 1;
 
