@@ -114,13 +114,7 @@ package body GNATCOLL.Storage_Pools.Headers is
          function Header_Of
             (Element : Element_Access) return Header_Access
          is
-            F : Integer;
-         begin
-            if Element = null then
-               return null;
-            end if;
-
-            F := Element.all'Finalization_Size;
+            Finalization_Size : Integer;
             --  If the element_type is a controlled type, this will
             --  be the number of extra bytes requested by the compiler in
             --  calls to Allocate and Deallocate (see the memory layout
@@ -130,15 +124,23 @@ package body GNATCOLL.Storage_Pools.Headers is
             --  the compiler when calling Deallocate, but not when calling
             --  Header_Of so we need to take them into account when looking
             --  for the our own header.
-            --
-            --  Place the Descriptor_Size within the type conversion to
-            --  prevent a potential ambiguity in address manipulation when
-            --  System.Aux_Dec is present.
+
+            Descriptor_Size : Integer;
+            --  Similarily, for bounds information if the element type is
+            --  an unconstrained array (e.g. String).
+
+         begin
+            if Element = null then
+               return null;
+            end if;
+
+            Finalization_Size := Element.all'Finalization_Size;
+            Descriptor_Size := Element_Type'Descriptor_Size / Storage_Unit;
 
             return Convert
                (Address_Header_Of
                   (Element.all'Address
-                   - Storage_Offset (F - Element_Type'Descriptor_Size)));
+                   - Storage_Offset (Finalization_Size + Descriptor_Size)));
          end Header_Of;
 
       end Typed;
