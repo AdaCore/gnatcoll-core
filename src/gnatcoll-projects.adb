@@ -6818,6 +6818,74 @@ package body GNATCOLL.Projects is
       end if;
    end Predefined_Project_Path;
 
+   ------------------------
+   -- Set_Build_Tree_Dir --
+   ------------------------
+
+   procedure Set_Build_Tree_Dir
+     (Self : in out Project_Environment;
+      Dir  : GNATCOLL.VFS.Filesystem_String)
+   is
+      pragma Unreferenced (Self);
+   begin
+      Free (GPR.Build_Tree_Dir);
+      if Dir = "" then
+         GPR.Build_Tree_Dir := null;
+      else
+         GPR.Build_Tree_Dir := new String'(+Dir);
+      end if;
+   end Set_Build_Tree_Dir;
+
+   --------------------
+   -- Build_Tree_Dir --
+   --------------------
+
+   function Build_Tree_Dir
+     (Self : Project_Environment) return GNATCOLL.VFS.Filesystem_String
+   is
+      pragma Unreferenced (Self);
+   begin
+      if GPR.Build_Tree_Dir = null then
+         return "";
+      else
+         return +GPR.Build_Tree_Dir.all;
+      end if;
+   end Build_Tree_Dir;
+
+   ------------------
+   -- Set_Root_Dir --
+   ------------------
+
+   procedure Set_Root_Dir
+     (Self : in out Project_Environment;
+      Dir  : GNATCOLL.VFS.Filesystem_String)
+   is
+      pragma Unreferenced (Self);
+   begin
+      Free (GPR.Root_Dir);
+      if Dir = "" then
+         GPR.Root_Dir := null;
+      else
+         GPR.Root_Dir := new String'(+Dir);
+      end if;
+   end Set_Root_Dir;
+
+   --------------
+   -- Root_Dir --
+   --------------
+
+   function Root_Dir
+     (Self : Project_Environment) return GNATCOLL.VFS.Filesystem_String
+   is
+      pragma Unreferenced (Self);
+   begin
+      if GPR.Root_Dir = null then
+         return "";
+      else
+         return +GPR.Root_Dir.all;
+      end if;
+   end Root_Dir;
+
    -----------------------
    -- Set_Object_Subdir --
    -----------------------
@@ -11153,7 +11221,7 @@ package body GNATCOLL.Projects is
          On_Target => TS_Id);
       Host_Targets_List.Append
         (GPR.Knowledge.Normalized_Target (KB, TS_Id));
-      Free_Knowledge_Base (KB);
+      GPR.Knowledge.Free_Knowledge_Base (KB);
 
    end Set_Host_Targets_List;
 

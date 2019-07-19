@@ -1,0 +1,4 @@
+description: >
+  Check the getter/setter for Build_Tree_Dir and Root_Dir.
+data:
+    - "p.gpr"

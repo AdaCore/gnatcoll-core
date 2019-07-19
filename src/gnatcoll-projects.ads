@@ -530,6 +530,24 @@ package GNATCOLL.Projects is
    --  directories and doing the computation yourself, since it uses cached
    --  data.
 
+   procedure Set_Build_Tree_Dir
+     (Self : in out Project_Environment;
+      Dir  : GNATCOLL.VFS.Filesystem_String);
+   function Build_Tree_Dir
+     (Self : Project_Environment) return GNATCOLL.VFS.Filesystem_String;
+   --  Getter/Setter to control the root directory for building out-of-tree
+   --  projects. All relative object directories will be rooted at this
+   --  location.
+
+   procedure Set_Root_Dir
+     (Self : in out Project_Environment;
+      Dir  : GNATCOLL.VFS.Filesystem_String);
+   function Root_Dir
+     (Self : Project_Environment) return GNATCOLL.VFS.Filesystem_String;
+   --  Is only revelant when Build_Tree_Dir is set, this is used to keep
+   --  information about the root directory of artifacts to properly relocate
+   --  them.
+
    procedure Set_Object_Subdir
      (Self   : in out Project_Environment;
       Subdir : GNATCOLL.VFS.Filesystem_String);
