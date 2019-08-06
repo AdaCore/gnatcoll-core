@@ -1,0 +1,7 @@
+project P is
+
+   for Object_Dir use "Hello" & "/world";
+   for Exec_Dir use P'Object_Dir & "/exe";
+
+end P;
+

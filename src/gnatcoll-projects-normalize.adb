@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2018, AdaCore                     --
+--                     Copyright (C) 2002-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -2559,6 +2559,9 @@ package body GNATCOLL.Projects.Normalize is
             Set_Current_Term
               (First_Term (Previous_Decl, Tree_Node), Tree_Node, Val);
             Set_Source_Index_Of (Val, Tree_Node, Int (At_Index));
+            Set_Next_Term
+              (First_Term (Previous_Decl, Tree_Node),
+               Tree_Node, Empty_Project_Node);
          else
             Decl := Create_Attribute
               (Tree_Node, Case_Item, Attribute_Name,

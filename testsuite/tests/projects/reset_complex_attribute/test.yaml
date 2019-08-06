@@ -1,0 +1,6 @@
+description: >
+  When replacing a composite attribute value make sure
+  that no trailing parts of previous concatenation
+  remain in place.
+data:
+    - "p.gpr"
