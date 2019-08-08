@@ -33,7 +33,8 @@ project GnatColl is
    Madvise   : Yes_No := External ("GNATCOLL_MADVISE", "yes");
 
    type Build_Type is ("DEBUG", "PROD");
-   Build : Build_Type := External ("BUILD");
+   Build : Build_Type :=
+      External ("GNATCOLL_BUILD", External ("BUILD", "DEBUG"));
 
    type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type := External ("LIBRARY_TYPE");
