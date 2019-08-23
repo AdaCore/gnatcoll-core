@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2001-2018, AdaCore                     --
+--                     Copyright (C) 2001-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -857,7 +857,7 @@ package GNATCOLL.Traces is
    --  message doesn't fit on a single line).
 
    procedure Add_Global_Decorator
-      (Decorator : not null access Trace_Decorator_Record'Class;
+      (Decorator : not null Trace_Decorator;
        Name      : String);
    --  Register a global decorator that will apply to all existing
    --  Trace_Handle. The decorator only has an effect when it is active.

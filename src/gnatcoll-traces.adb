@@ -1540,7 +1540,7 @@ package body GNATCOLL.Traces is
    --------------------------
 
    procedure Add_Global_Decorator
-      (Decorator : not null access Trace_Decorator_Record'Class;
+      (Decorator : not null Trace_Decorator;
        Name      : String) is
    begin
       Register_Handle (Trace_Handle (Decorator), To_Upper (Name));
@@ -1710,53 +1710,53 @@ package body GNATCOLL.Traces is
             Set_Default_Stream ("&1");
 
             Global.Micro_Time := new Trace_Decorator_Record;
-            Global.Micro_Time.Add_Global_Decorator ("DEBUG.MICRO_TIME");
+            Add_Global_Decorator (Global.Micro_Time, "DEBUG.MICRO_TIME");
 
             Dec := new Elapse_Time_Trace;
-            Dec.Add_Global_Decorator ("DEBUG.ELAPSED_TIME");
+            Add_Global_Decorator (Dec, "DEBUG.ELAPSED_TIME");
 
             Dec := new Stack_Trace;
-            Dec.Add_Global_Decorator ("DEBUG.STACK_TRACE");
+            Add_Global_Decorator (Dec, "DEBUG.STACK_TRACE");
 
             Dec := new Count_Trace;
-            Dec.Add_Global_Decorator ("DEBUG.COUNT");
+            Add_Global_Decorator (Dec, "DEBUG.COUNT");
 
             Dec := new Memory_Trace;
-            Dec.Add_Global_Decorator ("DEBUG.MEMORY");
+            Add_Global_Decorator (Dec, "DEBUG.MEMORY");
 
             Dec := new Ada_Memory_Trace;
-            Dec.Add_Global_Decorator ("DEBUG.ADA_MEMORY");
+            Add_Global_Decorator (Dec, "DEBUG.ADA_MEMORY");
 
             --  These are handled directly in Trace, but we should have them on
             --  the active list of decorators to know whether we need to add a
             --  space.
 
             Global.Absolute_Time := new Trace_Decorator_Record;
-            Global.Absolute_Time.Add_Global_Decorator ("DEBUG.ABSOLUTE_TIME");
+            Add_Global_Decorator (Global.Absolute_Time, "DEBUG.ABSOLUTE_TIME");
 
             Global.Absolute_Date := new Trace_Decorator_Record;
-            Global.Absolute_Date.Add_Global_Decorator ("DEBUG.ABSOLUTE_DATE");
+            Add_Global_Decorator (Global.Absolute_Date, "DEBUG.ABSOLUTE_DATE");
 
             Global.Enclosing_Entity := new Trace_Decorator_Record;
-            Global.Enclosing_Entity.Add_Global_Decorator
-               ("DEBUG.ENCLOSING_ENTITY");
+            Add_Global_Decorator
+               (Global.Enclosing_Entity, "DEBUG.ENCLOSING_ENTITY");
 
             Global.Location := new Trace_Decorator_Record;
-            Global.Location.Add_Global_Decorator ("DEBUG.LOCATION");
+            Add_Global_Decorator (Global.Location, "DEBUG.LOCATION");
 
             --  The following are not decorators, and handled specially
 
             Global.Finalize_Traces := new Trace_Decorator_Record;
-            Global.Finalize_Traces.Add_Global_Decorator
-               ("DEBUG.FINALIZE_TRACES");
+            Add_Global_Decorator
+               (Global.Finalize_Traces, "DEBUG.FINALIZE_TRACES");
             Global.Finalize_Traces.Active := True;
 
             Global.Split_Lines := new Trace_Decorator_Record;
-            Global.Split_Lines.Add_Global_Decorator ("DEBUG.SPLIT_LINES");
+            Add_Global_Decorator (Global.Split_Lines, "DEBUG.SPLIT_LINES");
             Global.Split_Lines.Active := True;
 
             Global.Colors := new Trace_Decorator_Record;
-            Global.Colors.Add_Global_Decorator ("DEBUG.COLORS");
+            Add_Global_Decorator (Global.Colors, "DEBUG.COLORS");
          end if;
       end Create_Decorators;
 
