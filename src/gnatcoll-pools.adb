@@ -224,7 +224,7 @@ package body GNATCOLL.Pools is
                         Unchecked_Free (R);
                      elsif R /= null then
                         Trace
-                          (Me, "One ressource still in use, can't be freed");
+                          (Me, "One resource still in use, can't be freed");
                      end if;
                   end loop;
 
