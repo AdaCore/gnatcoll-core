@@ -1,3 +1,5 @@
+#!/bin/sh
+
 cd obj
 
 # Create the database from the schema (remove the old one, just in case)
