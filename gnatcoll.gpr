@@ -85,6 +85,10 @@ project GnatColl is
    case Library_Type is
       when "relocatable" =>
          for Library_Options use Extra_Libs;
+
+         --  Put user options in front, for options like --as-needed.
+         for Leading_Library_Options use External_As_List ("LDFLAGS", " ");
+
       when others =>
          null;
    end case;
@@ -105,6 +109,13 @@ project GnatColl is
 
       for Switches ("gnatcoll_support.c") use
          Compiler'Switches ("C") & Extra_Switches;
+
+      --  Give user flags the last word.
+      for Switches ("Ada") use Compiler'Switches ("Ada")
+        & External_As_List ("ADAFLAGS", " ");
+      for Switches ("C") use Compiler'Switches ("C")
+        & External_As_List ("CFLAGS", " ")
+        & External_As_List ("CPPFLAGS", " ");
 
    end Compiler;
 
