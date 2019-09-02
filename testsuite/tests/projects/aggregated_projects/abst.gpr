@@ -1,0 +1,3 @@
+abstract project abst is
+   Comp_Switches := ("-O2");
+end abst;

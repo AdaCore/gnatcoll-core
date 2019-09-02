@@ -1,0 +1,4 @@
+aggregate project Nested_Aggr is
+   for Project_Path use (".");
+   for Project_Files use ("e.gpr", "d.gpr");
+end Nested_Aggr;

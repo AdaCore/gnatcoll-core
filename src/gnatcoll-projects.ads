@@ -302,6 +302,9 @@ package GNATCOLL.Projects is
    function Is_Aggregate_Library (Self : Project_Type) return Boolean;
    --  Return true if the current project is an aggregate library project.
 
+   function Is_Abstract_Project (Self : Project_Type) return Boolean;
+   --  Return true if the current project is an abstract project.
+
    function Get_Environment
      (Self : Project_Type) return Project_Environment_Access;
    --  Return the environment which applies to the project, or null
@@ -1221,6 +1224,22 @@ package GNATCOLL.Projects is
    --  extended project of Parent
    --  If Parent is an aggregate library and Child is one of it's aggregated
    --  projects, True is returned.
+
+   type Project_Array is array (Positive range <>) of aliased Project_Type;
+   type Project_Array_Access is access all Project_Array;
+
+   procedure Unchecked_Free (Arr : in out Project_Array_Access);
+
+   Empty_Project_Array : constant Project_Array;
+
+   function Aggregated_Projects
+     (Project           : Project_Type;
+      Unwind_Aggregated : Boolean := True) return Project_Array_Access;
+   --  Return the list of projects aggregated by Project. If Unwind_Aggregated
+   --  is True then any aggregated projects that are aggregate projects
+   --  themselves are also resolved into their aggregated projects recursively.
+   --  For non-aggregate projects returns empty list.
+   --  Result must be freed by the caller.
 
    ---------------
    -- Scenarios --
@@ -2334,6 +2353,9 @@ private
 
    No_Project : aliased constant Project_Type :=
      (Ada.Finalization.Controlled with Data => null);
+
+   Empty_Project_Array : constant Project_Array :=
+     Project_Array'(1 .. 0 => No_Project);
 
    function Get_View (Project : Project_Type'Class) return GPR.Project_Id;
    function Node

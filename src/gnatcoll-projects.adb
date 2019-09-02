@@ -106,6 +106,17 @@ package body GNATCOLL.Projects is
    procedure Unchecked_Free is new Ada.Unchecked_Deallocation
      (Project_Type'Class, Project_Type_Access);
 
+   --------------------
+   -- Unchecked_Free --
+   --------------------
+
+   procedure Unchecked_Free (Arr : in out Project_Array_Access) is
+      procedure Internal is new Ada.Unchecked_Deallocation
+        (Project_Array, Project_Array_Access);
+   begin
+      Internal (Arr);
+   end Unchecked_Free;
+
    package Project_Htables is new Ada.Containers.Indefinite_Hashed_Maps
      (Key_Type        => Virtual_File,   --  project path
       Element_Type    => Project_Type,
@@ -9740,6 +9751,16 @@ package body GNATCOLL.Projects is
         (Self.Data.Node, Self.Data.Tree.Tree) in GPR.Aggregate_Project;
    end Is_Aggregate_Project;
 
+   -------------------------
+   -- Is_Abstract_Project --
+   -------------------------
+
+   function Is_Abstract_Project (Self : Project_Type) return Boolean is
+   begin
+      return Project_Qualifier_Of
+        (Self.Data.Node, Self.Data.Tree.Tree) = Abstract_Project;
+   end Is_Abstract_Project;
+
    -----------------
    -- Is_Editable --
    -----------------
@@ -11224,6 +11245,75 @@ package body GNATCOLL.Projects is
       GPR.Knowledge.Free_Knowledge_Base (KB);
 
    end Set_Host_Targets_List;
+
+   -------------------------
+   -- Aggregated_Projects --
+   -------------------------
+
+   function Aggregated_Projects
+     (Project           : Project_Type;
+      Unwind_Aggregated : Boolean := True) return Project_Array_Access
+   is
+      P          : Project_Type;
+      Aggregated : Aggregated_Project_List;
+
+      P_Files_Agg : Project_Array_Access;
+
+      Result : Project_Array_Access :=
+        new Project_Array'(Empty_Project_Array);
+
+      procedure Append
+        (Files : in out Project_Array_Access; P : Project_Type);
+
+      procedure Append
+        (Files : in out Project_Array_Access; P : Project_Type)
+      is
+         Tmp : Project_Array_Access;
+      begin
+         if Files = null then
+            Files := new Project_Array'(1 => P);
+         else
+            Tmp := new Project_Array (1 .. Files'Length + 1);
+            Tmp (1 .. Files'Length) := Files.all;
+            Tmp (Tmp'Last) := P;
+            Unchecked_Free (Files);
+            Files := Tmp;
+         end if;
+      end Append;
+
+   begin
+      if Project.Get_View = GPR.No_Project then
+         --  View has not been computed for this project.
+         return Result;
+      end if;
+
+      if not Project.Is_Aggregate_Project then
+         return Result;
+      end if;
+
+      Aggregated := Project.Data.View.Aggregated_Projects;
+      while Aggregated /= null loop
+
+         P := Project_Type
+           (Project_From_Path
+              (Project.Data.Tree_For_Map, Aggregated.Path));
+
+         if Unwind_Aggregated and then P.Is_Aggregate_Project then
+            P_Files_Agg := P.Aggregated_Projects;
+            for P_File_Agg of P_Files_Agg.all loop
+               Append (Result, P_File_Agg);
+            end loop;
+            Unchecked_Free (P_Files_Agg);
+         else
+            Append (Result, P);
+         end if;
+
+         Aggregated := Aggregated.Next;
+      end loop;
+
+      return Result;
+
+   end Aggregated_Projects;
 
 begin
 --     GPR.Initialize;

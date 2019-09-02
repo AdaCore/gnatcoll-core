@@ -1,0 +1,10 @@
+with "abst.gpr";
+aggregate project Aggr is
+   for Project_Path use (".");
+   for Project_Files use ("a.gpr", "b.gpr", "nested_aggr.gpr");
+   
+   package Builder is
+      for Global_Compilation_Switches ("Ada") use
+        Abst.Comp_Switches;
+   end Builder;
+end Aggr;

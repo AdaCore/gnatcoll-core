@@ -1,0 +1,15 @@
+description: >
+  Check Aggregated_Projects and Is_Abstract_project.
+data:
+    - "a.gpr"
+    - "b.gpr"
+    - "c.gpr"
+    - "d.gpr"
+    - "e.gpr"
+    - "aggr.gpr"
+    - "abst.gpr"
+    - "nested_aggr.gpr"
+    - "src_a.ads"
+    - "src_b.ads"
+    - "src_d.ads"
+    - "src_e.ads"
