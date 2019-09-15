@@ -6,3 +6,6 @@ data:
     - "p.gpr"
     - "agg.gpr"
     - "abst.gpr"
+skip:
+    # Known memory leak S912-005
+    - [XFAIL, "env.valgrind"]
