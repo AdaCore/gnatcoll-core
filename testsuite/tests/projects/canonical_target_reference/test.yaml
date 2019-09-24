@@ -1,0 +1,7 @@
+description: >
+  Check that reference to Canonical_Target attribute
+  are properly processed.
+data:
+    - "test_project.gpr"
+    - "main.adb"
+    - "doot.ads"
