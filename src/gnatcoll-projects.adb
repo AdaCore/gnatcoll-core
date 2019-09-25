@@ -8099,6 +8099,30 @@ package body GNATCOLL.Projects is
       --  cases when we do want to store the values of all externals.
       --  So we just filter out such warnings.
 
+      procedure Clean_Up_Node_Tree
+        (Node_Tree    : GPR.Project_Node_Tree_Ref;
+         Tree         : Project_Tree_Ref;
+         Project_Node : Project_Node_Id;
+         Project      : Project_Id);
+      --  Simple callback to free unused node trees that may be created for
+      --  aggregated projects.
+
+      ------------------------
+      -- Clean_Up_Node_Tree --
+      ------------------------
+
+      procedure Clean_Up_Node_Tree
+        (Node_Tree    : GPR.Project_Node_Tree_Ref;
+         Tree         : Project_Tree_Ref;
+         Project_Node : Project_Node_Id;
+         Project      : Project_Id)
+      is
+         pragma Unreferenced (Tree, Project_Node, Project);
+         Local_Node_Tree : GPR.Project_Node_Tree_Ref := Node_Tree;
+      begin
+         Free (Local_Node_Tree);
+      end Clean_Up_Node_Tree;
+
       ----------------------------
       -- Filter_Reload_Warnings --
       ----------------------------
@@ -8223,7 +8247,8 @@ package body GNATCOLL.Projects is
                From_Project_Node_Tree => Tree.Data.Tree,
                Env                    => Tree.Data.Env.Env,
                Reset_Tree             => True,
-               On_New_Tree_Loaded     => null);
+               On_New_Tree_Loaded     =>
+                 Clean_Up_Node_Tree'Unrestricted_Access);
 
             if not Success or else Tmp_Prj = null then
                Trace (Me, "Processing phase 1 failed");
@@ -8340,7 +8365,7 @@ package body GNATCOLL.Projects is
             From_Project_Node_Tree => Tree.Data.Tree,
             Env                    => Tree.Data.Env.Env,
             Reset_Tree             => True,
-            On_New_Tree_Loaded     => null);
+            On_New_Tree_Loaded     => Clean_Up_Node_Tree'Unrestricted_Access);
 
          if Success
            and then Tmp_Prj /= null
@@ -9672,6 +9697,9 @@ package body GNATCOLL.Projects is
 
       while Has_Element (Iter) loop
          Data := Element (Iter).Data;
+         if Data.Tree.Tree /= Self.Data.Tree then
+            Free (Data.Tree.Tree);
+         end if;
          Data.Tree := null;
          Reset_View (Data.all);
          Data.Node := Empty_Project_Node;
