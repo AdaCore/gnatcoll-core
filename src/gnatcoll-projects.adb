@@ -7400,11 +7400,6 @@ package body GNATCOLL.Projects is
       end if;
 
       Set_Host_Targets_List;
-      if Env = null or else Env.Forced_Target = null then
-         GPR.Opt.Target_Value := new String'(Host_Targets_List.Last_Element);
-      else
-         GPR.Opt.Target_Value := new String'(Env.Forced_Target.all);
-      end if;
 
       if Self.Data /= null and then Self.Data.Root /= No_Project then
          Previous_Project := Self.Root_Project.Project_Path;
