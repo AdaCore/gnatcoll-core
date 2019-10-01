@@ -58,7 +58,9 @@ package GNATCOLL.Coders.Base64 is
       In_Last  :    out Stream_Element_Offset;
       Out_Data :    out Stream_Element_Array;
       Out_Last :    out Stream_Element_Offset;
-      Flush    :        Flush_Mode);
+      Flush    :        Flush_Mode)
+     with Pre => In_Data'First > Stream_Element_Offset'First
+       and then Out_Data'First > Stream_Element_Offset'First;
    --  Encode data to base64 from In_Data to Out_Date.
    --  In_Last is the index of last element from In_Data accepted by
    --  the Coder.
@@ -90,7 +92,9 @@ package GNATCOLL.Coders.Base64 is
       In_Last  :    out Stream_Element_Offset;
       Out_Data :    out Stream_Element_Array;
       Out_Last :    out Stream_Element_Offset;
-      Flush    :        Flush_Mode);
+      Flush    :        Flush_Mode)
+     with Pre => In_Data'First > Stream_Element_Offset'First
+       and then Out_Data'First > Stream_Element_Offset'First;
    --  Decode base64 data from In_Data to Out_Date.
 
    overriding function Is_Open (Coder : Decoder_Type) return Boolean;

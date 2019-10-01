@@ -66,7 +66,9 @@ package GNATCOLL.Coders is
       In_Last  :    out Stream_Element_Offset;
       Out_Data :    out Stream_Element_Array;
       Out_Last :    out Stream_Element_Offset;
-      Flush    :        Flush_Mode) is abstract;
+      Flush    :        Flush_Mode) is abstract
+     with Pre'Class => In_Data'First > Stream_Element_Offset'First
+       and then Out_Data'First > Stream_Element_Offset'First;
    --  Transcodes data from In_Data to Out_Date.
    --  In_Last is the index of last element from In_Data accepted by
    --  the Coder.
