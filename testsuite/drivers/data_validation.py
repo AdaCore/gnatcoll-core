@@ -53,6 +53,11 @@ class DataValidationDriver(GNATcollTestDriver):
             return TestStatus.FAIL
 
     def tear_down(self, previous_values):
+        # If the test program build failed, there is nothing we can do (and the
+        # result for this test is alredy pushed anyway).
+        if not previous_values.get('build'):
+            return False
+
         failures = [v for v in previous_values.values() if
                     not isinstance(v, TestStatus) or v != TestStatus.PASS]
         if failures:
