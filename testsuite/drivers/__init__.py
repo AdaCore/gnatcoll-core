@@ -62,7 +62,9 @@ def make_gnatcoll(work_dir, debug=False, gcov=False, gnatcov=False):
         'BUILD={}'.format('DEBUG' if debug or gcov or gnatcov else 'PROD')]
     if gcov:
         make_gnatcoll_cmd += [
-            'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage -gargs']
+            'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage'
+            ' -cargs:Ada -gnatwn'
+            ' -gargs']
     elif gnatcov:
         make_gnatcoll_cmd += [
             'GPRBUILD_OPTIONS=-cargs -fdump-scos -fpreserve-control-flow'
