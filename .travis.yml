@@ -5,9 +5,10 @@ python:
 env:
   global:
     - TOOLS_DIR=$HOME/build_tools
-    - GNAT_TAR_PATH=$TOOLS_DIR/gpl-2017-compiler.tar.gz
-    - LINUX_GNAT_URL=http://mirrors.cdn.adacore.com/art/591c6d80c7a447af2deed1d7
-    - DARWIN_GNAT_URL=http://mirrors.cdn.adacore.com/art/591c9045c7a447af2deed24e
+    - INSTALL_DIR=$HOME/build_tools/install
+    - GNAT_INSTALLER=$TOOLS_DIR/gnat-community-installer
+    - GNAT_LINUX_INSTALLER_URL=http://mirrors.cdn.adacore.com/art/5cdffc5409dcd015aaf82626
+    - GNAT_OSX_INSTALLER_URL=http://mirrors.cdn.adacore.com/art/5ce0322c31e87a8f1d4253fa
 os:
   - linux
 
@@ -18,39 +19,17 @@ cache:
     - $HOME/build_tools
 
 install:
-  # Check if the GNAT package is already available in the cache directory. If
-  # not, download it.
-  - >
-      test -f $GNAT_TAR_PATH ||
-      (mkdir -p $TOOLS_DIR &&
-       if [ "$TRAVIS_OS_NAME" = "osx" ]; then
-          wget $DARWIN_GNAT_URL -O $GNAT_TAR_PATH
-       else
-          wget $LINUX_GNAT_URL -O $GNAT_TAR_PATH
-       fi
-      )
-
-  # Extract GNAT from its package
-  - (mkdir -p ada-compiler && cd ada-compiler && tar --strip-components 1 -xzf $GNAT_TAR_PATH)
-
-  # Add GNAT to $PATH
-  - export PATH=$PWD/ada-compiler/bin:$PATH
-
-  # Checkout gprbuild
-  - git clone https://github.com/AdaCore/gprbuild libgpr-src
-
-  # Add e3-testsuite
-  - pip install git+https://github.com/AdaCore/e3-testsuite.git 
+  - export PATH=$INSTALL_DIR/bin:$PATH
+  - sh .travis-install.sh
 
 script:
-  # Show GNAT version for the record
-  - $PWD/ada-compiler/bin/gprbuild --version
+  # Build gnatcoll-core. Build only the static variant, as only one build is
+  # enough to check for errors: extra builds makes the Travis job longer for no
+  # gain.
+  - make build-static
 
-  - (cd libgpr-src && make libgpr.build && make libgpr.install)
-
-    # Build gnatcoll-core
-  - make all
-
+  # Run the testsuite. It will rebuild gnatcoll-core in gcov mode before
+  # running the tests, so that we have a coverage report.
   - (cd testsuite; ./run-tests --gcov)
 
 after_success:
