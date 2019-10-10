@@ -15,8 +15,7 @@ os:
 # up the process.
 cache:
   directories:
-    - /home/travis/build_tools
-    - /Users/travis/build_tools
+    - $HOME/build_tools
 
 install:
   # Check if the GNAT package is already available in the cache directory. If
