@@ -1,0 +1,4 @@
+project r is
+   for Object_Dir use "obj_r";
+   for Source_Dirs use ("src_r");
+end r;

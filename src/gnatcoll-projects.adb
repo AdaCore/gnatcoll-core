@@ -6391,6 +6391,34 @@ package body GNATCOLL.Projects is
       end if;
    end Extended_Project;
 
+   ------------------------------------
+   -- Extended_Projects_Source_Files --
+   ------------------------------------
+
+   function Extended_Projects_Source_Files
+     (Project : Project_Type) return GNATCOLL.VFS.File_Array_Access
+   is
+      P : Project_Type := Project;
+
+      Result, Files : GNATCOLL.VFS.File_Array_Access;
+   begin
+      if Project.Data = null
+        or else Project.Data.Files = null
+      then
+         return new File_Array (1 .. 0);
+      end if;
+
+      while P /= No_Project loop
+         Files := P.Source_Files (Recursive => False);
+         Append (Result, Files.all);
+         Unchecked_Free (Files);
+
+         P := Extended_Project (P);
+      end loop;
+
+      return Result;
+   end Extended_Projects_Source_Files;
+
    -----------------------
    -- Extending_Project --
    -----------------------

@@ -1,0 +1,10 @@
+description: >
+  Check gathering sources of all projects
+  extending a given one.
+data:
+    - "p.gpr"
+    - "q.gpr"
+    - "r.gpr"
+    - "src_p"
+    - "src_q"
+    - "src_r"

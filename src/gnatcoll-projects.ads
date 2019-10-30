@@ -730,6 +730,11 @@ package GNATCOLL.Projects is
    --  If Include_Externally_Built is False then source directories belonging
    --  to project marked "Externally_Built" will not be returned.
 
+   function Extended_Projects_Source_Files
+     (Project : Project_Type) return GNATCOLL.VFS.File_Array_Access;
+   --  Returns sources of the given project and of all projects it may possibly
+   --  extend.
+
    type File_And_Project is record
       File    : GNATCOLL.VFS.Virtual_File;
       Project : GNATCOLL.Projects.Project_Type;
