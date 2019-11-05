@@ -32,16 +32,18 @@ General:
 
 * `BUILD`: control the build options: `PROD` (default) or `DEBUG`
 
-* `PROCESSORS` : parallel compilation (default is 0, which uses all available
+* `PROCESSORS`: parallel compilation (default is 0, which uses all available
   cores)
 
 * `TARGET`: for cross-compilation, auto-detected for native platforms
 
 * `SOURCE_DIR`: for out-of-tree build
 
-* `INTEGRATED`: treat prefix as compiler installation (yes/no) this is so that
-  installed gnatcoll project can later be referenced as predefined project of
-  this compiler; this adds a normalized target subdir to prefix default is "no"
+* `INTEGRATED`: if `yes` (default is `no`), consider that `prefix` is where the
+  toolchain is installed and install GNATcoll in a target-dependent
+  subdirectory. This makes it possible to install GNATcoll multiple times for
+  the various compilers in the same prefix. Enable this only for cross
+  compilers.
 
 Module-specific:
 
