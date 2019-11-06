@@ -668,6 +668,7 @@ package body GNATCOLL.Utils is
    function Time_Value (Str : String) return Ada.Calendar.Time is
       First  : Integer := Str'First;
       Last   : Integer := Str'Last;
+      Subsecond : Duration := 0.0;
 
       --  When no timezone is specified by the user, UTC is assumed.
       TZ      : Duration := 0.0;
@@ -716,17 +717,25 @@ package body GNATCOLL.Utils is
          end if;
       end if;
 
-      --  Special case: UTC time zone speficied as 'Z'
+      --  Special case: UTC time zone specified as 'Z'
 
       if Str'Length > 1 and then Str (Last) = 'Z' then
          Last := Last - 1;
          TZ := 0.0;   --  date is given as UTC
       end if;
 
-      --  Ignore fraction of second
+      --  Treat fraction of seconds independently because GNAT.Calendar.Time_IO
+      --  doesn't handle them
 
       for S in reverse First .. Last loop
          if Str (S) = '.' then
+            for S2 in reverse S + 1 .. Last loop
+               Subsecond :=
+                  (Subsecond
+                   + Duration (Character'Pos (Str (S2)) - Character'Pos ('0'))
+                  ) * 0.1;
+            end loop;
+
             Last := S - 1;
             exit;
          end if;
@@ -757,7 +766,7 @@ package body GNATCOLL.Utils is
            (Ada.Calendar.Time_Zones.UTC_Time_Offset (Local)) * 60.0;
 
          --  Time zone offset (in seconds) for the local timezone
-         return Local + TZ + Local_TZ;
+         return Local + TZ + Local_TZ + Subsecond;
       end;
 
    exception
