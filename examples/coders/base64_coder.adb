@@ -1,9 +1,10 @@
 ------------------------------------------------------------------------------
---                             G N A T C O L L                              --
+--                                                                          --
+--                     G N A T C O L L   E X A M P L E S                    --
 --                                                                          --
 --                        Copyright (C) 2019, AdaCore                       --
 --                                                                          --
--- This library is free software;  you can redistribute it and/or modify it --
+-- This is free software;  you can redistribute it and/or modify it         --
 -- under terms of the  GNU General Public License  as published by the Free --
 -- Software  Foundation;  either version 3,  or (at your  option) any later --
 -- version. This library is distributed in the hope that it will be useful, --
@@ -20,9 +21,9 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
---
---  This demo encodes/decodes to/from base64 from standard intput to standard
---  output.
+
+--  This example encodes/decodes to/from base64 from standard input to
+--  standard output.
 
 with Ada.Streams;              use Ada.Streams;
 with Ada.Command_Line;         use Ada.Command_Line;
