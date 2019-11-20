@@ -1,0 +1,5 @@
+with "gnatcoll";
+
+project GPR_Sources is
+   for Main use ("gpr_sources.adb");
+end GPR_Sources;
