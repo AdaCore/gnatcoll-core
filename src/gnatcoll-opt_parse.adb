@@ -129,7 +129,8 @@ package body GNATCOLL.Opt_Parse is
 
    overriding function Usage
      (Self : Flag_Parser) return String
-   is ("[" & To_String (Self.Long) & "|" & To_String (Self.Short) & "]");
+   is ("[" & To_String (Self.Long) &
+       (if Self.Short = "" then "" else "|" & To_String (Self.Short)) & "]");
 
    overriding function Help_Name
      (Self : Flag_Parser) return String
@@ -266,9 +267,9 @@ package body GNATCOLL.Opt_Parse is
       end if;
    end Append_Text;
 
-   ----------------------
+   ---------------------------
    -- Set_Next_Start_Column --
-   ----------------------
+   ---------------------------
 
    procedure Set_Next_Start_Column
      (Self : in out Text_Wrapper; Col : Col_Type := 0) is
@@ -769,7 +770,7 @@ package body GNATCOLL.Opt_Parse is
 
       overriding function Usage
         (Self : Option_Parser) return String
-      is ("[" & Long & "|" & Short & " "
+      is ("[" & Long & (if Short = "" then "" else "|" & Short) & " "
           & To_Upper (Long (3 .. Long'Last)) & "]");
 
       overriding function Help_Name
@@ -875,7 +876,7 @@ package body GNATCOLL.Opt_Parse is
 
       overriding function Usage
         (Self : Option_List_Parser) return String
-      is ("[" & Long & "|" & Short & " "
+      is ("[" & Long & (if Short = "" then "" else "|" & Short) & " "
           & To_Upper (Long (3 .. Long'Last))
           & "[" & To_Upper (Long (3 .. Long'Last)) & "...]]");
 
