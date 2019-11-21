@@ -529,9 +529,13 @@ package body GNATCOLL.Opt_Parse is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array
       is
-        (if Self.Has_Result (Args)
-         then Internal_Result (Self.Get_Result (Args).all).Results.all
-         else No_Results);
+        (if Enabled
+         then (if Self.Has_Result (Args)
+               then Internal_Result (Self.Get_Result (Args).all).Results.all
+               else No_Results)
+         elsif Allow_Empty
+         then (1 .. 0 => <>)
+         else raise Disabled_Error);
 
       ----------------
       -- Parse_Args --
@@ -587,9 +591,11 @@ package body GNATCOLL.Opt_Parse is
       end Release;
 
    begin
-      Parser.Data.Positional_Args_Parsers.Append (Self);
-      Parser.Data.All_Parsers.Append (Self);
-      Self.Position := Parser.Data.All_Parsers.Last_Index;
+      if Enabled then
+         Parser.Data.Positional_Args_Parsers.Append (Self);
+         Parser.Data.All_Parsers.Append (Self);
+         Self.Position := Parser.Data.All_Parsers.Last_Index;
+      end if;
    end Parse_Positional_Arg_List;
 
    --------------------------
@@ -636,7 +642,9 @@ package body GNATCOLL.Opt_Parse is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
       is
-        (Internal_Result (Self.Get_Result (Args).all).Result);
+        (if Enabled
+         then Internal_Result (Self.Get_Result (Args).all).Result
+         else raise Disabled_Error);
 
       ----------------
       -- Parse_Args --
@@ -668,9 +676,11 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      Parser.Data.Positional_Args_Parsers.Append (Self);
-      Parser.Data.All_Parsers.Append (Self);
-      Self.Position := Parser.Data.All_Parsers.Last_Index;
+      if Enabled then
+         Parser.Data.Positional_Args_Parsers.Append (Self);
+         Parser.Data.All_Parsers.Append (Self);
+         Self.Position := Parser.Data.All_Parsers.Last_Index;
+      end if;
    end Parse_Positional_Arg;
 
    ----------------
@@ -723,21 +733,28 @@ package body GNATCOLL.Opt_Parse is
       ---------
 
       function Get
-        (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean
-      is
-         R : constant Parser_Result_Access := Self.Get_Result (Args);
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean is
       begin
-         if R /= null then
-            return Flag_Parser_Result (R.all).Result;
-         else
+         if not Enabled then
             return False;
          end if;
+         declare
+            R : constant Parser_Result_Access := Self.Get_Result (Args);
+         begin
+            if R /= null then
+               return Flag_Parser_Result (R.all).Result;
+            else
+               return False;
+            end if;
+         end;
       end Get;
 
    begin
-      Parser.Data.Opts_Parsers.Append (Self);
-      Parser.Data.All_Parsers.Append (Self);
-      Self.Position := Parser.Data.All_Parsers.Last_Index;
+      if Enabled then
+         Parser.Data.Opts_Parsers.Append (Self);
+         Parser.Data.All_Parsers.Append (Self);
+         Self.Position := Parser.Data.All_Parsers.Last_Index;
+      end if;
    end Parse_Flag;
 
    ------------------
@@ -789,15 +806,20 @@ package body GNATCOLL.Opt_Parse is
       ---------
 
       function Get
-        (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
-      is
-         R : constant Parser_Result_Access := Self.Get_Result (Args);
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type is
       begin
-         if R /= null then
-            return Internal_Result (R.all).Result;
-         else
+         if not Enabled then
             return Default_Val;
          end if;
+         declare
+            R : constant Parser_Result_Access := Self.Get_Result (Args);
+         begin
+            if R /= null then
+               return Internal_Result (R.all).Result;
+            else
+               return Default_Val;
+            end if;
+         end;
       end Get;
 
       ----------------
@@ -831,9 +853,11 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      Parser.Data.Opts_Parsers.Append (Self);
-      Parser.Data.All_Parsers.Append (Self);
-      Self.Position := Parser.Data.All_Parsers.Last_Index;
+      if Enabled then
+         Parser.Data.Opts_Parsers.Append (Self);
+         Parser.Data.All_Parsers.Append (Self);
+         Self.Position := Parser.Data.All_Parsers.Last_Index;
+      end if;
    end Parse_Option;
 
    -----------------------
@@ -891,23 +915,28 @@ package body GNATCOLL.Opt_Parse is
       ---------
 
       function Get
-        (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array
-      is
-         R : constant Parser_Result_Access := Self.Get_Result (Args);
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array is
       begin
-         if R /= null then
-            declare
-               Res : Result_Array
-                 (1 .. Internal_Result (R.all).Results.Last_Index);
-            begin
-               for I in Res'Range loop
-                  Res (I) := Internal_Result (R.all).Results (I);
-               end loop;
-               return Res;
-            end;
-         else
-            return No_Results;
+         if not Enabled then
+            return (1 .. 0 => <>);
          end if;
+         declare
+            R : constant Parser_Result_Access := Self.Get_Result (Args);
+         begin
+            if R /= null then
+               declare
+                  Res : Result_Array
+                    (1 .. Internal_Result (R.all).Results.Last_Index);
+               begin
+                  for I in Res'Range loop
+                     Res (I) := Internal_Result (R.all).Results (I);
+                  end loop;
+                  return Res;
+               end;
+            else
+               return No_Results;
+            end if;
+         end;
       end Get;
 
       ----------------
@@ -983,9 +1012,11 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      Parser.Data.Opts_Parsers.Append (Self);
-      Parser.Data.All_Parsers.Append (Self);
-      Self.Position := Parser.Data.All_Parsers.Last_Index;
+      if Enabled then
+         Parser.Data.Opts_Parsers.Append (Self);
+         Parser.Data.All_Parsers.Append (Self);
+         Self.Position := Parser.Data.All_Parsers.Last_Index;
+      end if;
    end Parse_Option_List;
 
    ----------------------------
