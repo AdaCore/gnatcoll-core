@@ -47,48 +47,58 @@ package GNATCOLL.Opt_Parse is
    --  with Ada.Text_IO;           use Ada.Text_IO;
    --  with GNATCOLL.Opt_Parse;    use GNATCOLL.Opt_Parse;
    --
-   --  procedure Main is
+   --  .. code:: ada
    --
-   --     package Arg is
-   --        Parser : Argument_Parser := Create_Argument_Parser
-   --          (Help => "Help string for the parser");
+   --     procedure Main is
    --
-   --        package Files is new Parse_Positional_Arg_List
-   --          (Parser   => Parser,
-   --           Name     => "files",
-   --           Arg_Type => Unbounded_String,
-   --           Help     => "The files to parse");
+   --        package Arg is
+   --           Parser : Argument_Parser := Create_Argument_Parser
+   --             (Help => "Help string for the parser");
    --
-   --        package Quiet is new Parse_Flag
-   --          (Parser => Parser,
-   --           Short  => "-q",
-   --           Long   => "--quiet",
-   --           Help   => "Whether the tool should be quiet or not");
+   --           package Files is new Parse_Positional_Arg_List
+   --             (Parser   => Parser,
+   --              Name     => "files",
+   --              Arg_Type => Unbounded_String,
+   --              Help     => "The files to parse");
    --
-   --        package Charset is new Parse_Option
-   --          (Parser      => Parser,
-   --           Short       => "-C",
-   --           Long        => "--charset",
-   --           Arg_Type    => Unbounded_String,
-   --           Help        =>
-   --              "What charset to use for the analysis context. "
-   --              & "Default is ""latin-1""",
-   --           Default_Val => To_Unbounded_String ("latin-1"));
-   --     end Arg;
+   --           package Quiet is new Parse_Flag
+   --             (Parser => Parser,
+   --              Short  => "-q",
+   --              Long   => "--quiet",
+   --              Help   => "Whether the tool should be quiet or not");
    --
-   --  begin
+   --           package Charset is new Parse_Option
+   --             (Parser      => Parser,
+   --              Short       => "-C",
+   --              Long        => "--charset",
+   --              Arg_Type    => Unbounded_String,
+   --              Help        =>
+   --                 "What charset to use for the analysis context. "
+   --                 & "Default is ""latin-1""",
+   --              Default_Val => To_Unbounded_String ("latin-1"));
+   --        end Arg;
    --
-   --     if Arg.Parser.Parse then
+   --     begin
    --
-   --        Put_Line ("Charset = " & To_String (Arg.Charset.Get));
-   --        for F of Arg.Files.Get loop
-   --           if not Arg.Quiet.Get then
-   --              Put_Line ("Got file " & To_String (F));
-   --           end if;
-   --        end loop;
-   --     end if;
+   --        if Arg.Parser.Parse then
    --
-   --  end Main;
+   --           Put_Line ("Charset = " & To_String (Arg.Charset.Get));
+   --           for F of Arg.Files.Get loop
+   --              if not Arg.Quiet.Get then
+   --                 Put_Line ("Got file " & To_String (F));
+   --              end if;
+   --           end loop;
+   --        end if;
+   --
+   --     end Main;
+   --
+   --  All generic packages for argument parsers accept an ``Enabled`` formal,
+   --  set to True by default. When set to False, it cancels the registration
+   --  of the argument parser. In this case, depending on the argument
+   --  specifics, calling its ``Get`` primitive may return a default value or
+   --  raise a ``Disabled_Error`` exception. This feature is useful to disable
+   --  one or several options depending on some compile-time configuration
+   --  without using complex declarations blocks nested in ``if`` statements.
 
    ------------------------
    --  General API types --
@@ -150,6 +160,10 @@ package GNATCOLL.Opt_Parse is
    --  also the exception that you should raise in conversion functions when
    --  receiving an invalid value.
 
+   Disabled_Error : exception;
+   --  Exception raised when trying to get the value of a disabled argument
+   --  parser that is not a list and provides no default value.
+
    --------------------------------
    --  Specific argument parsers --
    --------------------------------
@@ -174,6 +188,10 @@ package GNATCOLL.Opt_Parse is
       with function Convert (Arg : String) return Arg_Type is <>;
       --  Conversion function to convert from a raw string argument to the
       --  argument type.
+
+      Enabled : Boolean := True;
+      --  Whether to add this argument parser. Note that if it is disabled and
+      --  Allow_Empty is False, Get will raise a Disabled_Error.
 
    package Parse_Positional_Arg_List is
       type Result_Array is array (Positive range <>) of Arg_Type;
@@ -206,6 +224,10 @@ package GNATCOLL.Opt_Parse is
       --  Conversion function to convert from a raw string argument to the
       --  argument type.
 
+      Enabled : Boolean := True;
+      --  Whether to add this argument parser. Note that if it is disabled, Get
+      --  will raise a Disabled_Error.
+
    package Parse_Positional_Arg is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
@@ -226,6 +248,10 @@ package GNATCOLL.Opt_Parse is
 
       Help : String := "";
       --  Help string for the argument.
+
+      Enabled : Boolean := True;
+      --  Whether to add this argument parser
+
    package Parse_Flag is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean;
@@ -256,6 +282,9 @@ package GNATCOLL.Opt_Parse is
 
       Default_Val : Arg_Type;
       --  Default value if the option is not passed.
+
+      Enabled : Boolean := True;
+      --  Whether to add this argument parser
 
    package Parse_Option is
       function Get
@@ -291,6 +320,9 @@ package GNATCOLL.Opt_Parse is
       with function Convert (Arg : String) return Arg_Type is <>;
       --  Conversion function to convert from a raw string argument to the
       --  argument type.
+
+      Enabled : Boolean := True;
+      --  Whether to add this argument parser
 
    package Parse_Option_List is
       type Result_Array is array (Positive range <>) of Arg_Type;
