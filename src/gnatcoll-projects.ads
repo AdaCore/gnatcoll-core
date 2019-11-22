@@ -400,12 +400,15 @@ package GNATCOLL.Projects is
    procedure Set_Default_Gnatls
      (Self         : in out Project_Environment;
       Gnatls       : String);
+   No_Gnatls : constant String;
    --  Set the default gnatls to run (before a project is loaded).
    --  This impacts the default path on which projects are looked for, but
    --  will be overridden if the user has specified an IDE.Gnatlist attribute
    --  in his project.
    --  This procedure is now deprecated, and we recommend that project use the
    --  Runtime and Target attributes instead. See Set_Target_And_Runtime below.
+   --  When No_Gnatls is set no attempts to invoke gnatls are made when loading
+   --  a project.
 
    procedure Set_Target_And_Runtime
      (Self    : in out Project_Environment;
@@ -2355,6 +2358,8 @@ private
    --  (Get_Languages,...)
    Languages_Attribute        : constant Attribute_Pkg_List := "languages";
    Exec_Dir_Attribute         : constant Attribute_Pkg_String := "exec_dir";
+
+   No_Gnatls : constant String := "#no-gnatls#";
 
    No_Project : aliased constant Project_Type :=
      (Ada.Finalization.Controlled with Data => null);

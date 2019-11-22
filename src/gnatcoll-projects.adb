@@ -7900,11 +7900,15 @@ package body GNATCOLL.Projects is
       Fd      : Process_Descriptor_Access;
 
    begin
-      if Self.Gnatls /= null
-        and then Self.Gnatls.all = Gnatls
-      then
-         Trace (Me, "Gnatls was already run with same arguments: " & Gnatls);
-         return;
+      if Self.Gnatls /= null then
+         if Self.Gnatls.all = Gnatls then
+            Trace
+              (Me, "Gnatls was already run with same arguments: " & Gnatls);
+            return;
+         elsif Self.Gnatls.all = No_Gnatls then
+            Trace (Me, "Gnatls should not be invoked");
+            return;
+         end if;
       end if;
 
       Free (Self.Gnatls);
