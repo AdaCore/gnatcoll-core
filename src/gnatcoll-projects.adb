@@ -7782,8 +7782,9 @@ package body GNATCOLL.Projects is
       function Process_Gnatls (Gnatls : String) return Boolean;
       function Process_Gnatls (Gnatls : String) return Boolean is
       begin
-         if Tree.Data.Env.Gnatls = null
-            or else Tree.Data.Env.Gnatls.all /= Gnatls
+         if Tree.Data.Env.Gnatls = null or else
+           (Tree.Data.Env.Gnatls.all /= Gnatls and then
+            Tree.Data.Env.Gnatls.all /= No_Gnatls)
          then
             Tree.Data.Env.Set_Path_From_Gnatls
                (Gnatls       => Gnatls,
