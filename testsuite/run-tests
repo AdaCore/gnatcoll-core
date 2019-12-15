@@ -41,7 +41,7 @@ class MyTestsuite(Testsuite):
             default=False,
             action="store_true")
 
-    def tear_up(self):
+    def set_up(self):
         self.env.gcov = self.main.args.gcov
         self.env.gnatcov = self.main.args.gnatcov
         self.env.valgrind = self.main.args.valgrind

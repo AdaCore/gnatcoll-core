@@ -22,18 +22,21 @@
 ------------------------------------------------------------------------------
 
 with Ada.Text_IO;
+with Ada.Directories;
 with GNATCOLL.Config;
 with Test_Assert;
 
 function Test return Integer is
 
    package IO renames Ada.Text_IO;
+   package Dir renames Ada.Directories;
    package A renames Test_Assert;
    package Cfg renames GNATCOLL.Config;
 
    Ini  : Cfg.INI_Parser;
    Ini2 : Cfg.INI_Parser;
    Ini3 : Cfg.INI_Parser;
+   Sys  : Cfg.INI_Parser;
    Pool : Cfg.Config_Pool;
 
 begin
@@ -153,6 +156,29 @@ begin
       when others =>
          A.Assert (False, "parsing test6.ini");
    end;
+
+   --  Check system_id related functionality
+   IO.Put_Line ("Loading test_sys.ini");
+   Sys.Set_System_Id (Dir.Current_Directory);
+   Sys.Open ("test_as.ini");
+   A.Assert (Sys.As_Absolute_File, Dir.Full_Name ("test1.ini"),
+             "check if file name is correctly retrieved from system ID");
+   Sys.Next;
+   declare
+      D : constant String := Sys.As_Absolute_Dir;
+   begin
+      A.Assert (D (D'First .. D'Last - 1), Dir.Full_Name (".."), --  strip sep
+                "check if dir is correctly retrieved from system ID");
+   end;
+
+   --  Check the rest of As_* functionality
+   Sys.Next;
+   A.Assert (Sys.As_Boolean,
+             "check if boolean is correctly retrieved");
+   Sys.Next;
+   A.Assert (Sys.As_Integer, 15,
+             "check if integer is correctly retrieved");
+
    return A.Report;
 
 end Test;
