@@ -1,0 +1,5 @@
+description: email data and parse test.
+data:
+    - "*.mbx"
+
+# The test set is derived from mailutils testsuite
