@@ -1,0 +1,15 @@
+=== Create chain
+Resolving...
+Convert_Int.On_Next  input= 2
+Convert_Float.On_Next  input= 2.00000E+00
+Display_String.On_Next  input=value was 2.00000E+00
+Display_String.On_Next  input=value was 2.00000E+00
+Display_Int.On_Next  input= 2
+=== Create chain, will Fail
+Failing...
+Display_String.Failed because Explicit failure
+=== Create chain, will Fail in middle
+Convert_Int.On_Next  input= 3
+Fail_On_Float: mark output as failed
+Display_String.Failed because explicit
+Display_String.Failed because explicit

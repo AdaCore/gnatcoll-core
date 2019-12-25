@@ -61,6 +61,8 @@ package body Test_Assert is
          IO.Put (" " & Msg);
       end if;
       IO.New_Line;
+
+      Assert_Count := Assert_Count + 1;
    end Assert;
 
    ------------------

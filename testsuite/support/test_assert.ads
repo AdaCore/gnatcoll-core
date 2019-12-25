@@ -82,6 +82,12 @@ package Test_Assert is
    --  If Left = Right then test case is considered PASSED, otherwise
    --  the test status is FAILED and Final_Status set to 1.
 
+   Assert_Count : Natural := 0;
+   --  Incremented every time an assert is called. Can be checked against a
+   --  specific value to verify that the expected number of Asserts triggered,
+   --  when their number depends on execution, e.g. if they are called from
+   --  inside callbacks or conditional branches.
+
    function Report return Natural;
    --  Report should be called the following way at the end of a test
    --  program main function:
