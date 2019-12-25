@@ -22,7 +22,7 @@
 ------------------------------------------------------------------------------
 
 --   A promise (also known sometimes as a future or deferred) is a
---   a synchronization mechanism between asynchronous routines.
+--   synchronization mechanism between asynchronous routines.
 --
 --   Such routines could be implemented as tasks, but also be handled
 --   via the system's asynchronous I/O primitives, or an event loop in a
