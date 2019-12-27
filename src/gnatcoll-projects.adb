@@ -73,6 +73,8 @@ with GPR.Sdefault;
 
 package body GNATCOLL.Projects is
 
+   package GU renames GNATCOLL.Utils;
+
    Me    : constant Trace_Handle := Create ("Projects", Default => Off);
    Debug : constant Trace_Handle := Create ("Projects.Debug", Default => Off);
    Me_Gnat : constant Trace_Handle :=
@@ -8082,13 +8084,14 @@ package body GNATCOLL.Projects is
       while F <= Output'Last loop
          L := EOL (Output (F .. Output'Last));
 
-         if Starts_With (Output (F .. L - 1), "Source Search Path:") then
+         if GU.Starts_With (Output (F .. L - 1), "Source Search Path:") then
             Set_Context (Source_Path);
 
-         elsif Starts_With (Output (F .. L - 1), "Object Search Path:") then
+         elsif GU.Starts_With (Output (F .. L - 1), "Object Search Path:") then
             Set_Context (Object_Path);
 
-         elsif Starts_With (Output (F .. L - 1), "Project Search Path:") then
+         elsif GU.Starts_With (Output (F .. L - 1), "Project Search Path:")
+         then
             Set_Context (Project_Path);
 
          elsif Context /= None then
