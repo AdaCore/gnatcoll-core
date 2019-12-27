@@ -27,6 +27,8 @@ with GNAT.Strings;       use GNAT.Strings;
 with GNATCOLL.OS.Constants;
 
 with Ada.Directories;
+with Ada.Containers.Hashed_Maps;
+with Interfaces.C.Strings;
 
 with Test_Assert;
 
@@ -40,11 +42,11 @@ function Test return Integer is
    --  Perform tests on a specific file
 
    procedure Test_F (Dir : Virtual_File) is
-      D, F    : Virtual_File;
-      W       : Writable_File;
-      Str     : String_Access;
-      Success : Boolean;
-      Files   : File_Array_Access;
+      D, F        : Virtual_File;
+      W           : Writable_File;
+      Str         : String_Access;
+      Success     : Boolean;
+      Dirs, Files : File_Array_Access;
    begin
       --  A file that does not exist yet
       F := Create_From_Dir
@@ -57,12 +59,17 @@ function Test return Integer is
       A.Assert (+F.File_Extension, ".txt", "file extension");
       A.Assert (Is_Absolute_Path (F), "is absolute");
       A.Assert (not Is_Regular_File (F), "is regular file");
+      A.Assert (+Relative_Path (F, Dir), "foo.txt", "relative path");
+      A.Assert (Has_Suffix (F, "t"), "has suffix");
+      A.Assert (not Is_Symbolic_Link (F), "is symlink");
 
       --  Now create the file
 
       W := Write_File (F);
       Write (W, "first word ");
-      Write (W, "second word");
+      Close (W);
+      W := Write_File (F, Append => True);
+      Write (W, Interfaces.C.Strings.New_String ("second word"));
       Close (W);
 
       --  Check whether the file exists
@@ -74,6 +81,7 @@ function Test return Integer is
 
       Set_Readable (F, False);
       A.Assert (Is_Regular_File (F), "is regular file when unreadable");
+      A.Assert (not Is_Readable (F), "is readable");
 
       --  Try and read the file
 
@@ -88,9 +96,15 @@ function Test return Integer is
       Set_Readable (F, True);
       Str := Read_File (F);
       A.Assert (Str.all, "first word second word", "contents when readable");
+      A.Assert (Integer (Size (F)), Str.all'Length, "file size");
       Free (Str);
 
-      --  Check contents of directory
+      --  Make the file read-only
+
+      Set_Writable (F, False);
+      A.Assert (not Is_Writable (F), "is writable");
+
+      --  Check directory operations
 
       A.Assert (Is_Directory (Dir), "is directory");
 
@@ -98,10 +112,25 @@ function Test return Integer is
       Make_Dir (D, Recursive => True);
       W := Write_File (Create_From_Dir (D, "foo"));
       Close (W);
-      W := Write_File (Create_From_Dir (D, "bar.txt"));
+      W := Write_File (Create_From_UTF8 (+Full_Name (D) & "/bar"));
       Close (W);
-      Files := Read_Dir_Recursive (D, Extension => ".txt");
-      A.Assert (Files.all'Length, 1, "files found");
+      Rename (D / "bar", Create_From_Dir (D, "bar.txt"), Success);
+      A.Assert (Success, "rename");
+      Copy (D, "sub/sub2", Success);
+      A.Assert (Success, "copy");
+      Remove_Dir (D, Recursive => False, Success => Success);
+      A.Assert (not Success, "remove dir (non-recursive)");
+      Dirs := Read_Dir_Recursive
+         (Create_From_Dir (Dir, "sub"), Filter => Dirs_Only);
+      A.Assert (Dirs.all'Length, 2, "dirs found");
+      Files := Read_Files_From_Dirs (Dirs.all);
+      A.Assert (Files.all'Length, 4, "files found");
+      Unchecked_Free (Files);
+      Unchecked_Free (Dirs);
+      Remove_Dir (D, Recursive => True, Success => Success);
+      A.Assert (Success, "remove dir (recursive)");
+      Files := Read_Dir_Recursive (Dir, Extension => ".txt");
+      A.Assert (Files.all'Length, 2, "txt files found");
       Unchecked_Free (Files);
 
       --  Delete the file
@@ -137,11 +166,29 @@ begin
         (Dir => Get_Current_Dir, Base_Name => "default_pref.py");
       Default_Pref_Pyc : constant Virtual_File := Create_From_Dir
         (Dir => Get_Current_Dir, Base_Name => "default_pref.pyc");
+
+      package Maps is new Ada.Containers.Hashed_Maps
+         (Virtual_File, Integer, Full_Name_Hash, "=");
+      use Maps;
+      M : Maps.Map;
+      C : Maps.Cursor;
+      F1, F2 : Virtual_File;
    begin
       A.Assert (Default_Pref_Py < Default_Pref_Pyc,
                 "default_pref.py < default_pref.pyc");
       A.Assert (not (Default_Pref_Pyc < Default_Pref_Py),
                 "default_pref.pyc < default_pref.py");
+
+      --  Check mapping functionality
+
+      F1 := Create ("/a/b");
+      M.Include (F1, 2);
+
+      F2 := Create ("/a/b/c");
+      F2 := F2.Get_Parent;    --  "/a/b/"
+      C := M.Find (F2);
+
+      A.Assert (Has_Element (C), "find parent in map");
    end;
 
    return A.Report;
