@@ -126,7 +126,7 @@
 --          This combines with the DEBUG.COLORS settings.
 --          Setting this to "on" or "true" forces color output, to
 --          "off" or "false" disables colors, and "auto" will try and
---          autodetect whether the terminal supports colors.
+--          auto-detect whether the terminal supports colors.
 --          For Windows users, note that colors are only supported via
 --          the use of ANSI sequences (see gnatcoll-terminal.ads)
 
@@ -235,7 +235,7 @@
 --     >&2               --  defines the default stream
 --     DEBUG.COLORS=yes  --  enable colors
 --     PKG1=no           --  do not show
---     PKG2=yes          --  to the default stream, ie stderr
+--     PKG2=yes          --  to the default stream, i.e. stderr
 --     PKG3=yes >file    --  to the file "file" in current directory
 --     PKG4=yes >&syslog --  to syslog, see gnat-traces-syslog.ads
 
@@ -478,7 +478,7 @@ package GNATCOLL.Traces is
        Bg    => Terminal.Grey));
    --  The various colors that can be applied to text. You can combine a
    --  foreground and a background color by concatenating the strings.
-   --  !!! This constants provided for backward compartibility. Use Style
+   --  !!! This constants provided for backward compatibility. Use Style
    --  parameter instead in new applications.
 
    subtype Message_Style is GNATCOLL.Terminal.Full_Style;
@@ -836,7 +836,7 @@ package GNATCOLL.Traces is
       Handle : not null Logger;
       Msg    : in out Msg_Strings.XString) is null;
    --  You can override either of these two procedures to create your own
-   --  decorators to specific trace handles (ie additional information) each
+   --  decorators to specific trace handles (i.e. additional information) each
    --  time some message is logged. These functions are only called for the
    --  handles passed to Add_Global_Decorator.
    --

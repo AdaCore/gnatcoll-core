@@ -550,7 +550,7 @@ package GNATCOLL.Projects is
       Dir  : GNATCOLL.VFS.Filesystem_String);
    function Root_Dir
      (Self : Project_Environment) return GNATCOLL.VFS.Filesystem_String;
-   --  Is only revelant when Build_Tree_Dir is set, this is used to keep
+   --  Is only relevant when Build_Tree_Dir is set, this is used to keep
    --  information about the root directory of artifacts to properly relocate
    --  them.
 
@@ -1561,7 +1561,7 @@ package GNATCOLL.Projects is
      (Project      : Project_Type;
       Attribute    : Attribute_Pkg_List;
       Use_Extended : Boolean := False) return GNAT.Strings.String_List;
-   --  Return the list of indices that are in use for this attribute (ie the
+   --  Return the list of indices that are in use for this attribute (i.e. the
    --  set of values that you can use in the call to Attribute_Value such that
    --  there is a corresponding attribute in the project file).
    --  The returned value must be freed by the user (see GNATCOLL.Utils.Free).
@@ -2094,8 +2094,8 @@ private
       TTY_Process_Descriptor_Disabled : Boolean := False;
       --  when TTY_Process_Descriptor are disabled, Process_Descriptor are
       --  used instead of TTY_Process_Descriptor to workaround incompatibility.
-      --  Known incompatibility: java IOException found when gnatcoll-projects
-      --  used from Java on linux through AJIS.
+      --  Known incompatibility: Java IOException found when gnatcoll-projects
+      --  used from Java on Linux through AJIS.
       --  For more information see Set_Disable_Use_Of_TTY_Process_Descriptor
       --  procedure comment.
 

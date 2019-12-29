@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2018, AdaCore                     --
+--                     Copyright (C) 2010-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -23,11 +23,11 @@
 
 --  This package implements resource pools.
 --  The resources are created once (the first time they are needed). The
---  application can then get a temporary exclusive handle on a resource (ie if
---  another part of the application is also requesting a resource, it will in
---  fact retrieve another instance). When the resource is no longer used by the
---  application, it is automatically released into the pool, and will be reused
---  the next time the application requests a resource.
+--  application can then get a temporary exclusive handle on a resource (i.e.
+--  if another part of the application is also requesting a resource, it will
+--  in fact retrieve another instance). When the resource is no longer used by
+--  the application, it is automatically released into the pool, and will be
+--  reused the next time the application requests a resource.
 --
 --  A typical usage is when the resource creation is expensive, such as a pool
 --  of database connections.
@@ -135,7 +135,7 @@ package GNATCOLL.Pools is
 
    procedure Free;
    --  Detach all resources from the pool.
-   --  Any resource that is not in use elsewhere (ie retrieved by Get) will
+   --  Any resource that is not in use elsewhere (i.e. retrieved by Get) will
    --  get freed (and the corresponding [Free] formal subprogram will be
    --  called).
 
@@ -144,7 +144,7 @@ package GNATCOLL.Pools is
 
    function Get_Factory_Param
      (Set : Resource_Set := Default_Set) return access Factory_Param;
-   --  Returns a the factory param used for the set.
+   --  Returns the Factory_Param used for the set.
    --  Remember that the factory will not be called again for resources that
    --  have already been created, even if they have been released to the pool
    --  since then.

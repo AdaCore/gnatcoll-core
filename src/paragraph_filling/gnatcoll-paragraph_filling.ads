@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2017, AdaCore                     --
+--                     Copyright (C) 2011-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,7 +27,7 @@ with Ada.Strings.Unbounded;
 
 package GNATCOLL.Paragraph_Filling is
 
-   --  This purpose of this package is to format paragraphs to take up the
+   --  The purpose of this package is to format paragraphs to take up the
    --  minimal number of lines and to look better.
 
    --  Note: All subprograms in this package that take or return a String

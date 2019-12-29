@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2017, AdaCore                     --
+--                     Copyright (C) 2005-2019, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,7 +25,7 @@
 --  allocation mechanism. Its goal is to provide an additional monitoring
 --  facility to check where your program allocates memory.
 --
---  To activate this alternates implementation in your application, you
+--  To activate this alternative implementation in your application, you
 --  must provide your own s-memory.adb somewhere in your source directories.
 --  Then simply recompile the modified body of that package with
 --  gnatmake -u -a -g s-memory.adb (or use the -a switch when you compile

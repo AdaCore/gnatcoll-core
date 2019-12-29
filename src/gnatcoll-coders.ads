@@ -123,7 +123,7 @@ private
       with procedure Read
         (Item : out Stream_Element_Array;
          Last : out Stream_Element_Offset);
-      --  User should provide data to transcode thru this routine
+      --  User should provide data to transcode through this routine
 
       Buffer : in out Stream_Element_Array;
       --  Buffer to keep remaining data from the previous back read

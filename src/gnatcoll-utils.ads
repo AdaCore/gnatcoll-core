@@ -273,7 +273,7 @@ package GNATCOLL.Utils is
 
    procedure Add_Search_Path (Variable : String; Path : String);
    --  Prepend a path to an environment variable containing a list of paths.
-   --  If Path is already in the search list, subsequent occurences will be
+   --  If Path is already in the search list, subsequent occurrences will be
    --  removed and thus limit final path value size.
 
    -----------

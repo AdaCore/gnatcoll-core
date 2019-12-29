@@ -76,7 +76,7 @@ Writing tests
 -------------
 
 Testcases are found in the ``tests`` subdirectory. A testcase is a directory
-containing the a file called `test.yaml`.
+containing the file called `test.yaml`.
 
 A ``test.yaml`` looks like:
 
