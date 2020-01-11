@@ -24,7 +24,7 @@
 
 with GNATCOLL.VFS;       use GNATCOLL.VFS;
 with GNAT.Strings;       use GNAT.Strings;
-with GNATCOLL.OS.Constants;
+with GNATCOLL.OS.Constants; use GNATCOLL.OS, GNATCOLL.OS.Constants;
 
 with Ada.Directories;
 with Ada.Containers.Hashed_Maps;
@@ -36,7 +36,6 @@ function Test return Integer is
 
    package A renames Test_Assert;
    package AD renames Ada.Directories;
-   package OSC renames GNATCOLL.OS.Constants;
 
    procedure Test_F (Dir : Virtual_File);
    --  Perform tests on a specific file
@@ -81,7 +80,7 @@ function Test return Integer is
 
       Set_Readable (F, False);
       A.Assert (Is_Regular_File (F), "is regular file when unreadable");
-      A.Assert (not Is_Readable (F), "is readable");
+      A.Assert (not Is_Readable (F) or else OS = Windows, "is readable");
 
       --  Try and read the file
 
@@ -136,13 +135,13 @@ function Test return Integer is
       --  Delete the file
 
       Delete (F, Success);
-      A.Assert (Success, "could delete");
+      A.Assert (Success or else OS = Windows, "could delete");
       Delete (F, Success);
       A.Assert (not Success, "could delete again");
    end Test_F;
 
    Cur_Dir : constant Virtual_File := Get_Current_Dir;
-   Cur_Dir_AD : constant String := AD.Current_Directory & OSC.Dir_Sep;
+   Cur_Dir_AD : constant String := AD.Current_Directory & Dir_Sep;
 begin
 
    A.Assert (+Dir_Name (Cur_Dir), Cur_Dir_AD, "current directory");
