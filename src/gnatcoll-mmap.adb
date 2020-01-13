@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2020, AdaCore                     --
+--                     Copyright (C) 2007-2017, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -25,13 +25,10 @@ with Ada.IO_Exceptions;
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.Mmap.System;       use GNATCOLL.Mmap.System;
 with GNATCOLL.Strings;           use GNATCOLL.Strings;
-with GNATCOLL.Traces;            use GNATCOLL.Traces;
 with System;                     use System;
 with System.Storage_Elements;    use System.Storage_Elements;
 
 package body GNATCOLL.Mmap is
-
-   Me : constant Trace_Handle := Create ("GNATCOLL.MMAP", Default => Off);
 
    type Mapped_File_Record is record
       Current_Region     : Mapped_Region;
@@ -446,8 +443,6 @@ package body GNATCOLL.Mmap is
       Region : Mapped_Region renames File.Current_Region;
       Result : String_Access;
    begin
-      Trace (Me, "Read_Whole_File called for filename: " & Filename);
-
       Read (File);
 
       if Region.Data /= Standard.System.Null_Address then
