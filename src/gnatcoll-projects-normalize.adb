@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2019, AdaCore                     --
+--                     Copyright (C) 2002-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -2632,8 +2632,7 @@ package body GNATCOLL.Projects.Normalize is
          return Result;
       end Convert_Dir_Separators;
 
-      Vals : constant GNAT.Strings.String_List :=
-        Convert_Dir_Separators (Values);
+      Vals : GNAT.Strings.String_List := Convert_Dir_Separators (Values);
 
       procedure Add_Or_Replace
         (Tree_Node      : GPR.Project_Node_Tree_Ref;
@@ -2724,6 +2723,7 @@ package body GNATCOLL.Projects.Normalize is
          Scenario  => Scenario,
          Index     => Index,
          Callback  => Add_Or_Replace'Unrestricted_Access);
+      Free (Vals);
    end Set_Attribute;
 
    ----------------------
