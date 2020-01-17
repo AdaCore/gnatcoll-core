@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2019, AdaCore                     --
+--                     Copyright (C) 2002-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1651,26 +1651,106 @@ package body GNATCOLL.Projects is
       Name            : GNATCOLL.VFS.Filesystem_String)
       return File_Info
    is
-      Curs       : Names_Files.Cursor;
-      File       : Virtual_File;
-      Source     : Source_File_Data;
-      Imports    : Boolean;
-      Result     : File_Info;
-      Iter       : Project_Iterator;
+      function Find_From_Base_Name
+        (Name : GNATCOLL.VFS.Filesystem_String) return File_Info;
+      --  Find the File_Info from the given base name
 
-   begin
-      if Project_Type (Self) = No_Project then
-         return File_Info'
-           (File         => Create (Name),
+      function Create_From_Full_Name (File : Virtual_File) return File_Info;
+      --  Create File_Info from the given file
+
+      -------------------------
+      -- Find_From_Base_Name --
+      -------------------------
+
+      function Find_From_Base_Name
+        (Name : GNATCOLL.VFS.Filesystem_String) return File_Info
+      is
+         Curs       : Names_Files.Cursor;
+         File       : Virtual_File;
+         Source     : Source_File_Data;
+         Imports    : Boolean;
+         Iter       : Project_Iterator;
+      begin
+         --  Amongst all the files with the right basename, search the one, if
+         --  any, that is visible from Self.
+
+         Curs := Self.Data.Tree_For_Map.Sources.Find (Name);
+         if Has_Element (Curs) then
+            --  Check amongst all possibilities which one is in Self or its
+            --  imported projects.
+
+            Source := Element (Curs);
+            loop
+               Imports := Source.Project = Project_Type (Self)
+                 or else Source.Project = No_Project;
+               --  predefined source file
+               if not Imports then
+                  Iter := Self.Start
+                    (Recursive        => True,
+                     Include_Extended => True);
+                  loop
+                     exit when Current (Iter) = No_Project;
+
+                     if Current (Iter) = Source.Project then
+                        Imports := True;
+                        exit;
+                     end if;
+
+                     Next (Iter);
+                  end loop;
+               end if;
+
+               if Imports then
+                  return Source_File_Data_To_Info (Source);
+               end if;
+
+               exit when Source.Next = null;
+               Source := Source.Next.all;
+            end loop;
+         end if;
+
+         --  Search in the predefined source path
+
+         if Self.Data.Tree.Env.Predefined_Source_Path /= null then
+            File := Locate_Regular_File
+              (Name, Self.Data.Tree.Env.Predefined_Source_Path.all);
+
+            if File /= GNATCOLL.VFS.No_File then
+               Include_File
+                 (Self.Data.Tree_For_Map.Sources, Name,
+                  Source_File_Data'
+                    (Project  => No_Project,
+                     File     => File,
+                     Lang     => No_Name,
+                     Source   => null,
+                     Next     => null));
+
+               return File_Info'
+                 (File         => File,
+                  Project      => No_Project,
+                  Root_Project => Project_Type (Self),
+                  Part         => Unit_Separate,
+                  Name         => No_Name,
+                  Lang         => No_Name);
+            end if;
+         end if;
+
+         return
+           (File         => GNATCOLL.VFS.No_File,
             Project      => No_Project,
             Root_Project => Project_Type (Self),
             Part         => Unit_Separate,
             Name         => GPR.No_Name,
             Lang         => GPR.No_Name);
-      end if;
+      end Find_From_Base_Name;
 
-      if Is_Absolute_Path (Name) then
-         File := Create (Normalize_Pathname (Name, Resolve_Links => False));
+      ---------------------------
+      -- Create_From_Full_Name --
+      ---------------------------
+
+      function Create_From_Full_Name (File : Virtual_File) return File_Info is
+         Result : File_Info;
+      begin
          Result := Info (Tree => Self.Data.Tree, File => File);
 
          if Result.File = GNATCOLL.VFS.No_File then
@@ -1684,78 +1764,46 @@ package body GNATCOLL.Projects is
          end if;
 
          return Result;
+      end Create_From_Full_Name;
+
+      File   : Virtual_File;
+      Result : File_Info;
+   begin
+      if Project_Type (Self) = No_Project then
+         return File_Info'
+           (File         => Create (Name),
+            Project      => No_Project,
+            Root_Project => Project_Type (Self),
+            Part         => Unit_Separate,
+            Name         => GPR.No_Name,
+            Lang         => GPR.No_Name);
       end if;
 
-      --  Amongst all the files with the right basename, search the one, if
-      --  any, that is visible from Self.
+      if Is_Absolute_Path (Name) then
+         File := Create (Normalize_Pathname (Name, Resolve_Links => False));
+         return Create_From_Full_Name (File);
+      else
+         --  This is not an absolute name: first check the cache
 
-      Curs := Self.Data.Tree_For_Map.Sources.Find (Name);
-      if Has_Element (Curs) then
-         --  Check amongst all possibilities which one is in Self or its
-         --  imported projects.
+         if Self.Data.Base_Name_To_Full_Path = null then
+            --  If it's the first time we need the cache, create it here
+            Self.Data.Base_Name_To_Full_Path := new Basename_To_Info_Cache.Map;
+         end if;
 
-         Source := Element (Curs);
-         loop
-            Imports := Source.Project = Project_Type (Self)
-              or else Source.Project = No_Project;  --  predefined source file
-            if not Imports then
-               Iter := Self.Start
-                  (Recursive        => True,
-                   Include_Extended => True);
-               loop
-                  exit when Current (Iter) = No_Project;
+         if Self.Data.Base_Name_To_Full_Path.Contains (String (Name)) then
+            return Create_From_Full_Name
+              (Self.Data.Base_Name_To_Full_Path.Element (String (Name)));
+         else
+            --  Not found in cache: get the result
+            Result := Find_From_Base_Name (Name);
 
-                  if Current (Iter) = Source.Project then
-                     Imports := True;
-                     exit;
-                  end if;
+            --  .. and add it to the cache
+            Self.Data.Base_Name_To_Full_Path.Insert
+              (String (Name), Result.File);
 
-                  Next (Iter);
-               end loop;
-            end if;
-
-            if Imports then
-               return Source_File_Data_To_Info (Source);
-            end if;
-
-            exit when Source.Next = null;
-            Source := Source.Next.all;
-         end loop;
-      end if;
-
-      --  Search in the predefined source path
-
-      if Self.Data.Tree.Env.Predefined_Source_Path /= null then
-         File := Locate_Regular_File
-           (Name, Self.Data.Tree.Env.Predefined_Source_Path.all);
-
-         if File /= GNATCOLL.VFS.No_File then
-            Include_File
-              (Self.Data.Tree_For_Map.Sources, Name,
-               Source_File_Data'
-                 (Project  => No_Project,
-                  File     => File,
-                  Lang     => No_Name,
-                  Source   => null,
-                  Next     => null));
-
-            return File_Info'
-              (File         => File,
-               Project      => No_Project,
-               Root_Project => Project_Type (Self),
-               Part         => Unit_Separate,
-               Name         => No_Name,
-               Lang         => No_Name);
+            return Result;
          end if;
       end if;
-
-      return
-        (File         => GNATCOLL.VFS.No_File,
-         Project      => No_Project,
-         Root_Project => Project_Type (Self),
-         Part         => Unit_Separate,
-         Name         => GPR.No_Name,
-         Lang         => GPR.No_Name);
    end Create_From_Project;
 
    ------------
@@ -7015,6 +7063,9 @@ package body GNATCOLL.Projects is
    ----------------
 
    procedure Reset_View (Self : in out Project_Data'Class) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Basename_To_Info_Cache.Map,
+         Basename_To_Info_Cache_Map_Access);
    begin
       Self.View := GPR.No_Project;
       --  No need to reset Self.Imported_Projects, since this doesn't
@@ -7022,6 +7073,12 @@ package body GNATCOLL.Projects is
 
       Unchecked_Free (Self.Non_Recursive_Include_Path);
       Unchecked_Free (Self.Files);
+
+      if Self.Base_Name_To_Full_Path /= null then
+         Self.Base_Name_To_Full_Path.Clear;
+         Unchecked_Free (Self.Base_Name_To_Full_Path);
+         Self.Base_Name_To_Full_Path := null;
+      end if;
 
       Self.View_Is_Complete := True;
    end Reset_View;
@@ -7066,6 +7123,7 @@ package body GNATCOLL.Projects is
          then
             On_Free (Data.all);
             Unchecked_Free (Data);
+            Data := null;
          end if;
       end if;
    end Finalize;
@@ -9646,6 +9704,16 @@ package body GNATCOLL.Projects is
 
             Unchecked_Free (P.Data.Files);
             P.Data.Files := Files;
+
+            if P.Data.Base_Name_To_Full_Path = null then
+               P.Data.Base_Name_To_Full_Path := new Basename_To_Info_Cache.Map;
+            else
+               P.Data.Base_Name_To_Full_Path.Clear;
+            end if;
+
+            for F of P.Data.Files.all loop
+               P.Data.Base_Name_To_Full_Path.Include (String (F.Base_Name), F);
+            end loop;
          end;
 
          Next (Iter);

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2019, AdaCore                     --
+--                     Copyright (C) 2002-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -2112,6 +2112,14 @@ private
    type Project_Tree_Data;
    type Project_Tree_Data_Access is access Project_Tree_Data;
 
+   package Basename_To_Info_Cache is new Ada.Containers.Indefinite_Hashed_Maps
+     (Key_Type        => String,
+      Element_Type    => GNATCOLL.VFS.Virtual_File,
+      Hash            => Ada.Strings.Hash,
+      Equivalent_Keys => "=",
+      "="             => GNATCOLL.VFS."=");
+   type Basename_To_Info_Cache_Map_Access is access Basename_To_Info_Cache.Map;
+
    type Project_Data is tagged record
       Refcount : Integer := 1;
 
@@ -2152,6 +2160,12 @@ private
       Modified : Boolean := False;
       --  True if the project has been modified by the user, and not saved
       --  yet.
+
+      Base_Name_To_Full_Path : Basename_To_Info_Cache_Map_Access;
+      --  Cache resolving a base name to a file contained in the project tree
+      --  Note: because of the manual memmory management for Project_Type,
+      --  it's not possible for this to be a Basename_To_Info_Cache.Map, since
+      --  Finalize would not get called on it.
    end record;
 
    type Project_Type is new Ada.Finalization.Controlled with record
