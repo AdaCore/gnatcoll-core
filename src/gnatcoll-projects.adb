@@ -1786,6 +1786,12 @@ package body GNATCOLL.Projects is
          return Create_From_Full_Name (File);
       else
          --  This is not an absolute name: first check the cache
+
+         if Self.Data.Base_Name_To_Full_Path = null then
+            --  If it's the first time we need the cache, create it here
+            Self.Data.Base_Name_To_Full_Path := new Basename_To_Info_Cache.Map;
+         end if;
+
          if Self.Data.Base_Name_To_Full_Path.Contains (String (Name)) then
             return Create_From_Full_Name
               (Self.Data.Base_Name_To_Full_Path.Element (String (Name)));
@@ -7087,6 +7093,9 @@ package body GNATCOLL.Projects is
    ----------------
 
    procedure Reset_View (Self : in out Project_Data'Class) is
+      procedure Unchecked_Free is new Ada.Unchecked_Deallocation
+        (Basename_To_Info_Cache.Map,
+         Basename_To_Info_Cache_Map_Access);
    begin
       Self.View := GPR.No_Project;
       --  No need to reset Self.Imported_Projects, since this doesn't
@@ -7095,8 +7104,13 @@ package body GNATCOLL.Projects is
       Unchecked_Free (Self.Non_Recursive_Include_Path);
       Unchecked_Free (Self.Files);
 
+      if Self.Base_Name_To_Full_Path /= null then
+         Self.Base_Name_To_Full_Path.Clear;
+         Unchecked_Free (Self.Base_Name_To_Full_Path);
+         Self.Base_Name_To_Full_Path := null;
+      end if;
+
       Self.View_Is_Complete := True;
-      Self.Base_Name_To_Full_Path.Clear;
    end Reset_View;
 
    ------------
@@ -7139,6 +7153,7 @@ package body GNATCOLL.Projects is
          then
             On_Free (Data.all);
             Unchecked_Free (Data);
+            Data := null;
          end if;
       end if;
    end Finalize;
@@ -9755,7 +9770,12 @@ package body GNATCOLL.Projects is
             Unchecked_Free (P.Data.Files);
             P.Data.Files := Files;
 
-            P.Data.Base_Name_To_Full_Path.Clear;
+            if P.Data.Base_Name_To_Full_Path = null then
+               P.Data.Base_Name_To_Full_Path := new Basename_To_Info_Cache.Map;
+            else
+               P.Data.Base_Name_To_Full_Path.Clear;
+            end if;
+
             for F of P.Data.Files.all loop
                P.Data.Base_Name_To_Full_Path.Include (String (F.Base_Name), F);
             end loop;

@@ -2126,6 +2126,7 @@ private
       Hash            => Ada.Strings.Hash,
       Equivalent_Keys => "=",
       "="             => GNATCOLL.VFS."=");
+   type Basename_To_Info_Cache_Map_Access is access Basename_To_Info_Cache.Map;
 
    type Project_Data is tagged record
       Refcount : Integer := 1;
@@ -2168,8 +2169,11 @@ private
       --  True if the project has been modified by the user, and not saved
       --  yet.
 
-      Base_Name_To_Full_Path : Basename_To_Info_Cache.Map;
+      Base_Name_To_Full_Path : Basename_To_Info_Cache_Map_Access;
       --  Cache resolving a base name to a file contained in the project tree
+      --  Note: because of the manual memmory management for Project_Type,
+      --  it's not possible for this to be a Basename_To_Info_Cache.Map, since
+      --  Finalize would not get called on it.
    end record;
 
    type Project_Type is new Ada.Finalization.Controlled with record
