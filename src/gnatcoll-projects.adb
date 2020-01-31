@@ -7483,6 +7483,9 @@ package body GNATCOLL.Projects is
       Project_File     : GNATCOLL.VFS.Virtual_File := Root_Project_Path;
       Pth              : Path_Name_Type;
    begin
+      Sinput.Clear_Source_File_Table;
+      Sinput.Reset_First;
+
       if Active (Me_Gnat) then
          GPR.Current_Verbosity := GPR.High;
       end if;
@@ -8286,9 +8289,6 @@ package body GNATCOLL.Projects is
       GPR.Com.Fail := Fail'Unrestricted_Access;
 
       Tree.Data.Root := No_Project;
-
-      Sinput.Clear_Source_File_Table;
-      Sinput.Reset_First;
 
       Override_Flags
         (Tree.Data.Env.Env,
