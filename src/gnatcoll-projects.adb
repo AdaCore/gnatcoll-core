@@ -7362,48 +7362,50 @@ package body GNATCOLL.Projects is
       Key  : GNATCOLL.VFS.Filesystem_String;
       Elem : Source_File_Data)
    is
-      M_Cur       : constant Names_Files.Cursor := Map.Find (Key);
-      Found_Elem  : Source_File_Data;
+      M_Cur       : Names_Files.Cursor;
+      Inserted    : Boolean;
       Elem_Access : Source_File_Data_Access;
 
    begin
-      if M_Cur = Names_Files.No_Element then
-         Map.Include (Key, Elem);
+      Map.Insert (Key, Elem, M_Cur, Inserted);
+      if Inserted then
          return;
       end if;
 
-      Found_Elem := Names_Files.Element (M_Cur);
+      declare
+         Found_Elem : constant Names_Files.Reference_Type :=
+                        Map.Reference (M_Cur);
+      begin
+         if Found_Elem.Project = Elem.Project
+           and then Found_Elem.File = Elem.File
+         then
+            --  Exactly same file, nothing has to be done.
+            return;
 
-      if Found_Elem.Project = Elem.Project
-        and then Found_Elem.File = Elem.File
-      then
-         --  Exactly same file, nothing has to be done.
-         return;
+         elsif Found_Elem.Next = null then
+            Found_Elem.Next := new Source_File_Data'(Elem);
 
-      elsif Found_Elem.Next = null then
-         Found_Elem.Next := new Source_File_Data'(Elem);
-         Map.Replace (Key, Found_Elem);
+         else
+            --  Look through other files with same base name and add elem
+            --  if not present.
 
-      else
-         --  Look through other files with same base name and add elem
-         --  if not present.
+            Elem_Access := Found_Elem.Next;
+            loop
+               if Elem_Access.Project = Elem.Project
+                 and then Elem_Access.File = Elem.File
+               then
+                  return;
+               end if;
 
-         Elem_Access := Found_Elem.Next;
-         loop
-            if Elem_Access.Project = Elem.Project
-              and then Elem_Access.File = Elem.File
-            then
-               return;
-            end if;
+               if Elem_Access.Next = null then
+                  Elem_Access.Next := new Source_File_Data'(Elem);
+                  return;
+               end if;
 
-            if Elem_Access.Next = null then
-               Elem_Access.Next := new Source_File_Data'(Elem);
-               return;
-            end if;
-
-            Elem_Access := Elem_Access.Next;
-         end loop;
-      end if;
+               Elem_Access := Elem_Access.Next;
+            end loop;
+         end if;
+      end;
    end Include_File;
 
    -----------
@@ -9579,8 +9581,7 @@ package body GNATCOLL.Projects is
       Source           : Source_Id;
       Source_File_List : Virtual_File_List.List;
       Tree_For_Map     : constant Project_Tree_Data_Access :=
-         Self.Data.Root.Data.Tree_For_Map;
-
+                           Self.Data.Root.Data.Tree_For_Map;
    begin
       Tree_For_Map.Objects_Basename.Clear;
 
