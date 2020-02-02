@@ -9627,123 +9627,119 @@ package body GNATCOLL.Projects is
          --  Add the sources that are already in the project.
          --  Convert the names to UTF8 for proper handling in GPS
 
-         Source_Iter := For_Each_Source (P.Data.Tree.View, Get_View (P));
+         Source_Iter := For_Each_Source
+           (P.Data.Tree.View, Get_View (P), Locally_Removed => False);
          loop
             Source := Element (Source_Iter);
             exit when Source = No_Source;
 
-            --  Do not consider sources that are excluded
+            --  Get the absolute path name for this source
 
-            if not Source.Locally_Removed then
+            Get_Name_String (Source.Path.Display_Name);
 
-               --  Get the absolute path name for this source
-               Get_Name_String (Source.Path.Display_Name);
+            declare
+               File : constant Virtual_File :=
+                        Create (+Name_Buffer (1 .. Name_Len));
+            begin
+               if Self.Data.Root.Is_Aggregate_Project then
+                  --  If we have duplicates, create lists
+                  Include_File
+                    (Tree_For_Map.Sources,
+                     Base_Name (File),
+                     (P, File, Source.Language.Name, Source, null));
+               else
+                  --  No point in all the checks for regular project.
 
-               declare
-                  File : constant Virtual_File :=
-                    Create (+Name_Buffer (1 .. Name_Len));
-               begin
-                  if Self.Data.Root.Is_Aggregate_Project then
-                     --  If we have duplicates, create lists
-                     Include_File
-                       (Tree_For_Map.Sources,
-                        Base_Name (File),
-                        (P, File, Source.Language.Name, Source, null));
-                  else
-                     --  No point in all the checks for regular project.
+                  Tree_For_Map.Sources.Include
+                    (Base_Name (File),
+                     (P, File, Source.Language.Name, Source, null));
+               end if;
 
-                     Tree_For_Map.Sources.Include
-                       (Base_Name (File),
-                        (P, File, Source.Language.Name, Source, null));
-                  end if;
+               if Source.Object /= GPR.No_File
+                 and then Source.Language /= null
+                   -- and then Source.Language.Config.Object_File_Suffix /=
+                   -- Name_Op_Subtract  ????
+                 and then Get_String
+                   (Source.Language.Config.Object_File_Suffix) /= "-"
+               then
+                  declare
+                     Base : constant Filesystem_String :=
+                              Base_Name
+                                (Filesystem_String
+                                   (Get_String (Source.Object)),
+                                 ".o");
+                     Base_Last : Natural := Base'Last;
+                  begin
+                     --  In GPS, users might define ada-based languages
+                     --  when they have local variations. In this case,
+                     --  they are likely to define the object suffix as
+                     --  ".ali", which we need to ignore as well.
 
-                  if Source.Object /= GPR.No_File
-                    and then Source.Language /= null
---                       and then Source.Language.Config.Object_File_Suffix /=
---                          Name_Op_Subtract  ????
-                    and then Get_String
-                      (Source.Language.Config.Object_File_Suffix) /= "-"
-                  then
-                     declare
-                        Base : constant Filesystem_String :=
-                          Base_Name
-                            (Filesystem_String (Get_String (Source.Object)),
-                             ".o");
-                        Base_Last : Natural := Base'Last;
-                     begin
-                        --  In GPS, users might define ada-based languages
-                        --  when they have local variations. In this case,
-                        --  they are likely to define the object suffix as
-                        --  ".ali", which we need to ignore as well.
+                     if Ends_With (String (Base), ".ali") then
+                        Base_Last := Base_Last - 4;
+                     end if;
 
-                        if Base'Length > 4
-                           and then Base (Base_Last - 3 .. Base_Last) = ".ali"
-                        then
-                           Base_Last := Base_Last - 4;
-                        end if;
+                     --  We know the actual object file will be in either
+                     --  P or one of its extending projects. We can't
+                     --  compute this information now though, because the
+                     --  sources might not have been compiled. So the final
+                     --  computation is done directly in Library_Files.
 
-                        --  We know the actual object file will be in either
-                        --  P or one of its extending projects. We can't
-                        --  compute this information now though, because the
-                        --  sources might not have been compiled. So the final
-                        --  computation is done directly in Library_Files.
+                     if Source.Index = 0 then
+                        --  ??? What if we have a non-aggregate root, that
+                        --  imports a library aggregate project ?
+                        --  if Is_Aggregate_Project (Self.Data.Root) then
+                        Include_File
+                          (Tree_For_Map.Objects_Basename,
+                           Base (Base'First .. Base_Last),
+                           (P, File, Source.Language.Name, Source,
+                            null));
+                        --  else
+                        --     --  No point in all the checks for regular
+                        --     --  project.
+                        --
+                        --     Tree_For_Map.Objects_Basename.Include
+                        --       (Base (Base'First .. Base_Last),
+                        --          (P, File, Source.Language.Name, Source,
+                        --           null));
+                        --  end if;
 
-                        if Source.Index = 0 then
-                           --  ??? What if we have a non-aggregate root, that
-                           --  imports a library aggregate project ?
---                             if Is_Aggregate_Project (Self.Data.Root) then
-                              Include_File
-                                (Tree_For_Map.Objects_Basename,
-                                 Base (Base'First .. Base_Last),
-                                 (P, File, Source.Language.Name, Source,
-                                  null));
---                             else
---                                --  No point in all the checks for regular
---                                --  project.
---
---                                Tree_For_Map.Objects_Basename.Include
---                                  (Base (Base'First .. Base_Last),
---                                   (P, File, Source.Language.Name, Source,
---                                    null));
---                             end if;
+                     else
+                        --  if Is_Aggregate_Project (Self.Data.Root) then
+                        Include_File
+                          (Tree_For_Map.Objects_Basename,
+                           Base (Base'First .. Base_Last) & "~"
+                           & (+Image
+                             (Integer (Source.Index),
+                                  Min_Width => 0)),
+                           (P, File, Source.Language.Name, Source,
+                            null));
+                        --  else
+                        --     --  No point in all the checks for regular
+                        --     --  project.
+                        --
+                        --     Tree_For_Map.Objects_Basename.Include
+                        --       (Base (Base'First .. Base_Last) & "~"
+                        --        & (+Image
+                        --          (Integer (Source.Index),
+                        --               Min_Width => 0)),
+                        --        (P, File, Source.Language.Name, Source,
+                        --         null));
+                        --  end if;
+                     end if;
+                  end;
+               end if;
 
-                        else
---                             if Is_Aggregate_Project (Self.Data.Root) then
-                              Include_File
-                                (Tree_For_Map.Objects_Basename,
-                                 Base (Base'First .. Base_Last) & "~"
-                                 & (+Image
-                                   (Integer (Source.Index),
-                                        Min_Width => 0)),
-                                 (P, File, Source.Language.Name, Source,
-                                  null));
---                             else
---                                --  No point in all the checks for regular
---                                --  project.
---
---                                Tree_For_Map.Objects_Basename.Include
---                                  (Base (Base'First .. Base_Last) & "~"
---                                   & (+Image
---                                     (Integer (Source.Index),
---                                          Min_Width => 0)),
---                                   (P, File, Source.Language.Name, Source,
---                                    null));
---                             end if;
-                        end if;
-                     end;
-                  end if;
+               --  The project manager duplicates files that contain several
+               --  units. Only add them once in the project sources
+               --  (and thus only when the Index is 0 (single unit) or 1
+               --  (first of multiple units).
+               --  For source-based languages, we allow duplicate sources
 
-                  --  The project manager duplicates files that contain several
-                  --  units. Only add them once in the project sources
-                  --  (and thus only when the Index is 0 (single unit) or 1
-                  --  (first of multiple units).
-                  --  For source-based languages, we allow duplicate sources
-
-                  if Source.Unit = null or else Source.Index <= 1 then
-                     Prepend (Source_File_List, File);
-                  end if;
-               end;
-            end if;
+               if Source.Unit = null or else Source.Index <= 1 then
+                  Prepend (Source_File_List, File);
+               end if;
+            end;
 
             Next (Source_Iter);
          end loop;
