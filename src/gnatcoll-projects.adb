@@ -35,7 +35,6 @@ with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Text_IO;                 use Ada.Text_IO;
 with Ada.Unchecked_Conversion;
-with System;
 
 with GNAT.Case_Util;              use GNAT.Case_Util;
 with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
@@ -8619,11 +8618,6 @@ package body GNATCOLL.Projects is
       --  Creates project instances for given project tree.
       --  This is called once per aggregated project tree
 
-      procedure Free (S : in out GPR.Sinput.Source_File_Record);
-      --  Free allocated memory
-      --  This is temporary until GPR.Sinput doesn't have
-      --  a corresponding visible procedure
-
       Undefined_Externals_Present : Boolean := False;
       procedure Catch_Undefined_Externals (S : String);
       --  Sets Undefined_Externals_Present to true if there is at least one
@@ -8854,44 +8848,6 @@ package body GNATCOLL.Projects is
          Actual_Config_File_Tree := Project_Tree;
       end Add_GPS_Naming_Schemes_To_Config_File;
 
-      ----------
-      -- Free --
-      ----------
-
-      procedure Free (S : in out GPR.Sinput.Source_File_Record) is
-         procedure Free is new Ada.Unchecked_Deallocation
-           (GPR.Sinput.Lines_Table_Type, GPR.Sinput.Lines_Table_Ptr);
-
-         Lo : constant Source_Ptr := S.Source_First;
-         Hi : constant Source_Ptr := S.Source_Last;
-         subtype Actual_Source_Buffer is GPR.Osint.Source_Buffer (Lo .. Hi);
-         --  Physical buffer allocated
-
-         type Actual_Source_Ptr is access Actual_Source_Buffer;
-         --  This is the pointer type for the physical buffer allocated
-
-         procedure Free is new Ada.Unchecked_Deallocation
-           (Actual_Source_Buffer, Actual_Source_Ptr);
-
-         pragma Suppress (All_Checks);
-
-         pragma Warnings (Off);
-         --  The following unchecked conversion is aliased safe, since it
-         --  is not used to create improperly aliased pointer values.
-
-         function To_Actual_Source_Ptr is new
-           Ada.Unchecked_Conversion (System.Address, Actual_Source_Ptr);
-
-         pragma Warnings (On);
-
-         Actual_Ptr : Actual_Source_Ptr :=
-           To_Actual_Source_Ptr (S.Source_Text (Lo)'Address);
-
-      begin
-         Free (Actual_Ptr);
-         Free (S.Lines_Table);
-      end Free;
-
       -------------------------------
       -- Initialize_Source_Records --
       -------------------------------
@@ -9031,10 +8987,9 @@ package body GNATCOLL.Projects is
          Errors (S);
       end Catch_Undefined_Externals;
 
-      Sources_Count : Source_File_Index;
+      Sources_Count : constant Source_File_Index :=
+                        GPR.Sinput.Source_File_Last;
    begin
-      Sources_Count := GPR.Sinput.Source_File.Last;
-
       if Self.Data.Env.IDE_Mode then
          GPR.Output.Set_Special_Output
            (Catch_Undefined_Externals'Unrestricted_Access);
@@ -9231,10 +9186,7 @@ package body GNATCOLL.Projects is
             & ASCII.LF);
       end if;
 
-      for Index in Sources_Count + 1 .. GPR.Sinput.Source_File.Last loop
-         Free (GPR.Sinput.Source_File.Table (Index));
-      end loop;
-      GPR.Sinput.Source_File.Set_Last (Sources_Count);
+      GPR.Sinput.Source_File_Trim (Sources_Count);
 
       --  Save the config file that was used to disk, if needed. This will
       --  be used when spawning other project-aware tools, since it might
