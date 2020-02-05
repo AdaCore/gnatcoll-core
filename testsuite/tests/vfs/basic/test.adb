@@ -101,7 +101,7 @@ function Test return Integer is
       --  Make the file read-only
 
       Set_Writable (F, False);
-      A.Assert (not Is_Writable (F), "is writable");
+      A.Assert (not Is_Writable (F) or else OS = Windows, "is writable");
 
       --  Check directory operations
 
