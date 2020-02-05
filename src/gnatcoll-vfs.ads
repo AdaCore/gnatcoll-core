@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2019, AdaCore                     --
+--                     Copyright (C) 2003-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -345,10 +345,10 @@ package GNATCOLL.VFS is
    --  Child directory
 
    function Is_Readable (File : Virtual_File) return Boolean;
-   --  Return True if File is readable
+   --  Return True if File is readable by the current process
 
    function Is_Writable (File : Virtual_File) return Boolean;
-   --  Return True if File is writable
+   --  Return True if File is writable by the current process
 
    function Is_Directory (VF : Virtual_File) return Boolean;
    --  Return True if File is in fact a directory
@@ -361,11 +361,13 @@ package GNATCOLL.VFS is
    --  contains the base name or a relative name.
 
    procedure Set_Writable (File : VFS.Virtual_File; Writable : Boolean);
-   --  If Writable is True, make File writable, otherwise make File unwritable
+   --  If Writable is True, grant write permissions to file's owner,
+   --  otherwise revoke write permissions.
 
    procedure Set_Readable (File : VFS.Virtual_File; Readable : Boolean);
-   --  If Readable is True, make File readable, otherwise make File unreadable.
-   --  Note that this is not supported on Windows.
+   --  If Readable is True, grant read permissions to file's owner,
+   --  otherwise revoke read permissions.
+   --  Note that this is not supported on remote Windows.
 
    function File_Time_Stamp (File : Virtual_File) return Ada.Calendar.Time;
    --  Return the timestamp for this file. This is GMT time, not local time.
