@@ -88,7 +88,8 @@ begin
    --------------------
 
    declare
-      Arr : JSON_Array := Int_0 & Int_1 & Hello_World;
+      Arr   : JSON_Array := Int_0 & Int_1 & Hello_World;
+      Empty : constant JSON_Array := Empty_Array;
    begin
       --  Inspect an empty array
 
@@ -135,6 +136,26 @@ begin
       Arr := Hello_World & Int_0 & Int_1 & Int_0;
       Sort (Arr, Less'Access);
       Check_Image (Create (Arr), "[0,0,1,""Hello world!""]");
+
+      --  Array iteration
+      declare
+         I : Positive := 1;
+      begin
+         for V of Arr loop
+            case I is
+            when 1      => A.Assert (V = Int_0);
+            when 2      => A.Assert (V = Int_0);
+            when 3      => A.Assert (V = Int_1);
+            when 4      => A.Assert (V = Hello_World);
+            when others => A.Assert (False);
+            end case;
+            I := I + 1;
+         end loop;
+
+         for V of Empty loop
+            A.Assert (False);
+         end loop;
+      end;
    end;
 
    -------------------------

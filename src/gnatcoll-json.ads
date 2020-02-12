@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2018, AdaCore                     --
+--                     Copyright (C) 2011-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -115,9 +115,20 @@ package GNATCOLL.JSON is
    --
    --  If you want to create a separate copy, you must use the Clone function.
 
-   type JSON_Array is private;
+   type JSON_Array is private with
+      Iterable => (First       => Array_First,
+                   Next        => Array_Next,
+                   Has_Element => Array_Has_Element,
+                   Element     => Array_Element);
    --  JSON array type. If an object of type JSON_Array is not otherwise
    --  initialized, it is initialized to Empty_Array.
+   --
+   --  Note that we use the Iterable aspect instead of the standard Ada 2012
+   --  iterator aspects because the latter brings impossible constraints: Ada
+   --  2012 iterators require JSON_Array to be tagged, which would break the
+   --  existing API: the Get function would be dispatching over more than one
+   --  type (JSON_Array because of the Arr argument, and JSON_Value because of
+   --  the return type).
 
    JSON_Null : constant JSON_Value;
    Empty_Array : constant JSON_Array;
@@ -169,6 +180,17 @@ package GNATCOLL.JSON is
    function Is_Empty (Val : JSON_Value) return Boolean;
    --  Return True if Val is empty array, empty object or null value. Return
    --  False in all other cases.
+
+   ---------------------
+   -- Array iteration --
+   ---------------------
+
+   function Array_First (Arr : JSON_Array) return Positive;
+   function Array_Next (Arr : JSON_Array; Index : Positive) return Positive;
+   function Array_Has_Element
+     (Arr : JSON_Array; Index : Positive) return Boolean;
+   function Array_Element
+     (Arr : JSON_Array; Index : Positive) return JSON_Value;
 
    ----------------------------------------------
    -- Serialization/deserialization primitives --

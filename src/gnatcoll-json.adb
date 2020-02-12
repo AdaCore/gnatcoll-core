@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2018, AdaCore                     --
+--                     Copyright (C) 2011-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -160,6 +160,48 @@ package body GNATCOLL.JSON is
          when others           => return False;
       end case;
    end Is_Empty;
+
+   -----------------
+   -- Array_First --
+   -----------------
+
+   function Array_First (Arr : JSON_Array) return Positive is
+      pragma Unreferenced (Arr);
+   begin
+      return 1;
+   end Array_First;
+
+   ----------------
+   -- Array_Next --
+   ----------------
+
+   function Array_Next (Arr : JSON_Array; Index : Positive) return Positive is
+      pragma Unreferenced (Arr);
+   begin
+      return Index + 1;
+   end Array_Next;
+
+   -----------------------
+   -- Array_Has_Element --
+   -----------------------
+
+   function Array_Has_Element
+     (Arr : JSON_Array; Index : Positive) return Boolean
+   is
+   begin
+      return Index <= Length (Arr);
+   end Array_Has_Element;
+
+   -------------------
+   -- Array_Element --
+   -------------------
+
+   function Array_Element
+     (Arr : JSON_Array; Index : Positive) return JSON_Value
+   is
+   begin
+      return Get (Arr, Index);
+   end Array_Element;
 
    --------------------------
    -- Format_Parsing_Error --
