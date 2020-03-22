@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2019, AdaCore                     --
+--                     Copyright (C) 2010-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -249,7 +249,7 @@ package body GNATCOLL.Pools is
    -------------
 
    function Element (Self : Resource) return access Element_Type is
-      Enc : access Resource_Data := Get (Self).Element;
+      Enc : constant access Resource_Data := Get (Self).Element;
    begin
       Assert (Me, Enc /= null,
               "A wrapper should not exist without an element");
