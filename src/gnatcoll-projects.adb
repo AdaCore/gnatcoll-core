@@ -36,6 +36,8 @@ with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Text_IO;                 use Ada.Text_IO;
 with Ada.Unchecked_Conversion;
 
+with System;                      use System;
+
 with GNAT.Case_Util;              use GNAT.Case_Util;
 with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
 with GNAT.Expect;                 use GNAT.Expect;
@@ -4532,8 +4534,8 @@ package body GNATCOLL.Projects is
                   --  it later.
 
                   Was_Unknown := Parent.Data.Importing_Projects = null
-                    or else Parent.Data.Importing_Projects =
-                      Unknown_Importing_Projects'Unrestricted_Access;
+                    or else Parent.Data.Importing_Projects.all'Address =
+                      Unknown_Importing_Projects'Address;
 
                   Compute_Importing_Projects (Parent, Root_Project);
                   Merge_Project (Parent, Include);
@@ -4594,8 +4596,8 @@ package body GNATCOLL.Projects is
    exception
       when E : others =>
          Trace (Me, E);
-         if Project.Data.Importing_Projects /=
-            Unknown_Importing_Projects'Unrestricted_Access
+         if Project.Data.Importing_Projects.all'Address /=
+            Unknown_Importing_Projects'Address
          then
             Unchecked_Free (Project.Data.Importing_Projects);
          end if;
