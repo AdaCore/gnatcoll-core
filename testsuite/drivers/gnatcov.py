@@ -2,7 +2,8 @@ import logging
 import os
 
 from e3.os.process import Run
-from e3.testsuite.process import check_call
+
+from drivers import bin_check_call
 
 
 COVERAGE_LEVEL = 'stmt+decision'
@@ -21,7 +22,7 @@ def list_to_file(str_list, filename):
 
 def gnatcov_run(driver, cmd, test_name=None, result=None, **kwargs):
     """
-    Wrapper for `e3.testsuite.process.check_call` that runs the process under
+    Wrapper for `bin_check_call` that runs the process under
     "gnatcov run" and that produces a checkpoint in
     `driver.env.checkpoints_dir` for the corresponding partial coverage report.
     """
@@ -32,7 +33,7 @@ def gnatcov_run(driver, cmd, test_name=None, result=None, **kwargs):
                                    '{}.ckpt'.format(test_name))
 
     cmd = ['gnatcov', 'run', '-o', trace_file, '-eargs'] + cmd
-    result = check_call(driver, cmd, test_name, result, **kwargs)
+    result = bin_check_call(driver, cmd, test_name, result, **kwargs)
 
     p = Run(['gnatcov', 'coverage',
              '--level={}'.format(COVERAGE_LEVEL),

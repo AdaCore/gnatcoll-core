@@ -13,29 +13,29 @@ import logging
 
 
 class MyTestsuite(Testsuite):
-    CROSS_SUPPORT = True
-    TEST_SUBDIR = 'tests'
-    DRIVERS = {
+    enable_cross_support = True
+    tests_subdir = 'tests'
+    test_driver_map = {
         'json_validation': JSONValidationDriver,
         'data_validation': DataValidationDriver,
         'default': BasicTestDriver}
 
-    def add_options(self):
-        self.main.argument_parser.add_argument(
+    def add_options(self, parser):
+        parser.add_argument(
             '--gcov',
             help="compute code coverage of GNATcoll with gcov",
             default=False,
             action="store_true")
-        self.main.argument_parser.add_argument(
+        parser.add_argument(
             '--gnatcov',
             help="compute code coverage of GNATcoll with GNATcoverage",
             default=False,
             action="store_true")
-        self.main.argument_parser.add_argument(
+        parser.add_argument(
             '--valgrind',
             help="check memory usage with Valgrind (memcheck tool)",
             action="store_true")
-        self.main.argument_parser.add_argument(
+        parser.add_argument(
             '--recompile',
             help="recompile debug version of gnatcoll for testing",
             default=False,
@@ -170,5 +170,3 @@ class MyTestsuite(Testsuite):
 if __name__ == '__main__':
     suite = MyTestsuite(os.path.dirname(__file__))
     suite.testsuite_main()
-    for k, v in suite.test_status_counters.iteritems():
-        print '%-24s: %d' % (k, v)

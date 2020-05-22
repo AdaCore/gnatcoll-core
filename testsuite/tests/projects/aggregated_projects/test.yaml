@@ -13,6 +13,5 @@ data:
     - "src_b.ads"
     - "src_d.ads"
     - "src_e.ads"
-skip:
-    # Known memory leak S912-003
-    - [XFAIL, "env.valgrind"]
+control:
+    - [XFAIL, "env.valgrind", "Known memory leak: see S912-003"]

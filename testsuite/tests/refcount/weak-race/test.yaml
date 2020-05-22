@@ -1,7 +1,8 @@
 description:
     Test for race between object disapearing and restore strong reference from
     weak reference.
-skip:
-   # Race condition never triggered with Valgrind, so no point in running the
-   # testcase for 300s in this mode.
-   - [XFAIL, "env.valgrind"]
+control:
+   - [SKIP, 'env.valgrind',
+      "Race condition never triggered with Valgrind, so no point in running the
+       testcase for 300s in this mode."
+     ]

@@ -1,4 +1,3 @@
 description: Completion test for GNATCOLL.Scripts and GNATCOLL.Scripts.Shell
-skip:
-    # Known memory leak S912-005
-    - [XFAIL, "env.valgrind"]
+control:
+    - [XFAIL, "env.valgrind", "Known memory leak: see S912-005"]

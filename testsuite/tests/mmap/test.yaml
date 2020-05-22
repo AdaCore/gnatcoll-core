@@ -1,6 +1,6 @@
 description: Test for GNATCOLL.MMAP
-skip:
-    # Ensure that we have enough space disk to create temporary huge files
-    - ['FAIL', 'disk_space() < 5000']
-    # On older darwin versions the test might crash servers for unknown reason
-    - ['XFAIL', 'env.build.os.name == "darwin" and env.build.os.version == "15.6.0"']
+control:
+    - [SKIP, "disk_space() < 5000",
+       "Not enough space disk to create temporary huge files"]
+    - [XFAIL, "env.build.os.name == 'darwin' and env.build.os.version == '15.6.0'",
+       "On older darwin versions the test might crash servers for unknown reason"]

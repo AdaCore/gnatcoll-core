@@ -1,4 +1,4 @@
-from e3.testsuite.process import check_call
+from drivers import bin_check_call
 
 
 def check_call_valgrind(driver, cmd, test_name=None, result=None, **kwargs):
@@ -10,4 +10,4 @@ def check_call_valgrind(driver, cmd, test_name=None, result=None, **kwargs):
     if driver.env.valgrind:
         cmd = ['valgrind', '-q', '--error-exitcode=2',
                '--leak-check=full'] + cmd
-    return check_call(driver, cmd, test_name, result, **kwargs)
+    return bin_check_call(driver, cmd, test_name, result, **kwargs)

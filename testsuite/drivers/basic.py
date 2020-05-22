@@ -1,10 +1,14 @@
-from e3.fs import cp
-from e3.testsuite.result import TestStatus
-from drivers import gprbuild, GNATcollTestDriver
 import os
 
+from e3.fs import cp
+from e3.os.fs import df
+from e3.testsuite.driver.classic import ClassicTestDriver
+from e3.testsuite.control import YAMLTestControlCreator
 
-class BasicTestDriver(GNATcollTestDriver):
+from drivers import gprbuild, run_test_program
+
+
+class BasicTestDriver(ClassicTestDriver):
     """Default GNATcoll testsuite driver.
 
     In order to declare a test:
@@ -20,52 +24,39 @@ class BasicTestDriver(GNATcollTestDriver):
            - "your_file2"
     """
 
-    def add_test(self, dag):
-        """Declare test workflow.
+    # We want to copy only specific files (files referenced by the "data" key
+    # in test.yaml).
+    copy_test_directory = False
 
-        The workflow is the following::
+    @property
+    def test_control_creator(self):
+        return YAMLTestControlCreator({
+            'env': self.env,
+            'test_env': self.test_env,
+            'disk_space': lambda: df(self.env.working_dir)
+        })
 
-            build --> check status
-
-        :param dag: tree of test fragment to amend
-        :type dag: e3.collection.dag.DAG
-        """
-        self.add_fragment(dag, 'build')
-        self.add_fragment(dag, 'check_run', after=['build'])
-
-        if 'test_exe' not in self.test_env:
-            self.test_env['test_exe'] = 'obj/test'
-
-    def build(self, previous_values):
-        """Build fragment."""
-        skip = self.should_skip()
-        if skip is not None:
-            self.result.set_status(skip)
-            self.push_result()
-            return False
-
+    def run(self):
+        # Build the test program
         if self.test_env.get('no-coverage'):
             gpr_project_path = self.env.gnatcoll_debug_gpr_dir
         else:
             gpr_project_path = self.env.gnatcoll_gpr_dir
-        return gprbuild(self, gcov=self.env.gcov,
-                        gpr_project_path=gpr_project_path)
+        gprbuild(self, gcov=self.env.gcov, gpr_project_path=gpr_project_path)
 
-    def check_run(self, previous_values):
-        """Check status fragment."""
-        if not previous_values['build']:
-            return
-
+        # Copy the requested data files
         for data in self.test_env.get('data', []):
             cp(os.path.join(self.test_env['test_dir'], data),
                self.test_env['working_dir'], recursive=True)
 
-        process = self.run_test_program(
-            [os.path.join(self.test_env['working_dir'],
-                          self.test_env['test_exe'])],
-            timeout=self.process_timeout)
-        if '<=== TEST PASSED ===>' not in process.out:
-            self.result.set_status(TestStatus.FAIL)
-        else:
-            self.result.set_status(TestStatus.PASS)
-        self.push_result()
+        # Run the test program
+        test_exe = self.test_env.get('test_exe', 'obj/test')
+        process = run_test_program(
+            self,
+            [os.path.join(self.test_env['working_dir'], test_exe)],
+            timeout=self.default_process_timeout)
+        self.output += process.out.decode('utf-8')
+
+    def compute_failures(self):
+        return (['Success marker not found']
+                if '<=== TEST PASSED ===>' not in self.result.log.log else [])

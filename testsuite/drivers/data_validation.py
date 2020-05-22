@@ -16,43 +16,45 @@ class DataValidationDriver(GNATcollTestDriver):
         self.add_fragment(dag, 'build')
 
         tear_down_deps = []
-        for data_file, description in self.test_env['data_files'].iteritems():
+        for data_file, description in self.test_env['data_files'].items():
             tear_down_deps.append(data_file)
             self.add_fragment(
                 dag,
                 data_file,
-                fun=lambda x, d=data_file, m=description:
-                self.run_subtest(d, m, x),
+                fun=self.run_subtest_for(data_file, description),
                 after=['build'])
         self.add_fragment(dag, 'tear_down', after=tear_down_deps)
 
-    def run_subtest(self, data_file, description, previous_values):
-        test_name = self.test_name + '.' + data_file
-        result = TestResult(test_name, env=self.test_env)
+    def run_subtest_for(self, data_file, description):
 
-        if not previous_values['build']:
-            return TestStatus.FAIL
+        def run_subtest(previous_values, slot):
+            test_name = self.test_name + '.' + data_file
+            result = TestResult(test_name, env=self.test_env)
 
-        process = self.run_test_program(
-            [os.path.join(self.test_env['working_dir'],
-                          self.test_env.get('validator', 'obj/test')),
-             os.path.join(self.test_env['test_dir'], data_file)],
-            test_name=test_name,
-            result=result,
-            timeout=self.process_timeout)
+            if not previous_values['build']:
+                return TestStatus.FAIL
 
-        return self.validate_result(process, data_file, result)
+            process = self.run_test_program(
+                [os.path.join(self.test_env['working_dir'],
+                              self.test_env.get('validator', 'obj/test')),
+                 os.path.join(self.test_env['test_dir'], data_file)],
+                test_name=test_name,
+                result=result,
+                timeout=self.process_timeout)
+
+            return self.validate_result(process, data_file, result)
+
+        return run_subtest
 
     def validate_result(self, process, data_file, result):
-        # Read data file
-        if '<=== TEST PASSED ===>' in process.out:
-            return TestStatus.PASS
-        else:
+        # Test passes as soon as there is this magic string is its output. Note
+        # that we push a test result only on failure.
+        if b'<=== TEST PASSED ===>' not in process.out:
             result.set_status(TestStatus.FAIL)
             self.push_result(result)
-            return TestStatus.FAIL
+        return True
 
-    def tear_down(self, previous_values):
+    def tear_down(self, previous_values, slot):
         # If the test program build failed, there is nothing we can do (and the
         # result for this test is alredy pushed anyway).
         if not previous_values.get('build'):
@@ -71,6 +73,6 @@ class DataValidationDriver(GNATcollTestDriver):
         if self.env.enable_cleanup:
             rm(self.test_env['working_dir'], recursive=True)
 
-    def build(self, previous_values):
+    def build(self, previous_values, slot):
         return gprbuild(self, gcov=self.env.gcov,
                         gpr_project_path=self.env.gnatcoll_gpr_dir)

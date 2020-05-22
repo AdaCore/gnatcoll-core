@@ -3,6 +3,6 @@ description: >
   project and there are missing withed projects.
 data:
     - "p.gpr"
-skip:
-    # Known memory leak S912-005
-    - [XFAIL, "env.valgrind"]
+control:
+    - [XFAIL, "env.valgrind",
+       "Known memory leak: see S912-005"]

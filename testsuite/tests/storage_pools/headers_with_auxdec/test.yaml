@@ -1,4 +1,3 @@
 description: Test GNATCOLL.Storage_Pools.Headers with Extend_System(Aux_DEC)
-skip:
-    # Known memory leak S912-005
-    - [XFAIL, "env.valgrind"]
+control:
+    - [XFAIL, "env.valgrind", "Known memory leak: see S912-005"]
