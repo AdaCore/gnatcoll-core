@@ -95,6 +95,12 @@ project GnatColl is
                null;
          end case;
    end case;
+   case OS is
+      when "unix" =>
+         Extra_Libs := Extra_Libs & ("-ldl"); --  For gnatcoll.plugins
+      when others =>
+         null;
+   end case;
 
    So_Ext := "";
    case OS is
