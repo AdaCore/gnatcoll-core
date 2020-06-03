@@ -81,8 +81,6 @@
 --     Dirs : File_Array :=
 --        Source_Dirs (Tree.Root_Project, Recursive => True);
 
-pragma Ada_05;
-
 private with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Doubly_Linked_Lists;
 with Ada.Containers.Indefinite_Ordered_Sets;

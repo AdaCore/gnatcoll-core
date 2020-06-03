@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2018, AdaCore                     --
+--                     Copyright (C) 2010-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -59,8 +59,6 @@
 --    once, and then query the value from it directly. This is mostly syntactic
 --    sugar, although it helps ensure that you are always reading existing keys
 --    (if your coding convention forces users to use these keys).
-
-pragma Ada_05;
 
 private with Ada.Containers.Indefinite_Hashed_Maps;
 private with Ada.Strings.Hash;
