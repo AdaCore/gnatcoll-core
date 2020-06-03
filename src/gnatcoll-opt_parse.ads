@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2019, AdaCore                     --
+--                     Copyright (C) 2009-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -23,6 +23,14 @@
 
 with Ada.Finalization;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+
+--  We need this to check that the passed type when instantiating an
+--  Enum_Option is really an enum type, via 'Type_Class, which is an Aux_Dec
+--  specific attribute, returning an enum declared in System.Aux_Dec. There is
+--  no general Ada capability or GNAT extension to do that yet, but this
+--  capability is in every GNAT version since a very long time, so it's safe to
+--  use.
+with System.Aux_DEC; use System.Aux_DEC;
 
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
@@ -293,6 +301,42 @@ package GNATCOLL.Opt_Parse is
    --  Parse a regular option. A regular option is of the form "--option val",
    --  or "--option=val", or "-O val", or "-Oval". If option is not passed,
    --  takes the default value.
+
+   generic
+      Parser : in out Argument_Parser;
+      --  Argument_Parser owning this argument.
+
+      Short : String := "";
+      --  Short form for this flag. Should start with one dash and be followed
+      --  by one or two alphanumeric characters.
+
+      Long : String;
+      --  Long form for this flag. Should start with two dashes.
+
+      Help : String := "";
+      --  Help string for the argument.
+
+      type Arg_Type is (<>);
+      --  Type of the option.
+
+      Default_Val : Arg_Type;
+      --  Default value if the option is not passed.
+
+      Enabled : Boolean := True;
+      --  Whether to add this argument parser
+
+   package Parse_Enum_Option is
+      pragma Compile_Time_Error
+        (Arg_Type'Type_Class /= Type_Class_Enumeration,
+         "Arg_Type for Parse_Enum_Option needs to be an enum type");
+
+      function Get
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
+   end Parse_Enum_Option;
+   --  Parse a regular option whose type is an enum type. See ``Parse_Option``
+   --  for the format. This is an helper around ``Parse_Option`` that will
+   --  automatically generate a converter and enrich the help message with
+   --  the possible alternatives.
 
    generic
       Parser : in out Argument_Parser;

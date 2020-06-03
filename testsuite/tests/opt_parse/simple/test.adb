@@ -33,6 +33,8 @@ function Test return Integer is
    function "+"
      (Self : String) return XString renames To_XString;
 
+   type User_Enum is (Foo, Bar, Baz);
+
    package Arg is
       Parser : Argument_Parser := Create_Argument_Parser
         (Help => "Run Libadalang name resolution on a number of files");
@@ -74,6 +76,14 @@ function Test return Integer is
          Arg_Type    => XString,
          Help        => "Scenario variables",
          Accumulate  => True);
+
+      package Enum_Opt is new Parse_Enum_Option
+        (Parser      => Parser,
+         Short       => "-E",
+         Long        => "--enum-opt",
+         Arg_Type    => User_Enum,
+         Default_Val => Foo,
+         Help        => "Enum option");
    end Arg;
 
 begin
@@ -122,6 +132,12 @@ begin
       A.Assert (Arg.Scenario_Vars.Get (2) = "c=d");
    else
       A.Assert (False);
+   end if;
+
+   --  Test erroneous option
+   A.Assert (not Arg.Parser.Parse ((+"-E", +"boo")), "Invalid enum option");
+   if Arg.Parser.Parse ((+"-E", +"foo")) then
+      Put_Line (Arg.Enum_Opt.Get'Image);
    end if;
 
    return A.Report;

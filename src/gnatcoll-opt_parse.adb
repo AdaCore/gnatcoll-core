@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2020, AdaCore                     --
+--                     Copyright (C) 2009-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -871,6 +871,57 @@ package body GNATCOLL.Opt_Parse is
          Self.Position := Parser.Data.All_Parsers.Last_Index;
       end if;
    end Parse_Option;
+
+   package body Parse_Enum_Option is
+      function Convert (Arg : String) return Arg_Type;
+
+      -------------
+      -- Convert --
+      -------------
+
+      function Convert (Arg : String) return Arg_Type is
+      begin
+         return Arg_Type'Value (Arg);
+      exception
+         when Constraint_Error =>
+            raise Opt_Parse_Error
+              with "Invalid input value for enum: """ & Arg & """";
+      end Convert;
+
+      function Alternatives return String;
+
+      function Alternatives return String is
+         Alts : XString_Array
+           (1 .. Arg_Type'Pos (Arg_Type'Last) + 1);
+      begin
+         for V in Arg_Type'Range loop
+            Alts (Arg_Type'Pos (V) + 1) := To_XString (V'Image).To_Lower;
+         end loop;
+
+         return To_String (To_XString (", ").Join (Alts));
+      end Alternatives;
+
+      Enriched_Help : constant String :=
+        Help
+        & (if Help (Help'Last) = '.' then "" else ".")
+        & " Possible alternatives: "
+        & Alternatives & ". Default: "
+        & To_XString (Default_Val'Image).To_Lower.To_String;
+
+      package Internal_Option is new Parse_Option
+        (Parser      => Parser,
+         Short       => Short,
+         Long        => Long,
+         Help        => Enriched_Help,
+         Arg_Type    => Arg_Type,
+         Default_Val => Default_Val,
+         Convert     => Convert,
+         Enabled     => Enabled);
+
+      function Get
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
+      renames Internal_Option.Get;
+   end Parse_Enum_Option;
 
    -----------------------
    -- Parse_Option_List --
