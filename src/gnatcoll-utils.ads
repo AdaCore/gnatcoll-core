@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2019, AdaCore                     --
+--                     Copyright (C) 2008-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -301,6 +301,12 @@ package GNATCOLL.Utils is
    --  If you want to spit the resulting time to extract the components,
    --  you should use:
    --     Ada.Calendar.Formatting.Split (.., Time_Zone => 0);
+
+   function UTC_Time_Offset (Local : Ada.Calendar.Time) return Duration is
+     (Duration (Ada.Calendar.Time_Zones.UTC_Time_Offset (Local)) * 60);
+   --  Returns the difference between the implementation-defined time zone of
+   --  Calendar, and UTC time, at the time Local. If the time zone of the
+   --  Calendar implementation is unknown, raises Unknown_Zone_Error.
 
    function Truncate
      (Date : Time; Time_Zone : Time_Zones.Time_Offset := 0) return Time;

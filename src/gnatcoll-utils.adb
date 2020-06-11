@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2019, AdaCore                     --
+--                     Copyright (C) 2008-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -696,6 +696,7 @@ package body GNATCOLL.Utils is
       --  When no timezone is specified by the user, UTC is assumed.
       TZ      : Duration := 0.0;
       TZ_Mark : constant Character_Set := To_Set ("+-");
+      Subsecs : Duration := 0.0; -- Subseconds
 
    begin
       if Str = "" then
@@ -751,6 +752,7 @@ package body GNATCOLL.Utils is
 
       for S in reverse First .. Last loop
          if Str (S) = '.' then
+            Subsecs := Duration'Value (Str (S .. Last));
             Last := S - 1;
             exit;
          end if;
@@ -760,9 +762,8 @@ package body GNATCOLL.Utils is
       --  GNAT.Calendar.Time_IO expects as space.
 
       declare
-         S2       : String := Str (First .. Last);
-         Local    : Ada.Calendar.Time;
-         Local_TZ : Duration;
+         S2    : String := Str (First .. Last);
+         Local : Ada.Calendar.Time;
       begin
          for S in S2'Range loop
             if S2 (S) = 'T' then
@@ -775,13 +776,9 @@ package body GNATCOLL.Utils is
 
          --  GNAT.Calendar.Time_IO.Value uses Ada.Calendars.Time_Of, which
          --  for GNAT assumes the input date is in the local time zone.
-         --  Local_TZ is used to compensated that offset.
+         --  UTC_Time_Offset call is used to compensated that offset.
 
-         Local_TZ := Duration
-           (Ada.Calendar.Time_Zones.UTC_Time_Offset (Local)) * 60.0;
-
-         --  Time zone offset (in seconds) for the local timezone
-         return Local + TZ + Local_TZ;
+         return Local + TZ + UTC_Time_Offset (Local) + Subsecs;
       end;
 
    exception
