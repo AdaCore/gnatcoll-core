@@ -634,8 +634,8 @@ private
       File     : Virtual_File;
       Tmp_File : Virtual_File;
       FD       : GNAT.OS_Lib.File_Descriptor := GNAT.OS_Lib.Invalid_FD;
-      Append   : Boolean;
-      Success  : Boolean;
+      Append   : Boolean := False;
+      Success  : Boolean := False;
       Error    : Ada.Strings.Unbounded.Unbounded_String;
    end record;
 
