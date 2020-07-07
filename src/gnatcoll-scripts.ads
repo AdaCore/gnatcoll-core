@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2019, AdaCore                     --
+--                     Copyright (C) 2003-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -809,6 +809,9 @@ package GNATCOLL.Scripts is
    --  types. The returned value must be Destroyed, unless you store it
    --  through Set_Data, in which case GNATCOLL will take care of that.
 
+   function As_Boolean (Prop : Instance_Property_Record'Class) return Boolean;
+   function As_Integer (Prop : Instance_Property_Record'Class) return Integer;
+   function As_Float (Prop : Instance_Property_Record'Class) return Float;
    function As_String (Prop : Instance_Property_Record'Class) return String;
    --  Assuming Prop was created with Create_Property, return its value
 

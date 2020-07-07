@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1317,6 +1317,36 @@ package body GNATCOLL.Scripts is
       return Scalar_Properties_Record'
         (Typ => Strings, Str => new String'(Val));
    end Create_Property;
+
+   ----------------
+   -- As_Boolean --
+   ----------------
+
+   function As_Boolean (Prop : Instance_Property_Record'Class) return Boolean
+   is
+   begin
+      return Scalar_Properties_Record (Prop).Bool;
+   end As_Boolean;
+
+   ----------------
+   -- As_Integer --
+   ----------------
+
+   function As_Integer (Prop : Instance_Property_Record'Class) return Integer
+   is
+   begin
+      return Scalar_Properties_Record (Prop).Int;
+   end As_Integer;
+
+   --------------
+   -- As_Float --
+   --------------
+
+   function As_Float (Prop : Instance_Property_Record'Class) return Float
+   is
+   begin
+      return Scalar_Properties_Record (Prop).Flt;
+   end As_Float;
 
    ---------------
    -- As_String --
