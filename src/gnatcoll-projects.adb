@@ -7504,6 +7504,10 @@ package body GNATCOLL.Projects is
          Previous_Status  := Default;
       end if;
 
+      if Env /= null and then Env.Config_File.Is_Regular_File then
+         Env.Set_Target_And_Runtime_From_Config;
+      end if;
+
       --  Looking for the project file in predefined paths if the default
       --  project path has been initialized.
       if Env /= null and then Is_Initialized (Env.Env.Project_Path) then
@@ -7748,6 +7752,250 @@ package body GNATCOLL.Projects is
       end if;
    end Set_Target_And_Runtime;
 
+   ----------------------------------------
+   -- Set_Target_And_Runtime_From_Config --
+   ----------------------------------------
+
+   procedure Set_Target_And_Runtime_From_Config
+     (Self : in out Project_Environment)
+   is
+      Config_Project_Node : GPR.Project_Node_Id;
+      Project_Node_Tree   : GPR.Project_Node_Tree_Ref :=
+        new Project_Node_Tree_Data;
+      Project_Tree        : Project_Tree_Ref :=
+        new GPR.Project_Tree_Data (Is_Root_Tree => True);
+      Config              : Project_Id;
+      Success             : Boolean;
+
+      function Get_Config_Attribute_Value
+        (Config_File  : Project_Id;
+         Project_Tree : Project_Tree_Ref;
+         Name         : String;
+         Index        : String := "";
+         Pack         : String := "") return String;
+      --  Retruns the value of specified attribute from configuration project
+      --  or an empty string if corresponding attribute is not found.
+      --  Name, Index and Pack parameters are not case-sensitive.
+
+      function Gnatls_From_CGPR
+        (Target  : String;
+         Runtime : String;
+         Gcc     : String) return String;
+      --  Constructs call to gnatls based on attributes from configuration
+      --  project.
+
+      --------------------------------
+      -- Get_Config_Attribute_Value --
+      --------------------------------
+
+      function Get_Config_Attribute_Value
+        (Config_File  : Project_Id;
+         Project_Tree : Project_Tree_Ref;
+         Name         : String;
+         Index        : String := "";
+         Pack         : String := "") return String
+      is
+         Shared             : constant Shared_Project_Tree_Data_Access :=
+           Project_Tree.Shared;
+
+         Conf_Decl : Declarations;
+         Conf_Attr_Id       : Variable_Id;
+         Conf_Attr          : Variable;
+
+         Conf_Array_Id      : Array_Id;
+         Conf_Array         : Array_Data;
+         Conf_Array_Elem_Id : Array_Element_Id;
+         Conf_Array_Elem    : Array_Element;
+
+         Conf_Pack_Id : Package_Id;
+         Conf_Pack    : Package_Element;
+
+         function "=" (L : Name_Id; R : String) return Boolean is
+           (To_Lower (Get_Name_String (L)) = To_Lower (R));
+      begin
+         if Config_File = GPR.No_Project then
+            return "";
+         end if;
+
+         Conf_Decl := Config_File.Decl;
+
+         if Pack /= "" then
+            Conf_Pack_Id := Conf_Decl.Packages;
+            while Conf_Pack_Id /= No_Package loop
+               Conf_Pack := Shared.Packages.Table (Conf_Pack_Id);
+
+               exit when Conf_Pack.Name = Pack;
+
+               Conf_Pack_Id := Conf_Pack.Next;
+            end loop;
+
+            if Conf_Pack_Id = No_Package then
+               return "";
+            else
+               Conf_Decl := Conf_Pack.Decl;
+            end if;
+         end if;
+
+         if Index = "" then
+
+            Conf_Attr_Id := Conf_Decl.Attributes;
+
+            while Conf_Attr_Id /= GPR.No_Variable loop
+               Conf_Attr := Shared.Variable_Elements.Table (Conf_Attr_Id);
+
+               if not Conf_Attr.Value.Default then
+                  if Conf_Attr.Name = Name then
+                     if Conf_Attr.Value.Kind = Single then
+                        return Get_Name_String (Conf_Attr.Value.Value);
+                     end if;
+                  end if;
+
+               end if;
+
+               Conf_Attr_Id := Conf_Attr.Next;
+            end loop;
+
+         else
+
+            Conf_Array_Id := Conf_Decl.Arrays;
+
+            while Conf_Array_Id /= No_Array loop
+               Conf_Array := Shared.Arrays.Table (Conf_Array_Id);
+
+               if Conf_Array.Name = Name then
+                  Conf_Array_Elem_Id := Conf_Array.Value;
+                  while Conf_Array_Elem_Id /= No_Array_Element loop
+                     Conf_Array_Elem :=
+                       Shared.Array_Elements.Table (Conf_Array_Elem_Id);
+
+                     if Conf_Array_Elem.Index = Index then
+                        return Get_Name_String (Conf_Array_Elem.Value.Value);
+                     end if;
+
+                     Conf_Array_Elem_Id := Conf_Array_Elem.Next;
+                  end loop;
+               end if;
+
+               Conf_Array_Id := Conf_Array.Next;
+            end loop;
+         end if;
+
+         return "";
+      end Get_Config_Attribute_Value;
+
+      ----------------------
+      -- Gnatls_From_CGPR --
+      ----------------------
+
+      function Gnatls_From_CGPR
+        (Target  : String;
+         Runtime : String;
+         Gcc     : String) return String
+      is
+         Include_Prefix : Boolean := True;
+      begin
+         Set_Host_Targets_List;
+         for Tgt of Host_Targets_List loop
+            if Target = Tgt then
+               Include_Prefix := False;
+               exit;
+            end if;
+         end loop;
+
+         if Gcc = "" then
+            return
+              (if Include_Prefix then Target & "-" else "")
+              & "gnatls -v"
+              & (if Runtime = "" then "" else "--RTS=" & Runtime);
+         else
+            for I in reverse Gcc'Range loop
+               if Gcc (I) in '/' | '\' then
+
+                  return
+                    Gcc (Gcc'First .. I)
+                    & (if Include_Prefix then Target & "-" else "")
+                    & "gnatls -v"
+                    & (if Runtime = "" then "" else " --RTS=" & Runtime);
+               end if;
+
+            end loop;
+         end if;
+
+         return "gnatls -v";
+      end Gnatls_From_CGPR;
+
+   begin
+      Trace (Me, "Set_Target_And_Runtime_From_Config");
+      if Self.Config_File = GNATCOLL.VFS.No_File
+        or else not Self.Config_File.Is_Regular_File
+      then
+         Trace (Me, "Config file not found");
+         return;
+      end if;
+      GPR.Snames.Initialize;
+      GPR.Attr.Initialize;
+      GPR.Tree.Initialize (Project_Node_Tree);
+      GPR.Initialize (Project_Tree);
+
+      GPR.Part.Parse
+        (In_Tree           => Project_Node_Tree,
+         Project           => Config_Project_Node,
+         Project_File_Name => Self.Config_File.Display_Full_Name,
+         Packages_To_Check => GPR.All_Packages,
+         Is_Config_File    => True,
+         Env               => Self.Env);
+
+      if not Present (Config_Project_Node) then
+         Trace (Me, "Cannot parse config project");
+         return;
+      end if;
+
+      Proc.Process_Project_Tree_Phase_1
+        (In_Tree                => Project_Tree,
+         Project                => Config,
+         Packages_To_Check      => GPR.All_Packages,
+         Success                => Success,
+         From_Project_Node      => Config_Project_Node,
+         From_Project_Node_Tree => Project_Node_Tree,
+         Env                    => Self.Env,
+         Reset_Tree             => False,
+         On_New_Tree_Loaded     => null);
+
+      if not Success then
+         Trace (Me, "Cannot process config project");
+         return;
+      end if;
+
+      declare
+         CGPR_Target  : constant String :=
+           Get_Config_Attribute_Value (Config, Project_Tree, "target");
+         CGPR_Runtime : constant String :=
+           Get_Config_Attribute_Value
+             (Config, Project_Tree, "Runtime_Dir", "ADA");
+         CGPR_GCC     : constant String :=
+           Get_Config_Attribute_Value
+             (Config, Project_Tree, "Driver", "ADA", "Compiler");
+      begin
+         Free (Self.Forced_Target);
+         Free (Self.Forced_Runtime);
+         if CGPR_Target /= "" then
+            Self.Forced_Target := new String'(CGPR_Target);
+         end if;
+         if CGPR_Runtime /= "" then
+            Self.Forced_Runtime := new String'(CGPR_Runtime);
+         end if;
+         Trace (Me, CGPR_GCC);
+
+         Trace (Me,
+                Gnatls_From_CGPR (CGPR_Target, CGPR_Runtime, CGPR_GCC));
+
+         Self.Set_Default_Gnatls
+           (Gnatls_From_CGPR (CGPR_Target, CGPR_Runtime, CGPR_GCC));
+      end;
+      Free (Project_Tree);
+      Free (Project_Node_Tree);
+   end Set_Target_And_Runtime_From_Config;
+
    ------------------------------------
    -- Set_Path_From_Gnatls_Attribute --
    ------------------------------------
@@ -7824,6 +8072,11 @@ package body GNATCOLL.Projects is
       function Default_Gnatls return String is
          No_Prefix : Boolean := False;
       begin
+         if Tree.Data.Env.Config_File.Is_Regular_File
+           and then Tree.Data.Env.Default_Gnatls /= null
+         then
+            return Tree.Data.Env.Default_Gnatls.all;
+         end if;
 
          for Tgt of Host_Targets_List loop
             if Target = Tgt then

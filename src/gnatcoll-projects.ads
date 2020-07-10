@@ -1052,6 +1052,16 @@ package GNATCOLL.Projects is
    --  Set_Automatic_Config_File) for XML files that will be used to generate
    --  the configuration file.
 
+   procedure Set_Target_And_Runtime_From_Config
+     (Self : in out Project_Environment);
+   --  Override the Runtime and Target attributes with values from the
+   --  configuration file proveded by Set_Config_File. Also takes into account
+   --  the toolchain from the configuration project.
+   --  If the configuration file is not set or doesn't exist of if any errors
+   --  happen during parsing of the config file the environment stays intact.
+   --  This procedure is called during Load so generally there is no need to
+   --  call it explicitly before loading the project.
+
    --------------------
    -- Naming schemes --
    --------------------
