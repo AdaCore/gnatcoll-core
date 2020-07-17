@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                    Copyright (C) 2015-2017, AdaCore                      --
+--                    Copyright (C) 2015-2020, AdaCore                      --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -37,7 +37,7 @@ project GnatColl is
       External ("GNATCOLL_BUILD", External ("BUILD", "DEBUG"));
 
    type Library_Type_Type is ("relocatable", "static", "static-pic");
-   Library_Type : Library_Type_Type := External ("LIBRARY_TYPE");
+   Library_Type : Library_Type_Type := External ("LIBRARY_TYPE", "static");
 
    for Source_Dirs     use ("src", "src/paragraph_filling");
    for Library_Kind    use Library_Type;
