@@ -1,0 +1,7 @@
+Code-Review+1: CI Builder <ci-builder@adacore.com>
+Code-Review+2: Dmitriy Anisimkov <anisimko@adacore.com>
+Submitted-by: Fabien Chouteau <chouteau@adacore.com>
+Submitted-at: Tue, 21 Jul 2020 11:16:12 +0200
+Reviewed-on: https://git.adacore.com/76189
+Project: gnatcoll-core
+Branch: refs/heads/master
