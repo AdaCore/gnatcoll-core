@@ -45,7 +45,7 @@ begin
    Test_Assert.Assert
      (Index
         (Element (Cur),
-         "p.gpr:1:06: unknown project file: ""Common1.gpr""") /= 0,
+         "p.gpr:1:06: imported project file ""Common1.gpr""") /= 0,
       "check first error line");
    Next (Cur);
    Test_Assert.Assert
