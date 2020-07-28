@@ -500,7 +500,7 @@ package GNATCOLL.JSON is
    --  Assuming Val is a JSON object, call CB on all its fields
 
    generic
-      type Mapped is private;
+      type Mapped (<>) is private;
    procedure Gen_Map_JSON_Object
      (Val         : JSON_Value;
       CB          : access procedure

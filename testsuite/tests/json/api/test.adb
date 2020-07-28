@@ -431,12 +431,26 @@ begin
    declare
       Obj : constant JSON_Value := Create_Object;
 
-      Trace          : Unbounded_String;
-      Expected_Trace : constant String :=
+      Expected_Trace_1 : constant String :=
          "foo: 0" & ASCII.LF & "bar: 1" & ASCII.LF;
+      Expected_Trace_2 : constant String :=
+         "foo" & ASCII.LF & "bar" & ASCII.LF;
+
+      type Iteration_Data (With_Value : Boolean) is record
+         Result : Unbounded_String;
+
+         case With_Value is
+            when False => null;
+            when True  => Value_Separator : Character;
+         end case;
+      end record;
+
+      Data_1 : Iteration_Data :=
+        (With_Value => True, Result => <>, Value_Separator => ':');
+      Data_2 : Iteration_Data := (With_Value => False, Result => <>);
 
       procedure Iterate
-        (Trace : in out Unbounded_String; Name : String; Value : JSON_Value);
+        (Data : in out Iteration_Data; Name : String; Value : JSON_Value);
       procedure Iterate (Name : String; Value : JSON_Value);
 
       -------------
@@ -444,31 +458,40 @@ begin
       -------------
 
       procedure Iterate
-        (Trace : in out Unbounded_String; Name : String; Value : JSON_Value) is
+        (Data : in out Iteration_Data; Name : String; Value : JSON_Value) is
       begin
-         Append (Trace, Name & ": " & String'(Value.Write) & ASCII.LF);
+         Append (Data.Result, Name);
+         if Data.With_Value then
+            Append (Data.Result,
+                    Data.Value_Separator & " " & String'(Value.Write));
+         end if;
+         Append (Data.Result, ASCII.LF);
       end Iterate;
 
       procedure Iterate (Name : String; Value : JSON_Value) is
       begin
-         Iterate (Trace, Name, Value);
+         Iterate (Data_1, Name, Value);
       end Iterate;
 
-      procedure Map_JSON_Object is new Gen_Map_JSON_Object (Unbounded_String);
+      procedure Map_JSON_Object is new Gen_Map_JSON_Object (Iteration_Data);
 
    begin
       Obj.Set_Field ("foo", Int_0);
       Obj.Set_Field ("bar", Int_1);
 
-      Trace := Null_Unbounded_String;
+      Data_1.Result := Null_Unbounded_String;
       Obj.Map_JSON_Object (Iterate'Access);
-      A.Assert (To_String (Trace) = Expected_Trace,
-                "Checking trace: " & Expected_Trace);
+      A.Assert (To_String (Data_1.Result), Expected_Trace_1,
+                "Checking trace: " & Expected_Trace_1);
 
-      Trace := Null_Unbounded_String;
-      Map_JSON_Object (Obj, Iterate'Access, Trace);
-      A.Assert (To_String (Trace) = Expected_Trace,
-                "Checking trace: " & Expected_Trace);
+      Data_1.Result := Null_Unbounded_String;
+      Map_JSON_Object (Obj, Iterate'Access, Data_1);
+      A.Assert (To_String (Data_1.Result), Expected_Trace_1,
+                "Checking trace: " & Expected_Trace_1);
+
+      Map_JSON_Object (Obj, Iterate'Access, Data_2);
+      A.Assert (To_String (Data_2.Result), Expected_Trace_2,
+                "Checking trace: " & Expected_Trace_2);
    end;
 
    return A.Report;
