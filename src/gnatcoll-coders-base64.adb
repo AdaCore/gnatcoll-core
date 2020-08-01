@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                       Copyright (C) 2019, AdaCore                        --
+--                     Copyright (C) 2019-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -77,10 +77,11 @@ package body GNATCOLL.Coders.Base64 is
       Wrap  : Natural     := 0;
       Mode  : Base64_Mode := MIME) is
    begin
-      Coder         := Encoder_Type'(others => <>);
-      Coder.To_Char := Base64 (Mode)'Access;
-      Coder.Align   := Mode = MIME;
-      Coder.Wrap    := (if Wrap > 0 then Wrap + 1 else 0);
+      Coder := Encoder_Type'
+        (To_Char => Base64 (Mode)'Access,
+         Align   => Mode = MIME,
+         Wrap    => (if Wrap > 0 then Wrap + 1 else 0),
+         others  => <>);
    end Initialize;
 
    ---------------
