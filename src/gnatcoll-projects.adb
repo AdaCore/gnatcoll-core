@@ -33,6 +33,7 @@ with Ada.Strings;                 use Ada.Strings;
 with Ada.Strings.Fixed;           use Ada.Strings.Fixed;
 with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;            use Ada.Strings.Maps;
+with Ada.Strings.Unbounded;
 with Ada.Text_IO;                 use Ada.Text_IO;
 with Ada.Unchecked_Conversion;
 
@@ -71,6 +72,12 @@ with GPR.Sinput;
 with GPR.Snames;                  use GPR.Snames;
 with GPR.Knowledge;
 with GPR.Sdefault;
+
+with DOM.Core.Nodes;
+with DOM.Core.Documents;
+with Input_Sources.File;
+with Sax.Readers;
+with Schema.Dom_Readers;
 
 package body GNATCOLL.Projects is
 
@@ -484,8 +491,25 @@ package body GNATCOLL.Projects is
      GPR.Knowledge.String_Lists.Empty_List;
    Host_Targets_List_Set : Boolean := False;
    procedure Set_Host_Targets_List;
-   --  Populate the list of host targets that include the host target itself
-   --  and may as well have corresponding fallback targets.
+   --  Populates the list of host targets that include the host target itself
+   --  and may as well have corresponding fallback targets. It also parses
+   --  targetset.xml and populates Normalisation_Dictionary (see below).
+
+   type Targetset_Info is record
+      Canonical_Name : Ada.Strings.Unbounded.Unbounded_String;
+      Regexp_Imgs    : GPR.Knowledge.String_Lists.List;
+   end record;
+
+   function "<" (L, R : Targetset_Info) return Boolean is
+     (Ada.Strings.Unbounded."<" (L.Canonical_Name, R.Canonical_Name));
+
+   package Targetset_Info_Set is new
+     Ada.Containers.Ordered_Sets (Targetset_Info);
+   Normalization_Dictionary : Targetset_Info_Set.Set;
+
+   function Normalize_Target_Name (Target_Name : String) return String;
+   --  Normalizes name of target against Normalization_Dictionary. If no match
+   --  is found return Target_Name as is.
 
    -----------
    -- Lists --
@@ -3788,7 +3812,7 @@ package body GNATCOLL.Projects is
    -------------------------
 
    function Target_Same_As_Host (Project : Project_Type) return Boolean is
-      Tgt : constant String := Project.Get_Target;
+      Tgt : constant String := Normalize_Target_Name (Project.Get_Target);
    begin
       if Tgt = "" then
          return True;
@@ -7893,10 +7917,11 @@ package body GNATCOLL.Projects is
          Gcc     : String) return String
       is
          Include_Prefix : Boolean := True;
+         N_Target : constant String := Normalize_Target_Name (Target);
       begin
          Set_Host_Targets_List;
          for Tgt of Host_Targets_List loop
-            if Target = Tgt then
+            if N_Target = Tgt then
                Include_Prefix := False;
                exit;
             end if;
@@ -8029,12 +8054,13 @@ package body GNATCOLL.Projects is
       Target_Value : constant Variable_Value :=
          Value_Of (Get_String ("target"), Project.Decl.Attributes, Shared);
       Target : constant String :=
-         (if Tree.Data.Env.Forced_Target /= null then
-           Tree.Data.Env.Forced_Target.all
-         elsif Target_Value.Project = Project then
-            Value_Of (Target_Value, Unset)
-         else
-            "");
+        Normalize_Target_Name
+          (if Tree.Data.Env.Forced_Target /= null then
+             Tree.Data.Env.Forced_Target.all
+           elsif Target_Value.Project = Project then
+             Value_Of (Target_Value, Unset)
+           else
+             "");
 
       function Get_Value_Of_Runtime (Project : Project_Id) return String;
       --  Look for the value of Runtime attribute in given project or projects
@@ -11545,8 +11571,8 @@ package body GNATCOLL.Projects is
    ---------------------------
 
    procedure Set_Host_Targets_List is
-      Gprbuild_Path : Filesystem_String_Access;
-      KB_Dir        : GNATCOLL.VFS.Virtual_File;
+      Gprbuild_Path   : Filesystem_String_Access;
+      KB_Dir, TS_File : GNATCOLL.VFS.Virtual_File;
 
       KB : GPR.Knowledge.Knowledge_Base;
 
@@ -11554,6 +11580,16 @@ package body GNATCOLL.Projects is
       use GPR.Knowledge.String_Lists;
 
       TS_Id         : GPR.Knowledge.Targets_Set_Id;
+
+      use DOM.Core, DOM.Core.Nodes;
+      use Input_Sources.File;
+      use Sax.Readers;
+      use Schema.Dom_Readers;
+
+      Input     : File_Input;
+      Reader    : Schema.Dom_Readers.Tree_Reader;
+      File_Node : DOM.Core.Node;
+      N, N2     : DOM.Core.Node;
 
    begin
       Trace (Me, "Set_Host_Targets_List");
@@ -11584,6 +11620,68 @@ package body GNATCOLL.Projects is
         (GPR.Knowledge.Normalized_Target (KB, TS_Id));
       GPR.Knowledge.Free_Knowledge_Base (KB);
 
+      TS_File := Join (KB_Dir, "targetset.xml");
+      if not TS_File.Is_Regular_File then
+         Trace (Me, "targetset.xml not found");
+         return;
+      end if;
+
+      Open (TS_File.Display_Full_Name, Input);
+      Reader.Set_Feature (Schema_Validation_Feature, False);
+      Reader.Set_Feature (Validation_Feature, False);  --  Do not use DTD
+      Parse (Reader, Input);
+      Close (Input);
+      File_Node := DOM.Core.Documents.Get_Element (Get_Tree (Reader));
+
+      if Node_Name (File_Node) = "gprconfig" then
+         N := First_Child (File_Node);
+         while N /= null loop
+            if Node_Name (N) = "targetset" then
+               declare
+                  Attr : constant DOM.Core.Node :=
+                    Get_Named_Item (Attributes (N), "canonical");
+                  TS_Info : Targetset_Info;
+
+                  use Ada.Strings.Unbounded;
+               begin
+                  if Attr /= null then
+                     TS_Info.Canonical_Name :=
+                       To_Unbounded_String (Node_Value (Attr));
+                  end if;
+
+                  N2 := First_Child (N);
+                  while N2 /= null loop
+
+                     if Node_Name (N2) = "target" then
+
+                        if TS_Info.Canonical_Name = Null_Unbounded_String then
+                           TS_Info.Canonical_Name :=
+                             To_Unbounded_String
+                               (Node_Value (First_Child (N2)));
+                        end if;
+
+                        TS_Info.Regexp_Imgs.Append
+                          (Node_Value (First_Child (N2)));
+
+                     end if;
+
+                     N2 := Next_Sibling (N2);
+                  end loop;
+
+                  Normalization_Dictionary.Include (TS_Info);
+               end;
+
+            end if;
+            N := Next_Sibling (N);
+         end loop;
+      end if;
+
+      declare
+         Doc : Document := Get_Tree (Reader);
+      begin
+         Free (Doc);
+      end;
+      Free (Reader);
    end Set_Host_Targets_List;
 
    -------------------------
@@ -11654,6 +11752,42 @@ package body GNATCOLL.Projects is
       return Result;
 
    end Aggregated_Projects;
+
+   ---------------------------
+   -- Normalize_Target_Name --
+   ---------------------------
+
+   function Normalize_Target_Name (Target_Name : String) return String
+   is
+      use Ada.Strings.Unbounded;
+   begin
+
+      if Target_Name = "" then
+         return "";
+      end if;
+
+      for TS_Info of Normalization_Dictionary loop
+
+         for Regexp_Img of TS_Info.Regexp_Imgs loop
+            declare
+               Pattern : constant Pattern_Matcher :=
+                 Compile ("^" & Regexp_Img & "$");
+            begin
+               if Match (Pattern, Target_Name) > Target_Name'First - 1 then
+                  return To_String (TS_Info.Canonical_Name);
+               end if;
+            exception
+               when Expression_Error =>
+                  --  We do not care about possible errors, if the regexp is
+                  --  bad we simply ignore it for normalization purposes.
+                  null;
+            end;
+         end loop;
+
+      end loop;
+
+      return Target_Name;
+   end Normalize_Target_Name;
 
 begin
 --     GPR.Initialize;
