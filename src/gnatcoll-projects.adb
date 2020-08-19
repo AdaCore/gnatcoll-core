@@ -11450,6 +11450,8 @@ package body GNATCOLL.Projects is
          Free (Self.Save_Config_File);
          Free (Self.Default_Gnatls);
          Free (Self.Gnatls);
+         Free (Self.Forced_Target);
+         Free (Self.Forced_Runtime);
          if not (Self.Packages_To_Check in All_Packs | No_Packs) then
             Free (Self.Packages_To_Check);
          end if;
