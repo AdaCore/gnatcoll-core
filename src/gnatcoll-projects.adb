@@ -7802,8 +7802,7 @@ package body GNATCOLL.Projects is
       --  Name, Index and Pack parameters are not case-sensitive.
 
       function Gnatls_From_CGPR
-        (Target  : String;
-         Runtime : String;
+        (Runtime : String;
          Gcc     : String) return String;
       --  Constructs call to gnatls based on attributes from configuration
       --  project.
@@ -7912,38 +7911,25 @@ package body GNATCOLL.Projects is
       ----------------------
 
       function Gnatls_From_CGPR
-        (Target  : String;
-         Runtime : String;
+        (Runtime : String;
          Gcc     : String) return String
       is
-         Include_Prefix : Boolean := True;
-         N_Target : constant String := Normalize_Target_Name (Target);
+         Idx : Integer;
       begin
-         Set_Host_Targets_List;
-         for Tgt of Host_Targets_List loop
-            if N_Target = Tgt then
-               Include_Prefix := False;
-               exit;
-            end if;
-         end loop;
 
          if Gcc = "" then
             return
-              (if Include_Prefix then Target & "-" else "")
-              & "gnatls -v"
+              "gnatls -v"
               & (if Runtime = "" then "" else "--RTS=" & Runtime);
          else
-            for I in reverse Gcc'Range loop
-               if Gcc (I) in '/' | '\' then
+            Idx := Index (Gcc, "gcc", Backward);
 
-                  return
-                    Gcc (Gcc'First .. I)
-                    & (if Include_Prefix then Target & "-" else "")
-                    & "gnatls -v"
-                    & (if Runtime = "" then "" else " --RTS=" & Runtime);
-               end if;
-
-            end loop;
+            if Idx > Gcc'First and then Idx = Gcc'Last - 2 then
+               return
+                 Gcc (Gcc'First .. Idx - 1)
+                 & "gnatls -v"
+                 & (if Runtime = "" then "" else " --RTS=" & Runtime);
+            end if;
          end if;
 
          return "gnatls -v";
@@ -8012,10 +7998,10 @@ package body GNATCOLL.Projects is
          Trace (Me, CGPR_GCC);
 
          Trace (Me,
-                Gnatls_From_CGPR (CGPR_Target, CGPR_Runtime, CGPR_GCC));
+                Gnatls_From_CGPR (CGPR_Runtime, CGPR_GCC));
 
          Self.Set_Default_Gnatls
-           (Gnatls_From_CGPR (CGPR_Target, CGPR_Runtime, CGPR_GCC));
+           (Gnatls_From_CGPR (CGPR_Runtime, CGPR_GCC));
       end;
       Free (Project_Tree);
       Free (Project_Node_Tree);
@@ -8054,13 +8040,14 @@ package body GNATCOLL.Projects is
       Target_Value : constant Variable_Value :=
          Value_Of (Get_String ("target"), Project.Decl.Attributes, Shared);
       Target : constant String :=
-        Normalize_Target_Name
-          (if Tree.Data.Env.Forced_Target /= null then
-             Tree.Data.Env.Forced_Target.all
-           elsif Target_Value.Project = Project then
-             Value_Of (Target_Value, Unset)
-           else
-             "");
+        (if Tree.Data.Env.Forced_Target /= null then
+            Tree.Data.Env.Forced_Target.all
+         elsif Target_Value.Project = Project then
+            Value_Of (Target_Value, Unset)
+         else
+            "");
+
+      N_Target : constant String := Normalize_Target_Name (Target);
 
       function Get_Value_Of_Runtime (Project : Project_Id) return String;
       --  Look for the value of Runtime attribute in given project or projects
@@ -8105,7 +8092,7 @@ package body GNATCOLL.Projects is
          end if;
 
          for Tgt of Host_Targets_List loop
-            if Target = Tgt then
+            if N_Target = Tgt then
                No_Prefix := True;
                exit;
             end if;
