@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2018, AdaCore                     --
+--                     Copyright (C) 2011-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -28,6 +28,8 @@ with Interfaces;                       use Interfaces;
 
 with GNAT.Encode_UTF8_String;
 with GNAT.Decode_UTF8_String;
+
+with GNATCOLL.Strings;
 
 package body GNATCOLL.JSON.Utility is
 
