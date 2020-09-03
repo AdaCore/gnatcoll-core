@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2019, AdaCore                     --
+--                     Copyright (C) 2009-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -92,7 +92,7 @@ package body GNATCOLL.Opt_Parse is
    --  Shortcut for a reference to a XString
 
    function Append_Line
-     (Self : in out Text_Wrapper) return XString_Ref;
+     (Self : aliased in out Text_Wrapper) return XString_Ref;
    --  Append a new line to Self
 
    procedure Append_Line
@@ -104,7 +104,7 @@ package body GNATCOLL.Opt_Parse is
    --  `Col_After`.
 
    function Current_Line
-     (Self : in out Text_Wrapper) return XString_Ref
+     (Self : aliased in out Text_Wrapper) return XString_Ref
    is
      (if Self.Lines.Is_Empty
       then Self.Append_Line else Self.Lines.Reference (Self.Lines.Last_Index));
@@ -208,7 +208,7 @@ package body GNATCOLL.Opt_Parse is
    -----------------
 
    function Append_Line
-     (Self : in out Text_Wrapper) return XString_Vectors.Reference_Type
+     (Self : aliased in out Text_Wrapper) return XString_Vectors.Reference_Type
    is
       Ret : XString;
    begin
