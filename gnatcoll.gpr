@@ -34,7 +34,7 @@ project GnatColl is
 
    type Build_Type is ("DEBUG", "PROD");
    Build : Build_Type :=
-      External ("GNATCOLL_BUILD", External ("BUILD", "DEBUG"));
+      External ("GNATCOLL_BUILD_MODE", External ("BUILD", "DEBUG"));
 
    type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type := External ("LIBRARY_TYPE", "static");
