@@ -1402,7 +1402,7 @@ package body GNATCOLL.JSON is
       end loop;
 
       Vals.Append
-        ((Key => To_XString (Field_Name),
+        (Object_Item'(Key => To_XString (Field_Name),
           Val => Field));
    end Set_Field;
 
@@ -1421,7 +1421,7 @@ package body GNATCOLL.JSON is
       end loop;
 
       Vals.Append
-        ((Key => Field_Name,
+        (Object_Item'(Key => Field_Name,
           Val => Field));
    end Set_Field;
 
