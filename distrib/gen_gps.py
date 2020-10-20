@@ -11,12 +11,14 @@ def recursive_ls(dir):
     """Return the list of ads files in dir and its subdirs"""
     result = set()
     for f in os.listdir(dir):
+        path = os.path.join(dir, f)
         if f.endswith(".ads") \
            and f.startswith("gnatcoll-"):
 
             private = False
             pkg = ""
-            for l in file(os.path.join(dir, f)).readlines():
+            with open(path) as h:
+              for l in h.readlines():
                 m = pkg_re.search(l)
                 if m:
                     private = m.group(1)
@@ -26,18 +28,18 @@ def recursive_ls(dir):
             if not private:
                 result.add((pkg, os.path.splitext(f)[0]))
 
-        elif os.path.isdir(os.path.join(dir, f)):
-            result = result.union(recursive_ls(os.path.join(dir, f)))
+        elif os.path.isdir(path):
+            result = result.union(recursive_ls(path))
 
     return result
 
 list = recursive_ls("../src")
-out = file("gnatcoll/runtime.py", "wb")
-out.write("""XML = r'''<?xml version="1.0"?>
+with open("gnatcoll/runtime.py", "w") as out:
+  out.write("""XML = r'''<?xml version="1.0"?>
 <GPS>
 """)
 
-for pkg, f in sorted(list):
+  for pkg, f in sorted(list):
     if '__' in f:
         # An internal package with a specific naming scheme
         continue
@@ -61,8 +63,7 @@ for pkg, f in sorted(list):
 
 """ % {"file": f, "menu": menu, "package": pkg})
 
-out.write("""</GPS>'''
+  out.write("""</GPS>'''
 import GPS
 GPS.parse_xml(XML)
 """)
-out.close()
