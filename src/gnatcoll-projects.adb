@@ -511,6 +511,19 @@ package body GNATCOLL.Projects is
    --  Normalizes name of target against Normalization_Dictionary. If no match
    --  is found return Target_Name as is.
 
+   package Language_Sets is new
+     Ada.Containers.Indefinite_Ordered_Sets (String);
+   use Language_Sets;
+
+   procedure Languages
+     (Project   : Project_Type;
+      Recursive : Boolean := False;
+      Langs     : in out Language_Sets.Set);
+   --  Internal implementation of Languages for non-aggregate project.
+   --  It will update Langs with the supported languages by Project.
+   --  If Recursive is True, then it will also add the supported languages
+   --  by its imported projects.
+
    -----------
    -- Lists --
    -----------
@@ -3444,91 +3457,40 @@ package body GNATCOLL.Projects is
    -- Languages --
    ---------------
 
-   function Languages
-     (Project : Project_Type; Recursive : Boolean := False) return String_List
+   procedure Languages
+     (Project   : Project_Type;
+      Recursive : Boolean := False;
+      Langs     : in out Language_Sets.Set)
    is
-      Iter          : Inner_Project_Iterator := Start (Project, Recursive);
-      Num_Languages : Natural := 0;
-      Val           : Variable_Value;
-      P             : Project_Type;
-
-      procedure Add_Language
-        (Lang : in out String_List; Index : in out Natural; Str : String);
-      --  Add a new language in the list, if not already there
-
-      ------------------
-      -- Add_Language --
-      ------------------
-
-      procedure Add_Language
-        (Lang : in out String_List; Index : in out Natural; Str : String)
-      is
-         Normalized :          String  := Str;
-         Idx        : constant Integer := Normalized'First;
-      begin
-         To_Lower (Normalized);
-         Normalized (Idx) := GNAT.Case_Util.To_Upper (Normalized (Idx));
-
-         for L in Lang'First .. Index - 1 loop
-            if Lang (L).all = Normalized then
-               return;
-            end if;
-         end loop;
-
-         Lang (Index) := new String'(Normalized);
-         Index := Index + 1;
-      end Add_Language;
-
+      Iter : Inner_Project_Iterator;
+      Val  : Variable_Value;
+      P    : Project_Type;
    begin
       if Get_View (Project) = GPR.No_Project then
-         return GNAT.OS_Lib.Argument_List'(1 .. 1 => new String'("ada"));
+         return;
       end if;
-
-      loop
-         P := Current (Iter);
-         exit when P = No_Project;
-
-         Val := Attribute_Value (P, String (Languages_Attribute));
-         case Val.Kind is
-            when Undefined => null;
-            when Single    => Num_Languages := Num_Languages + 1;
-            when List      =>
-               Num_Languages :=
-                 Num_Languages + Length (P.Tree_View, Val.Values);
-         end case;
-
-         Next (Iter);
-      end loop;
 
       Iter := Start (Project, Recursive);
 
       declare
-         --  If no project defines the language attribute, then they have
-         --  Ada as an implicit language. Save space for it.
-         Lang  : Argument_List (1 .. Num_Languages + 1);
-         Index : Natural := Lang'First;
          Value : String_List_Id;
       begin
          loop
             P := Current (Iter);
             exit when P = No_Project;
 
-            if not P.Has_Attribute (Languages_Attribute) then
-               Add_Language (Lang, Index, "ada");
-
-            else
+            if P.Has_Attribute (Languages_Attribute) then
                Val := Attribute_Value (P, String (Languages_Attribute));
                case Val.Kind is
                   when Undefined => null;
                   when Single    =>
-                     Add_Language (Lang, Index, Get_Name_String (Val.Value));
+                     Langs.Include (To_Lower (Get_Name_String (Val.Value)));
                   when List      =>
                      Value := Val.Values;
                      while Value /= Nil_String loop
-                        Add_Language
-                          (Lang, Index,
-                           Get_String
-                             (String_Elements (P.Data.Tree)(Value).Value));
+                        Langs.Include
+                          (To_Lower (Get_String
+                           (String_Elements (P.Data.Tree)(Value).Value)));
                         Value := String_Elements (P.Data.Tree)(Value).Next;
                      end loop;
                end case;
@@ -3536,9 +3498,55 @@ package body GNATCOLL.Projects is
 
             Next (Iter);
          end loop;
-
-         return Lang (Lang'First .. Index - 1);
       end;
+   end Languages;
+
+   ---------------
+   -- Languages --
+   ---------------
+
+   function Languages
+     (Project : Project_Type; Recursive : Boolean := False) return String_List
+   is
+      Langs : Language_Sets.Set := Language_Sets.Empty_Set;
+   begin
+      if Project = No_Project or else Get_View (Project) = GPR.No_Project then
+         return String_List'(1 .. 1 => new String'("ada"));
+      end if;
+
+      --  Languages for the current project and its imported project
+      Languages (Project, Recursive, Langs);
+
+      if Project.Is_Aggregate_Project then
+         declare
+            Aggr_Array : Project_Array_Access :=
+              Project.Aggregated_Projects (Unwind_Aggregated => True);
+         begin
+            --  If this is an aggregate project
+            for P of Aggr_Array.all loop
+               Languages (P, Recursive, Langs);
+            end loop;
+            Unchecked_Free (Aggr_Array);
+         end;
+      end if;
+
+      if Integer (Langs.Length) = 0 then
+         --  Empty set, return Ada as the default language
+         return String_List'(1 .. 1 => new String'("ada"));
+      else
+         --  Convert the Set to a list of String Access
+         declare
+            Lang_List : String_List (1 .. Integer (Langs.Length));
+            Idx       : Integer := Lang_List'First;
+         begin
+
+            for L of Langs loop
+               Lang_List (Idx) := new String'(L);
+               Idx := Idx + 1;
+            end loop;
+            return Lang_List;
+         end;
+      end if;
    end Languages;
 
    ------------------
@@ -10100,8 +10108,15 @@ package body GNATCOLL.Projects is
 
    function Is_Aggregate_Project (Self : Project_Type) return Boolean is
    begin
-      return Project_Qualifier_Of
-        (Self.Data.Node, Self.Data.Tree.Tree) in GPR.Aggregate_Project;
+      if Self = No_Project
+        or else Self.Data = null
+        or else Self.Data.Tree = null
+      then
+         return False;
+      else
+         return Project_Qualifier_Of
+           (Self.Data.Node, Self.Data.Tree.Tree) in GPR.Aggregate_Project;
+      end if;
    end Is_Aggregate_Project;
 
    -------------------------

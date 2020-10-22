@@ -1,0 +1,3 @@
+project B is
+  for Languages use ("Ada", "C++");
+end B;
