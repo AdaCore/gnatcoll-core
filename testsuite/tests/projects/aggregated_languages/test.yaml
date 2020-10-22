@@ -1,0 +1,6 @@
+description: >
+  Check Aggregated_Projects and Languages.
+data:
+    - "a.gpr"
+    - "b.gpr"
+    - "aggr.gpr"
