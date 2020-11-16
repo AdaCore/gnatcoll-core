@@ -32,9 +32,9 @@ begin
    declare
       Langs : String_List := PT.Root_Project.Languages;
    begin
-      Check_Language (Langs, "ada");
-      Check_Language (Langs, "c");
-      Check_Language (Langs, "c++");
+      Check_Language (Langs, "Ada");
+      Check_Language (Langs, "C");
+      Check_Language (Langs, "C++");
       for L of Langs loop
          Free (L);
       end loop;

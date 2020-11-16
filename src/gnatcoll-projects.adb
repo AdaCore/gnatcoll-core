@@ -511,6 +511,7 @@ package body GNATCOLL.Projects is
    --  Normalizes name of target against Normalization_Dictionary. If no match
    --  is found return Target_Name as is.
 
+   function To_Title (S : String) return String;
    package Language_Sets is new
      Ada.Containers.Indefinite_Ordered_Sets (String);
    use Language_Sets;
@@ -3453,6 +3454,20 @@ package body GNATCOLL.Projects is
       return Attribute_Indexes (Project, String (Attribute), Use_Extended);
    end Attribute_Indexes;
 
+   --------------
+   -- To_Title --
+   --------------
+
+   function To_Title (S : String) return String
+   is
+      Normalized : String := S;
+      Idx        : constant Integer := Normalized'First;
+   begin
+      To_Lower (Normalized);
+      Normalized (Idx) := GNAT.Case_Util.To_Upper (Normalized (Idx));
+      return Normalized;
+   end To_Title;
+
    ---------------
    -- Languages --
    ---------------
@@ -3484,12 +3499,12 @@ package body GNATCOLL.Projects is
                case Val.Kind is
                   when Undefined => null;
                   when Single    =>
-                     Langs.Include (To_Lower (Get_Name_String (Val.Value)));
+                     Langs.Include (To_Title (Get_Name_String (Val.Value)));
                   when List      =>
                      Value := Val.Values;
                      while Value /= Nil_String loop
                         Langs.Include
-                          (To_Lower (Get_String
+                          (To_Title (Get_String
                            (String_Elements (P.Data.Tree)(Value).Value)));
                         Value := String_Elements (P.Data.Tree)(Value).Next;
                      end loop;
