@@ -6,7 +6,7 @@ cache:
 install:
     - ps: $env:COMPILER_DIR = "C:\AdaCompiler"
     - ps: $env:CACHE_DIR = "C:\AdaDownloads"
-    - ps: $env:COMPILER_INSTALLER = $env:CACHE_DIR + "\gnat-gpl-2017.exe"
+    - ps: $env:COMPILER_INSTALLER = $env:CACHE_DIR + "\gnat-2020-20200818-x86_64-windows-bin.exe"
     - ps: md -f $env:COMPILER_DIR
     - ps: md -f $env:CACHE_DIR
     - ps: >
@@ -14,7 +14,7 @@ install:
             echo compiler already in cache
         } Else {
             (new-object net.webclient).DownloadFile(
-                'http://mirrors.cdn.adacore.com/art/591c97f0a3f5d779ee51082d',
+                'https://community.download.adacore.com/v1/85091aafe5cb9463f1bfa20a53b6aa0931bf9fc2?filename=gnat-2020-20200818-x86_64-windows-bin.exe',
                 $env:COMPILER_INSTALLER)
         }
     - ps: dir $env:CACHE_DIR
