@@ -7,8 +7,8 @@ env:
     - TOOLS_DIR=$HOME/build_tools
     - INSTALL_DIR=$HOME/build_tools/install
     - GNAT_INSTALLER=$TOOLS_DIR/gnat-community-installer
-    - GNAT_LINUX_INSTALLER_URL=http://mirrors.cdn.adacore.com/art/5cdffc5409dcd015aaf82626
-    - GNAT_OSX_INSTALLER_URL=http://mirrors.cdn.adacore.com/art/5ce0322c31e87a8f1d4253fa
+    - GNAT_LINUX_INSTALLER_URL=https://community.download.adacore.com/v1/a639696a9fd3bdf0be21376cc2dc3129323cbe42?filename=gnat-2020-20200818-x86_64-linux-bin
+    - GNAT_OSX_INSTALLER_URL=https://community.download.adacore.com/v1/aefa0616b9476874823a7974d3dd969ac13dfe3a?filename=gnat-2020-20200818-x86_64-darwin-bin.dmg
 os:
   - linux
 
