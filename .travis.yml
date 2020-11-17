@@ -1,7 +1,7 @@
 # Global variables
 language: python
 python:
-    - "2.7"
+    - "3.8"
 env:
   global:
     - TOOLS_DIR=$HOME/build_tools
