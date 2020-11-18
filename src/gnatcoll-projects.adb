@@ -3526,7 +3526,7 @@ package body GNATCOLL.Projects is
       Langs : Language_Sets.Set := Language_Sets.Empty_Set;
    begin
       if Project = No_Project or else Get_View (Project) = GPR.No_Project then
-         return String_List'(1 .. 1 => new String'("ada"));
+         return String_List'(1 .. 1 => new String'("Ada"));
       end if;
 
       --  Languages for the current project and its imported project
@@ -3547,7 +3547,7 @@ package body GNATCOLL.Projects is
 
       if Integer (Langs.Length) = 0 then
          --  Empty set, return Ada as the default language
-         return String_List'(1 .. 1 => new String'("ada"));
+         return String_List'(1 .. 1 => new String'("Ada"));
       else
          --  Convert the Set to a list of String Access
          declare
