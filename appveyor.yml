@@ -1,32 +1,13 @@
 version: 1.0.{build}
 environment:
     PYTHON: C:\Python27
-cache:
-    - C:\AdaDownloads
 install:
-    - ps: $env:COMPILER_DIR = "C:\AdaCompiler"
-    - ps: $env:CACHE_DIR = "C:\AdaDownloads"
-    - ps: $env:COMPILER_INSTALLER = $env:CACHE_DIR + "\gnat-2020-20200818-x86_64-windows-bin.exe"
-    - ps: md -f $env:COMPILER_DIR
-    - ps: md -f $env:CACHE_DIR
-    - ps: >
-        If (Test-Path $env:COMPILER_INSTALLER) {
-            echo compiler already in cache
-        } Else {
-            (new-object net.webclient).DownloadFile(
-                'https://community.download.adacore.com/v1/85091aafe5cb9463f1bfa20a53b6aa0931bf9fc2?filename=gnat-2020-20200818-x86_64-windows-bin.exe',
-                $env:COMPILER_INSTALLER)
-        }
-    - ps: dir $env:CACHE_DIR
-    - cmd: cmd /c start /wait %COMPILER_INSTALLER% /S /D=%COMPILER_DIR%
-    - ps: $env:Path = $env:COMPILER_DIR + "\bin;" + $env:Path 
-    - cmd: cd
-    - cmd: dir
+    - choco install gnat-gpl
     - cmd: git clone https://github.com/AdaCore/gprbuild libgpr-src
     - cmd: cd libgpr-src
     - cmd: gprbuild -p -m -j0 -XBUILD=production -XLIBRARY_TYPE=relocatable -XXMLADA_BUILD=relocatable -P gpr/gpr.gpr
     - cmd: gprinstall -p -f -XBUILD=production --install-name=gpr --build-var=LIBRARY_TYPE -XLIBRARY_TYPE=relocatable -XXMLADA_BUILD=relocatable  --build-name=relocatable -P gpr/gpr.gpr
     - cmd: cd ..
+build_script:
     - cmd: >
         gprbuild.exe -p -m -j0 -XGNATCOLL_OS=windows -XGNATCOLL_VERSION=0.0 -XBUILD=PROD -XLIBRARY_TYPE=relocatable -XXMLADA_BUILD=relocatable -P gnatcoll.gpr
-build: off
