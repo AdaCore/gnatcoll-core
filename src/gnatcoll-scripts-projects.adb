@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2019, AdaCore                     --
+--                     Copyright (C) 2003-2020, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -286,6 +286,17 @@ package body GNATCOLL.Scripts.Projects is
          declare
             Vars : constant Scenario_Variable_Array :=
               Project_Tree.Scenario_Variables;
+         begin
+            for V in Vars'Range loop
+               Set_Return_Value (Data, Value (Vars (V)));
+               Set_Return_Value_Key
+                 (Data, External_Name (Vars (V)));
+            end loop;
+         end;
+
+         declare
+            Vars : constant Untyped_Variable_Array :=
+              Project_Tree.Untyped_Variables;
          begin
             for V in Vars'Range loop
                Set_Return_Value (Data, Value (Vars (V)));
