@@ -374,6 +374,13 @@ package body GNATCOLL.Opt_Parse is
       Arguments : XString_Array := No_Arguments;
       Result    : out Parsed_Arguments) return Boolean
    is
+      Exit_Parsing : exception;
+      --  Raised when aborting arguments parsing for --help. We cannot call
+      --  directly GNAT.OS_Lib.OS_Exit in that case as this is in the middle of
+      --  vector iterations: the call to OS_Exit triggers the finalization of
+      --  these vectors, so we would get a vector tampering check failure. Use
+      --  an exception to stop the iteration, and only then call OS_Exit to
+      --  avoid this situation.
 
       Current_Arg   : Positive := 1;
       Cmd_Line_Args : constant XString_Array := Get_Arguments (Arguments);
@@ -410,7 +417,7 @@ package body GNATCOLL.Opt_Parse is
 
                      if Opt_Parser.all in Help_Flag_Parser'Class then
                         Put_Line (Self.Help);
-                        GNAT.OS_Lib.OS_Exit (0);
+                        raise Exit_Parsing;
                      end if;
 
                      goto Next_Iter;
@@ -463,6 +470,10 @@ package body GNATCOLL.Opt_Parse is
    exception
       when E : Opt_Parse_Error =>
          Handle_Failure (Ada.Exceptions.Exception_Message (E));
+         return False;
+
+      when Exit_Parsing =>
+         GNAT.OS_Lib.OS_Exit (0);
          return False;
    end Parse;
 

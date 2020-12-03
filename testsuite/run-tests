@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from drivers import make_gnatcoll, TESTSUITE_ROOT_DIR
 from drivers.basic import BasicTestDriver
+from drivers.build_and_run import BuildAndRunDriver
 from drivers.json_validation import JSONValidationDriver
 from drivers.data_validation import DataValidationDriver
 from drivers.gnatcov import list_to_file, produce_report
@@ -18,7 +19,9 @@ class MyTestsuite(Testsuite):
     test_driver_map = {
         'json_validation': JSONValidationDriver,
         'data_validation': DataValidationDriver,
-        'default': BasicTestDriver}
+        'default': BasicTestDriver,
+        'build_and_run': BuildAndRunDriver,
+    }
 
     def add_options(self, parser):
         parser.add_argument(
