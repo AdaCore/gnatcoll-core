@@ -4,3 +4,5 @@ control:
        "Not enough space disk to create temporary huge files"]
     - [XFAIL, "env.build.os.name == 'darwin' and env.build.os.version == '15.6.0'",
        "On older darwin versions the test might crash servers for unknown reason"]
+    - [SKIP, "env.build.os.name == 'windows' and env.build.os.version == '2012'",
+       "Test takes too long and hits rlimit"]
