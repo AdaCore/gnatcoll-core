@@ -39,19 +39,34 @@ project GnatColl is
    type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type := External ("LIBRARY_TYPE", "static");
 
+   type OS_Kind is ("windows", "unix", "osx");
+   OS : OS_Kind := External ("GNATCOLL_OS", "unix");
+
    for Source_Dirs     use ("src", "src/paragraph_filling");
    for Library_Kind    use Library_Type;
-   for Object_Dir
-      use "obj/gnatcoll/" & Project'Library_Kind;
+
+   case OS is
+      when "windows" | "osx" =>
+         --  On MacOS and Windows all object are relocatable by default
+         --  thus the same object directory can be used
+         for Object_Dir use "obj/gnatcoll/all";
+      when "unix" =>
+         --  On Unix static-pic and relocatable shared the same objects
+         case Library_Type is
+            when "relocatable" | "static-pic" =>
+               for Object_Dir use "obj/gnatcoll/pic";
+            when "static" =>
+               for Object_Dir use "obj/gnatcoll/static";
+         end case;
+   end case;
+
    for Library_Dir
       use "lib/gnatcoll/" & Project'Library_Kind;
    for Library_Name    use Name;
 
    for Languages use ("Ada", "C");
 
-   type OS_Kind is ("windows", "unix", "osx");
-   OS : OS_Kind := External ("GNATCOLL_OS", "unix");
-   Extra_Switches := ("-DATOMIC_INTRINSICS");
+   Extra_Switches := ();
    Extra_Libs := ();
    case OS is
       when "windows" =>
@@ -59,7 +74,7 @@ project GnatColl is
       when others =>
          case Mmap is
             when "yes" =>
-               Extra_Switches := ("-DHAVE_MMAP");
+               Extra_Switches := Extra_Switches & ("-DHAVE_MMAP");
                case Madvise is
                   when "yes" =>
                      Extra_Switches := Extra_Switches & ("-DHAVE_MADVISE");
