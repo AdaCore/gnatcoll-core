@@ -44,6 +44,13 @@ project GnatColl is
 
    Sources := ("src", "src/os", "src/paragraph_filling");
 
+   case OS is
+      when "unix" | "osx" =>
+         Sources := Sources & ("src/os/unix");
+      when "windows" =>
+         Sources := Sources & ("src/os/win32");
+   end case;
+
    for Source_Dirs use Sources;
 
    for Library_Kind use Library_Type;
@@ -73,7 +80,7 @@ project GnatColl is
    Extra_Libs := ();
    case OS is
       when "windows" =>
-         Extra_Libs := ("-lpsapi");   --  For gnatcoll.memory
+         Extra_Libs := ("-lpsapi", "-lntdll");   --  For gnatcoll.memory
       when others =>
          case Mmap is
             when "yes" =>
@@ -175,6 +182,8 @@ project GnatColl is
               use "gnatcoll-io-native-codec__unix.adb";
             for Implementation ("GNATCOLL.Plugins")
               use "gnatcoll-plugins__unix.adb";
+            for Implementation ("GNATCOLL.OS.Stat.Stat")
+              use "gnatcoll-os-stat-stat__unix.adb";
          when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
@@ -184,6 +193,8 @@ project GnatColl is
               use "gnatcoll-io-native-codec__win32.adb";
             for Implementation ("GNATCOLL.Plugins")
               use "gnatcoll-plugins__windows.adb";
+            for Implementation ("GNATCOLL.OS.Stat.Stat")
+              use "gnatcoll-os-stat-stat__win32.adb";
       end case;
 
    end Naming;

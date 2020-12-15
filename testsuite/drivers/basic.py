@@ -1,10 +1,11 @@
 import os
 
+from e3.sys import interpreter
 from e3.fs import cp
 from e3.os.fs import df
 from e3.testsuite.driver.classic import ClassicTestDriver
 from e3.testsuite.control import YAMLTestControlCreator
-
+from e3.testsuite.process import check_call
 from drivers import gprbuild, run_test_program
 
 
@@ -22,6 +23,9 @@ class BasicTestDriver(ClassicTestDriver):
        data:
            - "your_file1"
            - "your_file2"
+    6- If you need to do some operation before compiling and running the test
+       just create Python file called pre_test.py that will be executed in the
+       test working dir.
     """
 
     # We want to copy only specific files (files referenced by the "data" key
@@ -48,6 +52,12 @@ class BasicTestDriver(ClassicTestDriver):
         for data in self.test_env.get('data', []):
             cp(os.path.join(self.test_env['test_dir'], data),
                self.test_env['working_dir'], recursive=True)
+
+        pre_test_py = os.path.join(self.test_env['test_dir'], 'pre_test.py')
+        if os.path.isfile(pre_test_py):
+            check_call(self, [interpreter(), pre_test_py],
+                       cwd=self.test_env['working_dir'],
+                       timeout=self.default_process_timeout)
 
         # Run the test program
         test_exe = self.test_env.get('test_exe', 'obj/test')
