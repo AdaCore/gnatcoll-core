@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
---                           G N A T C O L L . O S                          --
+--                  G N A T C O L L . O S . C O N S T A N T S               --
 --                                                                          --
---                        Copyright (C) 2017, AdaCore                       --
+--                        Copyright (C) 2017-2020, AdaCore                  --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,18 +21,43 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package GNATCOLL.OS is
-   pragma Pure;
+--  This is the Windows version of GNATCOLL.OS.Constants package
 
-   --  Supported OS types
-   type OS_Type is (Windows, Unix, MacOS);
+package GNATCOLL.OS.Constants is
 
-   --  The filename resolution policy of a given file system
-   type Filename_Casing_Policy is (
-      Lower_Case,  --  case insensitive file system, normalized lower case
-      Upper_Case,  --  case insensitive file system, normalized upper case
-      Preserving,  --  case insensitive file system, case is preserved
-      Sensitive    --  case sensitive file system
-      );
+   -----------------------
+   -- OS identification --
+   -----------------------
 
-end GNATCOLL.OS;
+   OS : constant OS_Type := Windows;
+
+   -------------------------------------
+   --  File system specific constants --
+   -------------------------------------
+
+   Dir_Sep : constant Character := '\';
+   --  The character that separates qualified filename components
+
+   Path_Sep : constant Character := ';';
+   --  The character that separates paths in a path list
+
+   Exe_Ext : constant String := ".exe";
+   --  Executable image extension
+
+   Default_Casing_Policy : constant Filename_Casing_Policy := Preserving;
+   --  Default casing policy chosen by the OS
+
+   ------------------------------------------------
+   --  Dynamic link libraries specific constants --
+   ------------------------------------------------
+
+   DLL_Name : constant String := "DLL";
+   --  The OS-specific term to refer to a DLL
+
+   DLL_Search_Path_Var : constant String := "PATH";
+   --  Environment variable used to search for DLLs
+
+   DLL_Ext : constant String := ".dll";
+   --  DLL image extension
+
+end GNATCOLL.OS.Constants;

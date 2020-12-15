@@ -42,8 +42,11 @@ project GnatColl is
    type OS_Kind is ("windows", "unix", "osx");
    OS : OS_Kind := External ("GNATCOLL_OS", "unix");
 
-   for Source_Dirs     use ("src", "src/paragraph_filling");
-   for Library_Kind    use Library_Type;
+   Sources := ("src", "src/os", "src/paragraph_filling");
+
+   for Source_Dirs use Sources;
+
+   for Library_Kind use Library_Type;
 
    case OS is
       when "windows" | "osx" =>
@@ -182,6 +185,7 @@ project GnatColl is
             for Implementation ("GNATCOLL.Plugins")
               use "gnatcoll-plugins__windows.adb";
       end case;
+
    end Naming;
 
    package Linker is

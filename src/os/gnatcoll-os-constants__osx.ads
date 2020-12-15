@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  G N A T C O L L . O S . C O N S T A N T S               --
 --                                                                          --
---                        Copyright (C) 2017, AdaCore                       --
+--                   Copyright (C) 2017-2020, AdaCore                       --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,28 +21,27 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  This is the Windows version of GNATCOLL.OS.Constants package
+--  This is the MacOS version of GNATCOLL.OS.Constants package
 
 package GNATCOLL.OS.Constants is
-   pragma Pure;
 
    -----------------------
    -- OS identification --
    -----------------------
 
-   OS : constant OS_Type := Windows;
+   OS : constant OS_Type := MacOS;
 
    -------------------------------------
    --  File system specific constants --
    -------------------------------------
 
-   Dir_Sep : constant Character := '\';
+   Dir_Sep : constant Character := '/';
    --  The character that separates qualified filename components
 
-   Path_Sep : constant Character := ';';
+   Path_Sep : constant Character := ':';
    --  The character that separates paths in a path list
 
-   Exe_Ext : constant String := ".exe";
+   Exe_Ext : constant String := "";
    --  Executable image extension
 
    Default_Casing_Policy : constant Filename_Casing_Policy := Preserving;
@@ -52,13 +51,13 @@ package GNATCOLL.OS.Constants is
    --  Dynamic link libraries specific constants --
    ------------------------------------------------
 
-   DLL_Name : constant String := "DLL";
+   DLL_Name : constant String := "shared library";
    --  The OS-specific term to refer to a DLL
 
-   DLL_Search_Path_Var : constant String := "PATH";
+   DLL_Search_Path_Var : constant String := "DYLD_LIBRARY_PATH";
    --  Environment variable used to search for DLLs
 
-   DLL_Ext : constant String := ".dll";
+   DLL_Ext : constant String := ".dylib";
    --  DLL image extension
 
 end GNATCOLL.OS.Constants;

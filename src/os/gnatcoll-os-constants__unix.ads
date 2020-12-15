@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  G N A T C O L L . O S . C O N S T A N T S               --
 --                                                                          --
---                        Copyright (C) 2017, AdaCore                       --
+--                    Copyright (C) 2017-2020, AdaCore                      --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -24,7 +24,6 @@
 --  This is the Unix version of GNATCOLL.OS.Constants package
 
 package GNATCOLL.OS.Constants is
-   pragma Pure;
 
    -----------------------
    -- OS identification --

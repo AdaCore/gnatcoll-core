@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2019-2020, AdaCore                     --
+--                     Copyright (C) 2020, AdaCore                          --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,27 +22,32 @@
 ------------------------------------------------------------------------------
 
 with Ada.Unchecked_Deallocation;
+with Ada.Strings.UTF_Encoding.Wide_Strings;
 
-package body GNATCOLL.String_Builders is
+package body GNATCOLL.WString_Builders is
+
+   package UTF renames Ada.Strings.UTF_Encoding.Wide_Strings;
+
+   WNUL : constant Wide_Character := Wide_Character'Val (0);
 
    Minimal_Heap_Size : constant Natural := 64;
 
    procedure Free is new Ada.Unchecked_Deallocation
-     (String, String_Access);
+     (Wide_String, WString_Access);
 
-   procedure Allocate (Self : in out String_Builder; Chars : Natural);
+   procedure Allocate (Self : in out WString_Builder; Chars : Natural);
 
    --------------
    -- Allocate --
    --------------
 
-   procedure Allocate (Self : in out String_Builder; Chars : Natural)
+   procedure Allocate (Self : in out WString_Builder; Chars : Natural)
    is
       Str_Max : Natural := (if Self.Heap_Str = null then Minimal_Heap_Size
                             else Self.Heap_Str'Length);
    begin
 
-      --  Ensure we have room for total length + 1 (for ASCII.NUL)
+      --  Ensure we have room for total length + 1 (for WNUL)
       while Self.Str_Last + Chars + 1 > Str_Max loop
          Str_Max := Str_Max * 2;
       end loop;
@@ -50,7 +55,8 @@ package body GNATCOLL.String_Builders is
       --  Perform reallocations
       if Self.Heap_Str = null or else Str_Max > Self.Heap_Str'Length then
          declare
-            New_Str : constant String_Access := new String (1 .. Str_Max);
+            New_Str : constant WString_Access :=
+               new Wide_String (1 .. Str_Max);
          begin
             if Self.Heap_Str /= null then
                --  Copy previous content if necessary
@@ -70,29 +76,34 @@ package body GNATCOLL.String_Builders is
    -- Append --
    ------------
 
-   procedure Append (Self : in out String_Builder; Str : String) is
-      New_Last : constant Natural := Self.Str_Last + Str'Length;
+   procedure Append (Self : in out WString_Builder; Str : UTF8.UTF_8_String) is
+      WStr : constant Wide_String := UTF.Decode (Str);
+      New_Last : constant Natural := Self.Str_Last + WStr'Length;
    begin
-      if Str'Length = 0 then
+      if WStr'Length = 0 then
          return;
       end if;
 
-      if New_Last > String_Builder_Short_Size then
-         Allocate (Self, Str'Length);
-         Self.Heap_Str (Self.Str_Last + 1 .. New_Last) := Str;
-         Self.Heap_Str (New_Last + 1) := ASCII.NUL;
+      if New_Last > WString_Builder_Short_Size then
+         Allocate (Self, WStr'Length);
+         Self.Heap_Str (Self.Str_Last + 1 .. New_Last) := WStr;
+         Self.Heap_Str (New_Last + 1) := WNUL;
       else
-         Self.Stack_Str (Self.Str_Last + 1 .. New_Last) := Str;
-         Self.Stack_Str (New_Last + 1) := ASCII.NUL;
+         Self.Stack_Str (Self.Str_Last + 1 .. New_Last) := WStr;
+         Self.Stack_Str (New_Last + 1) := WNUL;
       end if;
       Self.Str_Last := New_Last;
 
    end Append;
 
-   procedure Append (Self : in out Static_String_Builder; Str : String) is
-      New_Last : constant Natural := Self.Str_Last + Str'Length;
+   procedure Append
+      (Self : in out Static_WString_Builder;
+       Str  : UTF8.UTF_8_String)
+   is
+      WStr : constant Wide_String := UTF.Decode (Str);
+      New_Last : constant Natural := Self.Str_Last + WStr'Length;
    begin
-      if Str'Length = 0 then
+      if WStr'Length = 0 then
          return;
       end if;
 
@@ -100,26 +111,29 @@ package body GNATCOLL.String_Builders is
          raise Constraint_Error;
       end if;
 
-      Self.Str (Self.Str_Last + 1 .. New_Last) := Str;
+      Self.Str (Self.Str_Last + 1 .. New_Last) := WStr;
       Self.Str_Last := New_Last;
-      Self.Str (Self.Str_Last + 1) := ASCII.NUL;
+      Self.Str (Self.Str_Last + 1) := WNUL;
    end Append;
 
-   procedure Append (Self : in out String_Builder; Char : Character) is
+   procedure Append (Self : in out WString_Builder; Char : Wide_Character) is
    begin
-      if Self.Str_Last + 1 > String_Builder_Short_Size then
+      if Self.Str_Last + 1 > WString_Builder_Short_Size then
          Allocate (Self, 1);
          Self.Str_Last := Self.Str_Last + 1;
          Self.Heap_Str (Self.Str_Last) := Char;
-         Self.Heap_Str (Self.Str_Last + 1) := ASCII.NUL;
+         Self.Heap_Str (Self.Str_Last + 1) := WNUL;
       else
          Self.Str_Last := Self.Str_Last + 1;
          Self.Stack_Str (Self.Str_Last) := Char;
-         Self.Stack_Str (Self.Str_Last + 1) := ASCII.NUL;
+         Self.Stack_Str (Self.Str_Last + 1) := WNUL;
       end if;
    end Append;
 
-   procedure Append (Self : in out Static_String_Builder; Char : Character) is
+   procedure Append
+      (Self : in out Static_WString_Builder;
+       Char : Wide_Character)
+   is
       New_Last : constant Natural := Self.Str_Last + 1;
    begin
       if New_Last > Self.Size_With_NUL - 1 then
@@ -127,52 +141,72 @@ package body GNATCOLL.String_Builders is
       end if;
       Self.Str_Last := New_Last;
       Self.Str (Self.Str_Last) := Char;
-      Self.Str (Self.Str_Last + 1) := ASCII.NUL;
+      Self.Str (Self.Str_Last + 1) := WNUL;
    end Append;
 
    ---------------
    -- As_String --
    ---------------
 
-   function As_String (Self : String_Builder) return String is
+   function As_String (Self : WString_Builder) return Wide_String is
    begin
-      if Self.Str_Last > String_Builder_Short_Size then
+      if Self.Str_Last > WString_Builder_Short_Size then
          return Self.Heap_Str.all (1 .. Self.Str_Last);
       else
          return Self.Stack_Str (1 .. Self.Str_Last);
       end if;
    end As_String;
 
-   function As_String (Self : Static_String_Builder) return String is
+   function As_String (Self : Static_WString_Builder) return Wide_String is
    begin
       return Self.Str (1 .. Self.Str_Last);
    end As_String;
 
-   -----------------
-   -- As_C_String --
-   -----------------
+   ------------------
+   -- As_C_WString --
+   ------------------
 
-   function As_C_String (Self : String_Builder) return OS.C_String is
+   function As_C_WString
+      (Self          : WString_Builder;
+       Null_If_Empty : Boolean := False)
+      return OS.C_WString
+   is
    begin
       if Self.Str_Last = 0 then
-         return OS.Empty_C_String;
-      elsif Self.Str_Last > String_Builder_Short_Size then
-         return OS.C_String (Self.Heap_Str (1)'Address);
+         if Null_If_Empty then
+            return OS.Null_C_WString;
+         else
+            return OS.Empty_C_WString;
+         end if;
+      elsif Self.Str_Last > WString_Builder_Short_Size then
+         return OS.C_WString (Self.Heap_Str (1)'Address);
       else
-         return OS.C_String (Self.Stack_Str (1)'Address);
+         return OS.C_WString (Self.Stack_Str (1)'Address);
       end if;
-   end As_C_String;
+   end As_C_WString;
 
-   function As_C_String (Self : Static_String_Builder) return OS.C_String is
+   function As_C_WString
+      (Self          : Static_WString_Builder;
+       Null_If_Empty : Boolean := False)
+      return OS.C_WString
+   is
    begin
-      return OS.C_String (Self.Str (1)'Address);
-   end As_C_String;
+      if Self.Str_Last = 0 then
+         if Null_If_Empty then
+            return OS.Null_C_WString;
+         else
+            return OS.Empty_C_WString;
+         end if;
+      else
+         return OS.C_WString (Self.Str (1)'Address);
+      end if;
+   end As_C_WString;
 
    ----------------
    -- Deallocate --
    ----------------
 
-   procedure Deallocate (Self : in out String_Builder) is
+   procedure Deallocate (Self : in out WString_Builder) is
    begin
       if Self.Heap_Str /= null then
          Free (Self.Heap_Str);
@@ -184,11 +218,15 @@ package body GNATCOLL.String_Builders is
    -- Element --
    -------------
 
-   function Element (Self : String_Builder; N : Positive) return Character is
+   function Element
+      (Self : WString_Builder;
+       N    : Positive)
+      return Wide_Character
+   is
    begin
       if N > Self.Str_Last then
          raise Constraint_Error;
-      elsif Self.Str_Last > String_Builder_Short_Size then
+      elsif Self.Str_Last > WString_Builder_Short_Size then
          return Self.Heap_Str.all (N);
       else
          return Self.Stack_Str (N);
@@ -196,8 +234,8 @@ package body GNATCOLL.String_Builders is
    end Element;
 
    function Element
-      (Self : Static_String_Builder; N : Positive)
-      return Character
+      (Self : Static_WString_Builder; N : Positive)
+      return Wide_Character
    is
    begin
       if N > Self.Str_Last then
@@ -211,12 +249,12 @@ package body GNATCOLL.String_Builders is
    -- Length --
    ------------
 
-   function Length (Self : String_Builder) return Natural is
+   function Length (Self : WString_Builder) return Natural is
    begin
       return Self.Str_Last;
    end Length;
 
-   function Length (Self : Static_String_Builder) return Natural is
+   function Length (Self : Static_WString_Builder) return Natural is
    begin
       return Self.Str_Last;
    end Length;
@@ -225,16 +263,19 @@ package body GNATCOLL.String_Builders is
    -- Set --
    ---------
 
-   procedure Set (Self : in out String_Builder; Str : String) is
+   procedure Set (Self : in out WString_Builder; Str : UTF8.UTF_8_String) is
    begin
       Self.Str_Last := 0;
       Append (Self, Str);
    end Set;
 
-   procedure Set (Self : in out Static_String_Builder; Str : String) is
+   procedure Set
+      (Self : in out Static_WString_Builder;
+       Str  : UTF8.UTF_8_String)
+   is
    begin
       Self.Str_Last := 0;
       Append (Self, Str);
    end Set;
 
-end GNATCOLL.String_Builders;
+end GNATCOLL.WString_Builders;
