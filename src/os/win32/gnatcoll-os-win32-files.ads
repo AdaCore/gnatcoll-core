@@ -22,8 +22,36 @@
 ------------------------------------------------------------------------------
 
 --  Win32 Files related APIs (see Microsoft MSDN for more information).
+with GNATCOLL.OS.FS;
 
 package GNATCOLL.OS.Win32.Files is
+
+   package FS renames GNATCOLL.OS.FS;
+
+   type Open_Mode is new UINT;
+
+   O_RDONLY      : constant Open_Mode := 16#0000#;
+   O_WRONLY      : constant Open_Mode := 16#0001#;
+   O_RDWR        : constant Open_Mode := 16#0002#;
+   O_APPEND      : constant Open_Mode := 16#0008#;
+   O_CREAT       : constant Open_Mode := 16#0100#;
+   O_TRUNC       : constant Open_Mode := 16#0200#;
+   O_EXCL        : constant Open_Mode := 16#0400#;
+   O_TEXT        : constant Open_Mode := 16#4000#;
+   O_BINARY      : constant Open_Mode := 16#8000#;
+   O_WTEXT       : constant Open_Mode := 16#10000#;
+   O_U16TEXT     : constant Open_Mode := 16#20000#;
+   O_U8TEXT      : constant Open_Mode := 16#40000#;
+   O_NOINHERIT   : constant Open_Mode := 16#0080#;
+   O_TEMPORARY   : constant Open_Mode := 16#0040#;
+   O_SHORT_LIVED : constant Open_Mode := 16#1000#;
+   O_SEQUENTIAL  : constant Open_Mode := 16#0020#;
+   O_RANDOM      : constant Open_Mode := 16#0010#;
+
+   type Permission_Mode is new UINT;
+
+   S_IREAD : constant Permission_Mode := 16#0100#;
+   S_IWRITE : constant Permission_Mode := 16#0080#;
 
    subtype ACCESS_MASK is DWORD;
    subtype SHARE_ACCESS is ULONG;
@@ -127,16 +155,45 @@ package GNATCOLL.OS.Win32.Files is
         Convention => Stdcall,
         External_Name => "NtQueryAttributesFile";
 
-   HANDLE_FLAG_INHERIT : constant DWORD := 1;
-   HANDLE_FLAG_PROTECT_FROM_CLOSE : constant DWORD := 2;
-
-   function SetHandleInformation
-      (hObject : HANDLE;
-       dwMask  : DWORD;
-       dwFlags : DWORD)
-      return BOOL
+   function Open
+      (Filename : C_WString;
+       Flags    : Open_Mode;
+       Mode     : Permission_Mode)
+      return FS.File_Descriptor
    with Import => True,
         Convention => Stdcall,
+        External_Name => "_wopen";
+
+   function CreatePipe
+      (ReadPipe       : out HANDLE;
+       WritePipe      : out HANDLE;
+       PipeAttributes : LPSECURITY_ATTRIBUTES;
+       Size           : DWORD) return BOOL
+   with Import        => True,
+        Convention    => Stdcall,
+        External_Name => "CreatePipe";
+
+   function GetOSFHandle (FD : FS.File_Descriptor) return HANDLE
+   with Import        => True,
+        Convention    => C,
+        External_Name => "_get_osfhandle";
+
+   function OpenOSFHandle
+      (Object : HANDLE; Flags : Integer := 0) return FS.File_Descriptor
+   with Import        => True,
+        Convention    => C,
+        External_Name => "_open_osfhandle";
+
+   type Handle_Flag is new DWORD;
+
+   HANDLE_FLAG_INHERIT            : constant Handle_Flag := 16#01#;
+   HANDLE_FLAG_PROTECT_FROM_CLOSE : constant Handle_Flag := 16#02#;
+
+   function SetHandleInformation
+      (Object : HANDLE; Mask : Handle_Flag; Flags : Handle_Flag)
+      return BOOL
+   with Import        => True,
+        Convention    => Stdcall,
         External_Name => "SetHandleInformation";
 
 end GNATCOLL.OS.Win32.Files;

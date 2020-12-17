@@ -24,8 +24,13 @@
 /* Ensure 64bits file operations are available */
 #define _LARGE_FILE_SOURCE 1
 #define _FILE_OFFSET_BITS 64
+#define _GNU_SOURCE 1
 
 #include <sys/stat.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 typedef unsigned long long int uint_64;
 typedef unsigned int uint_32;
@@ -120,4 +125,24 @@ int __gnatcoll_lstat(const char *path, struct gnatcoll_stat *buf)
 
 #endif
   return status;
+}
+
+int __gnatcoll_open(const char *path, int mode, int perm)
+{
+  return open (path, mode, perm);
+}
+
+/* Create a pipe
+
+On Linux system O_CLOEXEC (close on exec) can be set atomically. On other
+unix-like systems this should be done by a separate system calls.
+
+*/
+int __gnatcoll_pipe(int* fds)
+{
+#if defined(__linux__)
+  return pipe2(fds, O_CLOEXEC);
+#else
+  return pipe(fds);
+#endif
 }

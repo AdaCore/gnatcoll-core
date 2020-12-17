@@ -91,4 +91,21 @@ package GNATCOLL.OS.Win32 is
       with Inline;
    --  Return True if Status is a successful status
 
+   type SECURITY_ATTRIBUTES is record
+      Length             : DWORD;
+      SecurityDescriptor : LPVOID;
+      InheritHandle      : BOOL;
+   end record;
+   type LPSECURITY_ATTRIBUTES is access all SECURITY_ATTRIBUTES;
+
+   Inherit_Handle : aliased SECURITY_ATTRIBUTES :=
+      (Standard'Address_Size + 2 * Integer'Size,
+       LPVOID (System.Null_Address),
+       BOOL_TRUE);
+
+   No_Inherit_Handle : aliased SECURITY_ATTRIBUTES :=
+      (Standard'Address_Size + 2 * Integer'Size,
+       LPVOID (System.Null_Address),
+       BOOL_FALSE);
+
 end GNATCOLL.OS.Win32;
