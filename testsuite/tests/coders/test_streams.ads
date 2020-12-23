@@ -16,7 +16,7 @@ package Test_Streams is
       Item   :        Stream_Element_Array);
 
    procedure Reset (Stream : in out Stream_Type);
-   --  Reset read opsition to the start of data
+   --  Reset read position to the start of data
 
    procedure Clear (Stream : in out Stream_Type);
    --  Clear all internal written data from stream
