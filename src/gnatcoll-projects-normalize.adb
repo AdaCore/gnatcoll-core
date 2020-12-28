@@ -26,7 +26,6 @@ with Ada.Exceptions;            use Ada.Exceptions;
 with Ada.Strings.Fixed;         use Ada.Strings.Fixed;
 with Ada.Strings.Maps;          use Ada.Strings.Maps;
 with Ada.Unchecked_Deallocation;
-with GNAT.Case_Util;            use GNAT.Case_Util;
 with GNATCOLL.Traces;           use GNATCOLL.Traces;
 with GNATCOLL.Utils;            use GNATCOLL.Utils;
 with GNATCOLL.VFS;              use GNATCOLL.VFS;
@@ -1706,11 +1705,11 @@ package body GNATCOLL.Projects.Normalize is
               and then Associative_Array_Index_Of
                 (Current, Tree_Node) /= No_Name
             then
-               Get_Name_String
-                 (Associative_Array_Index_Of (Current, Tree_Node));
-               To_Lower (Name_Buffer (1 .. Name_Len));
-
-               Set_Associative_Array_Index_Of (Current, Tree_Node, Name_Find);
+               Set_Associative_Array_Index_Of
+                 (Current, Tree_Node,
+                  Get_Lower_Name_Id
+                    (Get_Name_String
+                       (Associative_Array_Index_Of (Current, Tree_Node))));
             end if;
          end if;
       end Check_Index_Sensitivity;

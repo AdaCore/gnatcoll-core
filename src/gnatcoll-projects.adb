@@ -39,7 +39,7 @@ with Ada.Unchecked_Conversion;
 
 with System;                      use System;
 
-with GNAT.Case_Util;              use GNAT.Case_Util;
+with GNAT.Case_Util;
 with GNAT.Directory_Operations;   use GNAT.Directory_Operations;
 with GNAT.Expect;                 use GNAT.Expect;
 with GNAT.Expect.TTY;             use GNAT.Expect.TTY;
@@ -511,7 +511,8 @@ package body GNATCOLL.Projects is
    --  Normalizes name of target against Normalization_Dictionary. If no match
    --  is found return Target_Name as is.
 
-   function To_Title (S : String) return String;
+   function To_Mixed (S : String) return String;
+
    package Language_Sets is new
      Ada.Containers.Indefinite_Ordered_Sets (String);
    use Language_Sets;
@@ -2706,9 +2707,7 @@ package body GNATCOLL.Projects is
 
       --  The project naming scheme
       else
-         Name_Len := Unit_Name'Length;
-         Name_Buffer (1 .. Name_Len) := To_Lower (Unit_Name);
-         Unit := Name_Find;
+         Unit := Get_Lower_Name_Id (Unit_Name);
 
          --  Take advantage of computation done by the project manager when we
          --  looked for source files
@@ -2752,8 +2751,8 @@ package body GNATCOLL.Projects is
 
          begin
             case Lang.Config.Naming_Data.Casing is
-               when All_Lower_Case => To_Lower (Uname);
-               when All_Upper_Case => To_Upper (Uname);
+               when All_Lower_Case => GNAT.Case_Util.To_Lower (Uname);
+               when All_Upper_Case => GNAT.Case_Util.To_Upper (Uname);
                when others => null;
             end case;
 
@@ -3455,18 +3454,15 @@ package body GNATCOLL.Projects is
    end Attribute_Indexes;
 
    --------------
-   -- To_Title --
+   -- To_Mixed --
    --------------
 
-   function To_Title (S : String) return String
-   is
+   function To_Mixed (S : String) return String is
       Normalized : String := S;
-      Idx        : constant Integer := Normalized'First;
    begin
-      To_Lower (Normalized);
-      Normalized (Idx) := GNAT.Case_Util.To_Upper (Normalized (Idx));
+      GNAT.Case_Util.To_Mixed (Normalized);
       return Normalized;
-   end To_Title;
+   end To_Mixed;
 
    ---------------
    -- Languages --
@@ -3499,12 +3495,12 @@ package body GNATCOLL.Projects is
                case Val.Kind is
                   when Undefined => null;
                   when Single    =>
-                     Langs.Include (To_Title (Get_Name_String (Val.Value)));
+                     Langs.Include (To_Mixed (Get_Name_String (Val.Value)));
                   when List      =>
                      Value := Val.Values;
                      while Value /= Nil_String loop
                         Langs.Include
-                          (To_Title (Get_String
+                          (To_Mixed (Get_String
                            (String_Elements (P.Data.Tree)(Value).Value)));
                         Value := String_Elements (P.Data.Tree)(Value).Next;
                      end loop;
