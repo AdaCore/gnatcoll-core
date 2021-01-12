@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2020, AdaCore                     --
+--                     Copyright (C) 2002-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1055,7 +1055,7 @@ package GNATCOLL.Projects is
    procedure Set_Target_And_Runtime_From_Config
      (Self : in out Project_Environment);
    --  Override the Runtime and Target attributes with values from the
-   --  configuration file proveded by Set_Config_File. Also takes into account
+   --  configuration file provided by Set_Config_File. Also takes into account
    --  the toolchain from the configuration project.
    --  If the configuration file is not set or doesn't exist of if any errors
    --  happen during parsing of the config file the environment stays intact.
@@ -2001,7 +2001,7 @@ package GNATCOLL.Projects is
    --  to attach pseudo-terminal to processes launched by the package,
    --  in particular to query the default search paths of the compilers.
    --  In some cases, however, they might introduce unwanted complexity
-   --  (for instance when running inside a java virtual machine). It is thus
+   --  (for instance when running inside a Java virtual machine). It is thus
    --  possible to disable them and fall back to a simpler way to spawn
    --  the processes.
    --  Most users should not have to disable this.
@@ -2182,7 +2182,7 @@ private
 
       Base_Name_To_Full_Path : Basename_To_Info_Cache_Map_Access;
       --  Cache resolving a base name to a file contained in the project tree
-      --  Note: because of the manual memmory management for Project_Type,
+      --  Note: because of the manual memory management for Project_Type,
       --  it's not possible for this to be a Basename_To_Info_Cache.Map, since
       --  Finalize would not get called on it.
    end record;
