@@ -20,7 +20,6 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
-with Interfaces.C; use Interfaces.C;
 with GNATCOLL.OS.FS;
 with GNATCOLL.OS.Libc_Constants;
 
@@ -29,10 +28,10 @@ package GNATCOLL.OS.Libc is
    package FS renames GNATCOLL.OS.FS;
    package Constants renames GNATCOLL.OS.Libc_Constants;
 
-   subtype Uint_64 is unsigned_long_long;
-   subtype Uint_32 is unsigned;
-   subtype Sint_64 is long_long;
-   subtype Sint_32 is int;
+   type Uint_64 is mod 2 ** Long_Long_Integer'Size;
+   type Uint_32 is mod 2 ** Integer'Size;
+   subtype Sint_64 is Long_Long_Integer;
+   subtype Sint_32 is Integer;
 
    type Uint is mod 2 ** Standard'Address_Size;
 
