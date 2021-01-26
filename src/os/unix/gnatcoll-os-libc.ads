@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 with GNATCOLL.OS.FS;
 with GNATCOLL.OS.Libc_Constants;
+with Interfaces.C; use Interfaces.C;
 
 package GNATCOLL.OS.Libc is
 
@@ -68,7 +69,7 @@ package GNATCOLL.OS.Libc is
    S_IFMT   : constant File_Mode := 8#170000#;
 
    --  File open modes
-   type Open_Mode is new uint_32;
+   type Open_Mode is new Uint_32;
 
    O_RDONLY   : constant Open_Mode := Constants.O_RDONLY;
    O_WRONLY   : constant Open_Mode := Constants.O_WRONLY;
@@ -85,7 +86,7 @@ package GNATCOLL.OS.Libc is
    subtype Fnctl_Cmd is Integer;
    F_GETFD : constant Fnctl_Cmd := 1;
    F_SETFD : constant Fnctl_Cmd := 2;
-   FD_CLOEXEC : constant uint := 1;
+   FD_CLOEXEC : constant Uint := 1;
 
    --  Define a few priority used to map to GNATCOLL.OS.Process priority class
    subtype Priority is Integer range -20 .. 20;
@@ -148,4 +149,32 @@ package GNATCOLL.OS.Libc is
    --  Note that on linux this function sets the O_CLOEXEC flag to the returned
    --  pipes.
 
+   --  See Posix chdir documentation
+   function Chdir (Path : C_String) return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "chdir";
+
+   --  See Posix getcwd documentation
+   function Getcwd (Buf : C_String; Size : size_t) return System.Address
+   with Import        => True,
+        Convention    => C,
+        External_Name => "getcwd";
+
+   --  See Posix setpriority documentation
+   function Setpriority (Which : Priority_Target;
+                         Who   : Integer;
+                         Prio  : Priority)
+                        return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "setpriority";
+
+   function Waitpid (Pid     : Integer;
+                     Status  : in out Uint_32;
+                     Options : Integer)
+                    return Integer
+   with Import        => True,
+        Convention    => C,
+        External_Name => "waitpid";
 end GNATCOLL.OS.Libc;

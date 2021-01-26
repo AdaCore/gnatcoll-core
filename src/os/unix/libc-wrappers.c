@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <spawn.h>
 #include <unistd.h>
 
 typedef unsigned long long int uint_64;
@@ -145,4 +146,17 @@ int __gnatcoll_pipe(int* fds)
 #else
   return pipe(fds);
 #endif
+}
+
+void *__gnatcoll_posix_spawn_file_actions_init()
+{
+  posix_spawn_file_actions_t *result = malloc (sizeof (posix_spawn_file_actions_t));
+  posix_spawn_file_actions_init(result);
+  return (void *) result;
+}
+
+void __gnatcoll_posix_spawn_file_actions_destroy(void *file_actions)
+{
+  posix_spawn_file_actions_destroy((posix_spawn_file_actions_t *) file_actions);
+  free (file_actions);
 }
