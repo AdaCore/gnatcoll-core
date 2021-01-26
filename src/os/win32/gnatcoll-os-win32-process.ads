@@ -1,0 +1,118 @@
+------------------------------------------------------------------------------
+--                              G N A T C O L L                             --
+--                                                                          --
+--                       Copyright (C) 2021, AdaCore                        --
+--                                                                          --
+-- This library is free software;  you can redistribute it and/or modify it --
+-- under terms of the  GNU General Public License  as published by the Free --
+-- Software  Foundation;  either version 3,  or (at your  option) any later --
+-- version. This library is distributed in the hope that it will be useful, --
+-- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
+-- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
+--                                                                          --
+-- As a special exception under Section 7 of GPL version 3, you are granted --
+-- additional permissions described in the GCC Runtime Library Exception,   --
+-- version 3.1, as published by the Free Software Foundation.               --
+--                                                                          --
+-- You should have received a copy of the GNU General Public License and    --
+-- a copy of the GCC Runtime Library Exception along with this program;     --
+-- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
+-- <http://www.gnu.org/licenses/>.                                          --
+--                                                                          --
+------------------------------------------------------------------------------
+
+--  Declare types and bindings to Win32 process related APIs
+
+with System;
+
+package GNATCOLL.OS.Win32.Process is
+
+   type STARTUPINFO is record
+      cb            : DWORD  := 0;
+      Reserved      : LPWSTR := LPWSTR (System.Null_Address);
+      Desktop       : LPWSTR := LPWSTR (System.Null_Address);
+      Title         : LPWSTR := LPWSTR (System.Null_Address);
+      X             : DWORD  := 0;
+      Y             : DWORD  := 0;
+      XSize         : DWORD  := 0;
+      YSize         : DWORD  := 0;
+      XCountChars   : DWORD  := 0;
+      YCountChars   : DWORD  := 0;
+      FillAttribute : DWORD  := 0;
+      Flags         : DWORD  := 0;
+      ShowWindow    : WORD   := 0;
+      Reserved2     : WORD   := 0;
+      Reserved3     : LPVOID := LPVOID (System.Null_Address);
+      StdInput      : HANDLE := 0;
+      StdOutput     : HANDLE := 0;
+      StdError      : HANDLE := 0;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   STARTF_USESTDHANDLES : constant DWORD := 16#00000100#;
+   SW_HIDE : constant WORD := 0;
+
+   type LPSTARTUPINFO is access all STARTUPINFO;
+
+   type PROCESS_INFORMATION is record
+      Process   : HANDLE;
+      Thread    : HANDLE;
+      ProcessId : DWORD;
+      ThreadId  : DWORD;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type LPPROCESS_INFORMATION is access all PROCESS_INFORMATION;
+
+   function WaitForSingleObject
+      (Object       : HANDLE;
+       Milliseconds : DWORD)
+      return DWORD
+   with Import => True,
+        Convention => Stdcall,
+        External_Name => "WaitForSingleObject";
+
+   INFINITE : constant DWORD := 16#ffffffff#;
+
+   function GetExitCodeProcess
+      (Process  : HANDLE;
+       ExitCode : out DWORD)
+      return BOOL
+   with Import => True,
+        Convention => Stdcall,
+        External_Name => "GetExitCodeProcess";
+
+   function CloseHandle (Object : HANDLE) return BOOL
+   with Import => True,
+        Convention => Stdcall,
+        External_Name => "CloseHandle";
+
+   subtype Process_Creation_Flags is DWORD;
+
+   function CreateProcess
+     (ApplicationName    : C_WString;
+      CommandLine        : C_WString;
+      ProcessAttributes  : LPSECURITY_ATTRIBUTES;
+      ThreadAttributes   : LPSECURITY_ATTRIBUTES;
+      bInheritHandles    : BOOL;
+      CreationFlags      : Process_Creation_Flags;
+      Environment        : C_WString;
+      CurrentDirectory   : C_WString;
+      Startup            : in out STARTUPINFO;
+      ProcessInformation : in out PROCESS_INFORMATION)
+      return BOOL
+   with Import => True,
+        Convention => Stdcall,
+        External_Name => "CreateProcessW";
+
+   --  Priorities
+   IDLE_PRIORITY_CLASS         : constant Process_Creation_Flags := 16#40#;
+   BELOW_NORMAL_PRIORITY_CLASS : constant Process_Creation_Flags := 16#4000#;
+   NORMAL_PRIORITY_CLASS       : constant Process_Creation_Flags := 16#20#;
+   ABOVE_NORMAL_PRIORITY_CLASS : constant Process_Creation_Flags := 16#8000#;
+   HIGH_PRIORITY_CLASS         : constant Process_Creation_Flags := 16#80#;
+
+   --  Other creation flags
+   CREATE_UNICODE_ENVIRONMENT  : constant Process_Creation_Flags := 16#400#;
+
+end GNATCOLL.OS.Win32.Process;

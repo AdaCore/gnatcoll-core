@@ -108,4 +108,9 @@ package GNATCOLL.OS.Win32 is
        LPVOID (System.Null_Address),
        BOOL_FALSE);
 
+   function GetLastError return DWORD
+   with Import        => True,
+        Convention    => C,
+        External_Name => "GetLastError";
+
 end GNATCOLL.OS.Win32;
