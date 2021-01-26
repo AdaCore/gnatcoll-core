@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2020, AdaCore                          --
+--                   Copyright (C) 2020-2021, AdaCore                       --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -63,6 +63,10 @@ package GNATCOLL.WString_Builders is
       with Inline;
    --  Return an Ada String (without the trailing ASCII.NUL)
 
+   function As_UTF8_String (Self : WString_Builder) return UTF8.UTF_8_String
+      with Inline;
+   --  Return an Ada String (without the trailing ASCII.NUL)
+
    function As_C_WString
       (Self          : WString_Builder;
        Null_If_Empty : Boolean := False)
@@ -110,6 +114,12 @@ package GNATCOLL.WString_Builders is
    --  the trailing NUL character maintained by the structure).
 
    function As_String (Self : Static_WString_Builder) return Wide_String
+      with Inline;
+   --  Return an Ada String (without the trailing ASCII.NUL)
+
+   function As_UTF8_String
+      (Self : Static_WString_Builder)
+      return UTF8.UTF_8_String
       with Inline;
    --  Return an Ada String (without the trailing ASCII.NUL)
 

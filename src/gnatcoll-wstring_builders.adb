@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2020, AdaCore                          --
+--                    Copyright (C) 2020-2021, AdaCore                      --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -144,24 +144,6 @@ package body GNATCOLL.WString_Builders is
       Self.Str (Self.Str_Last + 1) := WNUL;
    end Append;
 
-   ---------------
-   -- As_String --
-   ---------------
-
-   function As_String (Self : WString_Builder) return Wide_String is
-   begin
-      if Self.Str_Last > WString_Builder_Short_Size then
-         return Self.Heap_Str.all (1 .. Self.Str_Last);
-      else
-         return Self.Stack_Str (1 .. Self.Str_Last);
-      end if;
-   end As_String;
-
-   function As_String (Self : Static_WString_Builder) return Wide_String is
-   begin
-      return Self.Str (1 .. Self.Str_Last);
-   end As_String;
-
    ------------------
    -- As_C_WString --
    ------------------
@@ -201,6 +183,40 @@ package body GNATCOLL.WString_Builders is
          return OS.C_WString (Self.Str (1)'Address);
       end if;
    end As_C_WString;
+
+   ---------------
+   -- As_String --
+   ---------------
+
+   function As_String (Self : WString_Builder) return Wide_String is
+   begin
+      if Self.Str_Last > WString_Builder_Short_Size then
+         return Self.Heap_Str.all (1 .. Self.Str_Last);
+      else
+         return Self.Stack_Str (1 .. Self.Str_Last);
+      end if;
+   end As_String;
+
+   function As_String (Self : Static_WString_Builder) return Wide_String is
+   begin
+      return Self.Str (1 .. Self.Str_Last);
+   end As_String;
+
+   --------------------
+   -- As_UTF8_String --
+   --------------------
+
+   function As_UTF8_String (Self : WString_Builder) return UTF8.UTF_8_String is
+   begin
+      return UTF.Encode (As_String (Self));
+   end As_UTF8_String;
+
+   function As_UTF8_String
+      (Self : Static_WString_Builder) return UTF8.UTF_8_String
+   is
+   begin
+      return UTF.Encode (As_String (Self));
+   end As_UTF8_String;
 
    ----------------
    -- Deallocate --
