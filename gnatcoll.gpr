@@ -190,6 +190,14 @@ project GnatColl is
               use "gnatcoll-os-fs-set_close_on_exec__unix.adb";
             for Implementation ("GNATCOLL.OS.FS.Is_Console")
               use "gnatcoll-os-fs-is_console__unix.adb";
+            for Implementation ("GNATCOLL.OS.Process.Wait")
+              use "gnatcoll-os-process-wait__unix.adb";
+            for Implementation ("GNATCOLL.OS.Process.Internal_Spawn")
+              use "gnatcoll-os-process-internal_spawn__unix.adb";
+            for Specification ("GNATCOLL.OS.Process_Types")
+              use "gnatcoll-os-process_types__unix.ads";
+            for Implementation ("GNATCOLL.OS.Process_Types")
+              use "gnatcoll-os-process_types__unix.adb";
          when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
@@ -209,6 +217,14 @@ project GnatColl is
               use "gnatcoll-os-fs-open_pipe__win32.adb";
             for Implementation ("GNATCOLL.OS.FS.Set_Close_On_Exec")
               use "gnatcoll-os-fs-set_close_on_exec__win32.adb";
+            for Specification ("GNATCOLL.OS.Process_Types")
+              use "gnatcoll-os-process_types__win32.ads";
+            for Implementation ("GNATCOLL.OS.Process_Types")
+              use "gnatcoll-os-process_types__win32.adb";
+            for Implementation ("GNATCOLL.OS.Process.Wait")
+              use "gnatcoll-os-process-wait__win32.adb";
+            for Implementation ("GNATCOLL.OS.Process.Internal_Spawn")
+              use "gnatcoll-os-process-internal_spawn__win32.adb";
       end case;
 
       case OS is
