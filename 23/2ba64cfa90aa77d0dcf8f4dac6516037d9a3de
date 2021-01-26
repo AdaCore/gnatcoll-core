@@ -1,0 +1,7 @@
+Code-Review+2: Vasiliy Fofanov <fofanov@adacore.com>
+Code-Review-1: CI Builder <ci-builder@adacore.com>
+Submitted-by: Nicolas Roche <roche@adacore.com>
+Submitted-at: Tue, 26 Jan 2021 08:00:17 +0100
+Reviewed-on: https://git.adacore.com/85059
+Project: gnatcoll-core
+Branch: refs/heads/master
