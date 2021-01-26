@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2017-2020, AdaCore                     --
+--                     Copyright (C) 2017-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -58,6 +58,10 @@ package GNATCOLL.OS is
    type C_String_Array is new System.Address;
    Null_C_String_Array : constant C_String_Array;
 
+   --  Equivalent of wchar ** in C
+   type C_WString_Array is new System.Address;
+   Null_C_WString_Array : constant C_WString_Array;
+
 private
 
    Null_C_String   : constant C_String := C_String (System.Null_Address);
@@ -73,4 +77,6 @@ private
    Null_C_String_Array : constant C_String_Array :=
       C_String_Array (System.Null_Address);
 
+   Null_C_WString_Array : constant C_WString_Array :=
+      C_WString_Array (System.Null_Address);
 end GNATCOLL.OS;
