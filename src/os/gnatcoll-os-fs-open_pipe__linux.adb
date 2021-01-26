@@ -29,7 +29,6 @@ procedure Open_Pipe
    Pipe_Output : out File_Descriptor)
 is
    package Libc renames GNATCOLL.OS.Libc;
-   use type Libc.Libc_Status;
 
    Result : aliased Libc.Pipe_Type;
    Status : Libc.Libc_Status;
