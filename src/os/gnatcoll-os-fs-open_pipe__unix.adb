@@ -32,16 +32,16 @@ is
    package Libc renames GNATCOLL.OS.Libc;
 
    Result : aliased Libc.Pipe_Type;
-   Status : Libc_Status;
+   Status : Libc.Libc_Status;
 begin
    --  We need to ensure that a call to pipe and set_close_on_exec is done
    --  atomically. Otherwise the pipe file descriptors might leak into other
    --  processes and thus block the pipe (in programs mixing tasking and
    --  process spawning for example).
    GNAT.Task_Lock.Lock;
-   Status := Pipe (Result'Access);
+   Status := Libc.Pipe (Result'Access);
 
-   if Status = Error then
+   if Status = Libc.Error then
       GNAT.Task_Lock.Unlock;
       raise OS_Error with "cannot open pipe";
    end if;
