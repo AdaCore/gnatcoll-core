@@ -161,7 +161,7 @@ package GNATCOLL.OS.Win32.Files is
        Mode     : Permission_Mode)
       return FS.File_Descriptor
    with Import => True,
-        Convention => Stdcall,
+        Convention => C,
         External_Name => "_wopen";
 
    function CreatePipe
