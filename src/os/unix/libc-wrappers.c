@@ -141,7 +141,7 @@ unix-like systems this should be done by a separate system calls.
 */
 int __gnatcoll_pipe(int* fds)
 {
-#if defined(__linux__)
+#if defined(__linux__) && defined(O_CLOEXEC)
   return pipe2(fds, O_CLOEXEC);
 #else
   return pipe(fds);
