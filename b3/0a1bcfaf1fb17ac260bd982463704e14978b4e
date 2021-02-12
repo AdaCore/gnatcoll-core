@@ -1,0 +1,7 @@
+Code-Review+2: Dmitriy Anisimkov <anisimko@adacore.com>
+Code-Review-1: CI Builder <ci-builder@adacore.com>
+Submitted-by: Feodor Rybin <frybin@adacore.com>
+Submitted-at: Fri, 12 Feb 2021 13:21:57 +0100
+Reviewed-on: https://git.adacore.com/88223
+Project: gnatcoll-core
+Branch: refs/heads/master
