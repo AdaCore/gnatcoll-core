@@ -1,0 +1,8 @@
+project P is
+   package Foo is
+      for Switches ("aDA") use "boo";
+      for Switches ("aSM") use "foo";
+      for List_Switches ("aDA") use ("val1");
+      for List_Switches ("aSM") use ("val2");
+   end Foo;
+end P;

@@ -1494,11 +1494,15 @@ package GNATCOLL.Projects is
    --  To avoid typos, a set of constants is provided for all known attributes
    --  in a project.
    --
-   --  Note, that on some platforms the Index is case-sensitive when it is a
-   --  language name. For example, if the projects has
+   --  When attribute index is expected to be case-sensitive and actual index
+   --  is a name of one of the languages of a given project, the index is
+   --  treated as not case-sensitive. For example, if the project has
+   --      for Languages use ("Ada");
    --      for Attribute ("ada") use ...
-   --  and Index is set to "Ada", then False/empty list/No_Project
-   --  will be returned.
+   --      for Attribute ("Ada") use ...
+   --  and Index is set to "Ada", "ada", "ADA" or any other casing combination,
+   --  then the second attribute declaration will hide the first one and only
+   --  corresponding value/list of values from the last one will be returned.
    --
    --  It is also not recommended to use attribute related queries to get info
    --  on runtime and target, since there are legacy ways of specifying those

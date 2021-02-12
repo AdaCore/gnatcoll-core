@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2020, AdaCore                     --
+--                     Copyright (C) 2002-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -3002,8 +3002,11 @@ package body GNATCOLL.Projects is
       if Index /= "" then
          Elem := Value_Of (N, In_Arrays => Arr, Shared => Shared);
          if Elem /= No_Array_Element then
-            Value := Value_Of (Index => Get_String (Index), In_Array => Elem,
-                               Shared => Shared);
+            Value := Value_Of
+              (Index                  => Get_String (Index),
+               In_Array               => Elem,
+               Shared                 => Shared,
+               Force_Lower_Case_Index => Project.Has_Language (Index));
          end if;
       else
          Value := Value_Of (N, In_Variables => Var, Shared => Shared);
@@ -3325,8 +3328,12 @@ package body GNATCOLL.Projects is
          end if;
 
          I := Get_String (Index);
-         return Value_Of (I, In_Array => Arr_Elem_Id, Shared => Shared) /=
-           Nil_Variable_Value;
+         return Value_Of
+           (I,
+            In_Array               => Arr_Elem_Id,
+            Shared                 => Shared,
+            Force_Lower_Case_Index => Project.Has_Language (Index)) /=
+             Nil_Variable_Value;
       else
          return not Value_Of (N, Var, Shared).Default;
       end if;
