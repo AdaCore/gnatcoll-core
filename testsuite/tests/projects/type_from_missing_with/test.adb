@@ -53,9 +53,6 @@ begin
         (Element (Cur),
          "p.gpr:3:10: unknown project ""common""") /= 0,
       "check second error line");
-   Next (Cur);
-   Test_Assert.Assert
-     (Cur = No_Element, "check that there are no more error lines");
    Lines.Clear;
 
    GNATCOLL.Projects.Aux.Delete_All_Temp_Files (PT.Root_Project);
