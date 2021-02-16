@@ -75,19 +75,19 @@ int __gnatcoll_stat(const char *path, struct gnatcoll_stat *buf)
   buf->blksize = (sint_64) result.st_blksize;
   buf->blocks = (sint_64) result.st_blocks;
 #if defined(__APPLE__)
-  buf->atime = (sint_64) (result.st_atimespec.tv_sec * 1000000000 +
-                          result.st_atimespec.tv_nsec);
-  buf->mtime = (sint_64) (result.st_mtimespec.tv_sec * 1000000000 +
-                          result.st_mtimespec.tv_nsec);
-  buf->ctime = (sint_64) (result.st_ctimespec.tv_sec * 1000000000 +
-                          result.st_ctimespec.tv_nsec);
+  buf->atime = (sint_64) result.st_atimespec.tv_sec * 1000000000 +
+               (sint_64) result.st_atimespec.tv_nsec;
+  buf->mtime = (sint_64) result.st_mtimespec.tv_sec * 1000000000 +
+               (sint_64) result.st_mtimespec.tv_nsec;
+  buf->ctime = (sint_64) result.st_ctimespec.tv_sec * 1000000000 +
+               (sint_64) result.st_ctimespec.tv_nsec;
 #else
-  buf->atime = (sint_64) (result.st_atim.tv_sec * 1000000000 +
-                          result.st_atim.tv_nsec);
-  buf->mtime = (sint_64) (result.st_mtim.tv_sec * 1000000000 +
-                          result.st_mtim.tv_nsec);
-  buf->ctime = (sint_64) (result.st_ctim.tv_sec * 1000000000 +
-                          result.st_ctim.tv_nsec);
+  buf->atime = (sint_64) result.st_atim.tv_sec * 1000000000 +
+               (sint_64) result.st_atim.tv_nsec;
+  buf->mtime = (sint_64) result.st_mtim.tv_sec * 1000000000 +
+               (sint_64) result.st_mtim.tv_nsec;
+  buf->ctime = (sint_64) result.st_ctim.tv_sec * 1000000000 +
+               (sint_64) result.st_ctim.tv_nsec;
 
 #endif
   return status;
@@ -110,19 +110,19 @@ int __gnatcoll_lstat(const char *path, struct gnatcoll_stat *buf)
   buf->blksize = (sint_64) result.st_blksize;
   buf->blocks = (sint_64) result.st_blocks;
 #if defined(__APPLE__)
-  buf->atime = (sint_64) (result.st_atimespec.tv_sec * 1000000000 +
-                          result.st_atimespec.tv_nsec);
-  buf->mtime = (sint_64) (result.st_mtimespec.tv_sec * 1000000000 +
-                          result.st_mtimespec.tv_nsec);
-  buf->ctime = (sint_64) (result.st_ctimespec.tv_sec * 1000000000 +
-                          result.st_ctimespec.tv_nsec);
+  buf->atime = (sint_64) result.st_atimespec.tv_sec * 1000000000 +
+               (sint_64) result.st_atimespec.tv_nsec;
+  buf->mtime = (sint_64) result.st_mtimespec.tv_sec * 1000000000 +
+               (sint_64) result.st_mtimespec.tv_nsec;
+  buf->ctime = (sint_64) result.st_ctimespec.tv_sec * 1000000000 +
+               (sint_64) result.st_ctimespec.tv_nsec;
 #else
-  buf->atime = (sint_64) (result.st_atim.tv_sec * 1000000000 +
-                          result.st_atim.tv_nsec);
-  buf->mtime = (sint_64) (result.st_mtim.tv_sec * 1000000000 +
-                          result.st_mtim.tv_nsec);
-  buf->ctime = (sint_64) (result.st_ctim.tv_sec * 1000000000 +
-                          result.st_ctim.tv_nsec);
+  buf->atime = (sint_64) result.st_atim.tv_sec * 1000000000 +
+               (sint_64) result.st_atim.tv_nsec;
+  buf->mtime = (sint_64) result.st_mtim.tv_sec * 1000000000 +
+               (sint_64) result.st_mtim.tv_nsec;
+  buf->ctime = (sint_64) result.st_ctim.tv_sec * 1000000000 +
+               (sint_64) result.st_ctim.tv_nsec;
 
 #endif
   return status;
