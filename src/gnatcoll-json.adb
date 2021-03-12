@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2020, AdaCore                     --
+--                     Copyright (C) 2011-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1402,7 +1402,7 @@ package body GNATCOLL.JSON is
       end loop;
 
       Vals.Append
-        ((Key => To_XString (Field_Name),
+        (Object_Item'(Key => To_XString (Field_Name),
           Val => Field));
    end Set_Field;
 
@@ -1421,7 +1421,7 @@ package body GNATCOLL.JSON is
       end loop;
 
       Vals.Append
-        ((Key => Field_Name,
+        (Object_Item'(Key => Field_Name,
           Val => Field));
    end Set_Field;
 
