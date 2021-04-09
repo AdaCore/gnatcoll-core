@@ -1,0 +1,7 @@
+project My_Test_C is
+
+   for Languages use ("C");
+
+   for Source_Files use ();
+
+end My_Test_C;

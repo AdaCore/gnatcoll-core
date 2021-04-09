@@ -3512,6 +3512,9 @@ package body GNATCOLL.Projects is
                         Value := String_Elements (P.Data.Tree)(Value).Next;
                      end loop;
                end case;
+
+            else
+               Langs.Include (To_Mixed ("ada"));
             end if;
 
             Next (Iter);
