@@ -2669,7 +2669,7 @@ package body GNATCOLL.Projects is
 
       if Is_Ada_Predefined_Unit (Unit_Name) then
          declare
-            Buffer : String := Substitute_Dot (Unit_Name, "-");
+            Buffer : String := To_Lower (Substitute_Dot (Unit_Name, "-"));
             Len    : Natural := Buffer'Length;
          begin
             pragma Assert (Buffer'First = 1);

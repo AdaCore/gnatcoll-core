@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                        Copyright (C) 2015-2017, AdaCore                  --
+--                        Copyright (C) 2015-2021, AdaCore                  --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -71,6 +71,15 @@ package body GNATCOLL.Projects.Krunch is
          Curlen := Len - 17;
          Krlen := 8;
 
+      elsif Len >= 27
+        and then Buffer (1 .. 27) = "ada-long_long_long_integer_"
+      then
+         Startloc := 3;
+         Buffer (2 .. Len - 2) := Buffer (4 .. Len);
+         Buffer (18 .. Len - 10) := Buffer (26 .. Len - 2);
+         Curlen := Len - 10;
+         Krlen := 8;
+
       elsif Len >= 4 and then Buffer (1 .. 4) = "ada-" then
          Startloc := 3;
          Buffer (2 .. Len - 2) := Buffer (4 .. Len);
@@ -87,18 +96,51 @@ package body GNATCOLL.Projects.Krunch is
          Startloc := 3;
          Buffer (2 .. Len - 5) := Buffer (7 .. Len);
          Curlen := Len - 5;
-         Krlen  := 8;
+         if Buffer (Curlen - 2 .. Curlen) = "128"
+           or else Buffer (3 .. 9) = "exn_lll"
+           or else Buffer (3 .. 9) = "exp_lll"
+           or else Buffer (3 .. 9) = "img_lll"
+           or else Buffer (3 .. 9) = "val_lll"
+           or else Buffer (3 .. 9) = "wid_lll"
+           or else (Buffer (3 .. 6) = "pack" and then Curlen = 10)
+         then
+            if Buffer (3 .. 15) = "compare_array" then
+               Buffer (3 .. 4) := "ca";
+               Buffer (5 .. Curlen - 11) := Buffer (16 .. Curlen);
+               Curlen := Curlen - 11;
+            end if;
+            Krlen := 9;
+         else
+            Krlen := 8;
+         end if;
 
       elsif Len >= 11 and then Buffer (1 .. 11) = "interfaces-" then
          Startloc := 3;
          Buffer (2 .. Len - 9) := Buffer (11 .. Len);
          Curlen := Len - 9;
-         Krlen  := 8;
+
+         --  Only fully krunch historical units. For new units, simply use
+         --  the 'i-' prefix instead of 'interfaces-'. Packages Interfaces.C
+         --  and Interfaces.Cobol are already in the right form. Package
+         --  Interfaces.Definitions is krunched for backward compatibility.
+
+         if        (Curlen >  3 and then Buffer (3 ..  4) = "c-")
+           or else (Curlen >  3 and then Buffer (3 ..  4) = "c_")
+           or else (Curlen = 13 and then Buffer (3 .. 13) = "definitions")
+           or else (Curlen =  9 and then Buffer (3 ..  9) = "fortran")
+           or else (Curlen = 16 and then Buffer (3 .. 16) = "packed_decimal")
+           or else (Curlen >  8 and then Buffer (3 ..  9) = "vxworks")
+           or else (Curlen >  5 and then Buffer (3 ..  6) = "java")
+         then
+            Krlen := 8;
+         else
+            Krlen := Maxlen;
+         end if;
 
          --  For the renamings in the obsolescent section, we also force
          --  krunching to 8 characters, but no other special processing is
-         --  required here. Note that text_io and calendar are already short
-         --  enough anyway.
+         --  required here.
+         --  Note that text_io and calendar are already short enough anyway.
 
       elsif     (Len =  9 and then Buffer (1 ..  9) = "direct_io")
         or else (Len = 10 and then Buffer (1 .. 10) = "interfaces")
@@ -146,11 +188,11 @@ package body GNATCOLL.Projects.Krunch is
       while J <= Curlen - 8 loop
          if Buffer (J .. J + 8) = "wide_wide"
            and then (J = Startloc
-                     or else Buffer (J - 1) = '-'
-                     or else Buffer (J - 1) = '_')
+                      or else Buffer (J - 1) = '-'
+                      or else Buffer (J - 1) = '_')
            and then (J + 8 = Curlen
-                     or else Buffer (J + 9) = '-'
-                     or else Buffer (J + 9) = '_')
+                      or else Buffer (J + 9) = '-'
+                      or else Buffer (J + 9) = '_')
          then
             Buffer (J) := 'z';
             Buffer (J + 1 .. Curlen - 8) := Buffer (J + 9 .. Curlen);
