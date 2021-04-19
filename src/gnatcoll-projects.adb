@@ -609,7 +609,7 @@ package body GNATCOLL.Projects is
             end if;
 
          else
-            if Tree.Data.Root /= No_Project then
+            if Tree.Data.Root /= No_Project and then P.Data /= null then
                P := Project_Type (Project_From_Name (Tree.Data, Project.Name));
                P.Data.View_Is_Complete := False;
             end if;
