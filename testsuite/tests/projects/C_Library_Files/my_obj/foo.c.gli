@@ -1,0 +1,13 @@
+V "10.3.1 20210418 (for GNAT Pro 22.0w 20210418)"
+P
+R
+U foo.c foo.c
+A -fdump-scos
+A -g
+
+D /home/leo/workspace/gnatcov-support/U412-033/src/foo.c 00000000000000 00000000
+D /home/leo/workspace/gnatcov-support/U412-033/src/foo.h 00000000000000 00000000
+D /usr/include/stdc-predef.h 00000000000000 00000000
+
+C 1 foo.c
+CS 6:10-6:14

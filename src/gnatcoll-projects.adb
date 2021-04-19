@@ -1155,7 +1155,20 @@ package body GNATCOLL.Projects is
 
                Extended_P := Extending_Project (Root, True);
                loop
-                  if Extended_P = SFD.Project then
+                  --  All C library files are created when compiling a
+                  --  <basename>.c or <basename>.cpp file, so when processing
+                  --  a C library file, we want Library_Files to return
+                  --  <basename>.c(pp) as the corresponding source for
+                  --  <basename>.c.gli, and not the source of a homonym header.
+                  --
+                  --  Since all compiled .c(pp) files generate a corresponding
+                  --  .c.gli file, we are guaranteed to find some
+                  --  Source_File_Data corresponding to a .c(pp) file with the
+                  --  same basename as Key, even if we skip the header files.
+
+                  if Extended_P = SFD.Project
+                    and then +SFD.File.File_Extension not in ".h" | ".hpp"
+                  then
                      Local_Obj_Map.Include (Key, SFD);
 
                      return Local_Obj_Map.First;

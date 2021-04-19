@@ -1,0 +1,9 @@
+project My_Test is
+
+   for Languages use ("ada", "C");
+   for Source_Dirs use (".");
+   for Object_Dir use "my_obj";
+   for Main use ("main.adb");
+   for Exec_Dir use ".";
+
+end My_Test;

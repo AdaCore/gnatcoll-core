@@ -1,0 +1,11 @@
+description: >
+  Check that, for a given Library file <basename>.c.gli,
+  the procedure Library_File returns <basename>.c as the
+  associated source.
+
+data:
+  - "my_test.gpr"
+  - "foo.c"
+  - "foo.h"
+  - "main.adb"
+  - "my_obj"
