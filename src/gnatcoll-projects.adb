@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2020, AdaCore                     --
+--                     Copyright (C) 2002-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -3509,6 +3509,9 @@ package body GNATCOLL.Projects is
                         Value := String_Elements (P.Data.Tree)(Value).Next;
                      end loop;
                end case;
+
+            else
+               Langs.Include (To_Mixed ("ada"));
             end if;
 
             Next (Iter);

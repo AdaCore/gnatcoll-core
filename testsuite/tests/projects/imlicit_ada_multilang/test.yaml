@@ -1,0 +1,9 @@
+description: >
+  Check that Ada shows up in the recursive list of languages
+  when there is a project with no implicit Language attribute
+  which imports a project with non-ada language only.
+data:
+    - "test.adb"
+    - "ada_test.adb"
+    - "my_test.gpr"
+    - "my_test_c.gpr"
