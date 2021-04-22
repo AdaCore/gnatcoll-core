@@ -3511,7 +3511,7 @@ package body GNATCOLL.Projects is
                end case;
 
             else
-               Langs.Include (To_Mixed ("ada"));
+               Langs.Include ("Ada");
             end if;
 
             Next (Iter);
