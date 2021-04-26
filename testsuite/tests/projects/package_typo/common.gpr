@@ -1,0 +1,7 @@
+project Common is
+   for Source_Files use ();
+   package Link is
+      for Default_Switches use ();
+   end Link;
+end Common;
+
