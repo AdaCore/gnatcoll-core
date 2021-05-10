@@ -27,6 +27,7 @@
 #define _GNU_SOURCE 1
 
 #include <sys/stat.h>
+#include <sys/statvfs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -36,6 +37,65 @@
 typedef unsigned long long int uint_64;
 typedef unsigned int uint_32;
 typedef long long int sint_64;
+
+/* Simpler mapping of libc statvfs struct. This structure should stay
+   in sync with GNATCOLL.OS.Libc.Stat.Statvfs_Info.
+ */
+struct gnatcoll_statvfs {
+    uint_64 bsize;
+    uint_64 frsize;
+    uint_64 blocks;
+    uint_64 bfree;
+    uint_64 bavail;
+    uint_64 files;
+    uint_64 ffree;
+    uint_64 favail;
+    uint_64 flags;
+    uint_64 namemax;
+    uint_64 pathmax;
+};
+
+int __gnatcoll_statvfs(const char *path, struct gnatcoll_statvfs *buf)
+{
+   struct statvfs result;
+   int status;
+   status = statvfs (path, &result);
+   buf->bsize = (uint_64) result.f_bsize;
+   buf->frsize = (uint_64) result.f_frsize;
+   buf->blocks = (uint_64) result.f_blocks;
+   buf->bfree = (uint_64) result.f_bfree;
+   buf->bavail = (uint_64) result.f_bavail;
+   buf->files = (uint_64) result.f_files;
+   buf->ffree = (uint_64) result.f_ffree;
+   buf->favail = (uint_64) result.f_favail;
+   buf->flags = (uint_64) result.f_flag;
+   buf->namemax = (uint_64) result.f_namemax;
+   if (status == 0) {
+      buf->pathmax = (uint_64 ) pathconf (path, _PC_PATH_MAX);
+   }
+   return status;
+}
+
+int __gnatcoll_fstatvfs(int fd, struct gnatcoll_statvfs *buf)
+{
+   struct statvfs result;
+   int status;
+   status = fstatvfs (fd, &result);
+   buf->bsize = (uint_64) result.f_bsize;
+   buf->frsize = (uint_64) result.f_frsize;
+   buf->blocks = (uint_64) result.f_blocks;
+   buf->bfree = (uint_64) result.f_bfree;
+   buf->bavail = (uint_64) result.f_bavail;
+   buf->files = (uint_64) result.f_files;
+   buf->ffree = (uint_64) result.f_ffree;
+   buf->favail = (uint_64) result.f_favail;
+   buf->flags = (uint_64) result.f_flag;
+   buf->namemax = (uint_64) result.f_namemax;
+   if (status == 0) {
+      buf->pathmax = (uint_64 ) fpathconf (fd, _PC_PATH_MAX);
+   }
+   return status;
+}
 
 /* Simpler mapping of libc stat struct.
 

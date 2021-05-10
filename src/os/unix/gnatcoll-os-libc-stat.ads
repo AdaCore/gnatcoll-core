@@ -54,4 +54,38 @@ package GNATCOLL.OS.Libc.Stat is
         Convention    => C,
         External_Name => "__gnatcoll_lstat";
 
+   type Statvfs_Info is record
+      Bsize    : Uint_64;  --  File system block size
+      Frsize   : Uint_64;  --  Fragment size
+      Blocks   : Uint_64;  --  File system size in fragment units (Frsize)
+      Bfree    : Uint_64;  --  Free blocks in file system
+      Bavail   : Uint_64;  --  Free blocks available to unprivileged users
+      Files    : Uint_64;  --  Total file nodes in file system
+      Ffree    : Uint_64;  --  Free file nodes in file system
+      FAvail   : Uint_64;  --  Free file nodes aviable to unprivileged users
+      Flags    : Uint_64;  --  Mount flags (system specific)
+      Namemax  : Uint_64;  --  Maximum filename length (note this is the max
+                           --  length for each path fragment)
+      Pathmax  : Uint_64;  --  Maximum relative path length
+                           --  (from current directory). Strictly speaking
+                           --  statvfs does not return the max path but this
+                           --  value can be useful and thus added to the
+                           --  original statvfs structure.
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   --  See Posix statvfs documentation
+   function Statvfs
+      (Path : C_String; Info : in out Statvfs_Info) return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_statvfs";
+
+   --  See Posix fstatvfs documentation
+   function Fstatvfs
+      (Fd : FS.File_Descriptor; Info : in out Statvfs_Info) return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_fstatvfs";
+
 end GNATCOLL.OS.Libc.Stat;
