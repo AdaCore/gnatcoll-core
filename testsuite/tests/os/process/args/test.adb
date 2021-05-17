@@ -45,6 +45,14 @@ begin
       Args.Append ("\a");
       Output := Run (Args, Status => Status, Strip => True);
       A.Assert (To_String (Output), "5|-v|""|'|\na|\a");
+
+      IO.Put_Line ("Check utf-8 support");
+      Args.Clear;
+      Args.Append (Test_Python.Python_Executable);
+      Args.Append ("./check_args.py");
+      Args.Append ("ハ");
+      Output := Run (Args, Status => Status, Strip => True);
+      A.Assert (To_String (Output), "1|ハ");
    end;
 
    return A.Report;

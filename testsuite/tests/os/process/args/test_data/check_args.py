@@ -1,5 +1,5 @@
 import sys
-
+sys.stdout.reconfigure(encoding='utf-8')
 print(
     str(len(sys.argv[1:]))
     + "|"
