@@ -24,7 +24,10 @@ begin
       Args.Append ("--version");
       begin
          Status := Run (Args);
-         A.Assert (False, "exception not raised. status:" & Status'Img);
+         A.Assert
+            (Status, 127,
+             "if no exception is raised then status should 127. status:" &
+             Status'Img);
       exception
          when OS.OS_Error =>
             A.Assert (True, "got expected exception OS_Error");
