@@ -105,6 +105,7 @@ begin
        Spawn_Attributes (System.Null_Address),
        Process_Types.As_C (Args),
        Process_Types.As_C (Env));
+   Destroy (FA);
    if Spawn_Status /= 0 then
       raise OS_Error
       with "cannot spawn process (status:" & Spawn_Status'Img & ")";
