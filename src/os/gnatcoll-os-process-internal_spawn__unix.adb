@@ -50,11 +50,13 @@ is
    FA           : constant File_Actions := Init;
    C_Cwd        : Static_String_Builder (Cwd'Length + 1);
    Old_Cwd      : aliased Static_String_Builder (4096 + 1);
-   Status       : Integer;
+   Status       : Integer with Unreferenced;
    C_Status     : Libc_Status;
    Spawn_Status : Integer;
 begin
    --  Create file descriptors
+
+   --  ??? Should we ignore the contents of Status below?
    if Stdin /= FS.Standin then
       Status := Add_Dup2 (FA, Stdin, FS.Standin);
       Status := Add_Close (FA, Stdin);

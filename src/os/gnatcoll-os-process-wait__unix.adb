@@ -26,11 +26,11 @@ with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
 separate (GNATCOLL.OS.Process)
 function Wait (H : Process_Handle) return Integer
 is
-   use all type uint_32;
+   use all type Uint_32;
 
    Unix_Pid : constant Integer := Integer (H);
    Finished : Integer;
-   Status   : uint_32 := 0;
+   Status   : Uint_32 := 0;
 begin
    Finished := Waitpid (Unix_Pid, Status, 0);
    if Finished /= Unix_Pid or (Status and 16#7f#) /= 0 then

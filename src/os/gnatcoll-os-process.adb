@@ -50,6 +50,18 @@ package body GNATCOLL.OS.Process is
    --  Transform an Environment_Dict into Process_Types.Environ. To should be
    --  deallocated by the caller.
 
+   function Run
+     (Args              : Process_Types.Arguments;
+      Cwd               : UTF8.UTF_8_String  := "";
+      Stdin             : FS.File_Descriptor := FS.Standin;
+      Stderr            : FS.File_Descriptor := FS.Standerr;
+      Priority          : Priority_Class     := INHERIT;
+      Universal_Newline : Boolean            := False;
+      Strip             : Boolean            := False;
+      Status            : out Integer)
+      return Ada.Strings.Unbounded.Unbounded_String;
+   --  Common function used by several variants of Run
+
    -------------------------
    -- Dict_To_Environment --
    -------------------------
