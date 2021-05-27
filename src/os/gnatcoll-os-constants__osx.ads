@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                  G N A T C O L L . O S . C O N S T A N T S               --
 --                                                                          --
---                   Copyright (C) 2017-2020, AdaCore                       --
+--                   Copyright (C) 2017-2021, AdaCore                       --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -37,6 +37,10 @@ package GNATCOLL.OS.Constants is
 
    Dir_Sep : constant Character := '/';
    --  The character that separates qualified filename components
+
+   Dir_Seps : constant String := "/";
+   --  The list of allowed characters that separates qualified filename
+   --  components
 
    Path_Sep : constant Character := ':';
    --  The character that separates paths in a path list
