@@ -64,6 +64,26 @@ package body GNATCOLL.OS.Stat is
       return Self.Directory;
    end Is_Directory;
 
+   -------------------
+   -- Is_Executable --
+   -------------------
+
+   function Is_Executable (Self : File_Attributes) return Boolean
+   is
+   begin
+      return Self.Executable;
+   end Is_Executable;
+
+   ------------------------
+   -- Is_Executable_File --
+   ------------------------
+
+   function Is_Executable_File (Self : File_Attributes) return Boolean
+   is
+   begin
+      return Self.Regular and then Self.Executable;
+   end Is_Executable_File;
+
    -------------
    -- Is_File --
    -------------
@@ -74,6 +94,16 @@ package body GNATCOLL.OS.Stat is
       return Self.Regular;
    end Is_File;
 
+   -----------------
+   -- Is_Readable --
+   -----------------
+
+   function Is_Readable (Self : File_Attributes) return Boolean
+   is
+   begin
+      return Self.Readable;
+   end Is_Readable;
+
    ----------------------
    -- Is_Symbolic_Link --
    ----------------------
@@ -83,6 +113,16 @@ package body GNATCOLL.OS.Stat is
    begin
       return Self.Symbolic_Link;
    end Is_Symbolic_Link;
+
+   -----------------
+   -- Is_Writable --
+   -----------------
+
+   function Is_Writable (Self : File_Attributes) return Boolean
+   is
+   begin
+      return Self.Writable;
+   end Is_Writable;
 
    -----------------------
    -- Modification_Time --

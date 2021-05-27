@@ -62,6 +62,18 @@ package GNATCOLL.OS.Stat is
    function Is_Symbolic_Link (Self : File_Attributes) return Boolean;
    --  Return True if the file is a symbolic link
 
+   function Is_Executable (Self : File_Attributes) return Boolean;
+   --  Return True if the file is executable
+
+   function Is_Readable (Self : File_Attributes) return Boolean;
+   --  Return True if the file is readable
+
+   function Is_Writable (Self : File_Attributes) return Boolean;
+   --  Return True if the file is writable
+
+   function Is_Executable_File (Self : File_Attributes) return Boolean;
+   --  Return True if the file is a regular file and is executable
+
    function Modification_Time (Self : File_Attributes) return Time;
    --  Return file modification time
 
@@ -87,5 +99,9 @@ private
    pragma Inline (Is_Directory);
    pragma Inline (Is_Symbolic_Link);
    pragma Inline (Modification_Time);
+   pragma Inline (Is_Executable_File);
+   pragma Inline (Is_Writable);
+   pragma Inline (Is_Readable);
+   pragma Inline (Is_Executable);
 
 end GNATCOLL.OS.Stat;
