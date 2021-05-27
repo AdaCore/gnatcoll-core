@@ -61,7 +61,7 @@ package body GNATCOLL.OS.Process_Types is
       if Env.Inherited then
          --  Returning a null environment will cause Win32 API to inherit the
          --  current environment.
-         return Null_C_Wstring;
+         return Null_C_WString;
       elsif WSLB.Length (Env.Env) = 0 then
          return WSLB.As_C_WString (Minimal_Env.Env);
       else

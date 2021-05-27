@@ -32,7 +32,7 @@ package GNATCOLL.OS.Process_Types is
    package OS renames GNATCOLL.OS;
 
    --  Win32 process handle
-   type Process_Handle is new OS.Win32.Handle;
+   type Process_Handle is new OS.Win32.HANDLE;
    Invalid_Handle : constant Process_Handle;
 
    -------------------------

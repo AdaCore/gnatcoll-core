@@ -43,7 +43,7 @@ is
    Flags         : Process_Creation_Flags;
    WCwd          : Static_WString_Builder (Cwd'Length + 1);
 begin
-   Append (WCWD, Cwd);
+   Append (WCwd, Cwd);
    SI.cb := STARTUPINFO'Size / 8;
    SI.Flags := STARTF_USESTDHANDLES;
    SI.ShowWindow := SW_HIDE;
