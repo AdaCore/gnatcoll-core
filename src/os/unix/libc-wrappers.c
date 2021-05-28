@@ -33,6 +33,9 @@
 #include <fcntl.h>
 #include <spawn.h>
 #include <unistd.h>
+#include <dirent.h>
+#include <string.h>
+#include <errno.h>
 
 typedef unsigned long long int uint_64;
 typedef unsigned int uint_32;
@@ -219,4 +222,53 @@ void __gnatcoll_posix_spawn_file_actions_destroy(void *file_actions)
 {
   posix_spawn_file_actions_destroy((posix_spawn_file_actions_t *) file_actions);
   free (file_actions);
+}
+
+/* Portable mapping of lib dirent.
+
+ Note that we use a constant for the filename size which is not NAME_MAX as
+ some file system such as NTFS supports up to 255 characters for the name.
+ When encoded as UTF-8 this means that the size can be up to 255 * 4 bytes.
+ */
+#define GNATCOLL_DIRENT_NAME_MAX 1024
+struct gnatcoll_dirent {
+  uint_64 inode;
+  uint_64 offset;
+  uint_32 reclen;
+  unsigned char file_type;
+  char name[GNATCOLL_DIRENT_NAME_MAX];
+};
+
+void __gnatcoll_readdir(DIR *dirp, struct gnatcoll_dirent *buf)
+{
+  struct dirent *result;
+
+  result = readdir (dirp);
+
+  if (result != NULL)
+  {
+     buf->inode = (uint_64) result->d_ino;
+     buf->offset = (uint_64) result->d_off;
+     buf->reclen = (uint_32) result->d_reclen;
+     buf->file_type = (unsigned char) result->d_type;
+     strncpy(buf->name, result->d_name, GNATCOLL_DIRENT_NAME_MAX);
+     buf->name[GNATCOLL_DIRENT_NAME_MAX - 1] = '\0';
+  } else {
+     buf->inode = 0;
+     buf->offset = 0;
+     buf->reclen = 0;
+     buf->file_type = 0;
+     buf->name[0] = '\0';
+  }
+}
+
+/* Wrappers around errno are necessary as errno maybe a MACRO */
+int __gnatcoll_errno()
+{
+   return errno;
+}
+
+void __gnatcoll_set_errno(int i)
+{
+   errno = i;
 }

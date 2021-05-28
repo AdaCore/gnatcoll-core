@@ -31,6 +31,7 @@ package GNATCOLL.OS.Libc is
 
    type Uint_64 is mod 2 ** Long_Long_Integer'Size;
    type Uint_32 is mod 2 ** Integer'Size;
+   type Uint_8 is mod 2 ** 8;
    subtype Sint_64 is Long_Long_Integer;
    subtype Sint_32 is Integer;
 
@@ -113,9 +114,7 @@ package GNATCOLL.OS.Libc is
       Output : OS.FS.File_Descriptor;
    end record;
 
-   function Isatty
-     (Fd : FS.File_Descriptor)
-     return Integer
+   function Isatty (Fd : FS.File_Descriptor) return Integer
    with Import        => True,
         Convention    => C,
         External_Name => "isatty";
@@ -177,4 +176,15 @@ package GNATCOLL.OS.Libc is
    with Import        => True,
         Convention    => C,
         External_Name => "waitpid";
+
+   function Errno return Integer
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_errno";
+
+   procedure Set_Errno (I : Integer)
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_set_errno";
+
 end GNATCOLL.OS.Libc;
