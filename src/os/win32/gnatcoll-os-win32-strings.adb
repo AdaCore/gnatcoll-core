@@ -22,10 +22,15 @@
 ------------------------------------------------------------------------------
 
 package body GNATCOLL.OS.Win32.Strings is
+
+   ---------------
+   -- From_UTF8 --
+   ---------------
+
    function From_UTF8
       (Input        : UTF8.UTF_8_String;
        Output       : out Wide_String;
-       Output_Start : Integer := -1)
+       Output_Start : Integer := From_Start)
       return Integer
    is
       Status : int;
@@ -42,6 +47,37 @@ package body GNATCOLL.OS.Win32.Strings is
          Input'Length,
          LPWSTR (Output (Offset)'Address),
          Output'Length);
+
       return Integer (Status);
    end From_UTF8;
+
+   -------------
+   -- To_UTF8 --
+   -------------
+
+   function To_UTF8
+      (Input        : Wide_String;
+       Output       : out UTF8.UTF_8_String;
+       Output_Start : Integer := From_Start)
+      return Integer
+   is
+      Status : int;
+      Offset : Natural := Output'First;
+   begin
+      if Output_Start >= Output'First then
+         Offset := Output_Start;
+      end if;
+
+      Status := WideCharToMultiByte
+         (UTF8_CodePage, 0,
+          LPWSTR (Input'Address),
+          Input'Length,
+          LPSTR (Output (Offset)'Address),
+          Output'Length,
+          LPSTR (System.Null_Address),
+          null);
+
+      return Integer (Status);
+   end To_UTF8;
+
 end GNATCOLL.OS.Win32.Strings;

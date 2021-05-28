@@ -56,17 +56,27 @@ package GNATCOLL.OS.Win32.Files is
    subtype ACCESS_MASK is DWORD;
    subtype SHARE_ACCESS is ULONG;
    subtype FILE_ATTRIBUTE is ULONG;
+   subtype OPEN_OPTION is ULONG;
 
+   READONLY      : constant FILE_ATTRIBUTE := 16#00000001#;
+   HIDDEN        : constant FILE_ATTRIBUTE := 16#00000002#;
    DIRECTORY     : constant FILE_ATTRIBUTE := 16#00000010#;
+   NORMAL        : constant FILE_ATTRIBUTE := 16#00000080#;
    REPARSE_POINT : constant FILE_ATTRIBUTE := 16#00000400#;
 
-   FILE_READ  : constant ACCESS_MASK := 1;
-   FILE_WRITE : constant ACCESS_MASK := 2;
+   FILE_READ            : constant ACCESS_MASK := 16#0001#;
+   FILE_WRITE           : constant ACCESS_MASK := 16#0002#;
+   FILE_READ_ATTRIBUTES : constant ACCESS_MASK := 16#0080#;
+   FILE_LIST_DIRECTORY  : constant ACCESS_MASK := 16#0001#;
+   SYNCHRONIZE          : constant ACCESS_MASK := 16#00100000#;
 
    SHARE_READ   : constant SHARE_ACCESS := 1;
    SHARE_WRITE  : constant SHARE_ACCESS := 2;
    SHARE_DELETE : constant SHARE_ACCESS := 4;
    SHARE_ALL    : constant SHARE_ACCESS := 7;
+
+   FILE_OPEN_FOR_BACKUP_INTENT : constant OPEN_OPTION := 16#00004000#;
+   FILE_SYNCHRONOUS_IO_NONALERT : constant OPEN_OPTION := 16#00000020#;
 
    type OBJECT_ATTRIBUTES is record
       Length                   : ULONG;
@@ -78,39 +88,42 @@ package GNATCOLL.OS.Win32.Files is
    end record
    with Convention => C_Pass_By_Copy;
 
-   type POBJECT_ATTRIBUTES is access all OBJECT_ATTRIBUTES;
-
    type FILE_OBJECT_ATTRIBUTES is record
       OA     : OBJECT_ATTRIBUTES;
       Path   : UNICODE_PATH;
-   end record;
+   end record
+   with Convention => C_Pass_By_Copy;
 
    procedure Initialize (FA   : in out FILE_OBJECT_ATTRIBUTES;
                          Name : String);
 
    type IO_STATUS_BLOCK is record
+      Pointer     : LPVOID;
       Information : ULONG;
    end record
    with Convention => C_Pass_By_Copy;
 
-   type PIO_STATUS_BLOCK is access all IO_STATUS_BLOCK;
-
    function NtOpenFile
-     (FileHandle       : out HANDLE;
-      DesiredAccess    : ACCESS_MASK;
-      ObjectAttributes : POBJECT_ATTRIBUTES;
-      IoStatusBlock    : out IO_STATUS_BLOCK;
-      ShareAccess      : ULONG;
-      OpenOptions      : ULONG)
-      return NTSTATUS
-    with Import => True,
+      (FileHandle     : in out HANDLE;
+       Path           : in out UNICODE_STRING;
+       DesiredAccess  : ACCESS_MASK;
+       IoStatusBlock  : in out IO_STATUS_BLOCK;
+       ShareAccess    : SHARE_ACCESS;
+       OpenOptions    : ULONG)
+       return NTSTATUS
+   with Import => True,
+        Convention => C,
+        External_Name => "__gnatcoll_ntopenfile";
+
+   function NtClose (FileHandle : HANDLE) return NTSTATUS
+   with Import => True,
         Convention => Stdcall,
-        External_Name => "NtOpenFile";
+        External_Name => "NtClose";
 
    function NtCreateFile
      (FileHandle        : in out HANDLE;
       DesiredAccess     : ACCESS_MASK;
-      ObjectAttributes  : POBJECT_ATTRIBUTES;
+      ObjectAttributes  : in out OBJECT_ATTRIBUTES;
       IoStatusBlock     : in out IO_STATUS_BLOCK;
       AllocationSize    : PLARGE_INTEGER;
       FileAttributes    : ULONG;
@@ -125,13 +138,16 @@ package GNATCOLL.OS.Win32.Files is
         External_Name => "NtCreateFile";
 
    subtype FILE_INFORMATION_CLASS is unsigned;
-   FileBasicInformation : constant FILE_INFORMATION_CLASS := 4;
+   FileDirectoryInformation : constant FILE_INFORMATION_CLASS := 1;
+   FileBasicInformation     : constant FILE_INFORMATION_CLASS := 4;
+   FileAllInformation       : constant FILE_INFORMATION_CLASS := 18;
+   FileStatInformation      : constant FILE_INFORMATION_CLASS := 68;
 
    function NtQueryInformationFile
-     (hFile : HANDLE;
-      io    : PIO_STATUS_BLOCK;
-      ptr   : LPVOID;
-      len   : ULONG;
+     (FileHandle           : HANDLE;
+      IoStatusBlock        : in out IO_STATUS_BLOCK;
+      FileInformation      : LPVOID;
+      Length               : ULONG;
       FileInformationClass : FILE_INFORMATION_CLASS)
    return NTSTATUS
    with Import => True,
@@ -147,6 +163,80 @@ package GNATCOLL.OS.Win32.Files is
    end record
    with Convention => C_Pass_By_Copy;
 
+   type FILE_STANDARD_INFORMATION is record
+      AllocationSize : LARGE_INTEGER;
+      EndOfFile      : LARGE_INTEGER;
+      NumberOfLinks  : ULONG;
+      DeletePending  : BOOL;
+      Directory      : BOOL;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_INTERNAL_INFORMATION is record
+      IndexNumber : LARGE_INTEGER;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_EA_INFORMATION is record
+      EaSize : ULONG;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_ACCESS_INFORMATION is record
+      AccessFlags : ACCESS_MASK;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_POSITION_INFORMATION is record
+      CurrentByteOffset : LARGE_INTEGER;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_MODE_INFORMATION is record
+      Mode : ULONG;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_ALIGNMENT_INFORMATION is record
+      AlignmentRequirement : ULONG;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_NAME_INFORMATION is record
+      FileNameLength : ULONG;
+      FileName       : Wide_String (1 .. 4096);
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_ALL_INFORMATION is record
+      BasicInformation     : FILE_BASIC_INFORMATION;
+      StandardInformation  : FILE_STANDARD_INFORMATION;
+      InternalInformation  : FILE_INTERNAL_INFORMATION;
+      EaInformation        : FILE_EA_INFORMATION;
+      AccessInformation    : FILE_ACCESS_INFORMATION;
+      PositionInformation  : FILE_POSITION_INFORMATION;
+      ModeInformation      : FILE_MODE_INFORMATION;
+      AlignmentInformation : FILE_ALIGNMENT_INFORMATION;
+      NameInformation      : FILE_NAME_INFORMATION;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   type FILE_DIRECTORY_INFORMATION is record
+      NextEntryOffset : ULONG;
+      FileIndex       : ULONG;
+      CreationTime    : LARGE_INTEGER;
+      LastAccessTime  : LARGE_INTEGER;
+      LastWriteTime   : LARGE_INTEGER;
+      ChangeTime      : LARGE_INTEGER;
+      EndOfFile       : LARGE_INTEGER;
+      AllocationSize  : LARGE_INTEGER;
+      FileAttributes  : FILE_ATTRIBUTE;
+      FileNameLength  : ULONG;
+      FileName        : Wide_String (1 .. 256);
+   end record
+   with Convention => C_Pass_By_Copy,
+        Alignment  => 8;
+
    function NtQueryAttributesFile
       (ObjectAttributes : in out OBJECT_ATTRIBUTES;
        Information      : out FILE_BASIC_INFORMATION)
@@ -154,6 +244,23 @@ package GNATCOLL.OS.Win32.Files is
    with Import => True,
         Convention => Stdcall,
         External_Name => "NtQueryAttributesFile";
+
+   function NtQueryDirectoryFile
+      (FileHandle           : HANDLE;
+       Event                : HANDLE;
+       ApcRoutine           : LPVOID;
+       ApcContext           : LPVOID;
+       IoStatusBlock        : in out IO_STATUS_BLOCK;
+       FileInformation      : LPVOID;
+       Length               : ULONG;
+       FileInformationClass : FILE_INFORMATION_CLASS;
+       ReturnSingleEntry    : BOOL;
+       FileName             : PUNICODE_STRING;
+       RestartScan          : BOOL)
+      return NTSTATUS
+      with Import => True,
+           Convention => Stdcall,
+           External_Name => "NtQueryDirectoryFile";
 
    function Open
       (Filename : C_WString;

@@ -43,9 +43,9 @@ package GNATCOLL.OS.Win32.Process is
       ShowWindow    : WORD   := 0;
       Reserved2     : WORD   := 0;
       Reserved3     : LPVOID := LPVOID (System.Null_Address);
-      StdInput      : HANDLE := 0;
-      StdOutput     : HANDLE := 0;
-      StdError      : HANDLE := 0;
+      StdInput      : HANDLE := NULL_HANDLE;
+      StdOutput     : HANDLE := NULL_HANDLE;
+      StdError      : HANDLE := NULL_HANDLE;
    end record
    with Convention => C_Pass_By_Copy;
 

@@ -113,4 +113,7 @@ package GNATCOLL.OS.Win32 is
         Convention    => C,
         External_Name => "GetLastError";
 
+   Win32_Epoch_Offset : constant LARGE_INTEGER := 11644473600;
+   --  Difference between Win32 epoch offset and linux epoch in seconds
+
 end GNATCOLL.OS.Win32;

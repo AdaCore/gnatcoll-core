@@ -43,14 +43,26 @@ package GNATCOLL.OS.Win32.Strings is
    --  Codepages
    UTF8_CodePage : constant CodePage := 65001;
 
+   --  Special constant used by From_UTF8 and To_UTF8
+   From_Start : constant Integer := Integer'First;
+
    function From_UTF8
       (Input        : UTF8.UTF_8_String;
        Output       : out Wide_String;
-       Output_Start : Integer := -1)
+       Output_Start : Integer := From_Start)
       return Integer;
    --  Convert an UTF-8 string into a Wide_String and copy the result in Output
-   --  at position Output_Start. If Output_Start is equal to -1 then starts at
-   --  Output'First.
+   --  at position Output_Start. If Output_Start is equal to From_Start then
+   --  starts at Output'First.
+
+   function To_UTF8
+      (Input        : Wide_String;
+       Output       : out UTF8.UTF_8_String;
+       Output_Start : Integer := From_Start)
+      return Integer;
+   --  Convert a Wide_String into an UTF-8 string and copy the result in Output
+   --  at position Output_Start. If Output_Start is equal to From_Start then
+   --  starts at Output'First.
 
    function MultiByteToWideChar
      (Page         : CodePage;
