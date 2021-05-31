@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2019, AdaCore                     --
+--                     Copyright (C) 2009-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -464,7 +464,7 @@ package body GNATCOLL.Arg_Lists is
                         P : constant Unbounded_String := CL.V.Element (J).Text;
                      begin
                         if Element (P, 1) = Char then
-                           New_CL.V.Append
+                           New_CL.V.Append_Vector
                              (Callback
                                 (Slice (P, 2, Length (P)), Separate_Args).V);
                         else
