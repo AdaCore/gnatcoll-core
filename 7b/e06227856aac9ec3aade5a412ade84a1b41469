@@ -1,0 +1,9 @@
+Code-Review+2: Vasiliy Fofanov <fofanov@adacore.com>
+Code-Review-1: CI Builder <ci-builder@adacore.com>
+Code-Review+2: Bob Duff <duff@adacore.com>
+Code-Review+2: Feodor Rybin <frybin@adacore.com>
+Submitted-by: Bob Duff <duff@adacore.com>
+Submitted-at: Wed, 02 Jun 2021 15:12:34 +0200
+Reviewed-on: https://git.adacore.com/c/gnatcoll-core/+/95982
+Project: gnatcoll-core
+Branch: refs/heads/master
