@@ -134,4 +134,32 @@ package body GNATCOLL.OS.Stat is
       return Self.Stamp;
    end Modification_Time;
 
+   -------------------------
+   -- New_File_Attributes --
+   -------------------------
+
+   function New_File_Attributes
+      (Exists        : Boolean;
+       Writable      : Boolean;
+       Readable      : Boolean;
+       Executable    : Boolean;
+       Symbolic_Link : Boolean;
+       Regular       : Boolean;
+       Directory     : Boolean;
+       Stamp         : Time;
+       Length        : Long_Long_Integer)
+      return File_Attributes
+   is
+   begin
+      return (Exists        => Exists,
+              Writable      => Writable,
+              Readable      => Readable,
+              Executable    => Executable,
+              Symbolic_Link => Symbolic_Link,
+              Regular       => Regular,
+              Directory     => Directory,
+              Stamp         => Stamp,
+              Length        => Length);
+   end New_File_Attributes;
+
 end GNATCOLL.OS.Stat;

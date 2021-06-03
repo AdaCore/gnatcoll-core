@@ -80,18 +80,34 @@ package GNATCOLL.OS.Stat is
    function Image (Self : File_Attributes) return String;
    --  String image of a File_Attributes structure
 
+   function New_File_Attributes
+      (Exists        : Boolean;
+       Writable      : Boolean;
+       Readable      : Boolean;
+       Executable    : Boolean;
+       Symbolic_Link : Boolean;
+       Regular       : Boolean;
+       Directory     : Boolean;
+       Stamp         : Time;
+       Length        : Long_Long_Integer)
+      return File_Attributes;
+   --  Create manually a File_Attributes.
+   --
+   --  This function is for internal gnatcoll usage (used by GNATCOLL.OS.Dir).
+   --  See File_Attributes private declaration for parameter meanings
+
 private
 
    type File_Attributes is record
-      Exists            : Boolean := False;
-      Writable          : Boolean := False;
-      Readable          : Boolean := False;
-      Executable        : Boolean := False;
-      Symbolic_Link     : Boolean := False;
-      Regular           : Boolean := False;
-      Directory         : Boolean := False;
-      Stamp             : Time;
-      Length            : Long_Long_Integer := 0;
+      Exists            : Boolean := False;  --  Does the file exist ?
+      Writable          : Boolean := False;  --  Is it writable ?
+      Readable          : Boolean := False;  --  Is it readable ?
+      Executable        : Boolean := False;  --  Is it executable ?
+      Symbolic_Link     : Boolean := False;  --  Is it a symbolic link ?
+      Regular           : Boolean := False;  --  Is it a regular file ?
+      Directory         : Boolean := False;  --  Is it a directory ?
+      Stamp             : Time;              --  Last modification time
+      Length            : Long_Long_Integer := 0;  --  File size in bytes
    end record;
 
    pragma Inline (Exists);
