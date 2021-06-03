@@ -198,6 +198,14 @@ project GnatColl is
               use "gnatcoll-os-process_types__unix.ads";
             for Implementation ("GNATCOLL.OS.Process_Types")
               use "gnatcoll-os-process_types__unix.adb";
+            for Specification ("GNATCOLL.OS.Dir_Types")
+              use "gnatcoll-os-dir_types__unix.ads";
+            for Implementation ("GNATCOLL.OS.Dir.Open")
+              use "gnatcoll-os-dir-open__unix.adb";
+            for Implementation ("GNATCOLL.OS.Dir.Close")
+              use "gnatcoll-os-dir-close__unix.adb";
+            for Implementation ("GNATCOLL.OS.Dir.Read")
+              use "gnatcoll-os-dir-read__unix.adb";
          when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
@@ -225,6 +233,14 @@ project GnatColl is
               use "gnatcoll-os-process-wait__win32.adb";
             for Implementation ("GNATCOLL.OS.Process.Internal_Spawn")
               use "gnatcoll-os-process-internal_spawn__win32.adb";
+            for Specification ("GNATCOLL.OS.Dir_Types")
+              use "gnatcoll-os-dir_types__win32.ads";
+            for Implementation ("GNATCOLL.OS.Dir.Open")
+              use "gnatcoll-os-dir-open__win32.adb";
+            for Implementation ("GNATCOLL.OS.Dir.Close")
+              use "gnatcoll-os-dir-close__win32.adb";
+            for Implementation ("GNATCOLL.OS.Dir.Read")
+              use "gnatcoll-os-dir-read__win32.adb";
       end case;
 
       case OS is
