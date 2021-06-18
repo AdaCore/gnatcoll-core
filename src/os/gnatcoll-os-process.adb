@@ -276,6 +276,8 @@ package body GNATCOLL.OS.Process is
          end loop;
       end if;
 
+      FS.Close (Pipe_Read);
+
       --  Wait here is blocking but we reached EOF on Pipe_Read which in
       --  practice mean that the child process has ended. As a consequence
       --  Wait will return immediately with the process status.
