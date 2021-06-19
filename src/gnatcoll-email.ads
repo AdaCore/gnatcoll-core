@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2018, AdaCore                     --
+--                     Copyright (C) 2006-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -81,7 +81,7 @@ package GNATCOLL.Email is
    end record;
    Null_Address : constant Email_Address;
 
-   function "=" (Addr1, Addr2 : Email_Address) return Boolean;
+   overriding function "=" (Addr1, Addr2 : Email_Address) return Boolean;
    --  Whether Addr1 and Addr2 have the same address, even if real name differs
 
    -------------

@@ -6457,7 +6457,7 @@ package body GNATCOLL.Projects is
    -- "=" --
    ---------
 
-   function "=" (Prj1, Prj2 : Project_Type) return Boolean is
+   overriding function "=" (Prj1, Prj2 : Project_Type) return Boolean is
    begin
       if Prj1.Data = null then
          return Prj2.Data = null;
