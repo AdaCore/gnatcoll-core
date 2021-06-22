@@ -66,7 +66,11 @@ begin
                      (Result.Name_Buffer'First ..
                       Result.Name_Buffer'First + Name'Length - 1) := Name;
                   Result.Info := Stat.Stat
-                     (Handle.Path (1 .. Handle.Path_Last));
+                     (Handle.Path (1 .. Handle.Path_Last) &
+                      "/" &
+                      Result.Name_Buffer
+                         (Result.Name_Buffer'First ..
+                          Result.Name_Buffer'First + Result.Name_Last - 1));
                end if;
             end;
          end if;
