@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -270,6 +270,7 @@ package body GNATCOLL.Scripts.Files is
             Project        : constant GNATCOLL.Projects.Project_Type :=
                                Get_Project (Info, Default_To_Root => True);
             Is_Native      : constant Boolean := Project.Get_Target = "native"
+              or else Project.Target_Same_As_Host
               or else Project.Get_Target = "";
             Include_Suffix : constant Boolean := Is_Native
               or else Project.Attribute_Value
