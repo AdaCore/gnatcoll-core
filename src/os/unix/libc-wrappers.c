@@ -248,7 +248,11 @@ void __gnatcoll_readdir(DIR *dirp, struct gnatcoll_dirent *buf)
   if (result != NULL)
   {
      buf->inode = (uint_64) result->d_ino;
+#if defined(__APPLE__)
+     buf->offset = 0;
+#else
      buf->offset = (uint_64) result->d_off;
+#endif
      buf->reclen = (uint_32) result->d_reclen;
      buf->file_type = (unsigned char) result->d_type;
      strncpy(buf->name, result->d_name, GNATCOLL_DIRENT_NAME_MAX);
