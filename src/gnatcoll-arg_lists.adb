@@ -464,9 +464,14 @@ package body GNATCOLL.Arg_Lists is
                         P : constant Unbounded_String := CL.V.Element (J).Text;
                      begin
                         if Element (P, 1) = Char then
-                           New_CL.V.Append_Vector
-                             (Callback
-                                (Slice (P, 2, Length (P)), Separate_Args).V);
+                           declare
+                              List : constant Arg_List := Callback
+                                (Slice (P, 2, Length (P)), Separate_Args);
+                           begin
+                              for Item of List.V loop
+                                 New_CL.V.Append (Item);
+                              end loop;
+                           end;
                         else
                            New_CL.V.Append
                              ((Expandable, Expand_In_String (P)));
