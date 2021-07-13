@@ -47,6 +47,21 @@ package GNATCOLL.OS.Process is
    --  different type of object depending on the system. On Unix system it will
    --  be usually a process id and on Windows system a handle.
 
+   Invalid_Handle : constant Process_Handle :=
+      Process_Handle (Process_Types.Invalid_Handle);
+
+   type Process_Array is array (Natural range <>) of Process_Handle;
+
+   type Process_State is
+     (RUNNING,
+      WAITABLE,
+      TERMINATED);
+   --  When a process is spawned it goes into RUNNING state. Once the process
+   --  calls exit it goes into the WAITABLE state (i.e: this means call to
+   --  Wait will succeed and will not block). Finally once the process has
+   --  disapeared from the system (after a call to Wait) the state is
+   --  TERMINATED.
+
    type Priority_Class is
      (INHERIT,
       IDLE,
@@ -143,6 +158,23 @@ package GNATCOLL.OS.Process is
 
    function Wait (H : Process_Handle) return Integer;
    --  Wait for a process end, and return its exit code
+
+   function State (H : Process_Handle) return Process_State;
+   --  Return the process state
+
+   function Wait_For_Processes
+      (Processes : Process_Array;
+       Timeout   : Duration)
+      return Process_Handle;
+   --  Wait for multiple processes and return the first process for which
+   --  state is WAITABLE. If the timeout is reached or there is no process in
+   --  a WAITABLE state then Invalid_Handle is returned.
+   --
+   --  Unix limitations: the maximum length for Processes is 1024,
+   --  and the number of simultaneous calls per process to that function is
+   --  256.
+   --
+   --  Windows limitation: the maximum length for Processes is 64.
 
    function Run
       (Args     : Argument_List;

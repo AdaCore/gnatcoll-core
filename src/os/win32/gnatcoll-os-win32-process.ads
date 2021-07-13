@@ -72,7 +72,21 @@ package GNATCOLL.OS.Win32.Process is
         Convention => Stdcall,
         External_Name => "WaitForSingleObject";
 
-   INFINITE : constant DWORD := 16#ffffffff#;
+   function WaitForMultipleObjects
+      (Count        : DWORD;
+       Handles      : LPVOID;
+       WaitForAll   : BOOL;
+       Milliseconds : DWORD)
+      return DWORD
+   with Import        => True,
+        Convention    => Stdcall,
+        External_Name => "WaitForMultipleObjects";
+
+   INFINITE         : constant DWORD := 16#ffffffff#;
+   WAIT_OBJECT_0    : constant DWORD := 16#00000000#;
+   WAIT_ABANDONED_0 : constant DWORD := 16#00000080#;
+   WAIT_TIMEOUT     : constant DWORD := 16#00000102#;
+   WAIT_FAILED      : constant DWORD := 16#FFFFFFFF#;
 
    function GetExitCodeProcess
       (Process  : HANDLE;
@@ -114,5 +128,36 @@ package GNATCOLL.OS.Win32.Process is
 
    --  Other creation flags
    CREATE_UNICODE_ENVIRONMENT  : constant Process_Creation_Flags := 16#400#;
+
+   subtype PROCESS_INFORMATION_CLASS is unsigned;
+   ProcessBasicInformation     : constant PROCESS_INFORMATION_CLASS := 0;
+   ProcessDebugPort            : constant PROCESS_INFORMATION_CLASS := 7;
+   ProcessWow64Information     : constant PROCESS_INFORMATION_CLASS := 26;
+   ProcessImageFileName        : constant PROCESS_INFORMATION_CLASS := 27;
+   ProcessBreakOnTermination   : constant PROCESS_INFORMATION_CLASS := 29;
+   ProcessSubsystemInformation : constant PROCESS_INFORMATION_CLASS := 75;
+
+   subtype KPRIORITY is LONG;
+
+   type PROCESS_BASIC_INFORMATION is record
+      ExitStatus              : NTSTATUS;
+      PebBaseAddress          : LPVOID;
+      AffinityMask            : ULONG_PTR;
+      BasePriority            : KPRIORITY;
+      UniqueProcessId         : ULONG_PTR;
+      IheritedUniqueProcessId : ULONG_PTR;
+   end record
+   with Convention => C_Pass_By_Copy;
+
+   function NtQueryInformationProcess
+     (ProcessHandle            : HANDLE;
+      ProcessInformationClass  : PROCESS_INFORMATION_CLASS;
+      ProcessInformation       : System.Address;
+      ProcessInformationLength : ULONG;
+      ReturnLength             : out ULONG)
+     return NTSTATUS
+   with Import => True,
+        Convention => Stdcall,
+        External_Name => "NtQueryInformationProcess";
 
 end GNATCOLL.OS.Win32.Process;

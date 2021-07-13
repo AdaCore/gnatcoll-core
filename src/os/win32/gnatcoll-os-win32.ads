@@ -53,6 +53,7 @@ package GNATCOLL.OS.Win32 is
    type WORD is mod 2 ** Short_Integer'Size;
    type DWORD is mod 2 ** LONG'Size;
    type ULONG is mod 2 ** LONG'Size;
+   type ULONG_PTR is mod 2 ** Standard'Address_Size;
    type UINT is mod 2 ** Integer'Size;
    subtype NTSTATUS is LONG;
    subtype LONGLONG is Long_Long_Integer;

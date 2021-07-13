@@ -177,6 +177,9 @@ package GNATCOLL.OS.Libc is
         Convention    => C,
         External_Name => "waitpid";
 
+   EPERM : constant Integer := 1;
+   --  EPERM is set to 1 on all supported system
+
    function Errno return Integer
    with Import        => True,
         Convention    => C,
