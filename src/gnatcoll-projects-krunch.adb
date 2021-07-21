@@ -27,6 +27,10 @@ package body GNATCOLL.Projects.Krunch is
    -- Krunch --
    ------------
 
+   pragma Style_Checks ("M100");
+   --  Allow long lines to not reorganize code/comments, this should allow
+   --  easier check of krunch being up to date with gnat version.
+
    procedure Krunch
      (Buffer        : in out String;
       Len           : in out Natural;
@@ -96,15 +100,16 @@ package body GNATCOLL.Projects.Krunch is
          Startloc := 3;
          Buffer (2 .. Len - 5) := Buffer (7 .. Len);
          Curlen := Len - 5;
-         if Buffer (Curlen - 2 .. Curlen) = "128"
-           or else Buffer (3 .. 9) = "exn_lll"
-           or else Buffer (3 .. 9) = "exp_lll"
-           or else Buffer (3 .. 9) = "img_lll"
-           or else Buffer (3 .. 9) = "val_lll"
-           or else Buffer (3 .. 9) = "wid_lll"
-           or else (Buffer (3 .. 6) = "pack" and then Curlen = 10)
+         if (Curlen >= 3 and then Buffer (Curlen - 2 .. Curlen) = "128")
+           or else (Len >= 9 and then
+                       (Buffer (3 .. 9) = "exn_lll"
+                         or else Buffer (3 .. 9) = "exp_lll"
+                         or else Buffer (3 .. 9) = "img_lll"
+                         or else Buffer (3 .. 9) = "val_lll"
+                         or else Buffer (3 .. 9) = "wid_lll"))
+           or else (Curlen = 10 and then Buffer (3 .. 6) = "pack")
          then
-            if Buffer (3 .. 15) = "compare_array" then
+            if Len >= 15 and then Buffer (3 .. 15) = "compare_array" then
                Buffer (3 .. 4) := "ca";
                Buffer (5 .. Curlen - 11) := Buffer (16 .. Curlen);
                Curlen := Curlen - 11;
@@ -137,9 +142,8 @@ package body GNATCOLL.Projects.Krunch is
             Krlen := Maxlen;
          end if;
 
-         --  For the renamings in the obsolescent section, we also force
-         --  krunching to 8 characters, but no other special processing is
-         --  required here.
+         --  For the renamings in the obsolescent section, we also force krunching
+         --  to 8 characters, but no other special processing is required here.
          --  Note that text_io and calendar are already short enough anyway.
 
       elsif     (Len =  9 and then Buffer (1 ..  9) = "direct_io")
@@ -154,10 +158,10 @@ package body GNATCOLL.Projects.Krunch is
          Krlen    := 8;
          Curlen   := Len;
 
-         --  Special case of a child unit whose parent unit is a single letter
-         --  that is A, G, I, or S. In order to prevent confusion with krunched
-         --  names of predefined units use a tilde rather than a minus as the
-         --  second character of the file name.
+         --  Special case of a child unit whose parent unit is a single letter that
+         --  is A, G, I, or S. In order to prevent confusion with krunched names
+         --  of predefined units use a tilde rather than a minus as the second
+         --  character of the file name.
 
       elsif Len > 1
         and then Buffer (2) = '-'
