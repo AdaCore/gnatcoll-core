@@ -8098,20 +8098,26 @@ package body GNATCOLL.Projects is
       function Get_Value_Of_Runtime (Project : Project_Id) return String is
          Elem : constant Array_Element_Id := Value_Of
            (Get_String ("runtime"), Project.Decl.Arrays, Shared);
+
+         function Filter_Default (S : String) return String is
+           (if S = "default" then Unset else S);
+         --  Unlike gprconfig, gnatls cannot process --RTS=default, so we need
+         --  to replace it with empty value.
       begin
          if Elem = No_Array_Element then
             if Project.Extends = GPR.No_Project then
-               return Value_Of (Nil_Variable_Value, Unset);
+               return Filter_Default (Value_Of (Nil_Variable_Value, Unset));
             else
-               return Get_Value_Of_Runtime (Project.Extends);
+               return Filter_Default (Get_Value_Of_Runtime (Project.Extends));
             end if;
          else
-            return Value_Of
-               (Value_Of
-                    (Index    => Get_String ("ada"),
-                     In_Array => Elem,
-                     Shared   => Shared),
-              Unset);
+            return Filter_Default
+              (Value_Of
+                 (Value_Of
+                      (Index    => Get_String ("ada"),
+                       In_Array => Elem,
+                       Shared   => Shared),
+                  Unset));
          end if;
       end Get_Value_Of_Runtime;
 

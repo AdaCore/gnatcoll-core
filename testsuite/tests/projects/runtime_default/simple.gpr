@@ -1,0 +1,5 @@
+abstract project simple is
+
+   for Runtime ("Ada") use "default";
+
+end simple;
