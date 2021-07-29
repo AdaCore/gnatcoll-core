@@ -9901,6 +9901,15 @@ package body GNATCOLL.Projects is
             Source := Element (Source_Iter);
             exit when Source = No_Source;
 
+            if Source.Replaced_By /= No_Source then
+               --  In case of extending project inheriting package Naming of
+               --  the extended one and source dirs of both projects containing
+               --  same naming exception source, we will get a duplicate base
+               --  name outside of aggregate project here which is not allowed.
+               --  The replaced source needs to be ignored.
+               goto Next_Source;
+            end if;
+
             --  Get the absolute path name for this source
 
             Get_Name_String (Source.Path.Display_Name);
@@ -10009,6 +10018,7 @@ package body GNATCOLL.Projects is
                end if;
             end;
 
+            <<Next_Source>>
             Next (Source_Iter);
          end loop;
 

@@ -1,0 +1,5 @@
+project Q is
+   package Naming is
+      for Spec ("Pack") use "pack.ads_foo";
+   end Naming;
+end Q;

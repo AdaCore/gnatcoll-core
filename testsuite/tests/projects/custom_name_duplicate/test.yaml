@@ -1,0 +1,11 @@
+description: >
+  Check that when extending project has no package Naming
+  but extended one does and source dirs of both projects
+  have the same naming exception source Source_Files returns
+  only one of those sources and not both.
+data:
+    - "test.adb"
+    - "p.gpr"
+    - "pack.ads_foo"
+    - "pack2.ads"
+    - "q"
