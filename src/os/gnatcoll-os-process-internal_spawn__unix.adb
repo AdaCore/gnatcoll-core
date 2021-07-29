@@ -57,16 +57,36 @@ begin
    --  Create file descriptors
 
    --  ??? Should we ignore the contents of Status below?
+   --  First issue dup2 directives
    if Stdin /= FS.Standin then
       Status := Add_Dup2 (FA, Stdin, FS.Standin);
-      Status := Add_Close (FA, Stdin);
    end if;
+
    if Stdout /= FS.Standout then
       Status := Add_Dup2 (FA, Stdout, FS.Standout);
+   end if;
+
+   if Stderr /= FS.Standerr then
+      if Stderr = FS.To_Stdout then
+         Status := Add_Dup2 (FA, Stdout, FS.Standerr);
+      else
+         Status := Add_Dup2 (FA, Stderr, FS.Standerr);
+      end if;
+   end if;
+
+   --  Then the close ones
+   if Stdin /= FS.Standin then
+      Status := Add_Close (FA, Stdin);
+   end if;
+
+   if Stdout /= FS.Standout and then Stdout /= FS.Standin then
       Status := Add_Close (FA, Stdout);
    end if;
-   if Stderr /= FS.Standerr then
-      Status := Add_Dup2 (FA, Stderr, FS.Standerr);
+
+   if Stderr /= FS.Standout
+      and then Stderr /= FS.Standout
+      and then Stderr /= FS.Standin
+   then
       Status := Add_Close (FA, Stderr);
    end if;
 

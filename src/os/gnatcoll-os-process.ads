@@ -135,7 +135,8 @@ package GNATCOLL.OS.Process is
    --  If Cwd is not empty then the process will be executed in that directory.
    --
    --  Stdin, Stdout and Stderr are file descriptors to stdin, stdout and
-   --  stderr respectively.
+   --  stderr respectively. Note that you can set Stderr to FS.To_Stdout
+   --  to redirect stderr to stdout.
    --
    --  Priority defines the process priority. By default priority is
    --  inherited from the parent process.
