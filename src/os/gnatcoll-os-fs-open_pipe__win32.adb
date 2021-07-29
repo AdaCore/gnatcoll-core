@@ -26,8 +26,8 @@ with GNATCOLL.OS.Win32.Files;
 
 separate (GNATCOLL.OS.FS)
 procedure Open_Pipe
-  (Pipe_Input  : out File_Descriptor;
-   Pipe_Output : out File_Descriptor)
+  (Pipe_Read  : out File_Descriptor;
+   Pipe_Write : out File_Descriptor)
 is
    package Win32 renames GNATCOLL.OS.Win32;
 
@@ -46,7 +46,7 @@ begin
       raise OS_Error with "cannot open pipe";
    end if;
 
-   Pipe_Input := Win32.Files.OpenOSFHandle (Read_Pipe);
-   Pipe_Output := Win32.Files.OpenOSFHandle (Write_Pipe);
+   Pipe_Read := Win32.Files.OpenOSFHandle (Read_Pipe);
+   Pipe_Write := Win32.Files.OpenOSFHandle (Write_Pipe);
 
 end Open_Pipe;

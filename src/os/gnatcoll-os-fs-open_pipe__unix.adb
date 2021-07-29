@@ -26,8 +26,8 @@ with GNAT.Task_Lock;
 
 separate (GNATCOLL.OS.FS)
 procedure Open_Pipe
-  (Pipe_Input  : out File_Descriptor;
-   Pipe_Output : out File_Descriptor)
+  (Pipe_Read  : out File_Descriptor;
+   Pipe_Write : out File_Descriptor)
 is
    package Libc renames GNATCOLL.OS.Libc;
 
@@ -46,12 +46,12 @@ begin
       raise OS_Error with "cannot open pipe";
    end if;
 
-   Pipe_Input := Result.Input;
-   Pipe_Output := Result.Output;
+   Pipe_Read := Result.Input;
+   Pipe_Write := Result.Output;
 
    begin
-      Set_Close_On_Exec (Pipe_Input, True);
-      Set_Close_On_Exec (Pipe_Output, True);
+      Set_Close_On_Exec (Pipe_Read, True);
+      Set_Close_On_Exec (Pipe_Write, True);
    exception
       when OS_Error =>
          GNAT.Task_Lock.Unlock;

@@ -25,8 +25,8 @@ with GNATCOLL.OS.Libc;
 
 separate (GNATCOLL.OS.FS)
 procedure Open_Pipe
-  (Pipe_Input  : out File_Descriptor;
-   Pipe_Output : out File_Descriptor)
+  (Pipe_Read  : out File_Descriptor;
+   Pipe_Write : out File_Descriptor)
 is
    package Libc renames GNATCOLL.OS.Libc;
 
@@ -42,7 +42,7 @@ begin
       raise OS_Error with "cannot open pipe";
    end if;
 
-   Pipe_Input := Result.Input;
-   Pipe_Output := Result.Output;
+   Pipe_Read := Result.Input;
+   Pipe_Write := Result.Output;
 
 end Open_Pipe;

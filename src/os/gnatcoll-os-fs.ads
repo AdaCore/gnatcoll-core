@@ -64,10 +64,10 @@ package GNATCOLL.OS.FS is
    --  inherited by a child process)
 
    procedure Open_Pipe
-      (Pipe_Input  : out File_Descriptor;
-       Pipe_Output : out File_Descriptor);
-   --  Open a pipe. Data can be written on Pipe_Input and then read on
-   --  Pipe_Output. OS_Error can be raised in case of error. Note that the pipe
+      (Pipe_Read  : out File_Descriptor;
+       Pipe_Write : out File_Descriptor);
+   --  Open a pipe. Data can be written on Pipe_Write and then read on
+   --  Pipe_Read. OS_Error can be raised in case of error. Note that the pipe
    --  is opened with "close on exec" mode.
 
    procedure Set_Close_On_Exec

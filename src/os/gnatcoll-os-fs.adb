@@ -61,8 +61,8 @@ package body GNATCOLL.OS.FS is
    ---------------
 
    procedure Open_Pipe
-      (Pipe_Input  : out File_Descriptor;
-       Pipe_Output : out File_Descriptor) is separate;
+      (Pipe_Read  : out File_Descriptor;
+       Pipe_Write : out File_Descriptor) is separate;
 
    ----------
    -- Read --
