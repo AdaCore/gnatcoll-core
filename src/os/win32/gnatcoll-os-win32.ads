@@ -110,7 +110,7 @@ package GNATCOLL.OS.Win32 is
 
    function GetLastError return DWORD
    with Import        => True,
-        Convention    => C,
+        Convention    => Stdcall,
         External_Name => "GetLastError";
 
    Win32_Epoch_Offset : constant LARGE_INTEGER := 11644473600;
