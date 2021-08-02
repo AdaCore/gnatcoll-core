@@ -15,6 +15,7 @@ begin
    IO.Put_Line ("GNATCOLL.OS.Stat test");
    declare
       FA : File_Attributes;
+      D  : Duration;
    begin
       FA := Stat ("directory");
       IO.Put_Line (Image (FA));
@@ -31,7 +32,11 @@ begin
                 Msg => "check that regular_file is not a dir");
       A.Assert (not Is_Symbolic_Link (FA),
                 Msg => "check that regular_file is not a symbolic link");
-      A.Assert (Clock - Modification_Time (FA) < 100.0);
+      D := Clock - Modification_Time (FA);
+      A.Assert
+         (D < 100.0,
+          Msg => "check that modification time is less than 100s in the past: "
+          & D'Img);
 
       IO.Put_Line ("test file with utf-8 name");
       FA := Stat (Character'Val (16#C3#) & Character'Val (16#A9#) & ".txt");

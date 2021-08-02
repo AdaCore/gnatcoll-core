@@ -24,37 +24,63 @@
 with GNATCOLL.OS.Win32.Files; use GNATCOLL.OS.Win32.Files;
 with GNATCOLL.OS.Win32; use GNATCOLL.OS.Win32;
 with GNAT.OS_Lib;
+with Ada.Calendar.Conversions;
+with Interfaces.C;
 
 separate (GNATCOLL.OS.Stat)
 function Stat
-   (Path : UTF8.UTF_8_String;
+   (Path            : UTF8.UTF_8_String;
     Follow_Symlinks : Boolean := True)
-   return File_Attributes is
-   Attr        : FILE_OBJECT_ATTRIBUTES;
-   Status      : NTSTATUS;
-   Information : FILE_BASIC_INFORMATION;
-   Result      : File_Attributes;
-
+   return File_Attributes
+is
+   Attr      : UNICODE_PATH;
+   Status    : NTSTATUS;
+   Info      : FILE_ALL_INFORMATION;
+   Result    : File_Attributes;
+   WinHandle : HANDLE := NULL_HANDLE;
+   IO        : IO_STATUS_BLOCK;
    pragma Unreferenced (Follow_Symlinks);
 
 begin
    --  NtQueryAttributesFile requires an absolute path
-   if GNAT.OS_Lib.Is_Absolute_Path (Path) then
-      Initialize (Attr, Path);
-   else
-      Initialize (Attr, GNAT.OS_Lib.Normalize_Pathname (Path));
+   Initialize (Attr, GNAT.OS_Lib.Normalize_Pathname (Path));
+
+   Status := NtOpenFile
+      (WinHandle,
+       Attr.Str,
+       FILE_READ_ATTRIBUTES,
+       IO,
+       SHARE_ALL,
+       FILE_OPEN_FOR_BACKUP_INTENT);
+   if not Is_Success (Status) then
+      Result.Exists := False;
+      return Result;
    end if;
+   WinHandle := WinHandle and 16#FFFFFFFF#;
 
-   Status := NtQueryAttributesFile (Attr.OA, Information);
-
+   Status := NtQueryInformationFile (WinHandle, IO, LPVOID (Info'Address),
+                                     FILE_ALL_INFORMATION'Size / 8,
+                                     FileAllInformation);
    if Is_Success (Status) then
       Result.Exists := True;
-      Result.Directory := (DIRECTORY and Information.FileAttributes) > 0;
+      Result.Directory :=
+         (DIRECTORY and Info.BasicInformation.FileAttributes) > 0;
       Result.Symbolic_Link :=
-         (REPARSE_POINT and Information.FileAttributes) > 0;
+         (REPARSE_POINT and Info.BasicInformation.FileAttributes) > 0;
       Result.Regular :=
          not (Result.Directory or Result.Symbolic_Link);
+      Result.Stamp := Ada.Calendar.Conversions.To_Ada_Time
+         (Interfaces.C.long
+            ((Info.BasicInformation.LastWriteTime / 10000000)
+            - Win32_Epoch_Offset));
+      Result.Length := Info.StandardInformation.EndOfFile;
+      Result.Executable := True;
+      Result.Readable   := True;
+      Result.Writable   := True;
+   else
+      Result.Exists := False;
    end if;
 
+   Status := NtClose (WinHandle);
    return Result;
 end Stat;
