@@ -1,0 +1,121 @@
+on: [push, pull_request]
+name: BuildAndTest
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    name: Build
+    steps:
+      # Get current date (used to create a daily cache of dependencies)
+      - name: Get current date
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
+
+      # Checkout gnatcoll sources
+      - name: Get GNATCOLL
+        uses: actions/checkout@v2
+
+      # Handle installation of the compiler
+      # (Community 2020 for MacOS and Community 2021 for others)
+      - name: Cache compiler installation
+        id: cache-compiler
+        uses: actions/cache@v2
+        with:
+          path: ./cached_gnat
+          key: ${{ runner.os }}-gnat
+      - name: Get GNAT Community 2021 toolchain
+        if: ${{ runner.os != 'macOS' }}
+        uses: ada-actions/toolchain@ce2021
+        with:
+          distrib: community
+          install_dir: ./cached_gnat
+      - name: Get GNAT Community 2020 toolchain
+        if: ${{ runner.os == 'macOS' }}
+        uses: ada-actions/toolchain@ce2020
+        with:
+          distrib: community
+          install_dir: ./cached_gnat
+
+      # Handle dependencies
+      - name: Cache dependency artifacts on daily basis
+        id: cache-deps
+        uses: actions/cache@v2
+        with:
+          path: ./build_deps
+          key: ${{ runner.os }}-${{ steps.date.outputs.date }}-build-deps-v2
+
+      # On MacOS, build a recent libgpr
+      - name: Get gprbuild for libgpr
+        if: ${{ runner.os == 'macOS' && steps.cache-deps.outputs.cache-hit != 'true' }}
+        uses: actions/checkout@v2
+        with:
+          repository: AdaCore/gprbuild
+          path: gprbuild
+          fetch-depth: 0  # To be able do `git revert`
+      - name: Revert a libgpr patch (MacOS X only)
+        # The latest libgpr doesn't support GNAT CE 2020, but on MacOS X we
+        # don't have GNAT CE 2021. Let's revert this commit for now.
+        if: ${{ runner.os == 'macOS' && steps.cache-deps.outputs.cache-hit != 'true' }}
+        run: git -C gprbuild revert --no-edit 3341766255bf5ab90fe05a8e162894b7830adca6
+
+      - name: Build gprbuild
+        if: ${{ runner.os == 'macOS' && steps.cache-deps.outputs.cache-hit != 'true' }}
+        run: |
+            CWD=$(pwd)
+            mkdir -p ./build_deps/libs
+            cd gprbuild && make libgpr.build && make libgpr.install prefix=$CWD/build_deps/libs
+
+      # Get latest e3-core and e3-testsuite and cache resulting wheels
+      - name: Get e3-testsuite
+        uses: actions/checkout@v2
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        with:
+            repository: AdaCore/e3-testsuite
+            path: e3-testsuite
+      - name: Get e3-core
+        uses: actions/checkout@v2
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        with:
+            repository: AdaCore/e3-core
+            path: e3-core
+      - uses: actions/setup-python@v2
+        with:
+            python-version: '3.8'
+      - name: Install e3-testsuite (Windows)
+        if: ${{ runner.os == 'Windows' && steps.cache-deps.outputs.cache-hit != 'true' }}
+        run: |
+            $CWD=$(Get-Location)
+            mkdir -p ./build_deps/wheels
+            pip3 install wheel
+            cd e3-core && python3 ./setup.py -q bdist_wheel --python-tag py38 -d $CWD/build_deps/wheels &&
+            cd  .. &&
+            cd e3-testsuite && python3 ./setup.py -q bdist_wheel --python-tag py38 -d $CWD/build_deps/wheels
+      - name: Install e3-testsuite (Unix)
+        if: ${{ runner.os != 'Windows' && steps.cache-deps.outputs.cache-hit != 'true' }}
+        run: |
+            CWD=$(pwd)
+            mkdir -p ./build_deps/wheels
+            pip3 install wheel
+            (cd e3-core && python3 ./setup.py -q bdist_wheel --python-tag py38 -d $CWD/build_deps/wheels)
+            (cd e3-testsuite && python3 ./setup.py -q bdist_wheel --python-tag py38 -d $CWD/build_deps/wheels)
+      - name: Create python environment (Unix)
+        if: ${{ runner.os != 'Windows' }}
+        run: |
+          pip install ./build_deps/wheels/*.whl &&
+          echo "$(pwd)/build_deps/py3-env/bin" >> ${GITHUB_PATH}
+      - name: Create python environment (Windows)
+        if: ${{ runner.os == 'Windows' }}
+        run: |
+          $files = Get-Item ./build_deps/wheels/*.whl
+          pip install $files &&
+          echo "$(Get-Location)/build_deps/py3-env;$(Get-Location)/build_deps/py3-env/Scripts" >> $GITHUB_PATH
+      # Build, Install and test gnatcoll in DEBUG mode
+      - name: Build GNATCOLL
+        run: make BUILD=DEBUG
+      - name: Install GNATCOLL
+        run: make BUILD=DEBUG install
+      - name: Test GNATCOLL
+        run: (cd testsuite && python3 ./run-tests -j2 --failure-exit-code 1 -E)
