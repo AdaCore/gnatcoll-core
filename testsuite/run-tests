@@ -176,4 +176,4 @@ if __name__ == '__main__':
     # to easily locate it.
     os.environ["PYTHON_EXEC_PATH"] = os.path.abspath(sys.executable)
     suite = MyTestsuite(os.path.dirname(__file__))
-    suite.testsuite_main()
+    sys.exit(suite.testsuite_main())
