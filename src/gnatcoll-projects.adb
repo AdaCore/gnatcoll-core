@@ -2887,7 +2887,29 @@ package body GNATCOLL.Projects is
                if Unit (J) = '.' then
                   declare
                      Base : constant Filesystem_String := File_From_Unit
-                       (Project (Info), Unit (Unit'First .. J - 1), Part,
+                       (Project (Info), Unit (Unit'First .. J - 1), Unit_Spec,
+                        Language => Info.Language);
+                  begin
+                     if Base'Length > 0 then
+                        return Self.Create (Base, Use_Object_Path => False);
+                     end if;
+                  end;
+               end if;
+            end loop;
+         end if;
+
+         --  Second special case for separate units. When no parent spec has
+         --  been found, there still exists a scenario when separate is from
+         --  a body unit that does not have a spec. We need an extra loop
+         --  to not wrongly pick up the case when there is a chain of separates
+         --  one declared in another.
+
+         if Info.Part = Unit_Separate then
+            for J in reverse Unit'Range loop
+               if Unit (J) = '.' then
+                  declare
+                     Base : constant Filesystem_String := File_From_Unit
+                       (Project (Info), Unit (Unit'First .. J - 1), Unit_Body,
                         Language => Info.Language);
                   begin
                      if Base'Length > 0 then

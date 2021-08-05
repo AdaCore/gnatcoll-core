@@ -669,8 +669,12 @@ package GNATCOLL.Projects is
    function Other_File
      (Self : Project_Tree;
       File : GNATCOLL.VFS.Virtual_File) return GNATCOLL.VFS.Virtual_File;
-   --  If Info is a spec, returns the body of the same unit. If Info is a
+   --  If File is a spec, returns the body of the same unit. If File is a
    --  body, returns its spec.
+   --  If File is a separate, returns parent (possibly indirect, looping
+   --  through the chain of separates) unit spec. In case when a body stub
+   --  is defined in a library subprogram body that does not have a separate
+   --  spec, returns subprogram body file.
    --  If there is no "other file" in the project, but we could compute the
    --  name it should have, that name is returned (the file is created in the
    --  same directory as File).

@@ -1,0 +1,13 @@
+description: >
+  Check that GNATCOLL.Projects.Other_File properly returns
+  subprogram body when called for a separate defined in
+  a library subprogram body that does not have a separate spec.
+data:
+    - "prj.gpr"
+    - "main-separate_of_body.adb"
+    - "main.adb"
+    - "pkg_0-p_separate_common.adb"
+    - "pkg_0-pack-p_separate_of_separate.adb"
+    - "pkg_0-pack.adb"
+    - "pkg_0.adb"
+    - "pkg_0.ads"
