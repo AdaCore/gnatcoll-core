@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <wait.h>
+#include <sys/wait.h>
 #include <signal.h>
 
 typedef long long int sint_64;
