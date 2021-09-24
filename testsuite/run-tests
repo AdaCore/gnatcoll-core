@@ -49,7 +49,6 @@ class MyTestsuite(Testsuite):
         self.env.gcov = self.main.args.gcov
         self.env.gnatcov = self.main.args.gnatcov
         self.env.valgrind = self.main.args.valgrind
-        self.env.enable_cleanup = self.main.args.enable_cleanup
 
         # Reject incompatible options
         incompatible = [name for name in ('gcov', 'gnatcov', 'valgrind')
