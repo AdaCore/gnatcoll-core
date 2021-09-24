@@ -1,5 +1,6 @@
 from e3.fs import rm
 from e3.testsuite.result import TestStatus, TestResult
+from e3.testsuite.utils import CleanupMode
 from drivers import GNATcollTestDriver, gprbuild
 import os
 
@@ -55,22 +56,28 @@ class DataValidationDriver(GNATcollTestDriver):
         return True
 
     def tear_down(self, previous_values, slot):
-        # If the test program build failed, there is nothing we can do (and the
-        # result for this test is alredy pushed anyway).
-        if not previous_values.get('build'):
-            return False
+        # If the build failed in the "build" fragment, we already pushed the
+        # result.
+        failed = True
+        if previous_values.get('build'):
+            failures = [v for v in previous_values.values() if
+                        not isinstance(v, TestStatus) or v != TestStatus.PASS]
+            if failures:
+                self.result.set_status(
+                    TestStatus.FAIL,
+                    msg="%s subtests failed" % len(failures)
+                )
+            else:
+                failed = False
+                self.result.set_status(TestStatus.PASS)
 
-        failures = [v for v in previous_values.values() if
-                    not isinstance(v, TestStatus) or v != TestStatus.PASS]
-        if failures:
-            self.result.set_status(TestStatus.FAIL,
-                                   msg="%s subtests failed" % len(failures))
-        else:
-            self.result.set_status(TestStatus.PASS)
+            self.push_result()
 
-        self.push_result()
-
-        if self.env.enable_cleanup:
+        # Cleanup temporaries if requested
+        if (
+            self.env.cleanup_mode == CleanupMode.ALL
+            or (self.env.cleanup_mode == CleanupMode.PASSING and not failed)
+        ):
             rm(self.test_env['working_dir'], recursive=True)
 
     def build(self, previous_values, slot):
