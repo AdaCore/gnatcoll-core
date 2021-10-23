@@ -82,6 +82,7 @@ project GnatColl is
       when "windows" =>
          Extra_Libs := ("-lpsapi", "-lntdll");   --  For gnatcoll.memory
       when others =>
+         Extra_Libs := ("-lutil");               --  For gnatcoll.projects
          case Mmap is
             when "yes" =>
                Extra_Switches := Extra_Switches & ("-DHAVE_MMAP");
