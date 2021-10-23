@@ -141,10 +141,19 @@ int __gnatcoll_init_sigchld_monitoring()
  * */
 int __gnatcoll_process_state(int pid)
 {
+#ifdef __OpenBSD__
+   int status;
+   pid = waitpid (pid, &status, WNOHANG);
+   if (pid == 0) { return 0; };
+   if (pid == -1 || WIFEXITED(status)) { return -2; };
+   /* return -1 is not possible since waitpid does the wait */
+   return 0;
+#else
    siginfo_t infop;
    int result;
    infop.si_pid = 0;
    result = waitid (P_PID, pid, &infop, WEXITED | WNOHANG | WNOWAIT);
    if (result == -1) { return -2; };
    if (infop.si_pid != 0) { return -1; } else { return 0; };
+#endif
 }
