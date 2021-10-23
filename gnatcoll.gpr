@@ -289,12 +289,9 @@ project GnatColl is
       end case;
 
       case OS is
-         when "unix" =>
+         when "unix" | "osx" =>
             for Specification  ("GNATCOLL.OS.Libc_Constants")
-              use "gnatcoll-os-libc_constants__linux.ads";
-         when "osx" =>
-            for Specification  ("GNATCOLL.OS.Libc_Constants")
-              use "gnatcoll-os-libc_constants__osx.ads";
+              use "gnatcoll-os-libc_constants__" & OS & ".ads";
          when "windows" =>
             null;
       end case;
