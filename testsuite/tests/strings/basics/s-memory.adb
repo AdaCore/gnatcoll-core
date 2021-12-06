@@ -32,8 +32,6 @@
 --  Copied from System.Memory, but counts the number of times we do
 --  malloc and realloc.
 
-pragma Compiler_Unit_Warning;
-
 with Ada.Exceptions;
 with System.Soft_Links;
 with System.Parameters;
