@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2001-2019, AdaCore                     --
+--                     Copyright (C) 2001-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -281,9 +281,10 @@ package body GNATCOLL.Traces is
    pragma Import (C, Get_Process_Id, "getpid");
 
    type File_Stream_Record is new Trace_Stream_Record with record
-      File : FILEs := NULL_Stream;
-      Lock : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
+      File           : FILEs := NULL_Stream;
+      Lock           : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
       Colors_Support : Boolean;
+      Virt_File      : Virtual_File := No_File;
    end record;
    overriding procedure Put
       (Stream     : in out File_Stream_Record;
@@ -648,12 +649,15 @@ package body GNATCOLL.Traces is
                +Relative_Path_To.Full_Name.all);
             N_Zero : aliased constant String := N & ASCII.NUL;
             F      : FILEs;
+            Virt_File : Virtual_File := No_File;
          begin
             if Append then
                F := fopen (N_Zero'Address, mode => A_Zero'Address);
             else
                F := fopen (N_Zero'Address, mode => W_Zero'Address);
             end if;
+
+            Virt_File := GNATCOLL.VFS.Create (+N);
 
             if F = NULL_Stream then
                F := stderr;
@@ -665,6 +669,7 @@ package body GNATCOLL.Traces is
               (Name           => new String'(Name),
                File           => F,
                Colors_Support => Term.Has_ANSI_Colors,
+               Virt_File      => Virt_File,
                others         => <>);
             Add_To_Streams (Tmp);
          end;
@@ -692,6 +697,23 @@ package body GNATCOLL.Traces is
 
       return Tmp;
    end Find_Stream;
+
+   ---------------------
+   -- Get_Stream_File --
+   ---------------------
+
+   function Get_Stream_File
+     (Handle : not null access Trace_Handle_Record'Class) return Virtual_File
+   is
+   begin
+      if Handle.Stream /= null
+        and then Handle.Stream.all in File_Stream_Record'Class
+      then
+         return File_Stream_Record (Handle.Stream.all).Virt_File;
+      end if;
+
+      return No_File;
+   end Get_Stream_File;
 
    ------------
    -- Create --

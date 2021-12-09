@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2001-2019, AdaCore                     --
+--                     Copyright (C) 2001-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -641,6 +641,10 @@ package GNATCOLL.Traces is
    --  the Debug_Mode flag statically, so that if you have disable debugging
    --  altogether, the code will not even be inserted in the object code by
    --  the compiler.
+
+   function Get_Stream_File
+     (Handle : not null access Trace_Handle_Record'Class) return Virtual_File;
+   --  Return the file associated to the handle's stream, if any.
 
    type Handlers_Proc is access procedure (Handle : Trace_Handle);
    procedure For_Each_Handle (Proc : not null Handlers_Proc);
