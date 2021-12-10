@@ -284,7 +284,9 @@ package body GNATCOLL.Traces is
       File           : FILEs := NULL_Stream;
       Lock           : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
       Colors_Support : Boolean;
-      Virt_File      : Virtual_File := No_File;
+
+      File_Name      : GNAT.Strings.String_Access;
+      --  The absolute path of the file associated to this stream, if any.
    end record;
    overriding procedure Put
       (Stream     : in out File_Stream_Record;
@@ -649,15 +651,12 @@ package body GNATCOLL.Traces is
                +Relative_Path_To.Full_Name.all);
             N_Zero : aliased constant String := N & ASCII.NUL;
             F      : FILEs;
-            Virt_File : Virtual_File := No_File;
          begin
             if Append then
                F := fopen (N_Zero'Address, mode => A_Zero'Address);
             else
                F := fopen (N_Zero'Address, mode => W_Zero'Address);
             end if;
-
-            Virt_File := GNATCOLL.VFS.Create (+N);
 
             if F = NULL_Stream then
                F := stderr;
@@ -669,7 +668,7 @@ package body GNATCOLL.Traces is
               (Name           => new String'(Name),
                File           => F,
                Colors_Support => Term.Has_ANSI_Colors,
-               Virt_File      => Virt_File,
+               File_Name      => new String'(N),
                others         => <>);
             Add_To_Streams (Tmp);
          end;
@@ -708,8 +707,10 @@ package body GNATCOLL.Traces is
    begin
       if Handle.Stream /= null
         and then Handle.Stream.all in File_Stream_Record'Class
+        and then File_Stream_Record (Handle.Stream.all).File_Name /= null
       then
-         return File_Stream_Record (Handle.Stream.all).Virt_File;
+         return Create
+           (+File_Stream_Record (Handle.Stream.all).File_Name.all);
       end if;
 
       return No_File;
@@ -1697,6 +1698,8 @@ package body GNATCOLL.Traces is
          Status := fclose (Stream.File);
          Stream.File := NULL_Stream;
       end if;
+
+      GNAT.Strings.Free (Stream.File_Name);
 
       Close (Trace_Stream_Record (Stream));
    end Close;
