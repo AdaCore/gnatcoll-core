@@ -1,0 +1,7 @@
+description: >
+  Check that target from extended project is taken
+  into account when selecting gnatls to spawn.
+data:
+    - "options.gpr"
+    - "main.gpr"
+    - "simple.ads"
