@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -35,7 +35,6 @@ with System;                            use System;
 with GNAT.Debug_Utilities;              use GNAT.Debug_Utilities;
 with GNATCOLL.Mmap;                     use GNATCOLL.Mmap;
 with GNAT.OS_Lib;                       use GNAT.OS_Lib;
-with GNATCOLL.Scripts;                  use GNATCOLL.Scripts;
 with GNATCOLL.Scripts.Impl;             use GNATCOLL.Scripts.Impl;
 with GNATCOLL.Traces;                   use GNATCOLL.Traces;
 with GNATCOLL.Utils;                    use GNATCOLL.Utils;

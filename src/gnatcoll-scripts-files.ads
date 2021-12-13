@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2017, AdaCore                     --
+--                     Copyright (C) 2003-2021, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,7 +22,6 @@
 ------------------------------------------------------------------------------
 --  Implementation of File class
 
-with GNATCOLL.Scripts;       use GNATCOLL.Scripts;
 with GNATCOLL.VFS;
 
 package GNATCOLL.Scripts.Files is
