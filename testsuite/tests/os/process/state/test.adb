@@ -28,7 +28,8 @@ begin
    end loop;
 
    A.Assert (Iteration < 24, "Expect around 20 calls to wait");
-   A.Assert (Iteration >= 18, "Check that we wait a few times");
+   A.Assert
+     (Iteration >= 12, "Check that we wait a few times," & Iteration'Img);
    A.Assert (State (H) = WAITABLE, "Check that we are in a waitable state");
    if State (H) = WAITABLE then
       Status := Wait (H);

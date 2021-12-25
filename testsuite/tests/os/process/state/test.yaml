@@ -1,4 +1,2 @@
 title: GNATCOLL.OS.Process State
-control:
-    - ["XFAIL", "env.build.os.name == 'windows'", "unstable on windows (investigated under U831-026)"]
 data: ["test_data/*.py"]
