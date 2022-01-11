@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2021, AdaCore                     --
+--                     Copyright (C) 2009-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -294,6 +294,10 @@ package GNATCOLL.Opt_Parse is
       Enabled : Boolean := True;
       --  Whether to add this argument parser
 
+      Usage_Text : String := "";
+      --  Usage string for the argument. When left empty default usage text
+      --  will be generated in the form of [--Long|-Short LONG].
+
    package Parse_Option is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
@@ -324,6 +328,10 @@ package GNATCOLL.Opt_Parse is
 
       Enabled : Boolean := True;
       --  Whether to add this argument parser
+
+      Usage_Text : String := "";
+      --  Usage string for the argument. When left empty default usage text
+      --  will be generated in the form of [--Long|-Short LONG].
 
    package Parse_Enum_Option is
       pragma Compile_Time_Error
@@ -367,6 +375,10 @@ package GNATCOLL.Opt_Parse is
 
       Enabled : Boolean := True;
       --  Whether to add this argument parser
+
+      Usage_Text : String := "";
+      --  Usage string for the argument. When left empty default usage text
+      --  will be generated in the form of [--Long|-Short LONG [LONG...]].
 
    package Parse_Option_List is
       type Result_Array is array (Positive range <>) of Arg_Type;

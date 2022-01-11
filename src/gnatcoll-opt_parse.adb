@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2021, AdaCore                     --
+--                     Copyright (C) 2009-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -780,9 +780,7 @@ package body GNATCOLL.Opt_Parse is
       end record;
 
       overriding function Usage
-        (Self : Option_Parser) return String
-      is ("[" & Long & (if Short = "" then "" else "|" & Short) & " "
-          & To_Upper (Long (3 .. Long'Last)) & "]");
+        (Self : Option_Parser) return String;
 
       overriding function Help_Name
         (Dummy : Option_Parser) return String
@@ -812,6 +810,21 @@ package body GNATCOLL.Opt_Parse is
            Position => <>);
 
       Self : constant Parser_Access := Self_Val'Unchecked_Access;
+
+      -----------
+      -- Usage --
+      -----------
+
+      overriding function Usage
+        (Self : Option_Parser) return String
+      is
+      begin
+         if Usage_Text = "" then
+            return "[" & Long & (if Short = "" then "" else "|" & Short)
+                   & " " & To_Upper (Long (3 .. Long'Last)) & "]";
+         end if;
+         return Usage_Text;
+      end Usage;
 
       ---------
       -- Get --
@@ -916,7 +929,8 @@ package body GNATCOLL.Opt_Parse is
          Arg_Type    => Arg_Type,
          Default_Val => Default_Val,
          Convert     => Convert,
-         Enabled     => Enabled);
+         Enabled     => Enabled,
+         Usage_Text  => Usage_Text);
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
@@ -937,10 +951,7 @@ package body GNATCOLL.Opt_Parse is
       end record;
 
       overriding function Usage
-        (Self : Option_List_Parser) return String
-      is ("[" & Long & (if Short = "" then "" else "|" & Short) & " "
-          & To_Upper (Long (3 .. Long'Last))
-          & "[" & To_Upper (Long (3 .. Long'Last)) & "...]]");
+        (Self : Option_List_Parser) return String;
 
       overriding function Help_Name
         (Dummy : Option_List_Parser) return String
@@ -972,6 +983,22 @@ package body GNATCOLL.Opt_Parse is
          Position => <>);
 
       Self     : constant Parser_Access := Self_Val'Unchecked_Access;
+
+      -----------
+      -- Usage --
+      -----------
+
+      overriding function Usage
+        (Self : Option_List_Parser) return String
+      is
+      begin
+         if Usage_Text = "" then
+            return "[" & Long & (if Short = "" then "" else "|" & Short)
+                   & " " & To_Upper (Long (3 .. Long'Last))
+                   & "[" & To_Upper (Long (3 .. Long'Last)) & "...]]";
+         end if;
+         return Usage_Text;
+      end Usage;
 
       ---------
       -- Get --
