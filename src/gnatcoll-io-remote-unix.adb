@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -399,7 +399,6 @@ package body GNATCOLL.IO.Remote.Unix is
          2 => new String'("u+w"),
          3 => new String'("""" & String (File) & """"));
       Status : Boolean;
-      pragma Unreferenced (Status);
 
    begin
       if not State then
@@ -424,7 +423,6 @@ package body GNATCOLL.IO.Remote.Unix is
          2 => new String'("u+r"),
          3 => new String'("""" & String (File) & """"));
       Status : Boolean;
-      pragma Unreferenced (Status);
 
    begin
       if not State then

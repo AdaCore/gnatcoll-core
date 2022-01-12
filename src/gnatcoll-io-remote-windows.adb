@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2006-2017, AdaCore                     --
+--                     Copyright (C) 2006-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -486,7 +486,6 @@ package body GNATCOLL.IO.Remote.Windows is
                   new String'("""" & String (File) & """"),
                   new String'("2>&1"));
       Status : Boolean;
-      pragma Unreferenced (Status);
 
    begin
       if not State then
