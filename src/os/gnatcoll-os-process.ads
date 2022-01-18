@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                     Copyright (C) 2021-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -59,7 +59,7 @@ package GNATCOLL.OS.Process is
    --  When a process is spawned it goes into RUNNING state. Once the process
    --  calls exit it goes into the WAITABLE state (i.e: this means call to
    --  Wait will succeed and will not block). Finally once the process has
-   --  disapeared from the system (after a call to Wait) the state is
+   --  disappeared from the system (after a call to Wait) the state is
    --  TERMINATED.
 
    type Priority_Class is
@@ -78,7 +78,7 @@ package GNATCOLL.OS.Process is
 
    function Equivalent_Variables
       (Left, Right : UTF8.UTF_8_String) return Boolean;
-   --  Internal function used by Environment_Dict to decide if two environent
+   --  Internal function used by Environment_Dict to decide if two environment
    --  variable names correspond to the same environment variable.
 
    package Env_Dicts is
@@ -88,8 +88,8 @@ package GNATCOLL.OS.Process is
           Hash            => Ada.Strings.Hash,
           Equivalent_Keys => Equivalent_Variables);
    use Env_Dicts;
-   --  Environment dict. If your application already handle this structure
-   --  internally, we can avoid this intermediate dictionnary by using the
+   --  Environment dict. If your application already handles this structure
+   --  internally, we can avoid this intermediate dictionary by using the
    --  low-level version of the API.
 
    package Arg_Lists is
@@ -140,11 +140,11 @@ package GNATCOLL.OS.Process is
    --  is the program to launch and subsequent ones the arguments to that
    --  program.
    --
-   --  If Env is not passed then environment is inherited from the parent
-   --  process. Otherwise environment is overriden using the Env content. Note
-   --  that in order to improve usability, on Windows when an empty env is
+   --  If empty Env is passed then environment is inherited from the parent
+   --  process, otherwise environment is overridden with content of Env. Note
+   --  that in order to improve usability, on Windows when empty Env is
    --  passed then SYSTEMROOT and SYSTEMDRIVE are automatically added to the
-   --  the environment using the current process value. Without these
+   --  environment using the current process value, as without these
    --  variables process spawning fails.
    --
    --  If Cwd is not empty then the process will be executed in that directory.
@@ -157,7 +157,7 @@ package GNATCOLL.OS.Process is
    --  inherited from the parent process.
 
    function Wait (H : Process_Handle) return Integer;
-   --  Wait for a process end, and return its exit code
+   --  Wait for a process to end, and return its exit code
 
    function State (H : Process_Handle) return Process_State;
    --  Return the process state
@@ -196,7 +196,7 @@ package GNATCOLL.OS.Process is
       return Integer;
    --  Start a process and wait for its termination.
    --
-   --  The function takes the same arguments as Start but return an exit
+   --  The function takes the same arguments as Start but returns an exit
    --  status.
 
    function Run
@@ -224,7 +224,7 @@ package GNATCOLL.OS.Process is
    --  Same as Run but in addition the standard output is captured and returned
    --
    --  The function takes two additional parameters:
-   --  Universal_Newline: when True, sequence of CR + LF are transformed into
+   --  Universal_Newline: when True, sequences of CR + LF are transformed into
    --      LF
    --  Strip: when True, both leading and trailing CR, LF, HT and spaces are
    --      stripped from the output
