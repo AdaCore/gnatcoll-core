@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                       Copyright (C) 2021-2022, AdaCore                   --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -256,18 +256,40 @@ package body GNATCOLL.OS.Process is
       --  Read output and filter out if necessary CR characters. Note that
       --  call to Read is blocking.
       if Universal_Newline then
-         loop
-            N := FS.Read (Pipe_Read, Buffer);
-            exit when N <= 0;
+         declare
+            Prev_Chunk_Last_Is_CR : Boolean := False;
+         begin
+            loop
+               N := FS.Read (Pipe_Read, Buffer);
+               exit when N <= 0;
 
-            for Index in 1 .. N - 1 loop
-               if not (Buffer (Index) = ASCII.CR
-                       and then Buffer (Index + 1) = ASCII.LF)
-               then
-                  Append (Output, Buffer (Index));
+               --  Check if last chunk ended with a CR and first char in this
+               --  chunk is a LF
+               if Prev_Chunk_Last_Is_CR and then Buffer (1) /= ASCII.LF then
+                  Append (Output, ASCII.CR);
+               end if;
+
+               for Index in 1 .. N - 1 loop
+                  if Buffer (Index) /= ASCII.CR
+                     or else Buffer (Index + 1) /= ASCII.LF
+                  then
+                     Append (Output, Buffer (Index));
+                  end if;
+               end loop;
+
+               if Buffer (N) = ASCII.CR then
+                  Prev_Chunk_Last_Is_CR := True;
+               else
+                  Prev_Chunk_Last_Is_CR := False;
+                  Append (Output, Buffer (N));
                end if;
             end loop;
-         end loop;
+
+            --  Trailing CR
+            if Prev_Chunk_Last_Is_CR then
+               Append (Output, ASCII.CR);
+            end if;
+         end;
       else
          loop
             N := FS.Read (Pipe_Read, Buffer);
