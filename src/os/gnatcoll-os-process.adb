@@ -228,12 +228,10 @@ package body GNATCOLL.OS.Process is
       Status            : out Integer)
       return Ada.Strings.Unbounded.Unbounded_String
    is
-      use type FS.File_Descriptor;
       use Ada.Strings.Unbounded;
 
       Pipe_Read, Pipe_Write : OS.FS.File_Descriptor;
       Output                : Unbounded_String;
-      Real_Stderr_Fd        : OS.FS.File_Descriptor := Stderr;
       Buffer                : String (1 .. 4096);
       Pid                   : Process_Handle;
       N                     : Integer;
@@ -241,13 +239,9 @@ package body GNATCOLL.OS.Process is
       --  Allocate a PIPE to retrieve the output
       FS.Open_Pipe (Pipe_Read, Pipe_Write);
 
-      if Stderr = FS.To_Stdout then
-         Real_Stderr_Fd := Pipe_Write;
-      end if;
-
       --  Start the process.
       Pid := Start
-        (Args, Env, Cwd, Stdin, Pipe_Write, Real_Stderr_Fd, Priority);
+        (Args, Env, Cwd, Stdin, Pipe_Write, Stderr, Priority);
 
       --  Be sure to close Pipe_Write otherwise following reads on Pipe_Read
       --  will block even if the child process ends.
@@ -461,24 +455,75 @@ package body GNATCOLL.OS.Process is
       Priority : Priority_Class        := INHERIT)
       return Process_Handle
    is
-      Result  : Process_Handle;
+      Result      : Process_Handle;
+
+      --  By default final file descriptors are the one passed by the user
+      Real_Stdin   : OS.FS.File_Descriptor := Stdin;
+      Real_Stdout  : OS.FS.File_Descriptor := Stdout;
+      Real_Stderr  : OS.FS.File_Descriptor := Stderr;
+      Close_Stdin  : Boolean := False;
+      Close_Stdout : Boolean := False;
+      Close_Stderr : Boolean := False;
+
+      use type OS.FS.File_Descriptor;
    begin
       GNAT.Task_Lock.Lock;
 
-      FS.Set_Close_On_Exec (Stdin, False);
-      FS.Set_Close_On_Exec (Stdout, False);
-      FS.Set_Close_On_Exec (Stderr, False);
+      --  Handle special cases for file descriptors
+      --  First ensure all file descriptors are valid
+      if Stdout = OS.FS.Invalid_FD then
+         raise OS_Error with "invalid fd for process stdout";
+      elsif Stdout = OS.FS.Null_FD then
+         Real_Stdout := OS.FS.Open (OS.FS.Null_File, OS.FS.Write_Mode);
+         Close_Stdout := True;
+      elsif Stdout = OS.FS.To_Stdout then
+         raise OS_Error with "cannot redirect stdout to stdout";
+      end if;
+
+      if Stdin = OS.FS.Invalid_FD then
+         raise OS_Error with "invalid fd for process stdin";
+      elsif Stdin = OS.FS.Null_FD then
+         Real_Stdin := OS.FS.Open (OS.FS.Null_File, OS.FS.Read_Mode);
+         Close_Stdin := True;
+      elsif Stdin = OS.FS.To_Stdout then
+         raise OS_Error with "cannot redirect stdin to stdout";
+      end if;
+
+      if Stderr = OS.FS.Invalid_FD then
+         raise OS_Error with "invalid fd for process stderr";
+      elsif Stderr = OS.FS.Null_FD then
+         Real_Stderr := OS.FS.Open (OS.FS.Null_File, OS.FS.Write_Mode);
+         Close_Stderr := True;
+      elsif Stderr = OS.FS.To_Stdout then
+         Real_Stderr := Real_Stdout;
+      end if;
+
+      FS.Set_Close_On_Exec (Real_Stdin, False);
+      FS.Set_Close_On_Exec (Real_Stdout, False);
+      FS.Set_Close_On_Exec (Real_Stderr, False);
 
       Result := Internal_Spawn
         (Args,
          Cwd,
          Env,
-         Stdin, Stdout, Stderr,
+         Real_Stdin, Real_Stdout, Real_Stderr,
          Priority);
 
-      FS.Set_Close_On_Exec (Stdin, True);
-      FS.Set_Close_On_Exec (Stdout, True);
-      FS.Set_Close_On_Exec (Stderr, True);
+      FS.Set_Close_On_Exec (Real_Stdin, True);
+      FS.Set_Close_On_Exec (Real_Stdout, True);
+      FS.Set_Close_On_Exec (Real_Stderr, True);
+
+      if Close_Stdout then
+         OS.FS.Close (Real_Stdout);
+      end if;
+
+      if Close_Stderr then
+         OS.FS.Close (Real_Stderr);
+      end if;
+
+      if Close_Stdin then
+         OS.FS.Close (Real_Stdin);
+      end if;
 
       GNAT.Task_Lock.Unlock;
       return Result;
