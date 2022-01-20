@@ -79,7 +79,15 @@ package body Test_Assert is
             Starting_Line := False;
             IO.Put ((1 .. Indent_Columns => ' '));
          end if;
-         IO.Put (C);
+
+         case C is
+            when ASCII.CR =>
+               IO.Put ("\r");
+            when ASCII.LF =>
+               IO.Put ("\n" & ASCII.LF);
+            when others =>
+               IO.Put (C);
+         end case;
       end loop;
    end Put_Indented;
 
