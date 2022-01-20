@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                      Copyright (C) 2020-2021, AdaCore                    --
+--                      Copyright (C) 2020-2022, AdaCore                    --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -45,6 +45,12 @@ package body GNATCOLL.OS.FS is
    ----------------
 
    function Is_Console (FD : File_Descriptor) return Boolean is separate;
+
+   ---------------
+   -- Null_File --
+   ---------------
+
+   function Null_File return UTF8.UTF_8_String is separate;
 
    ----------
    -- Open --

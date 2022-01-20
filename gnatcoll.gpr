@@ -184,6 +184,8 @@ project GnatColl is
               use "gnatcoll-plugins__unix.adb";
             for Implementation ("GNATCOLL.OS.Stat.Stat")
               use "gnatcoll-os-stat-stat__unix.adb";
+            for Implementation ("GNATCOLL.OS.FS.Null_File")
+              use "gnatcoll-os-fs-null_file__unix.adb";
             for Implementation ("GNATCOLL.OS.FS.Open")
               use "gnatcoll-os-fs-open__unix.adb";
             for Implementation ("GNATCOLL.OS.FS.Set_Close_On_Exec")
@@ -223,6 +225,8 @@ project GnatColl is
               use "gnatcoll-os-stat-stat__win32.adb";
             for Implementation ("GNATCOLL.OS.FS.Is_Console")
               use "gnatcoll-os-fs-is_console__win32.adb";
+            for Implementation ("GNATCOLL.OS.FS.Null_File")
+              use "gnatcoll-os-fs-null_file__win32.adb";
             for Implementation ("GNATCOLL.OS.FS.Open")
               use "gnatcoll-os-fs-open__win32.adb";
             for Implementation ("GNATCOLL.OS.FS.Open_Pipe")

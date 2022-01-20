@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2020-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -81,6 +81,9 @@ package GNATCOLL.OS.FS is
 
    function Is_Console (FD : File_Descriptor) return Boolean;
    --  Return True if the FD correspond to a console.
+
+   function Null_File return UTF8.UTF_8_String;
+   --  Return path to the null file (/dev/null on Unix, NUL on Windows)
 
    function Read (FD : File_Descriptor; Buffer : in out String) return Integer;
    --  Read data from FD and put it in Buffer. The call is blocking and
