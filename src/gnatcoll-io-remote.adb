@@ -851,6 +851,7 @@ package body GNATCOLL.IO.Remote is
       end case;
 
       GNAT.OS_Lib.Delete_File (String (Tmp) & File.Tmp_Name, Dead);
+      pragma Assert (Dead, "couldn't delete temp file");
    end Close;
 
    ----------------
