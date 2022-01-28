@@ -69,7 +69,7 @@ package Mylib is
          Default_Val => Mon);
 
       package Files_Option2 is new Parse_Option_List
-         (Parser      => Parser,
+        (Parser      => Parser,
          Short       => "-F2",
          Long        => "--files2",
          Arg_Type    => Unbounded_String,

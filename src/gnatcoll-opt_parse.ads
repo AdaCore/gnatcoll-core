@@ -251,14 +251,22 @@ package GNATCOLL.Opt_Parse is
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
 
-      Long : String;
+      Long : String := "";
       --  Long form for this flag. Should start with two dashes.
+      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  argument to have a long form. In this case you must provide a
+      --  non-empty Name (i.e. Name /= "") to be used in help text.
 
       Help : String := "";
       --  Help string for the argument.
 
       Enabled : Boolean := True;
       --  Whether to add this argument parser
+
+      Name : String := "";
+      --  Name of the parser. Must be provided if Long is not provided.
+      --  This is used to build up the --help text.
+      --  Name will be used if both Name and Long are non-empty strings.
 
    package Parse_Flag is
       function Get
@@ -275,8 +283,11 @@ package GNATCOLL.Opt_Parse is
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
 
-      Long : String;
+      Long : String := "";
       --  Long form for this flag. Should start with two dashes.
+      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  argument to have a long form. In this case you must provide a
+      --  non-empty Name (i.e. Name /= "") to be used in help text.
 
       Help : String := "";
       --  Help string for the argument.
@@ -298,6 +309,11 @@ package GNATCOLL.Opt_Parse is
       --  Usage string for the argument. When left empty default usage text
       --  will be generated in the form of [--Long|-Short LONG].
 
+      Name : String := "";
+      --  Name of the parser. Must be provided if Long is not provided.
+      --  This is used to build up the --help text.
+      --  Name will be used if both Name and Long are non-empty strings.
+
    package Parse_Option is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
@@ -314,8 +330,11 @@ package GNATCOLL.Opt_Parse is
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
 
-      Long : String;
+      Long : String := "";
       --  Long form for this flag. Should start with two dashes.
+      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  argument to have a long form. In this case you must provide a
+      --  non-empty Name (i.e. Name /= "") to be used in help text.
 
       Help : String := "";
       --  Help string for the argument.
@@ -332,6 +351,11 @@ package GNATCOLL.Opt_Parse is
       Usage_Text : String := "";
       --  Usage string for the argument. When left empty default usage text
       --  will be generated in the form of [--Long|-Short LONG].
+
+      Name : String := "";
+      --  Name of the parser. Must be provided if Long is not provided.
+      --  This is used to build up the --help text.
+      --  Name will be used if both Name and Long are non-empty strings.
 
    package Parse_Enum_Option is
       pragma Compile_Time_Error
@@ -354,8 +378,11 @@ package GNATCOLL.Opt_Parse is
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
 
-      Long : String;
+      Long : String := "";
       --  Long form for this flag. Should start with two dashes.
+      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  argument to have a long form. In this case you must provide a
+      --  non-empty Name (i.e. Name /= "") to be used in help text.
 
       Help : String := "";
       --  Help string for the argument.
@@ -379,6 +406,11 @@ package GNATCOLL.Opt_Parse is
       Usage_Text : String := "";
       --  Usage string for the argument. When left empty default usage text
       --  will be generated in the form of [--Long|-Short LONG [LONG...]].
+
+      Name : String := "";
+      --  Name of the parser. Must be provided if Long is not provided.
+      --  This is used to build up the --help text.
+      --  Name will be used if both Name and Long are non-empty strings.
 
    package Parse_Option_List is
       type Result_Array is array (Positive range <>) of Arg_Type;

@@ -22,9 +22,9 @@
 ------------------------------------------------------------------------------
 
 with Ada.Command_Line;
-with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Exceptions;
+with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
 
 with GNAT.OS_Lib;
@@ -128,14 +128,10 @@ package body GNATCOLL.Opt_Parse is
    end record;
 
    overriding function Usage
-     (Self : Flag_Parser) return String
-   is ("[" & To_String (Self.Long) &
-       (if Self.Short = "" then "" else "|" & To_String (Self.Short)) & "]");
+     (Self : Flag_Parser) return String;
 
    overriding function Help_Name
-     (Self : Flag_Parser) return String
-   is
-     (To_String (Self.Long) & ", " & To_String (Self.Short));
+     (Self : Flag_Parser) return String;
 
    overriding function Parse_Args
      (Self   : in out Flag_Parser;
@@ -147,6 +143,39 @@ package body GNATCOLL.Opt_Parse is
 
    type Help_Flag_Parser is new Flag_Parser with null record;
    --  Specific subtype of Flag_Parser to designate the help flag parser.
+
+   -----------
+   -- Usage --
+   -----------
+
+   overriding function Usage
+     (Self : Flag_Parser) return String
+   is
+   begin
+      if Self.Long /= "" and Self.Short /= "" then
+         return
+           "[" & To_String (Self.Long) & "|" & To_String (Self.Short) & "]";
+      elsif Self.Long /= "" then
+         return "[" & To_String (Self.Long) & "]";
+      end if;
+      return "[" & To_String (Self.Short) & "]";
+   end Usage;
+
+   ---------------
+   -- Help_Name --
+   ---------------
+
+   overriding function Help_Name
+     (Self : Flag_Parser) return String
+   is
+   begin
+      if Self.Long /= "" and Self.Short /= "" then
+         return To_String (Self.Long) & ", " & To_String (Self.Short);
+      elsif Self.Long /= "" then
+         return To_String (Self.Long);
+      end if;
+      return To_String (Self.Short);
+   end Help_Name;
 
    -----------------
    -- Append_Line --
@@ -730,7 +759,8 @@ package body GNATCOLL.Opt_Parse is
    package body Parse_Flag is
 
       Self_Val : aliased Flag_Parser := Flag_Parser'
-        (Name     => +Long (3 .. Long'Last),
+        (Name     => +(if Name /= "" then Name
+                       else Long (3 .. Long'Last)),
          Help     => +Help,
          Long     => +Long,
          Short    => +Short,
@@ -762,7 +792,13 @@ package body GNATCOLL.Opt_Parse is
       end Get;
 
    begin
-      if Enabled then
+      if Long = "" and Short = "" then
+         raise Opt_Parse_Error
+           with "A long or short flag must be provided for Parse_Flag";
+      elsif Long = "" and Name = "" then
+         raise Opt_Parse_Error
+           with "Either Long or Name must be provided for Parse_Flag";
+      elsif Enabled then
          Parser.Data.Opts_Parsers.Append (Self);
          Parser.Data.All_Parsers.Append (Self);
          Self.Position := Parser.Data.All_Parsers.Last_Index;
@@ -783,9 +819,7 @@ package body GNATCOLL.Opt_Parse is
         (Self : Option_Parser) return String;
 
       overriding function Help_Name
-        (Dummy : Option_Parser) return String
-      is
-        (Long & ", " & Short);
+        (Dummy : Option_Parser) return String;
 
       overriding function Parse_Args
         (Self   : in out Option_Parser;
@@ -803,7 +837,8 @@ package body GNATCOLL.Opt_Parse is
 
       Self_Val : aliased Option_Parser :=
         Option_Parser'
-          (Name     => +Long (3 .. Long'Last),
+          (Name     => +(if Name /= "" then Name
+                         else Long (3 .. Long'Last)),
            Help     => +Help,
            Parser   => Parser.Data,
            Opt      => True,
@@ -820,11 +855,31 @@ package body GNATCOLL.Opt_Parse is
       is
       begin
          if Usage_Text = "" then
-            return "[" & Long & (if Short = "" then "" else "|" & Short)
-                   & " " & To_Upper (Long (3 .. Long'Last)) & "]";
+            if Long /= "" and Short /= "" then
+               return "[" & Long & "|" & Short & " " & (+Self.Name) & "]";
+            elsif Long /= "" then
+               return "[" & Long & " " & (+Self.Name) & "]";
+            end if;
+            return "[" & Short & " " & (+Self.Name) & "]";
          end if;
          return Usage_Text;
       end Usage;
+
+      ---------------
+      -- Help_Name --
+      ---------------
+
+      overriding function Help_Name
+        (Dummy : Option_Parser) return String
+      is
+      begin
+         if Long /= "" and Short /= "" then
+            return Long & ", " & Short;
+         elsif Long /= "" then
+            return Long;
+         end if;
+         return Short;
+      end Help_Name;
 
       ---------
       -- Get --
@@ -878,7 +933,13 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      if Enabled then
+      if Long = "" and Short = "" then
+         raise Opt_Parse_Error
+           with "A long or short flag must be provided for Parse_Option";
+      elsif Long = "" and Name = "" then
+         raise Opt_Parse_Error
+           with "Either Long or Name must be provided for Parse_Option";
+      elsif Enabled then
          Parser.Data.Opts_Parsers.Append (Self);
          Parser.Data.All_Parsers.Append (Self);
          Self.Position := Parser.Data.All_Parsers.Last_Index;
@@ -930,11 +991,21 @@ package body GNATCOLL.Opt_Parse is
          Default_Val => Default_Val,
          Convert     => Convert,
          Enabled     => Enabled,
-         Usage_Text  => Usage_Text);
+         Usage_Text  => Usage_Text,
+         Name        => Name);
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
       renames Internal_Option.Get;
+
+   begin
+      if Long = "" and Short = "" then
+         raise Opt_Parse_Error
+           with "A long or short flag must be provided for Parse_Enum_Option";
+      elsif Long = "" and Name = "" then
+         raise Opt_Parse_Error
+           with "Either Long or Name must be provided for Parse_Enum_Option";
+      end if;
    end Parse_Enum_Option;
 
    -----------------------
@@ -954,9 +1025,7 @@ package body GNATCOLL.Opt_Parse is
         (Self : Option_List_Parser) return String;
 
       overriding function Help_Name
-        (Dummy : Option_List_Parser) return String
-      is
-        (Long & ", " & Short);
+        (Dummy : Option_List_Parser) return String;
 
       overriding function Parse_Args
         (Self   : in out Option_List_Parser;
@@ -976,7 +1045,8 @@ package body GNATCOLL.Opt_Parse is
       procedure Release (Self : in out Internal_Result) is null;
 
       Self_Val : aliased Option_List_Parser :=
-        (Name   => +Long (3 .. Long'Last),
+        (Name   => +(if Name /= "" then Name
+                     else To_Upper (Long (3 .. Long'Last))),
          Help   => +Help,
          Parser => Parser.Data,
          Opt    => True,
@@ -993,12 +1063,34 @@ package body GNATCOLL.Opt_Parse is
       is
       begin
          if Usage_Text = "" then
-            return "[" & Long & (if Short = "" then "" else "|" & Short)
-                   & " " & To_Upper (Long (3 .. Long'Last))
-                   & "[" & To_Upper (Long (3 .. Long'Last)) & "...]]";
+            if Long /= "" and Short /= "" then
+               return "[" & Long & "|" & Short & " " & (+Self.Name) &
+                      " [" & (+Self.Name) & "...]]";
+            elsif Long /= "" then
+               return "[" & Long & " " & (+Self.Name) &
+                      " [" & (+Self.Name) & "...]]";
+            end if;
+            return "[" & Short & " " & (+Self.Name) &
+                   " [" & (+Self.Name) & "...]]";
          end if;
          return Usage_Text;
       end Usage;
+
+      ---------------
+      -- Help_Name --
+      ---------------
+
+      overriding function Help_Name
+        (Dummy : Option_List_Parser) return String
+      is
+      begin
+         if Long /= "" and Short /= "" then
+            return Long & ", " & Short;
+         elsif Long /= "" then
+            return Long;
+         end if;
+         return Short;
+      end Help_Name;
 
       ---------
       -- Get --
@@ -1039,12 +1131,13 @@ package body GNATCOLL.Opt_Parse is
          Pos    : Positive;
          Result : in out Parsed_Arguments) return Parser_Return
       is
-         Last : Parser_Return := Error_Return;
-
          Res  : Parser_Result_Access
          renames Result.Ref.Get.Results (Self.Position);
 
          Tmp : Internal_Result_Access := null;
+
+         Converted_Arg : Arg_Type;
+         Arg_Count     : Natural := 0;
 
       begin
          if Accumulate then
@@ -1076,33 +1169,37 @@ package body GNATCOLL.Opt_Parse is
          end if;
 
          for I in Pos + 1 .. Args'Last loop
-            if Args (I).Starts_With ("--") or Args (I).Starts_With ("-") then
-               exit;
-            end if;
-
-            Last := I;
+            exit when Args (I).Starts_With ("-");
+            Arg_Count := Arg_Count + 1;
          end loop;
 
-         if Last = Error_Return then
+         if Arg_Count = 0 then
             return Error_Return;
          end if;
 
          Tmp := new Internal_Result'
            (Start_Pos => Pos,
-            End_Pos   => Last,
+            End_Pos   => Pos + Arg_Count,
             Results   => Result_Vectors.Empty_Vector);
 
          Res := Tmp.all'Unchecked_Access;
 
-         for I in 1 .. Last - Pos + 1 loop
-            Internal_Result (Res.all).Results (I) := Convert (+Args (I + Pos));
+         for I in 1 .. Arg_Count loop
+            Converted_Arg := Convert (+Args (Pos + I));
+            Internal_Result (Res.all).Results.Append (Converted_Arg);
          end loop;
 
-         return Parser_Return (Last + 1);
+         return Parser_Return (Pos + Arg_Count + 1);
       end Parse_Args;
 
    begin
-      if Enabled then
+      if Long = "" and Short = "" then
+         raise Opt_Parse_Error
+           with "A long or short flag must be provided for Parse_Option_List";
+      elsif Long = "" and Name = "" then
+         raise Opt_Parse_Error
+           with "Either Long or Name must be provided for Parse_Option_List";
+      elsif Enabled then
          Parser.Data.Opts_Parsers.Append (Self);
          Parser.Data.All_Parsers.Append (Self);
          Self.Position := Parser.Data.All_Parsers.Last_Index;
@@ -1213,21 +1310,15 @@ package body GNATCOLL.Opt_Parse is
       New_Pos     : out Parser_Return) return XString
    is
    begin
-
-      if
-        Args (Pos) = Long
-        or else (Short /= "" and then Args (Pos) = Short)
-      then
+      if Args (Pos) = Long or Args (Pos) = Short then
          if Pos + 1 > Args'Last then
             raise Opt_Parse_Error with "Incomplete option";
          end if;
          New_Pos := Pos + 2;
          return Args (Pos + 1);
-
-      elsif Args (Pos).Starts_With (Long & "=") then
+      elsif Long /= "" and then Args (Pos).Starts_With (Long & "=") then
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Long'Last + 2, Args (Pos).Length);
-
       elsif Short /= "" and then Args (Pos).Starts_With (Short) then
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Short'Last + 1, Args (Pos).Length);
