@@ -853,14 +853,16 @@ package body GNATCOLL.Opt_Parse is
       overriding function Usage
         (Self : Option_Parser) return String
       is
+         Usage_Name : constant String :=
+           (if Name /= "" then Name else To_Upper (+Self.Name));
       begin
          if Usage_Text = "" then
             if Long /= "" and Short /= "" then
-               return "[" & Long & "|" & Short & " " & (+Self.Name) & "]";
+               return "[" & Long & "|" & Short & " " & Usage_Name & "]";
             elsif Long /= "" then
-               return "[" & Long & " " & (+Self.Name) & "]";
+               return "[" & Long & " " & Usage_Name & "]";
             end if;
-            return "[" & Short & " " & (+Self.Name) & "]";
+            return "[" & Short & " " & Usage_Name & "]";
          end if;
          return Usage_Text;
       end Usage;
