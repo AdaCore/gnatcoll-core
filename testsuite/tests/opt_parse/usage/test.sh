@@ -5,7 +5,7 @@ STDOUT=stdout.log
 # The usage text is split across multiple lines making the greps unreliable.
 # This joins together the output onto one line, with correct spaceage in the
 # usage text so that the greps can find the expected text.
-python3 parse_output.py
+python parse_output.py
 
 # Check that the help text contains updated usage information
 if grep -P -q "\[--charset\|-C <charset name>\]" $STDOUT; then
