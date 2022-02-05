@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2018, AdaCore                     --
+--                     Copyright (C) 2009-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -342,6 +342,7 @@ package body GNATCOLL.IO.Native is
      (File : not null access Native_File_Record) return Boolean is
    begin
       if GNAT.OS_Lib.Directory_Separator = '\'
+        and then File.Full'Length > 1
         and then File.Full (File.Full'First .. File.Full'First + 1) = "\\"
       then
          --  There is an issue with (at least) GNAT 6.2 when Is_Directory
