@@ -60,9 +60,6 @@ package body GNATCOLL.Opt_Parse is
    end record;
    --  Simple abstract type to help with formatting of the outputted help text.
 
-   subtype Col_Type is Integer range -2 .. Integer'Last;
-   --  Type for a column in the text wrapper.
-
    Current_Col : constant Col_Type := -1;
    --  Constant to represent a magic value that represents the current column
 
@@ -1213,7 +1210,9 @@ package body GNATCOLL.Opt_Parse is
    ----------------------------
 
    function Create_Argument_Parser
-     (Help : String; Command_Name : String := "") return Argument_Parser
+     (Help              : String;
+      Command_Name      : String := "";
+      Help_Column_Limit : Col_Type := 80) return Argument_Parser
    is
       XCommand_Name : constant XString :=
         +(if Command_Name = ""
@@ -1237,6 +1236,7 @@ package body GNATCOLL.Opt_Parse is
          Parser.Data.Opts_Parsers.Append (Parser.Data.Help_Flag);
          Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
          Parser.Data.Help_Flag.Position := Parser.Data.All_Parsers.Last_Index;
+         Parser.Data.Help_Column_Limit := Help_Column_Limit;
       end return;
    end Create_Argument_Parser;
 
@@ -1245,8 +1245,45 @@ package body GNATCOLL.Opt_Parse is
    ----------
 
    function Help (Self : Argument_Parser) return String is
-      Ret : Text_Wrapper;
+      Ret         : Text_Wrapper;
+      Length      : Col_Type;
+      Pos_Arg_Col : Col_Type := 0;
+      Opt_Arg_Col : Col_Type := 0;
    begin
+
+      Ret.Wrap_Col := Self.Data.Help_Column_Limit;
+
+      --  Set column for help text relative to the max length of Help_Name
+      for Parser of Self.Data.Positional_Args_Parsers loop
+         Length := Parser.Help_Name'Length;
+         if Length > Pos_Arg_Col then
+            Pos_Arg_Col := Length;
+         end if;
+      end loop;
+
+      for Parser of Self.Data.Opts_Parsers loop
+         Length := Parser.Help_Name'Length;
+         if Length > Opt_Arg_Col then
+            Opt_Arg_Col := Length;
+         end if;
+      end loop;
+
+      --  Plus 5, 2 for padding, 3 because Help_Name is Starts at Col 3
+      Pos_Arg_Col := Pos_Arg_Col + 5;
+      Opt_Arg_Col := Opt_Arg_Col + 5;
+
+      --  Check that Pos_Arg_Col doesn't cause the starting position of help
+      --  text to exceed the limit at which all text is wrapped. If it does
+      --  exceed this limit, then choose some default value (25) for help text
+      --  to begin at.
+      if Pos_Arg_Col >= Ret.Wrap_Col then
+         Pos_Arg_Col := 25;
+      end if;
+
+      if Opt_Arg_Col >= Ret.Wrap_Col then
+         Opt_Arg_Col := 25;
+      end if;
+
       --  Usage
 
       Ret.Append_Text ("usage: " & (+Self.Data.Command_Name));
@@ -1271,7 +1308,7 @@ package body GNATCOLL.Opt_Parse is
 
       for Parser of Self.Data.Positional_Args_Parsers loop
          Ret.Append_Text (Parser.Help_Name);
-         Ret.Set_Column (25);
+         Ret.Set_Column (Pos_Arg_Col);
 
          Ret.Append_Line (+Parser.Help, Col_After => 3);
       end loop;
@@ -1281,7 +1318,7 @@ package body GNATCOLL.Opt_Parse is
 
       for Parser of Self.Data.Opts_Parsers loop
          Ret.Append_Text (Parser.Help_Name);
-         Ret.Set_Column (25);
+         Ret.Set_Column (Opt_Arg_Col);
 
          Ret.Append_Line (+Parser.Help, Col_After => 3);
       end loop;

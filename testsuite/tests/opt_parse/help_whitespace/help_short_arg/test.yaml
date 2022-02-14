@@ -1,0 +1,2 @@
+driver: build_run_diff
+description: Check that long argument name causes the previously default 25 column limit to shrink

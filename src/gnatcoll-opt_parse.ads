@@ -122,11 +122,14 @@ package GNATCOLL.Opt_Parse is
    --  you will be able to access argument values directly via the generic Get
    --  functions.
 
+   subtype Col_Type is Integer range -2 .. Integer'Last;
+   --  Type for a column in the text wrapper.
+
    No_Arguments : constant XString_Array (1 .. 0) := (others => <>);
-   --  Constant for the absence of command line arguments
+   --  Constant for the absence of command line arguments.
 
    No_Parsed_Arguments : constant Parsed_Arguments;
-   --  Constant for a null Parsed_Arguments value
+   --  Constant for a null Parsed_Arguments value.
 
    function Parse
      (Self      : in out Argument_Parser;
@@ -140,7 +143,9 @@ package GNATCOLL.Opt_Parse is
    --  Parse command line arguments for Self. Return arguments explicitly.
 
    function Create_Argument_Parser
-     (Help : String; Command_Name : String := "") return Argument_Parser;
+     (Help              : String;
+      Command_Name      : String := "";
+      Help_Column_Limit : Col_Type := 80) return Argument_Parser;
    --  Create an argument parser with the provided help string.
 
    function Help (Self : Argument_Parser) return String;
@@ -511,6 +516,7 @@ private
 
       Mutex : aliased Mutual_Exclusion;
       --  Mutex used to make Get_Result thread safe
+      Help_Column_Limit                     : Col_Type := 80;
    end record;
 
    type Parser_Result is abstract tagged record
