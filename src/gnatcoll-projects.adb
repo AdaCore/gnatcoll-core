@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2021, AdaCore                     --
+--                     Copyright (C) 2002-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -35,7 +35,6 @@ with Ada.Strings.Hash_Case_Insensitive;
 with Ada.Strings.Maps;            use Ada.Strings.Maps;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;                 use Ada.Text_IO;
-with Ada.Unchecked_Conversion;
 
 with System;                      use System;
 
