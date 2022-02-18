@@ -1,4 +1,3 @@
-with Ada.Unchecked_Conversion;
 with GNAT.Directory_Operations;
 with GNAT.OS_Lib;
 with GNATCOLL.Mmap;
