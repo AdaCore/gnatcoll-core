@@ -1,0 +1,7 @@
+Code-Review+2: Raphaël Amiard <amiard@adacore.com>
+Code-Review-1: CI Builder <ci-builder@adacore.com>
+Submitted-by: Pierre-Marie de Rodat <derodat@adacore.com>
+Submitted-at: Thu, 24 Feb 2022 15:27:25 +0000
+Reviewed-on: https://git.adacore-it.com/c/gnatcoll-core/+/111634
+Project: gnatcoll-core
+Branch: refs/heads/master
