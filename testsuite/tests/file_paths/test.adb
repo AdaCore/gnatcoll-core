@@ -30,11 +30,30 @@ procedure Test is
 
    function Filename_Image (Filename : String) return String is
       F : constant Virtual_File := Create (+Filename);
+
+      function Canonicalize (S : String) return String;
+      --  Canonicalize backslashes to forward slashes
+
+      ------------------
+      -- Canonicalize --
+      ------------------
+
+      function Canonicalize (S : String) return String is
+      begin
+         return R : String := S do
+            for C of R loop
+               if C = '\' then
+                  C := '/';
+               end if;
+            end loop;
+         end return;
+      end Canonicalize;
+
    begin
       if F.Is_Absolute_Path then
-         return "abs(""" & (+F.Relative_Path (CWD)) & """)";
+         return "abs(""" & Canonicalize (+F.Relative_Path (CWD)) & """)";
       else
-         return """" & Filename & """";
+         return """" & Canonicalize (Filename) & """";
       end if;
    end Filename_Image;
 
@@ -68,7 +87,7 @@ procedure Test is
 begin
    --  The empty path is equivalent to the current working directory
 
-   Check ("", Path_Separator, If_Empty);
+   Check ("", ':', If_Empty);
 
    --  First items in the path have priority
 
