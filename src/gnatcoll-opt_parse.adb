@@ -41,7 +41,7 @@ package body GNATCOLL.Opt_Parse is
    function "+"
      (Self : XString) return String renames To_String;
 
-   function Get_Arguments (Arguments : XString_Array) return XString_Array;
+   function Get_Arguments return XString_Array;
 
    function Parse_One_Option
      (Short, Long : String;
@@ -311,20 +311,13 @@ package body GNATCOLL.Opt_Parse is
    -- Get_Arguments --
    -------------------
 
-   function Get_Arguments (Arguments : XString_Array) return XString_Array is
+   function Get_Arguments return XString_Array is
+      Args : XString_Array (1 .. Cmd_Line.Argument_Count);
    begin
-      if Arguments /= No_Arguments then
-         return Arguments;
-      end if;
-
-      declare
-         Args : XString_Array (1 .. Cmd_Line.Argument_Count);
-      begin
-         for I in Args'Range loop
-            Args (I) := +Cmd_Line.Argument (I);
-         end loop;
-         return Args;
-      end;
+      for I in Args'Range loop
+         Args (I) := +Cmd_Line.Argument (I);
+      end loop;
+      return Args;
    end Get_Arguments;
 
    ----------------
@@ -373,135 +366,161 @@ package body GNATCOLL.Opt_Parse is
    -- Parse --
    -----------
 
-   function Parse
-     (Self      : in out Argument_Parser;
-      Arguments : XString_Array := No_Arguments) return Boolean
-   is
-   begin
-      if Self.Data.Default_Result /= No_Parsed_Arguments then
-         Self.Data.Default_Result := No_Parsed_Arguments;
-      end if;
+   procedure Parse_Internal
+     (Self         : in out Argument_Parser;
+      Arguments    : XString_Array;
+      Result       : out Parsed_Arguments;
+      Exit_Parsing : out Boolean;
+      Success      : out Boolean);
+   --  Internal procedure used by all of the parse functions.
 
-      return Ret : constant Boolean
-        := Self.Parse (Arguments, Self.Data.Default_Result)
-      do
-         if not Ret then
-            Put_Line (Help (Self));
-         end if;
-      end return;
+   function Parse (Self : in out Argument_Parser) return Boolean
+   is
+      Exit_Parsing : Boolean;
+      Success      : Boolean;
+   begin
+      Self.Parse_Internal
+         (Get_Arguments, Self.Data.Default_Result, Exit_Parsing, Success);
+      if Exit_Parsing then
+         GNAT.OS_Lib.OS_Exit (0);
+      elsif not Success then
+         Put_Line (Self.Help);
+      end if;
+      return Success;
    end Parse;
 
-   -----------
-   -- Parse --
-   -----------
+   function Parse
+     (Self      : in out Argument_Parser;
+      Arguments : XString_Array) return Boolean
+   is
+      Exit_Parsing : Boolean;
+      Success      : Boolean;
+   begin
+      Self.Parse_Internal
+        (Arguments, Self.Data.Default_Result, Exit_Parsing, Success);
+      if Exit_Parsing then
+         GNAT.OS_Lib.OS_Exit (0);
+      elsif not Success then
+         Put_Line (Self.Help);
+      end if;
+      return Success;
+   end Parse;
 
    function Parse
      (Self      : in out Argument_Parser;
-      Arguments : XString_Array := No_Arguments;
+      Arguments : XString_Array;
       Result    : out Parsed_Arguments) return Boolean
    is
-      Exit_Parsing : exception;
-      --  Raised when aborting arguments parsing for --help. We cannot call
-      --  directly GNAT.OS_Lib.OS_Exit in that case as this is in the middle of
-      --  vector iterations: the call to OS_Exit triggers the finalization of
-      --  these vectors, so we would get a vector tampering check failure. Use
-      --  an exception to stop the iteration, and only then call OS_Exit to
-      --  avoid this situation.
+      Exit_Parsing : Boolean;
+      Success      : Boolean;
+   begin
+      Self.Parse_Internal (Arguments, Result, Exit_Parsing, Success);
+      if Exit_Parsing then
+         GNAT.OS_Lib.OS_Exit (0);
+      elsif not Success then
+         Put_Line (Self.Help);
+      end if;
+      return Success;
+   end Parse;
 
-      Current_Arg   : Positive := 1;
-      Cmd_Line_Args : constant XString_Array := Get_Arguments (Arguments);
+   procedure Parse_Internal
+     (Self         : in out Argument_Parser;
+      Arguments    : XString_Array;
+      Result       : out Parsed_Arguments;
+      Exit_Parsing : out Boolean;
+      Success      : out Boolean)
+   is
+      Current_Arg : Positive := Arguments'First;
+      Next_Arg    : Positive := Arguments'First;
+      Arg_Parsed  : Boolean;
 
       procedure Handle_Failure (Error_Msg : String);
 
-      --------------------
-      -- Handle_Failure --
-      --------------------
-
       procedure Handle_Failure (Error_Msg : String) is
       begin
-         Put_Line
-           ("Argument parsing failed: " & Error_Msg);
+         Put_Line ("Argument parsing failed: " & Error_Msg);
       end Handle_Failure;
 
+      function Attempt_Parse (Parser : Parser_Access) return Boolean;
+      --  Attempt to parse the next argument using Parser.
+      --  If successful, set Next_Arg to the position of the next argument to
+      --  be parsed, and return True.
+      --  If it was unable to parse the next argument return False.
+
+      function Attempt_Parse (Parsers : Parser_Vector) return Boolean;
+      --  Loop over Parsers, calling Attempt_Parse on each parser until one is
+      --  able to parse the next argument.
+      --  Returns True if a Parser successfully parsed the next
+      --  argument, False if not.
+
+      function Attempt_Parse (Parser : Parser_Access) return Boolean
+      is
+         P_Return : Parser_Return;
+      begin
+         P_Return := Parser.Parse (Arguments, Current_Arg, Result);
+         if P_Return = Error_Return then
+            return False;
+         end if;
+         Next_Arg := Positive (P_Return);
+         return True;
+      end Attempt_Parse;
+
+      function Attempt_Parse (Parsers : Parser_Vector) return Boolean
+      is
+         Parsed : Boolean := False;
+      begin
+         for Parser of Parsers loop
+            Parsed := Attempt_Parse (Parser);
+            exit when Parsed;
+         end loop;
+         return Parsed;
+      end Attempt_Parse;
+
    begin
+      Success := False;
+      Exit_Parsing := False;
+
       Result.Ref.Set
         (Parsed_Arguments_Type'
-           (Raw_Args => new XString_Array'(Cmd_Line_Args),
+           (Raw_Args => new XString_Array'(Arguments),
             Results  => new Parser_Result_Array
               (1 .. Self.Data.All_Parsers.Last_Index)));
 
-      while Current_Arg <= Cmd_Line_Args'Last loop
+      while Current_Arg <= Arguments'Last loop
+         --  Check for help flag
+         if Attempt_Parse (Self.Data.Help_Flag) then
+            Put_Line (Self.Help);
+            Exit_Parsing := True;
+            return;
+         end if;
 
-         for Opt_Parser of Self.Data.Opts_Parsers loop
-            begin
-               declare
-                  P_Return : constant Parser_Return :=
-                    Opt_Parser.Parse (Cmd_Line_Args, Current_Arg, Result);
-               begin
-                  if P_Return /= Error_Return then
-                     Current_Arg := Positive (P_Return);
+         --  Attempt to parse argument using optional and positional parsers
+         Arg_Parsed := Attempt_Parse (Self.Data.Opts_Parsers)
+           or else Attempt_Parse (Self.Data.Positional_Args_Parsers);
 
-                     if Opt_Parser.all in Help_Flag_Parser'Class then
-                        Put_Line (Self.Help);
-                        raise Exit_Parsing;
-                     end if;
+         --  Handle error case where argument was not parsed
+         if not Arg_Parsed then
+            Handle_Failure
+              ("Unrecognized argument " & (+Arguments (Current_Arg)));
+            return;
+         end if;
 
-                     goto Next_Iter;
-                  end if;
-               end;
-            exception
-               when E : Opt_Parse_Error =>
-                  Handle_Failure
-                    ("for option " & (+Opt_Parser.Name) & " - "
-                     & Ada.Exceptions.Exception_Message (E));
-                  return False;
-            end;
-         end loop;
-
-         for Pos_Parser of Self.Data.Positional_Args_Parsers loop
-            begin
-               declare
-                  P_Return : constant Parser_Return :=
-                    Pos_Parser.Parse (Cmd_Line_Args, Current_Arg, Result);
-               begin
-                  if P_Return /= Error_Return then
-                     Current_Arg := Positive (P_Return);
-                     goto Next_Iter;
-                  end if;
-               end;
-            exception
-               when E : Opt_Parse_Error =>
-                  Handle_Failure
-                    ("for parser " & (+Pos_Parser.Name) & " - "
-                     & Ada.Exceptions.Exception_Message (E));
-                  return False;
-            end;
-         end loop;
-
-         Handle_Failure
-           ("Unrecognized argument " & (+Cmd_Line_Args (Current_Arg)));
-         return False;
-
-         <<Next_Iter>>
+         Current_Arg := Next_Arg;
       end loop;
 
       for Parser of Self.Data.All_Parsers loop
          if not Parser.Opt and then not Parser.Has_Result (Result) then
             Handle_Failure ("Missing value for " & (+Parser.Name));
-            return False;
+            return;
          end if;
       end loop;
 
-      return True;
+      Success := True;
    exception
       when E : Opt_Parse_Error =>
          Handle_Failure (Ada.Exceptions.Exception_Message (E));
-         return False;
-
-      when Exit_Parsing =>
-         GNAT.OS_Lib.OS_Exit (0);
-         return False;
-   end Parse;
+         return;
+   end Parse_Internal;
 
    -----------
    -- Parse --

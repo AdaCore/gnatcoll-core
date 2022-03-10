@@ -33,3 +33,7 @@ testsuite/gnatcov
 testsuite/out
 
 examples/library/obj
+
+.vscode
+
+TODO
