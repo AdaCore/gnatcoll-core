@@ -108,6 +108,7 @@ begin
    --  Test option after list
    A.Assert (Arg.Parser.Parse ((+"-C", +"utf-8", +"a", +"b", +"--quiet")),
              "Flag after positional list");
+   A.Assert (Arg.Quiet.Get, "Get flag after positional list");
 
    A.Assert (Arg.Parser.Parse ((+"-j", +"12", +"a")), "Integer value");
 

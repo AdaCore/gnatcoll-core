@@ -47,7 +47,8 @@ package body GNATCOLL.Opt_Parse is
      (Short, Long : String;
       Args        : XString_Array;
       Pos         : Positive;
-      New_Pos     : out Parser_Return) return XString;
+      Parsed      : out Boolean;
+      Next_Pos    : out Positive) return XString;
 
    ------------------
    -- Text wrapper --
@@ -130,11 +131,15 @@ package body GNATCOLL.Opt_Parse is
    overriding function Help_Name
      (Self : Flag_Parser) return String;
 
-   overriding function Parse_Args
-     (Self   : in out Flag_Parser;
-      Args   : XString_Array;
-      Pos    : Positive;
-      Result : in out Parsed_Arguments) return Parser_Return;
+   overriding procedure Parse_Args
+     (Self         : in out Flag_Parser;
+      Args         : in     XString_Array;
+      Pos          : in     Positive;
+      Result       : in out Parsed_Arguments;
+      Recognised   :    out Boolean;
+      Parsed       :    out Boolean;
+      Next_Pos     :    out Positive;
+      Exit_Parsing :    out Boolean);
 
    overriding procedure Release (Self : in out Flag_Parser_Result) is null;
 
@@ -334,21 +339,14 @@ package body GNATCOLL.Opt_Parse is
 
       Dummy : Scoped_Lock (Self.Parser.Mutex'Access);
    begin
-      declare
-         Real_Args : Parsed_Arguments;
-      begin
-         if Args = No_Parsed_Arguments then
-            Real_Args := Self.Parser.Default_Result;
-         else
-            Real_Args := Args;
-         end if;
-
-         if Real_Args = No_Parsed_Arguments then
-            raise Opt_Parse_Error with "No results for command line arguments";
-         end if;
-
-         return Real_Args.Ref.Get.Results (Self.Position);
-      end;
+      if Args.Parsed then
+         return Args.Ref.Get.Results (Self.Position);
+      elsif Self.Parser.Default_Result.Parsed then
+         return Self.Parser.Default_Result.Ref.Get.Results (Self.Position);
+      end if;
+      raise Opt_Parse_Error
+        with "No arguments parsed for command: "
+         & To_String (Self.Parser.Command_Name);
    end Get_Result;
 
    ----------------
@@ -430,9 +428,11 @@ package body GNATCOLL.Opt_Parse is
       Exit_Parsing : out Boolean;
       Success      : out Boolean)
    is
-      Current_Arg : Positive := Arguments'First;
-      Next_Arg    : Positive := Arguments'First;
-      Arg_Parsed  : Boolean;
+      Current_Arg   : Positive := Arguments'First;
+      Next_Arg      : Positive := Arguments'First;
+
+      type Attempt_Parse_Result is (Arg_NA, Arg_Recognised, Arg_Parsed);
+      Parse_Result : Attempt_Parse_Result;
 
       procedure Handle_Failure (Error_Msg : String);
 
@@ -441,44 +441,68 @@ package body GNATCOLL.Opt_Parse is
          Put_Line ("Argument parsing failed: " & Error_Msg);
       end Handle_Failure;
 
-      function Attempt_Parse (Parser : Parser_Access) return Boolean;
+      function Attempt_Parse
+        (Parser : Parser_Access) return Attempt_Parse_Result;
       --  Attempt to parse the next argument using Parser.
-      --  If successful, set Next_Arg to the position of the next argument to
-      --  be parsed, and return True.
-      --  If it was unable to parse the next argument return False.
+      --  It will set Result to NA if this Parser can not parse the argument.
+      --  It will set Result to Recognised if should have been able to parse
+      --     the argument, but was unsuccessful for some reason.
+      --  It will set Result to Parsed if it was able to successfully parse the
+      --    argument.
+      --  It will return True if Result is Recognised or Parsed.
 
-      function Attempt_Parse (Parsers : Parser_Vector) return Boolean;
+      function Attempt_Parse
+        (Parsers : Parser_Vector) return Attempt_Parse_Result;
       --  Loop over Parsers, calling Attempt_Parse on each parser until one is
       --  able to parse the next argument.
-      --  Returns True if a Parser successfully parsed the next
-      --  argument, False if not.
+      --  It will set Result to NA if this Parser can not parse the argument.
+      --  It will set Result to Recognised if should have been able to parse
+      --     the argument, but was unsuccessful for some reason.
+      --  It will set Result to Parsed if it was able to successfully parse the
+      --    argument.
+      --  It will return True if Result is Recognised or Parsed.
 
-      function Attempt_Parse (Parser : Parser_Access) return Boolean
+      function Attempt_Parse
+        (Parser     : Parser_Access) return Attempt_Parse_Result
       is
-         P_Return : Parser_Return;
+         Recognised : Boolean := False;
+         Parsed     : Boolean := False;
       begin
-         P_Return := Parser.Parse (Arguments, Current_Arg, Result);
-         if P_Return = Error_Return then
-            return False;
+         if Parser.Has_Result (Result) and then not Parser.Does_Accumulate then
+            return Arg_NA;
          end if;
-         Next_Arg := Positive (P_Return);
-         return True;
+         Parser.Parse_Args
+           (Args         => Arguments,
+            Pos          => Current_Arg,
+            Result       => Result,
+            Recognised   => Recognised,
+            Parsed       => Parsed,
+            Next_Pos     => Next_Arg,
+            Exit_Parsing => Exit_Parsing);
+         if Parsed then
+            return Arg_Parsed;
+         elsif Recognised then
+            return Arg_Recognised;
+         end if;
+         return Arg_NA;
       end Attempt_Parse;
 
-      function Attempt_Parse (Parsers : Parser_Vector) return Boolean
+      function Attempt_Parse
+        (Parsers : Parser_Vector) return Attempt_Parse_Result
       is
-         Parsed : Boolean := False;
+         Result : Attempt_Parse_Result := Arg_NA;
       begin
          for Parser of Parsers loop
-            Parsed := Attempt_Parse (Parser);
-            exit when Parsed;
+            Result := Attempt_Parse (Parser);
+            exit when Result /= Arg_NA;
          end loop;
-         return Parsed;
+         return Result;
       end Attempt_Parse;
 
    begin
       Success := False;
       Exit_Parsing := False;
+      Result.Parsed := True;
 
       Result.Ref.Set
         (Parsed_Arguments_Type'
@@ -488,29 +512,54 @@ package body GNATCOLL.Opt_Parse is
 
       while Current_Arg <= Arguments'Last loop
          --  Check for help flag
-         if Attempt_Parse (Self.Data.Help_Flag) then
+         if Attempt_Parse (Self.Data.Help_Flag) = Arg_Parsed then
             Put_Line (Self.Help);
+            Success := True;
             Exit_Parsing := True;
+            Result.Parsed := False;
             return;
          end if;
 
-         --  Attempt to parse argument using optional and positional parsers
-         Arg_Parsed := Attempt_Parse (Self.Data.Opts_Parsers)
-           or else Attempt_Parse (Self.Data.Positional_Args_Parsers);
+         --  Attempt to parse argument using optional, positional, and then
+         --  sub-command parsers.
+         Parse_Result := Attempt_Parse (Self.Data.Opts_Parsers);
+         exit when Parse_Result = Arg_Recognised;
+
+         Parse_Result := Attempt_Parse (Self.Data.Positional_Args_Parsers);
+         exit when Parse_Result = Arg_Recognised;
+
+         Parse_Result := Attempt_Parse (Self.Data.Sub_Command_Parsers);
+         exit when Parse_Result = Arg_Recognised;
+
+         if Exit_Parsing then
+            Result.Parsed := False;
+            return;
+         end if;
 
          --  Handle error case where argument was not parsed
-         if not Arg_Parsed then
+         if Parse_Result = Arg_NA then
             Handle_Failure
               ("Unrecognized argument " & (+Arguments (Current_Arg)));
+            Put_Line (Self.Help);
+            Result.Parsed := False;
+            Exit_Parsing := True;
             return;
          end if;
 
          Current_Arg := Next_Arg;
       end loop;
 
+      if Parse_Result = Arg_Recognised then
+         Result.Parsed := False;
+         return;
+      end if;
+
       for Parser of Self.Data.All_Parsers loop
          if not Parser.Opt and then not Parser.Has_Result (Result) then
             Handle_Failure ("Missing value for " & (+Parser.Name));
+            Put_Line (Self.Help);
+            Result.Parsed := False;
+            Exit_Parsing := True;
             return;
          end if;
       end loop;
@@ -519,26 +568,127 @@ package body GNATCOLL.Opt_Parse is
    exception
       when E : Opt_Parse_Error =>
          Handle_Failure (Ada.Exceptions.Exception_Message (E));
+         Result.Parsed := False;
          return;
    end Parse_Internal;
 
-   -----------
-   -- Parse --
-   -----------
+   -----------------------
+   -- Parse_Sub_Command --
+   -----------------------
 
-   function Parse
-     (Self   : in out Parser_Type'Class;
-      Args   : XString_Array;
-      Pos    : Positive;
-      Result : in out Parsed_Arguments) return Parser_Return
-   is
+   package body Parse_Sub_Command is
+
+      type Sub_Command_Parser is new Parser_Type with record
+         null;
+      end record;
+
+      overriding procedure Parse_Args
+        (Self         : in out Sub_Command_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean);
+
+      overriding function Usage
+        (Self : Sub_Command_Parser) return String
+      is ("");
+
+      type Internal_Result is new Parser_Result with record
+         Result : Boolean;
+      end record;
+
+      overriding procedure Release (Self : in out Internal_Result) is null;
+
+      Self_Val : aliased Sub_Command_Parser :=
+        (Name     => +Name,
+         Help     => +Help,
+         Parser   => Parser.Data,
+         Position => <>,
+         Opt      => True);
+
+      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+
+      ---------
+      -- Get --
+      ---------
+
+      function Get
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean
+      is
+      begin
+         if not Enabled then
+            return False;
+         end if;
+         declare
+            R : constant Parser_Result_Access := Self.Get_Result (Args);
+         begin
+            if R /= null then
+               return Internal_Result (R.all).Result;
+            end if;
+            return False;
+         exception
+            when Opt_Parse_Error =>
+               return False;
+         end;
+      end Get;
+
+      ----------------
+      -- Parse_Args --
+      ----------------
+
+      overriding procedure Parse_Args
+        (Self         : in out Sub_Command_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean)
+      is
+         Arg_Text     : constant String := +Args (Pos);
+      begin
+         Parsed := False;
+         Recognised := False;
+         Next_Pos := Positive'Last;
+         Exit_Parsing := False;
+
+         if Arg_Text /= Name then
+            return;
+         end if;
+
+         Recognised := True;
+
+         declare
+            Int_Res : constant Parser_Result_Access :=
+               new Internal_Result'
+                  (Start_Pos => Pos,
+                   End_Pos   => Pos,
+                   Result    => True);
+         begin
+            Sub_Argument_Parser.Parse_Internal
+              (Arguments    => Args (Pos + 1 .. Args'Last),
+               Result       => Sub_Argument_Parser.Data.Default_Result,
+               Exit_Parsing => Exit_Parsing,
+               Success      => Parsed);
+            Result.Ref.Get.Results (Self.Position) := Int_Res;
+            if Parsed then
+               Next_Pos := Args'Last + 1;
+               return;
+            end if;
+         end;
+      end Parse_Args;
+
    begin
-      if Self.Has_Result (Result) and then not Self.Does_Accumulate then
-         return Error_Return;
+      if Enabled then
+         Parser.Data.Sub_Command_Parsers.Append (Self);
+         Parser.Data.All_Parsers.Append (Self);
+         Self.Position := Parser.Data.All_Parsers.Last_Index;
       end if;
-
-      return Self.Parse_Args (Args, Pos, Result);
-   end Parse;
+   end Parse_Sub_Command;
 
    -------------------------------
    -- Parse_Positional_Arg_List --
@@ -551,11 +701,15 @@ package body GNATCOLL.Opt_Parse is
          null;
       end record;
 
-      overriding function Parse_Args
-        (Self   : in out Positional_Arg_List_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return;
+      overriding procedure Parse_Args
+        (Self         : in out Positional_Arg_List_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean);
 
       overriding function Usage
         (Self : Positional_Arg_List_Parser) return String
@@ -598,28 +752,38 @@ package body GNATCOLL.Opt_Parse is
       -- Parse_Args --
       ----------------
 
-      overriding function Parse_Args
-        (Self   : in out Positional_Arg_List_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return
+      overriding procedure Parse_Args
+        (Self         : in out Positional_Arg_List_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean)
       is
-         Last : Parser_Return := Error_Return;
+         Arg_Count : Natural := 0;
       begin
-         for I in Pos .. Args'Last loop
-            if Args (I).Starts_With ("--") or Args (I).Starts_With ("-") then
-               exit;
-            end if;
+         Parsed := False;
+         Recognised := False;
+         Next_Pos := Pos;
+         Exit_Parsing := False;
 
-            Last := I;
+         for I in Pos .. Args'Last loop
+            exit when Args (I).Starts_With ("-");
+            Arg_Count := Arg_Count + 1;
          end loop;
 
-         if Last = Error_Return then
-            return Error_Return;
+         if Arg_Count = 0 then
+            return;
          end if;
 
+         Next_Pos := Pos + Arg_Count;
+         Parsed := True;
+         Recognised := True;
+
          declare
-            R : Result_Array (1 .. Last - Pos + 1);
+            R : Result_Array (1 .. Arg_Count);
          begin
             for I in R'Range loop
                R (I) := Convert (+Args (I + Pos - 1));
@@ -628,16 +792,13 @@ package body GNATCOLL.Opt_Parse is
             declare
                Res : constant Internal_Result_Access := new Internal_Result'
                  (Start_Pos => Pos,
-                  End_Pos   => Last,
+                  End_Pos   => Next_Pos,
                   Results   => new Result_Array'(R));
             begin
                Result.Ref.Get.Results (Self.Position) :=
                   Res.all'Unchecked_Access;
             end;
-
          end;
-
-         return Parser_Return (Last + 1);
       end Parse_Args;
 
       overriding procedure Release (Self : in out Internal_Result) is
@@ -665,11 +826,15 @@ package body GNATCOLL.Opt_Parse is
          null;
       end record;
 
-      overriding function Parse_Args
-        (Self   : in out Positional_Arg_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return;
+      overriding procedure Parse_Args
+        (Self         : in out Positional_Arg_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean);
 
       overriding function Usage
         (Self : Positional_Arg_Parser) return String
@@ -707,16 +872,27 @@ package body GNATCOLL.Opt_Parse is
       -- Parse_Args --
       ----------------
 
-      overriding function Parse_Args
-        (Self   : in out Positional_Arg_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return
+      overriding procedure Parse_Args
+        (Self         : in out Positional_Arg_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean)
       is
       begin
-         if Args (Pos).Starts_With ("--") or Args (Pos).Starts_With ("-") then
-            return Error_Return;
+         Parsed := False;
+         Recognised := False;
+         Next_Pos := Pos + 1;
+         Exit_Parsing := False;
+
+         if Args (Pos).Starts_With ("-") then
+            return;
          end if;
+
+         Recognised := True;
 
          declare
             Res     : constant Arg_Type := Convert (+Args (Pos));
@@ -729,7 +905,7 @@ package body GNATCOLL.Opt_Parse is
                Int_Res.all'Unchecked_Access;
          end;
 
-         return Parser_Return (Pos + 1);
+         Parsed := True;
       end Parse_Args;
 
    begin
@@ -744,27 +920,36 @@ package body GNATCOLL.Opt_Parse is
    -- Parse_Args --
    ----------------
 
-   overriding function Parse_Args
-     (Self   : in out Flag_Parser;
-      Args   : XString_Array;
-      Pos    : Positive;
-      Result : in out Parsed_Arguments) return Parser_Return
+   overriding procedure Parse_Args
+     (Self         : in out Flag_Parser;
+      Args         : in     XString_Array;
+      Pos          : in     Positive;
+      Result       : in out Parsed_Arguments;
+      Recognised   :    out Boolean;
+      Parsed       :    out Boolean;
+      Next_Pos     :    out Positive;
+      Exit_Parsing :    out Boolean)
    is
    begin
+      Parsed := False;
+      Recognised := False;
+      Next_Pos := Pos + 1;
+      Exit_Parsing := False;
+
       if Args (Pos) = Self.Long or else Args (Pos) = Self.Short then
+
+         Recognised := True;
 
          declare
             Res : constant Parser_Result_Access := new Flag_Parser_Result'
               (Start_Pos => Pos,
                End_Pos   => Pos,
-               Result    =>  True);
+               Result    => True);
          begin
             Result.Ref.Get.Results (Self.Position) := Res;
          end;
 
-         return Parser_Return (Pos + 1);
-      else
-         return Error_Return;
+         Parsed := True;
       end if;
    end Parse_Args;
 
@@ -837,11 +1022,15 @@ package body GNATCOLL.Opt_Parse is
       overriding function Help_Name
         (Dummy : Option_Parser) return String;
 
-      overriding function Parse_Args
-        (Self   : in out Option_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return;
+      overriding procedure Parse_Args
+        (Self         : in out Option_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean);
 
       type Internal_Result is new Parser_Result with record
          Result : Arg_Type;
@@ -918,24 +1107,33 @@ package body GNATCOLL.Opt_Parse is
                return Default_Val;
             end if;
          end;
+         exception
+            when Opt_Parse_Error =>
+               return Default_Val;
       end Get;
 
       ----------------
       -- Parse_Args --
       ----------------
 
-      overriding function Parse_Args
-        (Self   : in out Option_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return
+      overriding procedure Parse_Args
+        (Self         : in out Option_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean)
       is
-         New_Pos : Parser_Return;
-         Raw     : constant XString :=
-           Parse_One_Option (Short, Long, Args, Pos, New_Pos);
+         Raw : constant XString :=
+           Parse_One_Option (Short, Long, Args, Pos, Parsed, Next_Pos);
       begin
+         Exit_Parsing := False;
+         Recognised := False;
 
-         if New_Pos /= Error_Return then
+         if Parsed then
+            Recognised := True;
             declare
                Res : constant Internal_Result_Access :=
                  new Internal_Result'(Start_Pos => Pos,
@@ -946,8 +1144,6 @@ package body GNATCOLL.Opt_Parse is
                   Res.all'Unchecked_Access;
             end;
          end if;
-
-         return New_Pos;
       end Parse_Args;
 
    begin
@@ -1045,11 +1241,15 @@ package body GNATCOLL.Opt_Parse is
       overriding function Help_Name
         (Dummy : Option_List_Parser) return String;
 
-      overriding function Parse_Args
-        (Self   : in out Option_List_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return;
+      overriding procedure Parse_Args
+        (Self         : in out Option_List_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean);
 
       overriding function Does_Accumulate
         (Self : Option_List_Parser) return Boolean is (Accumulate);
@@ -1143,11 +1343,15 @@ package body GNATCOLL.Opt_Parse is
       -- Parse_Args --
       ----------------
 
-      overriding function Parse_Args
-        (Self   : in out Option_List_Parser;
-         Args   : XString_Array;
-         Pos    : Positive;
-         Result : in out Parsed_Arguments) return Parser_Return
+      overriding procedure Parse_Args
+        (Self         : in out Option_List_Parser;
+         Args         : in     XString_Array;
+         Pos          : in     Positive;
+         Result       : in out Parsed_Arguments;
+         Recognised   :    out Boolean;
+         Parsed       :    out Boolean;
+         Next_Pos     :    out Positive;
+         Exit_Parsing :    out Boolean)
       is
          Res  : Parser_Result_Access
          renames Result.Ref.Get.Results (Self.Position);
@@ -1158,13 +1362,18 @@ package body GNATCOLL.Opt_Parse is
          Arg_Count     : Natural := 0;
 
       begin
+         Parsed := False;
+         Recognised := False;
+         Next_Pos := Pos + 1;
+         Exit_Parsing := False;
+
          if Accumulate then
             declare
-               New_Pos : Parser_Return;
-               Raw     : constant XString :=
-                 Parse_One_Option (Short, Long, Args, Pos, New_Pos);
+               Raw : constant XString :=
+                 Parse_One_Option (Short, Long, Args, Pos, Parsed, Next_Pos);
             begin
-               if New_Pos /= Error_Return then
+               if Parsed then
+                  Recognised := True;
                   if Res = null then
                      Tmp :=
                        new Internal_Result'
@@ -1174,16 +1383,14 @@ package body GNATCOLL.Opt_Parse is
 
                      Res := Tmp.all'Unchecked_Access;
                   end if;
-
                   Internal_Result (Res.all).Results.Append (Convert (+Raw));
                end if;
-
-               return New_Pos;
+               return;
             end;
          end if;
 
          if Args (Pos) /= +Long and then Args (Pos) /= +Short then
-            return Error_Return;
+            return;
          end if;
 
          for I in Pos + 1 .. Args'Last loop
@@ -1192,7 +1399,7 @@ package body GNATCOLL.Opt_Parse is
          end loop;
 
          if Arg_Count = 0 then
-            return Error_Return;
+            return;
          end if;
 
          Tmp := new Internal_Result'
@@ -1207,7 +1414,8 @@ package body GNATCOLL.Opt_Parse is
             Internal_Result (Res.all).Results.Append (Converted_Arg);
          end loop;
 
-         return Parser_Return (Pos + Arg_Count + 1);
+         Parsed := True;
+         Next_Pos := Pos + Arg_Count + 1;
       end Parse_Args;
 
    begin
@@ -1263,11 +1471,14 @@ package body GNATCOLL.Opt_Parse is
    -- Help --
    ----------
 
-   function Help (Self : Argument_Parser) return String is
+   function Help (Self : Argument_Parser) return String
+   is
+      use type Ada.Containers.Count_Type;
       Ret         : Text_Wrapper;
       Length      : Col_Type;
       Pos_Arg_Col : Col_Type := 0;
       Opt_Arg_Col : Col_Type := 0;
+      Sub_Cmd_Col : Col_Type := 0;
    begin
 
       Ret.Wrap_Col := Self.Data.Help_Column_Limit;
@@ -1287,9 +1498,17 @@ package body GNATCOLL.Opt_Parse is
          end if;
       end loop;
 
+      for Parser of Self.Data.Sub_Command_Parsers loop
+         Length := Parser.Help_Name'Length;
+         if Length > Sub_Cmd_Col then
+            Sub_Cmd_Col := Length;
+         end if;
+      end loop;
+
       --  Plus 5, 2 for padding, 3 because Help_Name is Starts at Col 3
       Pos_Arg_Col := Pos_Arg_Col + 5;
       Opt_Arg_Col := Opt_Arg_Col + 5;
+      Sub_Cmd_Col := Sub_Cmd_Col + 5;
 
       --  Check that Pos_Arg_Col doesn't cause the starting position of help
       --  text to exceed the limit at which all text is wrapped. If it does
@@ -1301,6 +1520,10 @@ package body GNATCOLL.Opt_Parse is
 
       if Opt_Arg_Col >= Ret.Wrap_Col then
          Opt_Arg_Col := 25;
+      end if;
+
+      if Sub_Cmd_Col >= Ret.Wrap_Col then
+         Sub_Cmd_Col := 25;
       end if;
 
       --  Usage
@@ -1315,23 +1538,33 @@ package body GNATCOLL.Opt_Parse is
          Ret.Append_Text (" ");
       end loop;
 
+      if Self.Data.Sub_Command_Parsers.Length > 0 then
+         Ret.Append_Text ("<sub-command>");
+         Ret.Append_Text (" ");
+         Ret.Append_Text ("[<args>]");
+      end if;
+
       Ret.Append_Line (Col_After => 0);
       Ret.Append_Line;
 
       --  Main help
       Ret.Append_Text (+Self.Data.Help);
       Ret.Append_Line;
-      Ret.Append_Line;
 
-      Ret.Append_Line ("positional arguments:", Col_After => 3);
 
-      for Parser of Self.Data.Positional_Args_Parsers loop
-         Ret.Append_Text (Parser.Help_Name);
-         Ret.Set_Column (Pos_Arg_Col);
+      if Self.Data.Positional_Args_Parsers.Length > 0 then
+         Ret.Append_Line;
+         Ret.Append_Line ("positional arguments:", Col_After => 3);
 
-         Ret.Append_Line (+Parser.Help, Col_After => 3);
-      end loop;
+         for Parser of Self.Data.Positional_Args_Parsers loop
+            Ret.Append_Text (Parser.Help_Name);
+            Ret.Set_Column (Pos_Arg_Col);
 
+            Ret.Append_Line (+Parser.Help, Col_After => 3);
+         end loop;
+      end if;
+
+      --  Due to the help flag, there is always optional arguments
       Ret.Append_Line (Col_After => 0);
       Ret.Append_Line ("optional arguments:", Col_After => 3);
 
@@ -1341,6 +1574,17 @@ package body GNATCOLL.Opt_Parse is
 
          Ret.Append_Line (+Parser.Help, Col_After => 3);
       end loop;
+
+      if Self.Data.Sub_Command_Parsers.Length > 0 then
+         Ret.Append_Line (Col_After => 0);
+         Ret.Append_Line ("sub-commands:", Col_After => 3);
+         for Parser of Self.Data.Sub_Command_Parsers loop
+            Ret.Append_Text (Parser.Help_Name);
+            Ret.Set_Column (Sub_Cmd_Col);
+
+            Ret.Append_Line (+Parser.Help, Col_After => 3);
+         end loop;
+      end if;
 
       return Ret.Render;
    end Help;
@@ -1365,25 +1609,29 @@ package body GNATCOLL.Opt_Parse is
      (Short, Long : String;
       Args        : XString_Array;
       Pos         : Positive;
-      New_Pos     : out Parser_Return) return XString
+      Parsed      : out Boolean;
+      Next_Pos    : out Positive) return XString
    is
    begin
+      Parsed := False;
+      Next_Pos := Positive'Last;
       if Args (Pos) = Long or Args (Pos) = Short then
          if Pos + 1 > Args'Last then
             raise Opt_Parse_Error with "Incomplete option";
          end if;
-         New_Pos := Pos + 2;
+         Parsed := True;
+         Next_Pos := Pos + 2;
          return Args (Pos + 1);
       elsif Long /= "" and then Args (Pos).Starts_With (Long & "=") then
-         New_Pos := Pos + 1;
+         Parsed := True;
+         Next_Pos := Pos + 1;
          return Args (Pos).Slice (Long'Last + 2, Args (Pos).Length);
       elsif Short /= "" and then Args (Pos).Starts_With (Short) then
-         New_Pos := Pos + 1;
+         Parsed := True;
+         Next_Pos := Pos + 1;
          return Args (Pos).Slice (Short'Last + 1, Args (Pos).Length);
-      else
-         New_Pos := Error_Return;
-         return +"";
       end if;
+      return +"";
    end Parse_One_Option;
 
    -------------

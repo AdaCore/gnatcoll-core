@@ -116,6 +116,8 @@ package GNATCOLL.Opt_Parse is
    --  Base type for the Opt_Parse API. Represents a general parser to which
    --  you will associate specific argument parsers.
 
+   type Argument_Parser_Access is access all Argument_Parser'Class;
+
    type Parsed_Arguments is private;
    --  Type containing the result of an argument parse. Please note you do
    --  not need to handle the return value if you don't want to, in which case
@@ -183,6 +185,32 @@ package GNATCOLL.Opt_Parse is
    --------------------------------
    --  Specific argument parsers --
    --------------------------------
+
+   generic
+      Parser : in out Argument_Parser;
+      --  Argument_Parser owning this Argument_Parser.
+
+      Name : String;
+      --  Name of the argument in the parser. Used mainly to formal the help
+      --  output.
+
+      Help : String := "";
+      --  Help string for the argument.
+
+      Enabled : Boolean := True;
+      --  Whether to add this argument parser. Note that if it is disabled, Get
+      --  will raise a Disabled_Error.
+
+      Sub_Argument_Parser : in out Argument_Parser;
+      --  Argument_Parser owning this argument.
+
+   package Parse_Sub_Command is
+      function Get
+        (Args : Parsed_Arguments := No_Parsed_Arguments)
+         return Boolean;
+   end Parse_Sub_Command;
+   --  Parse a sub-command argument. Programs may split up functionality using
+   --  multiple sub-commands. For example: `git pull`, `git checkout`, etc.
 
    generic
       Parser : in out Argument_Parser;
@@ -469,22 +497,18 @@ private
    Error_Return : constant Parser_Return := 0;
    --  Special value for Parser_Return when there was an error
 
-   function Parse_Args
-     (Self   : in out Parser_Type;
-      Args   : XString_Array;
-      Pos    : Positive;
-      Result : in out Parsed_Arguments) return Parser_Return
+   procedure Parse_Args
+     (Self         : in out Parser_Type;
+      Args         : in     XString_Array;
+      Pos          : in     Positive;
+      Result       : in out Parsed_Arguments;
+      Recognised   :    out Boolean;
+      Parsed       :    out Boolean;
+      Next_Pos     :    out Positive;
+      Exit_Parsing :    out Boolean)
    is abstract;
    --  Return the result of parsing arguments for this parser. Abstract method
    --  that must be overloaded by implementations.
-
-   function Parse
-     (Self   : in out Parser_Type'Class;
-      Args   : XString_Array;
-      Pos    : Positive;
-      Result : in out Parsed_Arguments) return Parser_Return;
-   --  Return the result of parsing arguments for this parser. Function wrapper
-   --  around `Parse_Args` that is called by Arguments_Parser.
 
    function Usage
      (Self : Parser_Type) return String is abstract;
@@ -512,7 +536,7 @@ private
    type Argument_Parser_Data is record
       Help, Command_Name                    : XString;
       Positional_Args_Parsers, Opts_Parsers : Parser_Vector;
-      All_Parsers                           : Parser_Vector;
+      Sub_Command_Parsers, All_Parsers      : Parser_Vector;
       Default_Result                        : Parsed_Arguments
         := No_Parsed_Arguments;
       Help_Flag                             : Parser_Access := null;
@@ -559,12 +583,14 @@ private
      (Parsed_Arguments_Type, Release => Release, Atomic_Counters => True);
 
    type Parsed_Arguments is record
-      Ref : Parsed_Arguments_Shared_Ptrs.Ref
+      Parsed : Boolean := False;
+      Ref    : Parsed_Arguments_Shared_Ptrs.Ref
         := Parsed_Arguments_Shared_Ptrs.Null_Ref;
    end record;
 
    No_Parsed_Arguments : constant Parsed_Arguments :=
-     (Ref => Parsed_Arguments_Shared_Ptrs.Null_Ref);
+     (Parsed => False,
+      Ref => Parsed_Arguments_Shared_Ptrs.Null_Ref);
 
    type Argument_Parser is new Ada.Finalization.Limited_Controlled with record
       Data : Argument_Parser_Data_Access := null;
