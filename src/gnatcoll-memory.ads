@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2005-2019, AdaCore                     --
+--                     Copyright (C) 2005-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -141,7 +141,8 @@ package GNATCOLL.Memory is
    --    traces that are output to indicate locations of actions for error
    --    conditions such as bad allocations. If set to zero, the debug pool
    --    will not try to compute backtraces. This is more efficient but gives
-   --    less information on problem locations
+   --    less information on problem locations (and in particular, this
+   --    disables the tracking of the biggest users of memory).
    --
    --    Maximum_Logically_Freed_Memory: maximum amount of memory (bytes)
    --    that should be kept before starting to physically deallocate some.
@@ -199,8 +200,12 @@ package GNATCOLL.Memory is
 
    procedure Dump (Size : Positive; Report : Report_Type := All_Reports);
    --  Dump information about memory usage.
-   --  Size is the number of the biggest memory users we want to show. Report
-   --  indicates which sorting order is used in the report
+   --  Size is the number of the biggest memory users we want to show
+   --  (requires that the Debug_Pool has been configured with Stack_Trace_Depth
+   --  greater than zero). Also, for efficiency reasons, tracebacks with
+   --  a memory allocation below 1_000 bytes are not shown in the "biggest
+   --  memory users" part of the report.
+   --  Report indicates which sorting order is used in the report.
 
    procedure Reset;
    --  Reset all internal data. This is in general not needed, unless you want
