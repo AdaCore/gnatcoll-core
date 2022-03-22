@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                     Copyright (C) 2021-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -45,50 +45,81 @@ is
    use type FS.File_Descriptor;
    use type System.Address;
    use type Interfaces.C.size_t;
-   Pid          : Process_Id := 0;
-   Posix_Prio   : GNATCOLL.OS.Libc.Priority;
-   FA           : constant File_Actions := Init;
-   C_Cwd        : Static_String_Builder (Cwd'Length + 1);
-   Old_Cwd      : aliased Static_String_Builder (4096 + 1);
-   Status       : Integer with Unreferenced;
-   C_Status     : Libc_Status;
-   Spawn_Status : Integer;
+   Pid              : Process_Id := 0;
+   Posix_Prio       : GNATCOLL.OS.Libc.Priority;
+   FA               : constant File_Actions := Init;
+   C_Cwd            : Static_String_Builder (Cwd'Length + 1);
+   Old_Cwd          : aliased Static_String_Builder (4096 + 1);
+   Status           : Integer with Unreferenced;
+   C_Status         : Libc_Status;
+   Spawn_Status     : Integer;
+
+   --  FD to close after dup2 calls. It's important to call the close
+   --  otherwise some pipe might not be closed leading to hanging processes.
+
+   FD_To_Close : array (1 .. 3) of FS.File_Descriptor :=
+      (others => FS.Invalid_FD);
+
+   procedure Add_Potential_Close (FD : FS.File_Descriptor);
+   pragma Inline (Add_Potential_Close);
+   --  If necessary add a FD to the list of fd to close after the calls to
+   --  dup2.
+
+   -------------------------
+   -- Add_Potential_Close --
+   -------------------------
+
+   procedure Add_Potential_Close (FD : FS.File_Descriptor) is
+   begin
+      if FD = FS.Standin
+         or else FD = FS.Standout
+         or else FD = FS.Standerr
+      then
+         --  Never close standard descriptors
+         return;
+      end if;
+
+      for Index in FD_To_Close'Range loop
+         if FD = FD_To_Close (Index) then
+            return;
+         elsif FD_To_Close (Index) = FS.Invalid_FD then
+            FD_To_Close (Index) := FD;
+            return;
+         end if;
+      end loop;
+   end Add_Potential_Close;
+
 begin
-   --  Create file descriptors
+   --  Internal_Spawn assume we have valid file descriptors passed as input
+   --  (see gnatcoll-os-process.adb). Stdin, Stdout, Stderr cannot be
+   --  Invalid_FD, To_Stdout or Null_FD (special values have been resolved
+   --  by the caller). Nevertheless Stdin, Stdout and Stderr values might not
+   --  all be distincts.
 
    --  ??? Should we ignore the contents of Status below?
+
    --  First issue dup2 directives
    if Stdin /= FS.Standin then
       Status := Add_Dup2 (FA, Stdin, FS.Standin);
+      Add_Potential_Close (Stdin);
    end if;
 
    if Stdout /= FS.Standout then
       Status := Add_Dup2 (FA, Stdout, FS.Standout);
+      Add_Potential_Close (Stdout);
    end if;
 
    if Stderr /= FS.Standerr then
-      if Stderr = FS.To_Stdout then
-         Status := Add_Dup2 (FA, Stdout, FS.Standerr);
-      else
-         Status := Add_Dup2 (FA, Stderr, FS.Standerr);
+      Status := Add_Dup2 (FA, Stderr, FS.Standerr);
+      Add_Potential_Close (Stderr);
+   end if;
+
+   --  Then the close directives
+   for Index in FD_To_Close'Range loop
+      if FD_To_Close (Index) /= FS.Invalid_FD then
+         Status := Add_Close (FA, FD_To_Close (Index));
       end if;
-   end if;
-
-   --  Then the close ones
-   if Stdin /= FS.Standin then
-      Status := Add_Close (FA, Stdin);
-   end if;
-
-   if Stdout /= FS.Standout and then Stdout /= FS.Standin then
-      Status := Add_Close (FA, Stdout);
-   end if;
-
-   if Stderr /= FS.Standout
-      and then Stderr /= FS.Standout
-      and then Stderr /= FS.Standin
-   then
-      Status := Add_Close (FA, Stderr);
-   end if;
+   end loop;
 
    --  Compute final priority
    case Priority is
