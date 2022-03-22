@@ -1,7 +1,7 @@
 README.md                                  no-precommit-check
 
 # no style checking for tests
-testsute/tests/**                          no-precommit-check
+testsuite/tests/**                          no-precommit-check
 
 # Third-party package
 src/getRSS.c                               no-precommit-check
