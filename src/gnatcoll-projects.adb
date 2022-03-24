@@ -1429,7 +1429,10 @@ package body GNATCOLL.Projects is
 
    begin
       if Is_Aggregate_Project (Self) then
-         Increase_Indent (Me, "Library file for an aggregate project");
+         if Active (Me) then
+            Increase_Indent (Me, "Library file for an aggregate project");
+         end if;
+
          declare
             Aggregated : Aggregated_Project_List;
             P : Project_Type;
@@ -1455,7 +1458,10 @@ package body GNATCOLL.Projects is
             end loop;
          end;
 
-         Decrease_Indent (Me, "Done Library file for aggregate project");
+         if Active (Me) then
+            Decrease_Indent (Me, "Done Library file for aggregate project");
+         end if;
+
          return;
       end if;
 
@@ -5620,7 +5626,10 @@ package body GNATCOLL.Projects is
 
          <<Unwind>>
          --  Unwinding nested external references if any.
-         Increase_Indent (Me_SV, "Unwind nested external references");
+         if Active (Me_SV) then
+            Increase_Indent (Me_SV, "Unwind nested external references");
+         end if;
+
          declare
             Expression : Project_Node_Id;
 
@@ -5639,8 +5648,11 @@ package body GNATCOLL.Projects is
             while Expr /= Empty_Project_Node loop
                Expr := First_Term (Expr, T);
                if Next_Term (Expr, T) /= Empty_Project_Node then
-                  Decrease_Indent (Me_SV,
-                                   "Unwind terminated: Not canonical nesting");
+                  if Active (Me_SV) then
+                     Decrease_Indent
+                       (Me_SV, "Unwind terminated: Not canonical nesting");
+                  end if;
+
                   return;
                end if;
 
@@ -5667,7 +5679,10 @@ package body GNATCOLL.Projects is
                   Expr := External_Default_Of (Expr, T);
                   Expression := Expr;
                else
-                  Decrease_Indent (Me_SV, "Unwind finished");
+                  if Active (Me_SV) then
+                     Decrease_Indent (Me_SV, "Unwind finished");
+                  end if;
+
                   return;
                end if;
             end loop;
@@ -8327,7 +8342,10 @@ package body GNATCOLL.Projects is
       Free (Self.Gnatls);
       Self.Gnatls := new String'(Gnatls);
 
-      Increase_Indent (Me, "Executing " & Gnatls & " -v");
+      if Active (Me) then
+         Increase_Indent (Me, "Executing " & Gnatls & " -v");
+      end if;
+
       begin
          Spawn_Gnatls
            (Project_Environment'Class (Self), Fd, Gnatls_Args, Errors);
@@ -8350,7 +8368,10 @@ package body GNATCOLL.Projects is
                "sure they are in your ADA_PROJECT_PATH");
          end if;
 
-         Decrease_Indent (Me);
+         if Active (Me) then
+            Decrease_Indent (Me);
+         end if;
+
          return;
       end if;
 
@@ -8376,7 +8397,10 @@ package body GNATCOLL.Projects is
       end if;
 
       Free (Gnatls_Args);
-      Decrease_Indent (Me);
+
+      if Active (Me) then
+         Decrease_Indent (Me);
+      end if;
    end Set_Path_From_Gnatls;
 
    ---------------------------------
