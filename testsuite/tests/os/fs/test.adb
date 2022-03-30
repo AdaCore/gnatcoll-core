@@ -57,6 +57,41 @@ begin
       end;
       Close (FD);
 
+      --  Check that opening a file in write mode truncates the file to size 0
+
+      declare
+         Name : constant String := "non_empty_file";
+      begin
+         --  First create a file that contains several KB of data (just in case
+         --  it makes a difference).
+
+         FD := Open (Name, Mode => Write_Mode);
+         for C in Character range 'A' .. 'Z' loop
+            for Dummy in 1 .. 10 loop
+               Write (FD, (1 .. 80 => C));
+               Write (FD, (1 => ASCII.LF));
+            end loop;
+         end loop;
+
+         Close (FD);
+
+         --  Then try to overwrite it
+
+         FD := Open (Name, Mode => Write_Mode);
+         Write (FD, "not much here");
+         Close (FD);
+
+         --  Now, check that it contains data from the last write session only
+
+         FD := Open (Name, Mode => Read_Mode);
+         declare
+            File_Content : constant String := Read (FD);
+         begin
+            A.Assert (File_Content, "not much here");
+         end;
+         Close (FD);
+      end;
+
    end;
    return A.Report;
 end Test;

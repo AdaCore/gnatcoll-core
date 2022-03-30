@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2020-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -48,7 +48,7 @@ begin
          O_Mode := O_RDONLY or O_CLOEXEC;
          Perm   := 0;
       when Write_Mode =>
-         O_Mode := O_WRONLY or O_CREAT or O_CLOEXEC;
+         O_Mode := O_WRONLY or O_CREAT or O_CLOEXEC or O_TRUNC;
          Perm   := S_IRUSR or S_IWUSR or S_IRGRP or
             S_IWGRP or S_IROTH or S_IWOTH;
       when Append_Mode =>

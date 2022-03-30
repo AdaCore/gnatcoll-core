@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2020-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -54,7 +54,8 @@ begin
          O_Mode := Win32.Files.O_WRONLY
             or Win32.Files.O_CREAT
             or Win32.Files.O_NOINHERIT
-            or Win32.Files.O_BINARY;
+            or Win32.Files.O_BINARY
+            or Win32.Files.O_TRUNC;
          O_Perm := Win32.Files.S_IWRITE;
       when Append_Mode =>
          O_Mode := Win32.Files.O_WRONLY
