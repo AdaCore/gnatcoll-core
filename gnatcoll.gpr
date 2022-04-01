@@ -266,6 +266,8 @@ project GnatColl is
               use "gnatcoll-os-libc_constants__osx.ads";
             for Implementation ("GNATCOLL.OS.FS.Open_Pipe")
               use "gnatcoll-os-fs-open_pipe__unix.adb";
+         when "windows" =>
+            null;
       end case;
    end Naming;
 
