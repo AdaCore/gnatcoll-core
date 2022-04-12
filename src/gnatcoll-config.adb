@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2010-2018, AdaCore                     --
+--                     Copyright (C) 2010-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -35,7 +35,7 @@ package body GNATCOLL.Config is
    use String_Maps;
 
    No_Value : constant Config_Value :=
-      (Len => 0, System_Id => Null_XString, Value => (others => ' '));
+      (Len => 0, System_ID => Null_XString, Value => (others => ' '));
 
    Whitespaces : constant Character_Set := To_Set
       (" " & ASCII.CR & ASCII.HT & ASCII.LF & ASCII.VT & ASCII.FF);
