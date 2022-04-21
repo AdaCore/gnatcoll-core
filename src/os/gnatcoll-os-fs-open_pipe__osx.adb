@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with GNATCOLL.OS.Libc;
+with GNAT.Task_Lock;
 
 separate (GNATCOLL.OS.FS)
 procedure Open_Pipe
@@ -33,16 +34,29 @@ is
    Result : aliased Libc.Pipe_Type;
    Status : Libc.Libc_Status;
 begin
-
-   --  This implementation relies on the fact that pipe2 is used to open the
-   --  pipe and flag set to O_CLOEXEC. Thus there is no need to call
-   --  Set_Close_On_Exec.
+   --  We need to ensure that a call to pipe and set_close_on_exec is done
+   --  atomically. Otherwise the pipe file descriptors might leak into other
+   --  processes and thus block the pipe (in programs mixing tasking and
+   --  process spawning for example).
+   GNAT.Task_Lock.Lock;
    Status := Libc.Pipe (Result'Access);
+
    if Status = Libc.Error then
+      GNAT.Task_Lock.Unlock;
       raise OS_Error with "cannot open pipe";
    end if;
 
    Pipe_Read := Result.Input;
    Pipe_Write := Result.Output;
+
+   begin
+      Set_Close_On_Exec (Pipe_Read, True);
+      Set_Close_On_Exec (Pipe_Write, True);
+   exception
+      when OS_Error =>
+         GNAT.Task_Lock.Unlock;
+         raise;
+   end;
+   GNAT.Task_Lock.Unlock;
 
 end Open_Pipe;
