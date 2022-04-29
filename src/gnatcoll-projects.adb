@@ -7765,9 +7765,7 @@ package body GNATCOLL.Projects is
 
    procedure Initialize
      (Self     : in out Project_Environment_Access;
-      IDE_Mode : Boolean := False)
-   is
-      Path : String_Access;
+      IDE_Mode : Boolean := False) is
    begin
       if Self = null then
          Self := new Project_Environment;
@@ -7776,9 +7774,8 @@ package body GNATCOLL.Projects is
       GPR.Tree.Initialize (Self.Env, Create_Flags (null));
       GPR.Env.Initialize_Default_Project_Path
         (Self.Env.Project_Path, Target_Name => "");
-      GPR.Env.Get_Path (Self.Env.Project_Path, Path);
       Self.Predefined_Project_Path :=
-        new File_Array'(From_Path (+Path.all));
+        new File_Array'(From_Path (+Get_Path (Self.Env.Project_Path)));
       Self.IDE_Mode := IDE_Mode;
    end Initialize;
 
