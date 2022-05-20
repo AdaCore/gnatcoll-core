@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2021, AdaCore                     --
+--                     Copyright (C) 2002-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -9962,11 +9962,19 @@ package body GNATCOLL.Projects is
                    (Source.Language.Config.Object_File_Suffix) /= "-"
                then
                   declare
+                     Obj_Suffix_Attr : constant String :=
+                       Attribute_Value
+                         (Self.Data.Root,
+                          "compiler#object_file_suffix",
+                          "ada");
+
                      Base : constant Filesystem_String :=
                               Base_Name
                                 (Filesystem_String
                                    (Get_String (Source.Object)),
-                                 ".o");
+                                 +(if Obj_Suffix_Attr /= ""
+                                   then Obj_Suffix_Attr
+                                   else ".o"));
                      Base_Last : Natural := Base'Last;
                   begin
                      --  In GPS, users might define ada-based languages
