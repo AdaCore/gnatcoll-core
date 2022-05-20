@@ -9989,11 +9989,19 @@ package body GNATCOLL.Projects is
                    (Source.Language.Config.Object_File_Suffix) /= "-"
                then
                   declare
+                     Obj_Suffix_Attr : constant String :=
+                       Attribute_Value
+                         (Self.Data.Root,
+                          "compiler#object_file_suffix",
+                          "ada");
+
                      Base : constant Filesystem_String :=
                               Base_Name
                                 (Filesystem_String
                                    (Get_String (Source.Object)),
-                                 ".o");
+                                 +(if Obj_Suffix_Attr /= ""
+                                   then Obj_Suffix_Attr
+                                   else ".o"));
                      Base_Last : Natural := Base'Last;
                   begin
                      --  In GPS, users might define ada-based languages
