@@ -45,8 +45,9 @@ package body GNATCOLL.OS.Process is
    --  deallocated by the caller.
 
    procedure Dict_To_Environment
-      (From : Environment_Dict;
-       To   : in out Process_Types.Environ);
+      (From    : Environment_Dict;
+       Inherit : Boolean := False;
+       To      : in out Process_Types.Environ);
    --  Transform an Environment_Dict into Process_Types.Environ. To should be
    --  deallocated by the caller.
 
@@ -67,8 +68,9 @@ package body GNATCOLL.OS.Process is
    -------------------------
 
    procedure Dict_To_Environment
-      (From : Environment_Dict;
-       To   : in out Process_Types.Environ)
+      (From    : Environment_Dict;
+       Inherit : Boolean := False;
+       To      : in out Process_Types.Environ)
    is
       procedure Fill_Env (Position : Env_Dicts.Cursor);
       procedure Fill_Env (Position : Env_Dicts.Cursor) is
@@ -76,6 +78,9 @@ package body GNATCOLL.OS.Process is
          Process_Types.Set_Variable (To,  Key (Position), Element (Position));
       end Fill_Env;
    begin
+      if Inherit then
+         Process_Types.Import (To);
+      end if;
       Iterate (From, Fill_Env'Unrestricted_Access);
    end Dict_To_Environment;
 
@@ -193,6 +198,7 @@ package body GNATCOLL.OS.Process is
       Priority          : Priority_Class     := INHERIT;
       Universal_Newline : Boolean            := False;
       Strip             : Boolean            := False;
+      Inherit_Env       : Boolean            := False;
       Status            : out Integer)
       return Ada.Strings.Unbounded.Unbounded_String
    is
@@ -201,7 +207,7 @@ package body GNATCOLL.OS.Process is
       Result     : Ada.Strings.Unbounded.Unbounded_String;
    begin
       List_To_Arguments (Args, Final_Args);
-      Dict_To_Environment (Env, Final_Env);
+      Dict_To_Environment (Env, Inherit_Env, Final_Env);
       Result := Run (Args => Final_Args,
                      Env  => Final_Env,
                      Cwd  => Cwd,
@@ -355,13 +361,14 @@ package body GNATCOLL.OS.Process is
    end Run;
 
    function Run
-      (Args     : Argument_List;
-       Env      : Environment_Dict;
-       Cwd      : UTF8.UTF_8_String := "";
-       Stdin    : FS.File_Descriptor := FS.Standin;
-       Stdout   : FS.File_Descriptor := FS.Standout;
-       Stderr   : FS.File_Descriptor := FS.Standerr;
-       Priority : Priority_Class     := INHERIT)
+      (Args        : Argument_List;
+       Env         : Environment_Dict;
+       Cwd         : UTF8.UTF_8_String  := "";
+       Stdin       : FS.File_Descriptor := FS.Standin;
+       Stdout      : FS.File_Descriptor := FS.Standout;
+       Stderr      : FS.File_Descriptor := FS.Standerr;
+       Priority    : Priority_Class     := INHERIT;
+       Inherit_Env : Boolean            := False)
       return Integer
    is
       Final_Args : Process_Types.Arguments;
@@ -369,7 +376,7 @@ package body GNATCOLL.OS.Process is
       Result     : Integer;
    begin
       List_To_Arguments (Args, Final_Args);
-      Dict_To_Environment (Env, Final_Env);
+      Dict_To_Environment (Env, Inherit_Env, Final_Env);
       Result := Run (Final_Args, Final_Env, Cwd, Stdin, Stdout, Stderr,
                      Priority);
       Process_Types.Deallocate (Final_Args);
@@ -400,13 +407,14 @@ package body GNATCOLL.OS.Process is
    -----------
 
    function Start
-      (Args     : Argument_List;
-       Env      : Environment_Dict;
-       Cwd      : UTF8.UTF_8_String := "";
-       Stdin    : FS.File_Descriptor := FS.Standin;
-       Stdout   : FS.File_Descriptor := FS.Standout;
-       Stderr   : FS.File_Descriptor := FS.Standerr;
-       Priority : Priority_Class     := INHERIT)
+      (Args        : Argument_List;
+       Env         : Environment_Dict;
+       Cwd         : UTF8.UTF_8_String  := "";
+       Stdin       : FS.File_Descriptor := FS.Standin;
+       Stdout      : FS.File_Descriptor := FS.Standout;
+       Stderr      : FS.File_Descriptor := FS.Standerr;
+       Priority    : Priority_Class     := INHERIT;
+       Inherit_Env : Boolean            := False)
       return Process_Handle
    is
       Final_Args : Process_Types.Arguments;
@@ -415,7 +423,7 @@ package body GNATCOLL.OS.Process is
 
    begin
       List_To_Arguments (Args, Final_Args);
-      Dict_To_Environment (Env, Final_Env);
+      Dict_To_Environment (Env, Inherit_Env, Final_Env);
       Result := Start (Final_Args, Final_Env, Cwd, Stdin, Stdout, Stderr,
                        Priority);
       Process_Types.Deallocate (Final_Args);

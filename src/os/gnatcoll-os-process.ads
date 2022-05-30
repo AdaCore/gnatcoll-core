@@ -122,13 +122,14 @@ package GNATCOLL.OS.Process is
       return Process_Handle;
 
    function Start
-      (Args     : Argument_List;
-       Env      : Environment_Dict;
-       Cwd      : UTF8.UTF_8_String  := "";
-       Stdin    : FS.File_Descriptor := FS.Standin;
-       Stdout   : FS.File_Descriptor := FS.Standout;
-       Stderr   : FS.File_Descriptor := FS.Standerr;
-       Priority : Priority_Class     := INHERIT)
+      (Args        : Argument_List;
+       Env         : Environment_Dict;
+       Cwd         : UTF8.UTF_8_String  := "";
+       Stdin       : FS.File_Descriptor := FS.Standin;
+       Stdout      : FS.File_Descriptor := FS.Standout;
+       Stderr      : FS.File_Descriptor := FS.Standerr;
+       Priority    : Priority_Class     := INHERIT;
+       Inherit_Env : Boolean            := False)
       return Process_Handle;
    --  Start a process (non-blocking) and return a handle on it
    --
@@ -140,12 +141,14 @@ package GNATCOLL.OS.Process is
    --  is the program to launch and subsequent ones the arguments to that
    --  program.
    --
-   --  If empty Env is passed then environment is inherited from the parent
+   --  If no Env is passed then environment is inherited from the parent
    --  process, otherwise environment is overridden with content of Env. Note
    --  that in order to improve usability, on Windows when empty Env is
    --  passed then SYSTEMROOT and SYSTEMDRIVE are automatically added to the
    --  environment using the current process value, as without these
-   --  variables process spawning fails.
+   --  variables process spawning fails. If Env is passed and Inherit_Env is
+   --  set to True, then the environment passed to the process is the parent
+   --  environment on top of which the content of Env is applied.
    --
    --  If Cwd is not empty then the process will be executed in that directory.
    --
@@ -177,13 +180,14 @@ package GNATCOLL.OS.Process is
    --  Windows limitation: the maximum length for Processes is 64.
 
    function Run
-      (Args     : Argument_List;
-       Env      : Environment_Dict;
-       Cwd      : UTF8.UTF_8_String := "";
-       Stdin    : FS.File_Descriptor := FS.Standin;
-       Stdout   : FS.File_Descriptor := FS.Standout;
-       Stderr   : FS.File_Descriptor := FS.Standerr;
-       Priority : Priority_Class     := INHERIT)
+      (Args        : Argument_List;
+       Env         : Environment_Dict;
+       Cwd         : UTF8.UTF_8_String  := "";
+       Stdin       : FS.File_Descriptor := FS.Standin;
+       Stdout      : FS.File_Descriptor := FS.Standout;
+       Stderr      : FS.File_Descriptor := FS.Standerr;
+       Priority    : Priority_Class     := INHERIT;
+       Inherit_Env : Boolean            := False)
       return Integer;
 
    function Run
@@ -219,6 +223,7 @@ package GNATCOLL.OS.Process is
       Priority          : Priority_Class     := INHERIT;
       Universal_Newline : Boolean            := False;
       Strip             : Boolean            := False;
+      Inherit_Env       : Boolean            := False;
       Status            : out Integer)
       return Ada.Strings.Unbounded.Unbounded_String;
    --  Same as Run but in addition the standard output is captured and returned

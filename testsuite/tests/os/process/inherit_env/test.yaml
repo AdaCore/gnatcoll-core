@@ -1,0 +1,2 @@
+title: GNATCOLL.OS.Process test inherit_env parameter
+data: ["test_data/*.py"]
