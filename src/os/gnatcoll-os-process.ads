@@ -26,7 +26,6 @@
 with Ada.Strings;
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Containers.Indefinite_Vectors;
-with Ada.Strings.Hash;
 with Ada.Strings.Unbounded;
 with Ada.Strings.UTF_Encoding;
 with GNATCOLL.OS.FS;
@@ -81,11 +80,15 @@ package GNATCOLL.OS.Process is
    --  Internal function used by Environment_Dict to decide if two environment
    --  variable names correspond to the same environment variable.
 
+   function Variable_Name_Hash (Key : UTF8.UTF_8_String)
+      return Ada.Containers.Hash_Type;
+   --  Hash function used by Environment_Dicts.
+
    package Env_Dicts is
       new Ada.Containers.Indefinite_Hashed_Maps
          (UTF8.UTF_8_String,
           UTF8.UTF_8_String,
-          Hash            => Ada.Strings.Hash,
+          Hash            => Variable_Name_Hash,
           Equivalent_Keys => Equivalent_Variables);
    use Env_Dicts;
    --  Environment dict. If your application already handles this structure

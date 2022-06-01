@@ -21,7 +21,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Characters.Handling;
+with Ada.Strings.Hash;
+with Ada.Strings.Hash_Case_Insensitive;
+with Ada.Strings.Equal_Case_Insensitive;
 with GNAT.Task_Lock;
 
 package body GNATCOLL.OS.Process is
@@ -95,8 +97,7 @@ package body GNATCOLL.OS.Process is
       if Process_Types.Case_Sensitive_Env_Var_Names then
          return Left = Right;
       else
-         return Ada.Characters.Handling.To_Lower (Left) =
-            Ada.Characters.Handling.To_Lower (Left);
+         return Ada.Strings.Equal_Case_Insensitive (Left, Right);
       end if;
    end Equivalent_Variables;
 
@@ -543,6 +544,21 @@ package body GNATCOLL.OS.Process is
 
    function State (H : Process_Handle) return Process_State is separate;
 
+   ------------------------
+   -- Variable_Name_Hash --
+   ------------------------
+
+   function Variable_Name_Hash (Key : UTF8.UTF_8_String)
+      return Ada.Containers.Hash_Type
+   is
+   begin
+      if Process_Types.Case_Sensitive_Env_Var_Names then
+         return Ada.Strings.Hash (Key);
+      else
+         return Ada.Strings.Hash_Case_Insensitive (Key);
+      end if;
+   end Variable_Name_Hash;
+
    ----------
    -- Wait --
    ----------
@@ -553,4 +569,5 @@ package body GNATCOLL.OS.Process is
       (Processes : Process_Array;
        Timeout   : Duration)
       return Process_Handle is separate;
+
 end GNATCOLL.OS.Process;

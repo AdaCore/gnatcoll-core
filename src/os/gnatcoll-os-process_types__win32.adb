@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                   Copyright (C) 2021-2022, AdaCore                       --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Strings.UTF_Encoding.Wide_Strings;
+with Ada.Wide_Characters.Handling;
 with Ada.Environment_Variables;
 with GNATCOLL.String_Builders;
 
@@ -30,6 +31,7 @@ package body GNATCOLL.OS.Process_Types is
    package UTF renames Ada.Strings.UTF_Encoding.Wide_Strings;
    package SB renames GNATCOLL.String_Builders;
    package Env_Vars renames Ada.Environment_Variables;
+   package WCH renames Ada.Wide_Characters.Handling;
 
    Minimal_Env : Environ;
 
@@ -123,8 +125,9 @@ package body GNATCOLL.OS.Process_Types is
                El : constant Wide_String := WSLB.Element (Env.Env, J);
             begin
                if El'Length >= Entry_Prefix'Length and then
-                  El (El'First .. El'First + Entry_Prefix'Length - 1) =
-                     Entry_Prefix
+                  WCH.To_Lower
+                     (El (El'First .. El'First + Entry_Prefix'Length - 1)) =
+                  WCH.To_Lower (Entry_Prefix)
                then
                   WSLB.Delete (Env.Env, J);
 
