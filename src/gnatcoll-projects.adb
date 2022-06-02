@@ -6657,14 +6657,14 @@ package body GNATCOLL.Projects is
          while Lang /= null loop
             Suffix := Name_Id (Lang.Config.Naming_Data.Spec_Suffix);
             if Suffix /= No_Name
-              and then Ends_With (+Filename, Get_Name_String (Suffix))
+              and then Utils.Ends_With (+Filename, Get_Name_String (Suffix))
             then
                return Filename'Last - Natural (Length_Of_Name (Suffix));
             end if;
 
             Suffix := Name_Id (Lang.Config.Naming_Data.Body_Suffix);
             if Suffix /= No_Name
-              and then Ends_With (+Filename, Get_Name_String (Suffix))
+              and then Utils.Ends_With (+Filename, Get_Name_String (Suffix))
             then
                return Filename'Last - Natural (Length_Of_Name (Suffix));
             end if;
@@ -10009,7 +10009,7 @@ package body GNATCOLL.Projects is
                      --  they are likely to define the object suffix as
                      --  ".ali", which we need to ignore as well.
 
-                     if Ends_With (String (Base), ".ali") then
+                     if Utils.Ends_With (String (Base), ".ali") then
                         Base_Last := Base_Last - 4;
                      end if;
 
