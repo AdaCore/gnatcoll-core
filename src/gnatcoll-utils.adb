@@ -147,9 +147,9 @@ package body GNATCOLL.Utils is
       Replacement : String)
    is
       use Ada.Strings.Unbounded;
-      Ind : Natural := Index_Non_Blank (S);
+      Ind : Natural := 1;
    begin
-      while Ind < Length (S) loop
+      while Ind <= Length (S) loop
          Ind := Index (S, Pattern, Ind);
 
          exit when Ind = 0;
