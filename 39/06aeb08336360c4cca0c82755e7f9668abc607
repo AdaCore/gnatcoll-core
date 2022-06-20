@@ -1,0 +1,8 @@
+Code-Review+2: Jerome Lambourg <lambourg@adacore.com>
+Code-Review+2: Feodor Rybin <frybin@adacore.com>
+Code-Review-1: CI Builder <ci-builder@adacore.com>
+Submitted-by: Nicolas Roche <roche@adacore.com>
+Submitted-at: Mon, 20 Jun 2022 15:09:00 +0000
+Reviewed-on: https://git.adacore-it.com/c/gnatcoll-core/+/116744
+Project: gnatcoll-core
+Branch: refs/heads/master
