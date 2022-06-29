@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                       Copyright (C) 2021-2022, AdaCore                   --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -39,19 +39,20 @@ function Open (Path : UTF8.UTF_8_String) return Dir_Handle is
       GNAT.OS_Lib.Normalize_Pathname (Path, Resolve_Links => False);
    C_Path   : SB.Static_String_Builder (Abs_Path'Length + 1);
 begin
-
-   --  Keep track of the opented path
+   --  Keep track of the opened path
    Result.Path_Last := Abs_Path'Length;
    Result.Path (1 .. Abs_Path'Length) := Abs_Path;
 
    --  Open the directory
-   SB.Append (C_Path, Path);
+   SB.Append (C_Path, Abs_Path);
    Result.Handle := Dirent.Opendir (SB.As_C_String (C_Path));
 
    --  Check for errors
    if Result.Handle = Dirent.Invalid_Handle then
-      raise OS_Error with "cannot open directory" & Abs_Path;
+      raise OS_Error with "cannot open directory " & Abs_Path;
    end if;
+
+   Result.Is_Opened := True;
 
    return Result;
 end Open;

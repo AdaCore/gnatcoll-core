@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                       Copyright (C) 2021-2022, AdaCore                   --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,8 +26,11 @@ with GNATCOLL.OS.Libc;
 with Interfaces.C;
 
 separate (GNATCOLL.OS.Dir)
-function Read (Handle : Dir_Handle) return Dir_Entry is
-
+function Read
+   (Handle : Dir_Handle;
+    Follow_Symlinks : Boolean := True)
+   return Dir_Entry
+is
    package Libc renames GNATCOLL.OS.Libc;
    package Dirent renames GNATCOLL.OS.Libc.Dirent;
 
@@ -70,7 +73,8 @@ begin
                       "/" &
                       Result.Name_Buffer
                          (Result.Name_Buffer'First ..
-                          Result.Name_Buffer'First + Result.Name_Last - 1));
+                          Result.Name_Buffer'First + Result.Name_Last - 1),
+                      Follow_Symlinks => Follow_Symlinks);
                end if;
             end;
          end if;

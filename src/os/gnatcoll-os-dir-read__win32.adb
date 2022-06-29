@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                       Copyright (C) 2021-2022, AdaCore                   --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -28,7 +28,12 @@ with Ada.Calendar.Conversions;
 with Interfaces.C;
 
 separate (GNATCOLL.OS.Dir)
-function Read (Handle : Dir_Handle) return Dir_Entry is
+function Read
+   (Handle          : Dir_Handle;
+    Follow_Symlinks : Boolean := True)
+   return Dir_Entry
+is
+   pragma Unreferenced (Follow_Symlinks);
    Dir_Info   : aliased FILE_DIRECTORY_INFORMATION;
    Result     : Dir_Entry;
    Status     : NTSTATUS;

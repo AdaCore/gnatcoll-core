@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                      Copyright (C) 2021-2022, AdaCore                    --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,15 +27,18 @@ with GNATCOLL.String_Builders;
 with GNAT.OS_Lib;
 
 separate (GNATCOLL.OS.Dir)
-procedure Close (Handle : Dir_Handle) is
+procedure Close (Handle : in out Dir_Handle) is
 
    package Dirent renames GNATCOLL.OS.Libc.Dirent;
    package Libc renames GNATCOLL.OS.Libc;
 
    Status : Libc.Libc_Status;
 begin
-   Status := Dirent.Closedir (Dirent.Dir_Handle (Handle.Handle));
-   if Status /= Libc.Success then
-      raise OS_Error with "error while closing directory handle";
+   if Handle.Is_Opened then
+      Status := Dirent.Closedir (Dirent.Dir_Handle (Handle.Handle));
+      if Status /= Libc.Success then
+         raise OS_Error with "error while closing directory handle";
+      end if;
+      Handle.Is_Opened := False;
    end if;
 end Close;

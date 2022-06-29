@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                       Copyright (C) 2021-2022, AdaCore                   --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -56,6 +56,6 @@ begin
    Result.Handle := Win_Handle;
    Result.Path_Last := Full_Path'Length;
    Result.Path (1 .. Result.Path_Last) := Full_Path;
-
+   Result.Is_Opened := True;
    return Result;
 end Open;
