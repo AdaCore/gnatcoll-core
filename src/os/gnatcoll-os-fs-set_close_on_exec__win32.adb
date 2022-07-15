@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2020-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -31,21 +31,31 @@ procedure Set_Close_On_Exec
 is
    package Win32 renames GNATCOLL.OS.Win32;
 
+   use type Win32.HANDLE;
    Object : Win32.HANDLE;
    Result : Win32.BOOL;
 begin
+   --  First retrieve the handle associated with the FD
    Object := Win32.Files.GetOSFHandle (FD);
 
-   if Close_On_Exec then
-      Result := Win32.Files.SetHandleInformation
-         (Object, Win32.Files.HANDLE_FLAG_INHERIT, 0);
-   else
-      Result := Win32.Files.SetHandleInformation
-         (Object, Win32.Files.HANDLE_FLAG_INHERIT,
-          Win32.Files.HANDLE_FLAG_INHERIT);
+   if Object = Win32.HANDLE'Last then
+      --  FD is an invalid handle
+      raise OS_Error with "cannot set close on exec on invalid fd" & FD'Img;
+
+   elsif Object = Win32.HANDLE'Last - 1 then
+      --  In case the handle is not associated with a stream, any operation on
+      --  that handle fails though this is not considered strictly speaking as
+      --  an error. See MSDN documentation
+      return;
    end if;
 
+   --  Try to set "close on exec"
+   Result := Win32.Files.SetHandleInformation
+      (Object,
+       Win32.Files.HANDLE_FLAG_INHERIT,
+       (if Close_On_Exec then 0 else Win32.Files.HANDLE_FLAG_INHERIT));
+
    if Result = Win32.BOOL_FALSE then
-      raise OS_Error with "cannot set close on exec";
+      raise OS_Error with "cannot set close on exec on fd" & FD'Img;
    end if;
 end Set_Close_On_Exec;
