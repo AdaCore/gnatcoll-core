@@ -1,0 +1,6 @@
+abstract project Abst is
+
+   Ada_Compiler_Switches := External_As_List ("ADAFLAGS", " ") &
+          ("-Og" ,"-g");
+
+end Abst;

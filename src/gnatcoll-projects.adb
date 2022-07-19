@@ -5142,6 +5142,13 @@ package body GNATCOLL.Projects is
               Project.Data.Tree.Tree;
             Expr : Project_Node_Id := Expression_Of (Variable, Node_Tree);
          begin
+            if Expression_Kind_Of (Variable, Node_Tree) = List then
+               --  Extenal_As_list case. Just count as one and ignore the rest
+               --  of expression.
+               Count := Count + 1;
+               return;
+            end if;
+
             while Expr /= Empty_Project_Node loop
 
                Expr := First_Term (Expr, Node_Tree);
