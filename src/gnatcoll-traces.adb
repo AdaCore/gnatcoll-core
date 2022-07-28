@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2001-2021, AdaCore                     --
+--                     Copyright (C) 2001-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1367,8 +1367,9 @@ package body GNATCOLL.Traces is
             Trace (Handle, Msg, Style, Location => Location, Entity => Entity);
          end if;
 
-         --  ??? Should we do this when the handle is inactive ?
-         Increment (Handle.Stream.Indentation);
+         if Handle.Active then
+            Increment (Handle.Stream.Indentation);
+         end if;
       end if;
    end Increase_Indent;
 
@@ -1386,11 +1387,13 @@ package body GNATCOLL.Traces is
       if Handle /= null and then Handle.Stream /= null then
 
          --  The counter is a modulo type
-         if Sync_Sub_And_Fetch
-            (Handle.Stream.Indentation'Unchecked_Access, 1) = Minus_One
-         then
-            Handle.Stream.Indentation := 0;
-            Trace (Handle, "Indentation error: too many decrease");
+         if Handle.Active then
+            if Sync_Sub_And_Fetch
+              (Handle.Stream.Indentation'Unchecked_Access, 1) = Minus_One
+            then
+               Handle.Stream.Indentation := 0;
+               Trace (Handle, "Indentation error: too many decrease");
+            end if;
          end if;
 
          if Msg /= "" then
