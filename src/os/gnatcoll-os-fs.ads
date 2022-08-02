@@ -31,6 +31,7 @@ package GNATCOLL.OS.FS is
    package UTF8 renames Ada.Strings.UTF_Encoding;
 
    type File_Descriptor is private;
+
    --  A File descriptor
 
    Standin  : constant File_Descriptor;
@@ -113,6 +114,15 @@ package GNATCOLL.OS.FS is
    procedure Write (FD : File_Descriptor; Buffer : String);
    --  Write Buffer content to FD. OS_Error is raised if write fails or is not
    --  complete.
+
+   generic
+      type T is private;
+   procedure Write_Bytes
+      (FD : File_Descriptor; Buffer : T);
+
+   generic
+      type T is private;
+   function Read_Bytes (FD : File_Descriptor) return T;
 
 private
 
