@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2020-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -147,6 +147,33 @@ package GNATCOLL.OS.Libc is
    --  See Posix pipe
    --  Note that on linux this function sets the O_CLOEXEC flag to the returned
    --  pipes.
+
+   --  See POSIX posix_fadvise function. Note that on some platforms such as
+   --  MacOS, the function does nothing as the underlying system call does not
+   --  exist.
+   type Posix_Fadvise_Code is
+      (POSIX_FADV_NORMAL,
+       POSIX_FADV_SEQUENTIAL,
+       POSIX_FADV_RANDOM,
+       POSIX_FADV_NOREUSE,
+       POSIX_FADV_WILLNEED);
+   for Posix_Fadvise_Code'Size use Integer'Size;
+   for Posix_Fadvise_Code use
+      (POSIX_FADV_NORMAL     => 0,
+       POSIX_FADV_SEQUENTIAL => 1,
+       POSIX_FADV_RANDOM     => 2,
+       POSIX_FADV_NOREUSE    => 3,
+       POSIX_FADV_WILLNEED   => 4);
+
+   function Posix_Fadvise
+      (FD     : FS.File_Descriptor;
+       Offset : Sint_64 := 0;
+       Length : Sint_64 := 0;
+       Advice : Posix_Fadvise_Code := POSIX_FADV_NORMAL)
+      return Integer
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_posix_fadvise";
 
    --  See Posix chdir documentation
    function Chdir (Path : C_String) return Libc_Status

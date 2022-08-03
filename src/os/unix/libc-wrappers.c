@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2020-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -194,6 +194,34 @@ int __gnatcoll_lstat(const char *path, struct gnatcoll_stat *buf)
 int __gnatcoll_open(const char *path, int mode, int perm)
 {
   return open (path, mode, perm);
+}
+
+/* Wrapper around posix_fadvise */
+int __gnatcoll_posix_fadvise(int fd, sint_64 offset, sint_64 length,int advice)
+{
+#if defined(__APPLE__)
+   return 0;
+#else
+   int effective_advice;
+
+   switch (advice)
+   {
+      case 0:
+         effective_advice = POSIX_FADV_NORMAL; break;
+      case 1:
+         effective_advice = POSIX_FADV_SEQUENTIAL; break;
+      case 2:
+         effective_advice = POSIX_FADV_RANDOM; break;
+      case 3:
+         effective_advice = POSIX_FADV_NOREUSE; break;
+      case 4:
+         effective_advice = POSIX_FADV_WILLNEED; break;
+      default:
+         return -1;
+   }
+
+   return posix_fadvise(fd, (off_t) offset, (off_t) length, effective_advice);
+#endif
 }
 
 /* Create a pipe
