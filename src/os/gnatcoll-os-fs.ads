@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2022, AdaCore                     --
+--                     Copyright (C) 2020-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -51,11 +51,16 @@ package GNATCOLL.OS.FS is
    --  Used by some functions to redirect a file descriptor to the null file
    --  (i.e /dev/null on unix or NUL on windows)
 
+   Default_Buffer_Size : constant Positive := 64 * 1024;
+   --  On Windows and Linux using 64K as buffer size when reading files is
+   --  usually the best value in term of performance.
+
    type Open_Mode is (Read_Mode, Write_Mode, Append_Mode);
 
    function Open
       (Path : UTF8.UTF_8_String;
-       Mode : Open_Mode := Read_Mode)
+       Mode : Open_Mode := Read_Mode;
+       Advise_Sequential : Boolean := False)
       return File_Descriptor;
    --  Open a file located at Path.
    --
@@ -63,6 +68,10 @@ package GNATCOLL.OS.FS is
    --  In Write_Mode and Append_Mode if the file does not exist it is created.
    --  File is opened in "close on exec" mode (i.e: the file descriptor is not
    --  inherited by a child process)
+   --  If Advice_Sequential is set to True an indication is sent to the OS when
+   --  opening the file that the file is going to be accessed sequentially,
+   --  which might improve performance when iterating on the complete content
+   --  of a file.
 
    procedure Open_Pipe
       (Pipe_Read  : out File_Descriptor;
@@ -93,13 +102,13 @@ package GNATCOLL.OS.FS is
 
    function Read
       (FD          : File_Descriptor;
-       Buffer_Size : Positive := 4096)
+       Buffer_Size : Positive := Default_Buffer_Size)
       return Unbounded_String;
    --  Read full file content.
 
    function Read
       (FD          : File_Descriptor;
-       Buffer_Size : Positive := 4096)
+       Buffer_Size : Positive := Default_Buffer_Size)
       return String;
    --  Read full file content. As String might rely on stack, usually it's
    --  preferable to use the variant that returns an Unbounded_String.

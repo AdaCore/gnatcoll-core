@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2022, AdaCore                     --
+--                     Copyright (C) 2020-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,7 +27,8 @@ with GNATCOLL.String_Builders;
 separate (GNATCOLL.OS.FS)
 function Open
    (Path : UTF8.UTF_8_String;
-    Mode : Open_Mode := Read_Mode)
+    Mode : Open_Mode := Read_Mode;
+    Advise_Sequential : Boolean := False)
    return File_Descriptor
 is
    package SB renames GNATCOLL.String_Builders;
@@ -39,6 +40,9 @@ is
    Result : File_Descriptor;
    Perm   : File_Mode;
    O_Mode : Libc.Open_Mode;
+   pragma Warnings (Off);
+   Fadvise_Status : Integer;
+   pragma Warnings (On);
 begin
 
    Append (C_Path, Path);
@@ -62,6 +66,15 @@ begin
    if Result < 0 then
       return Invalid_FD;
    else
+      if Advise_Sequential then
+         --  As this is just an advise emited that has potentially only impact
+         --  on performance, don't fail if Posix_Fadvise fails.
+         Fadvise_Status := Libc.Posix_Fadvise
+            (FD     => Result,
+             Offset => 0,
+             Length => 0,
+             Advice => POSIX_FADV_SEQUENTIAL);
+      end if;
       return Result;
    end if;
 

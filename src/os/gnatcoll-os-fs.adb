@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                      Copyright (C) 2020-2022, AdaCore                    --
+--                      Copyright (C) 2020-2023, AdaCore                    --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -58,7 +58,8 @@ package body GNATCOLL.OS.FS is
 
    function Open
       (Path : UTF8.UTF_8_String;
-       Mode : Open_Mode := Read_Mode)
+       Mode : Open_Mode := Read_Mode;
+       Advise_Sequential : Boolean := False)
        return File_Descriptor
    is separate;
 
@@ -95,7 +96,7 @@ package body GNATCOLL.OS.FS is
 
    function Read
       (FD          : File_Descriptor;
-       Buffer_Size : Positive := 4096)
+       Buffer_Size : Positive := Default_Buffer_Size)
       return Unbounded_String
    is
       Buffer     : String (1 .. Buffer_Size);
@@ -113,7 +114,7 @@ package body GNATCOLL.OS.FS is
 
    function Read
       (FD          : File_Descriptor;
-       Buffer_Size : Positive := 4096)
+       Buffer_Size : Positive := Default_Buffer_Size)
       return String
    is
       Result : Unbounded_String;

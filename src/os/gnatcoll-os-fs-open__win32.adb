@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2022, AdaCore                     --
+--                     Copyright (C) 2020-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -27,7 +27,8 @@ with GNATCOLL.WString_Builders;
 separate (GNATCOLL.OS.FS)
 function Open
    (Path : UTF8.UTF_8_String;
-    Mode : Open_Mode := Read_Mode)
+    Mode : Open_Mode := Read_Mode;
+    Advise_Sequential : Boolean := False)
    return File_Descriptor
 is
    package SB renames GNATCOLL.WString_Builders;
@@ -65,6 +66,10 @@ begin
             or Win32.Files.O_BINARY;
          O_Perm := Win32.Files.S_IWRITE;
    end case;
+
+   if Advise_Sequential then
+      O_Mode := O_Mode or Win32.Files.O_SEQUENTIAL;
+   end if;
 
    Result := Win32.Files.Open (As_C_WString (C_Path), O_Mode, O_Perm);
 
