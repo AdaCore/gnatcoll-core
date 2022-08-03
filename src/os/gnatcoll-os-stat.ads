@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2020-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -80,6 +80,9 @@ package GNATCOLL.OS.Stat is
    function Image (Self : File_Attributes) return String;
    --  String image of a File_Attributes structure
 
+   function Length (Self : File_Attributes) return Long_Long_Integer;
+   --  Return file length
+
    function New_File_Attributes
       (Exists        : Boolean;
        Writable      : Boolean;
@@ -119,5 +122,6 @@ private
    pragma Inline (Is_Writable);
    pragma Inline (Is_Readable);
    pragma Inline (Is_Executable);
+   pragma Inline (Length);
 
 end GNATCOLL.OS.Stat;
