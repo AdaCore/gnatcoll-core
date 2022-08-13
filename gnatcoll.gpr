@@ -133,9 +133,6 @@ project GnatColl is
             for Switches ("C") use ("-O2", "-Wunreachable-code");
       end case;
 
-      for Switches ("gnatcoll_support.c") use
-         Compiler'Switches ("C") & Extra_Switches;
-
       --  Give user flags the last word.
       for Switches ("Ada") use Compiler'Switches ("Ada")
         & External_As_List ("ADAFLAGS", " ");
@@ -143,6 +140,8 @@ project GnatColl is
         & External_As_List ("CFLAGS", " ")
         & External_As_List ("CPPFLAGS", " ");
 
+      for Switches ("gnatcoll_support.c") use
+        Extra_Switches & Compiler'Switches ("C");
    end Compiler;
 
    package Binder is
