@@ -272,7 +272,12 @@ project GnatColl is
    end Naming;
 
    package Linker is
-      for Linker_Options use Extra_Libs;
+      case Library_Type is
+         when "relocatable" =>
+            null;
+         when "static" | "static-pic" =>
+            for Linker_Options use Extra_Libs;
+      end case;
    end Linker;
 
    package Install is
