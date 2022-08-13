@@ -122,6 +122,26 @@ package body GNATCOLL.OS.FS is
       return To_String (Result);
    end Read;
 
+   ----------------
+   -- Read_Bytes --
+   ----------------
+
+   function Read_Bytes (FD : File_Descriptor) return T is
+      Buffer     : String (1 .. T'Object_Size / 8);
+      Byte_Reads : Integer;
+   begin
+      Byte_Reads := Read (FD, Buffer => Buffer);
+      if Byte_Reads < T'Object_Size / 8 then
+         raise OS_Error with "read error";
+      end if;
+
+      declare
+         Result : T with Import, Convention => Ada, Address => Buffer'Address;
+      begin
+         return Result;
+      end;
+   end Read_Bytes;
+
    -----------------------
    -- Set_Close_On_Exec --
    -----------------------
@@ -164,4 +184,25 @@ package body GNATCOLL.OS.FS is
       return Integer (Result);
    end Write;
 
+   -----------------
+   -- Write_Bytes --
+   -----------------
+
+   procedure Write_Bytes (FD : File_Descriptor; Buffer : T) is
+      function C_Write
+        (Fd     : File_Descriptor;
+         Buffer : System.Address;
+         Size   : size_t)
+         return int;
+      pragma Import (C, C_Write, "write");
+
+      Result : int;
+   begin
+      Result := C_Write (FD, Buffer'Address, T'Object_Size / 8);
+
+      if Result /= T'Object_Size / 8 then
+         raise OS_Error with "write error";
+      end if;
+
+   end Write_Bytes;
 end GNATCOLL.OS.FS;

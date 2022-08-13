@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                    Copyright (C) 2020-2021, AdaCore                      --
+--                    Copyright (C) 2020-2022, AdaCore                      --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -123,6 +123,16 @@ package body GNATCOLL.OS.Stat is
    begin
       return Self.Writable;
    end Is_Writable;
+
+   ------------
+   -- Length --
+   ------------
+
+   function Length (Self : File_Attributes) return Long_Long_Integer
+   is
+   begin
+      return Self.Length;
+   end Length;
 
    -----------------------
    -- Modification_Time --
