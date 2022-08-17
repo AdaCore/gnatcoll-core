@@ -1037,15 +1037,15 @@ package body GNATCOLL.Projects is
       function Is_Extending_All (P : Project_Type) return Boolean is
         (Is_Extending_All (P.Data.Node, P.Data.Tree.Tree));
 
-      function Find_Ada_In_Subtree
-        (Map    : Names_Files.Map;
-         Key    : GNATCOLL.VFS.Filesystem_String;
-         Root   : Project_Type)
+      function Find_Unit_In_Subtree
+        (Map  : Names_Files.Map;
+         Key  : GNATCOLL.VFS.Filesystem_String;
+         Root : Project_Type)
          return Names_Files.Cursor;
-      function Find_C_In_Subtree
-        (Map    : Names_Files.Map;
-         Key    : GNATCOLL.VFS.Filesystem_String;
-         Root   : Project_Type)
+      function Find_File_In_Subtree
+        (Map  : Names_Files.Map;
+         Key  : GNATCOLL.VFS.Filesystem_String;
+         Root : Project_Type)
          return Names_Files.Cursor;
       --  Searches for Source_File_Data with given base name and a project from
       --  a project subtree that starts from Root.
@@ -1073,11 +1073,11 @@ package body GNATCOLL.Projects is
          end if;
       end Get_Base_Name;
 
-      -------------------------
-      -- Find_Ada_In_Subtree --
-      -------------------------
+      --------------------------
+      -- Find_Unit_In_Subtree --
+      --------------------------
 
-      function Find_Ada_In_Subtree
+      function Find_Unit_In_Subtree
         (Map  : Names_Files.Map;
          Key  : GNATCOLL.VFS.Filesystem_String;
          Root : Project_Type) return Names_Files.Cursor
@@ -1095,7 +1095,11 @@ package body GNATCOLL.Projects is
          SFD := Element (Cur);
 
          loop
-            if not (Get_String (SFD.Lang) in "c" | "cpp") then
+            if Get_Language_From_Name
+              (Get_View (SFD.Project),
+               Get_String (SFD.Lang))
+                .Config.Kind = Unit_Based
+            then
 
                Iter := Start (Extending_Project (Root, True));
                while Current (Iter) /= No_Project loop
@@ -1117,13 +1121,13 @@ package body GNATCOLL.Projects is
          end loop;
 
          return Names_Files.No_Element;
-      end Find_Ada_In_Subtree;
+      end Find_Unit_In_Subtree;
 
-      -----------------------
-      -- Find_C_In_Subtree --
-      -----------------------
+      --------------------------
+      -- Find_File_In_Subtree --
+      --------------------------
 
-      function Find_C_In_Subtree
+      function Find_File_In_Subtree
         (Map  : Names_Files.Map;
          Key  : GNATCOLL.VFS.Filesystem_String;
          Root : Project_Type) return Names_Files.Cursor
@@ -1144,7 +1148,11 @@ package body GNATCOLL.Projects is
          --  instead of an inner iterator, so that library projects aggregated
          --  in a library aggregate are also considered
          loop
-            if Get_String (SFD.Lang) in "c" | "cpp" then
+            if Get_Language_From_Name
+              (Get_View (SFD.Project),
+               Get_String (SFD.Lang))
+                .Config.Kind = File_Based
+            then
 
                --  We can have as much c/c++ files with same name as possible.
                --  So what we need to do is only iterate through extended
@@ -1185,7 +1193,7 @@ package body GNATCOLL.Projects is
          end loop;
 
          return Names_Files.No_Element;
-      end Find_C_In_Subtree;
+      end Find_File_In_Subtree;
 
       Seen, Added : Virtual_File_Sets.Set;
 
@@ -1234,7 +1242,7 @@ package body GNATCOLL.Projects is
                   P      : Project_Type;
 
                begin
-                  Info_Cursor := Find_Ada_In_Subtree
+                  Info_Cursor := Find_Unit_In_Subtree
                     (Self.Data.Tree_For_Map.Objects_Basename,
                      B, Self);
 
@@ -1251,7 +1259,7 @@ package body GNATCOLL.Projects is
                      if Dot > B'First then
                         B_Last := Dot - 1;
                         Info_Cursor :=
-                          Find_C_In_Subtree
+                          Find_File_In_Subtree
                             (Self.Data.Tree_For_Map.Objects_Basename,
                              B (B'First .. B_Last),
                              Project);
