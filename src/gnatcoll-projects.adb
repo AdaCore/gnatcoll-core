@@ -1058,6 +1058,10 @@ package body GNATCOLL.Projects is
       procedure Process_Project (Project : Project_Type);
       --  Process Project and append to List all relevant ALI files
 
+      function Is_File_Based (SFD : Source_File_Data) return Boolean;
+      --  Return whether the source file designated by SFD belongs to a
+      --  file-based language (i.e. not a unit-based language, like Ada).
+
       Local_Obj_Map : Names_Files.Map;
 
       -------------------
@@ -1095,11 +1099,7 @@ package body GNATCOLL.Projects is
          SFD := Element (Cur);
 
          loop
-            if Get_Language_From_Name
-              (Get_View (SFD.Project),
-               Get_String (SFD.Lang))
-                .Config.Kind = Unit_Based
-            then
+            if not Is_File_Based (SFD) then
 
                Iter := Start (Extending_Project (Root, True));
                while Current (Iter) /= No_Project loop
@@ -1148,11 +1148,7 @@ package body GNATCOLL.Projects is
          --  instead of an inner iterator, so that library projects aggregated
          --  in a library aggregate are also considered
          loop
-            if Get_Language_From_Name
-              (Get_View (SFD.Project),
-               Get_String (SFD.Lang))
-                .Config.Kind = File_Based
-            then
+            if Is_File_Based (SFD) then
 
                --  We can have as much c/c++ files with same name as possible.
                --  So what we need to do is only iterate through extended
@@ -1434,6 +1430,18 @@ package body GNATCOLL.Projects is
             Trace (Me, "Couldn't open the directory "
                    & Dir.Display_Full_Name);
       end Process_Project;
+
+      -------------------
+      -- Is_File_Based --
+      -------------------
+
+      function Is_File_Based (SFD : Source_File_Data) return Boolean is
+         Language : constant Language_Ptr :=
+           Get_Language_From_Name
+             (Get_View (SFD.Project), Get_String (SFD.Lang));
+      begin
+         return Language.Config.Kind = File_Based;
+      end Is_File_Based;
 
    begin
       if Is_Aggregate_Project (Self) then
