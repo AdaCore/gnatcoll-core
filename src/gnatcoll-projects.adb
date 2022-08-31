@@ -1170,7 +1170,7 @@ package body GNATCOLL.Projects is
                   --  same basename as Key, even if we skip the header files.
 
                   if Extended_P = SFD.Project
-                    and then +SFD.File.File_Extension not in ".h" | ".hpp"
+                    and then Kind_To_Part (SFD.Source) = Unit_Body
                   then
                      Local_Obj_Map.Include (Key, SFD);
 

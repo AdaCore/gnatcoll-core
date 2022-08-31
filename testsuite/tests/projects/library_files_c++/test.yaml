@@ -1,0 +1,6 @@
+description:
+    Library_File used to assume C/C++ bodies had ".c"/".cc" suffixes (it's
+    wrong for C++ by default, and both can be configured anyway), and used to
+    assume that C++ headers had ".hpp" suffixes (likewise, and it's ".hh" by
+    default).
+data: ["p.gpr", "foo.cpp", "foo.cpp.gli", "foo.hh", "bar.hh", "bar.hh.gli"]

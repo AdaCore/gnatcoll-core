@@ -1,0 +1,3 @@
+project P is
+   for Languages use ("C++");
+end P;
