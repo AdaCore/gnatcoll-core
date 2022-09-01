@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2020, AdaCore                     --
+--                     Copyright (C) 2008-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -233,6 +233,13 @@ package GNATCOLL.Utils is
    --  Whether C is a valid character for an identifier (in most programming
    --  languages). It doesn't check whether the identifier starts with an
    --  underscore for instance, just whether the characters would be valid.
+
+   function Match (Str : String; Pattern : String) return Boolean;
+   --  Implementation of POSIX pattern matching
+   --
+   --  @param Str string to check
+   --  @param Pattern a posix pattern
+   --  @return True if Str matches Pattern, False otherwise
 
    ------------
    -- Expect --
