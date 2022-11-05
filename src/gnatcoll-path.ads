@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2018, AdaCore                     --
+--                     Copyright (C) 2009-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -44,8 +44,7 @@ private package GNATCOLL.Path is
 
    function Multi_Unit_Index_Char (FS : FS_Type) return Character;
    --  The character used by GNAT when creating ALI files for multi-unit files
-   --  on the given filesystem (this is generally '~' expect on VMS where it is
-   --  set to '$').
+   --  on the given filesystem (currently '~' on all supported systems).
 
    function Exe_Extension (FS : FS_Type) return FS_String;
    --  .exe on Windows, nothing on Unix
@@ -84,12 +83,12 @@ private package GNATCOLL.Path is
      (FS          : FS_Type;
       Path        : FS_String;
       Cygwin_Path : Boolean := False) return FS_String;
-   --  Translate a Path to unix style
+   --  Translate a Path to Unix style
 
    function From_Unix
      (FS   : FS_Type;
       Path : FS_String) return FS_String;
-   --  Translate a Path from unix style
+   --  Translate a Path from Unix style
 
    function File_Extension
      (FS   : FS_Type;
@@ -141,7 +140,7 @@ private package GNATCOLL.Path is
    function Normalize
      (FS   : FS_Type;
       Path : FS_String) return FS_String;
-   --  Replace every ./ or ../ items of the path
+   --  Remove all . and .. subpaths and duplicated dir separators from Path
 
    function Relative_Path
      (FS   : FS_Type;

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2017, AdaCore                     --
+--                     Copyright (C) 2009-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -180,7 +180,7 @@ package body GNATCOLL.Path is
                end loop;
 
                if Found_One then
-                  --  Case where we had "\\machine\svc" to analyse. The root
+                  --  Case where we had "\\machine\svc" to analyze. The root
                   --  is then "\\machine\src\"
                   return Path & '\';
                else
@@ -590,6 +590,13 @@ package body GNATCOLL.Path is
                   Idx := Idx + 1;
                   Src := Src + 1;
                end if;
+            elsif Path (Src) = DS and then
+                  Src > (if FS = FS_Windows then Path'First + 1
+                                            else Path'First) and then
+                  Path (Src - 1) = DS
+            then
+               --  Skip if the previous one is also DS
+               Src := Src + 1;
             else
                Dest (Idx) := Path (Src);
                Idx := Idx + 1;

@@ -190,6 +190,16 @@ begin
       A.Assert (Has_Element (C), "find parent in map");
    end;
 
+   --  Normalizing
+
+   declare
+      F1 : constant String := Cur_Dir_AD & "obj//../obj/.///./main.o";
+      F2 : constant String := +Create_From_Base (+F1).Full_Name;
+      F3 : constant String := +Create (+F2, Normalize => True).Full_Name;
+   begin
+      A.Assert (F3, Cur_Dir_AD & "obj" & Dir_Sep & "main.o");
+   end;
+
    return A.Report;
 
 end Test;
