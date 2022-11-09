@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2021, AdaCore                     --
+--                     Copyright (C) 2002-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1328,9 +1328,16 @@ package GNATCOLL.Projects is
    function Untyped_Variables
      (Self      : Project_Tree;
       Root_Only : Boolean := False) return Untyped_Variable_Array;
-   --  Return the list of scenario variables used in the whole project
-   --  tree, unless Root_Only is set to True. In the latter case only
-   --  variables declared in the root project are returned.
+   --  Returns the list of untyped variables used in the whole project
+   --  tree. If Root_Only is set to True, only returns untyped variables
+   --  declared in the root project, otherwise aside from untyped variables
+   --  also returns all external references throughout the project tree,
+   --  i.e. not just the ones used in variable declarations
+   --    Var := external("VAR", "value");
+   --  but also in attribute references or any other context, for example
+   --    for Object_Dir use external("OBJDIR", "obj);
+   --    for Switches ("Ada") use External_As_List ("ADAFLAGS", " ");
+   --  and so on.
 
    function Scenario_Variables
      (Self          : Project_Tree;

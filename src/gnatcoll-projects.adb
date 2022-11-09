@@ -5077,8 +5077,8 @@ package body GNATCOLL.Projects is
 
       Var_Quantity : Natural;
 
-      package Name_Id_Sets is new Ada.Containers.Ordered_Sets (GPR.Name_Id);
-      Inconsistent_SC_Externals : Name_Id_Sets.Set := Name_Id_Sets.Empty_Set;
+      Inconsistent_SC_Externals : GPR.Name_Id_Set.Set :=
+        GPR.Name_Id_Set.Empty_Set;
 
       function Count_Vars return Natural;
       --  Return the number of scenario variables in tree
@@ -5754,7 +5754,11 @@ package body GNATCOLL.Projects is
          U_Curr := U_Curr + 1;
       end Register_Untyped_Var;
 
-      use Name_Id_Sets;
+      Context : GPR.Ext.Context :=
+        GPR.Ext.Get_Context (Tree.Env.Env.External);
+
+      use GPR.Name_Id_Set;
+      use GPR.Ext.Context_Map;
       use Ada.Containers;
    begin
       Trace (Me, "Compute the list of scenario variables");
@@ -5764,7 +5768,8 @@ package body GNATCOLL.Projects is
 
       Typed_List :=  new Scenario_Variable_Array (1 .. Var_Quantity);
       T_Curr := Typed_List'First;
-      Untyped_List :=  new Untyped_Variable_Array (1 .. Var_Quantity);
+      Untyped_List :=  new Untyped_Variable_Array
+        (1 .. Var_Quantity + Natural (Context.Length));
       U_Curr := Untyped_List'First;
 
       For_Each_External_Variable_Declaration
@@ -5808,6 +5813,49 @@ package body GNATCOLL.Projects is
          Inconsistent_SC_Externals.Clear;
       end if;
 
+      if not Recursive then
+         goto Skip_Extras;
+      end if;
+
+      --  We need to add remaining external references as untyped variables
+      for SV of Tree.Env.Scenario_Variables.all loop
+         declare
+            SV_Name : String := External_Name (SV);
+         begin
+            GPR.Osint.Canonical_Case_Env_Var_Name (SV_Name);
+            Context.Exclude (Get_Name_Id (SV_Name));
+         end;
+      end loop;
+
+      for UV of Untyped_List (1 .. U_Curr - 1) loop
+         declare
+            UV_Name : String := External_Name (UV);
+         begin
+            GPR.Osint.Canonical_Case_Env_Var_Name (UV_Name);
+            Context.Exclude (Get_Name_Id (UV_Name));
+         end;
+      end loop;
+
+      --  Now add remaining externals to untyped variables. There is no way to
+      --  get their default without actually parsing corresponding expressions,
+      --  which requires full parsing of the project. So defaults are just set
+      --  to current value.
+      declare
+         Context_Cur : GPR.Ext.Context_Map.Cursor := Context.First;
+      begin
+         while Context_Cur /= GPR.Ext.Context_Map.No_Element loop
+            Untyped_List (U_Curr) :=
+              (Name    => Key (Context_Cur),
+               Default => Element (Context_Cur),
+               Value   => Element (Context_Cur));
+            U_Curr := U_Curr + 1;
+            Next (Context_Cur);
+         end loop;
+      end;
+
+      <<Skip_Extras>>
+      Context.Clear;
+
       if U_Curr > Untyped_List'Last then
          Tree.Env.Untyped_Variables := Untyped_List;
       else
@@ -5815,7 +5863,6 @@ package body GNATCOLL.Projects is
            new Untyped_Variable_Array'(Untyped_List (1 .. U_Curr - 1));
          Unchecked_Free (Untyped_List);
       end if;
-
    end Compute_Scenario_Variables;
 
    ------------------------

@@ -1,0 +1,5 @@
+description: >
+  Test that all external references outside of variable
+  declarations are still added to untyped variables.
+data:
+    - "p.gpr"

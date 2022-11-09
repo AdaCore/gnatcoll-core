@@ -1,0 +1,10 @@
+project p is
+
+   Y := external("Var2", "yyy");
+
+   for Source_Dirs use (external("sources", "."));
+   for Object_Dir use external("objects", "obj_dir");
+
+   type T is ("a", "b", "c");
+   X : T := external("Var1", "a");
+end p;
