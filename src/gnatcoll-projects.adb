@@ -7676,6 +7676,10 @@ package body GNATCOLL.Projects is
          Previous_Status  := Default;
       end if;
 
+      if Env /= null then
+         GPR.Ext.Reset_Context (Env.Env.External);
+      end if;
+
       if Env /= null and then Env.Config_File.Is_Regular_File then
          Env.Set_Target_And_Runtime_From_Config;
       end if;
