@@ -1,0 +1,19 @@
+procedure Main is
+
+   Type Fred is tagged
+
+      record
+
+         Something : Boolean;
+
+      end record;
+
+   procedure Simon (This  : access Fred'Class);
+
+   procedure Simon (This  : access Fred'Class) is
+   begin
+      null;
+   end Simon;
+begin
+   null;
+end Main;

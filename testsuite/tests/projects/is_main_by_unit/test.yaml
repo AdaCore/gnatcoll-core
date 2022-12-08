@@ -1,0 +1,8 @@
+description: >
+  Check that Is_Main_File correctly works when mains
+  are specified in the project file as unit names without
+  corresponding language specific suffix.
+data:
+    - "r.gpr"
+    - "main.ada2"
+    - "main2.c2"

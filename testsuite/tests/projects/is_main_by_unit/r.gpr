@@ -1,0 +1,9 @@
+project r is
+   for Languages use ("Ada", "C");
+   for Main use ("main", "main2");
+
+   package Naming is
+      for Body_Suffix ("Ada") use ".ada2";
+      for Body_Suffix ("C") use ".c2";
+   end Naming;
+end r;

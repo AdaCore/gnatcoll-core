@@ -3927,9 +3927,39 @@ package body GNATCOLL.Projects is
       B_File : constant GNATCOLL.VFS.Filesystem_String := Base_Name (File);
       Files  :          VFS.File_Array_Access;
       Source : Boolean := False;
-   begin
-      Trace (Me, (+File) & " vs " & (+B_File));
 
+      function Check_Unit_Name (B_File : String; Unit : String) return Boolean;
+      --  Checks that given file may correspond to a "unit" name specified
+      --  in the Main attribute by checking all language body suffixes.
+
+      ---------------------
+      -- Check_Unit_Name --
+      ---------------------
+
+      function Check_Unit_Name (B_File : String; Unit : String) return Boolean
+      is
+         Langs : GNAT.Strings.String_List_Access :=
+           new String_List'(Project.Languages);
+      begin
+         for L of Langs.all loop
+            if Project.Has_Attribute (Impl_Suffix_Attribute, L.all) then
+               if Equal
+                 (B_File,
+                  Unit & Project.Attribute_Value
+                    (Impl_Suffix_Attribute, L.all),
+                  Case_Sensitive => Case_Sensitive)
+               then
+                  Free (Langs);
+                  return True;
+               end if;
+            end if;
+         end loop;
+
+         Free (Langs);
+         return False;
+      end Check_Unit_Name;
+
+   begin
       if GNATCOLL.VFS_Utils.Is_Absolute_Path (File) then
          --  Check that given file is a source of Project first.
          Files := Project.Source_Files (Recursive => False);
@@ -3949,6 +3979,7 @@ package body GNATCOLL.Projects is
       for V in Value'Range loop
          if Equal
            (Value (V).all, +B_File, Case_Sensitive => Case_Sensitive)
+             or else Check_Unit_Name (+B_File, Value (V).all)
          then
             Free (Value);
             return True;
