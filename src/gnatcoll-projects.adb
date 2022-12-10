@@ -9450,7 +9450,7 @@ package body GNATCOLL.Projects is
 
       Reset_View (Self);
       GPR.Initialize (Self.Data.View);
-      GPR.Ext.Reset (Self.Data.Env.Env.External);
+      GPR.Ext.Reset_Context (Self.Data.Env.Env.External);
 
       Opt.Follow_Links_For_Files := not Self.Data.Env.Trusted_Mode;
       Opt.Follow_Links_For_Dirs  := not Self.Data.Env.Trusted_Mode;
