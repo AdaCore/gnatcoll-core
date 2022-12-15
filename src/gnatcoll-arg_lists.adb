@@ -537,11 +537,7 @@ package body GNATCOLL.Arg_Lists is
 
          if Protect_Quotes then
             for S in List (L)'Range loop
-               if List (L)(S) = '"'
-                 or else List (L)(S) = ' '
-                 or else List (L) (S) = '\'
-                 or else List (L) (S) = '''
-               then
+               if List (L) (S) in '"' | ' ' | '\' | ''' then
                   Length := Length + 1;
                end if;
             end loop;
@@ -555,13 +551,9 @@ package body GNATCOLL.Arg_Lists is
          for L in List'Range loop
             for J in List (L)'Range loop
                if Protect_Quotes then
-                  if List (L) (J) = '"'
-                    or else List (L) (J) = ' '
-                    or else List (L) (J) = '\'
-                    or else List (L) (J) = '''
-                  then
+                  if List (L) (J) in '"' | ' ' | '\' | ''' then
                      S (Index) := '\';
-                     Index := Index + 1;
+                     Index     := Index + 1;
                   end if;
                end if;
                S (Index) := List (L)(J);

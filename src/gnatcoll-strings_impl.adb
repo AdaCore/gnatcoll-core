@@ -1164,17 +1164,13 @@ package body GNATCOLL.Strings_Impl is
       begin
          Get_String (Self, S, L);
 
-         if Side = Ada.Strings.Both
-            or else Side = Ada.Strings.Right
-         then
+         if Side in Ada.Strings.Both | Ada.Strings.Right then
             while L >= 1 and then S (L) = Chars loop
-               L := L  - 1;
+               L := L - 1;
             end loop;
          end if;
 
-         if Side = Ada.Strings.Both
-            or else Side = Ada.Strings.Left
-         then
+         if Side in Ada.Strings.Both | Ada.Strings.Left then
             while F <= L and then S (F) = Chars loop
                F := F + 1;
             end loop;
@@ -1198,17 +1194,13 @@ package body GNATCOLL.Strings_Impl is
       begin
          Get_String (Self, S, L);
 
-         if Side = Ada.Strings.Both
-            or else Side = Ada.Strings.Right
-         then
+         if Side in Ada.Strings.Both | Ada.Strings.Right then
             while L >= 1 and then S (L) = Chars loop
-               L := L  - 1;
+               L := L - 1;
             end loop;
          end if;
 
-         if Side = Ada.Strings.Both
-            or else Side = Ada.Strings.Left
-         then
+         if Side in Ada.Strings.Both | Ada.Strings.Left then
             while F <= L and then S (F) = Chars loop
                F := F + 1;
             end loop;

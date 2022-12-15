@@ -346,11 +346,10 @@ package body GNATCOLL.Geometry is
       Bis2 : constant Line := Bisector (Segment'(1 => P2, 2 => P3));
       Center : constant Point := Intersection (Bis1, Bis2);
    begin
-      if Center = No_Point or else Center = Infinity_Points then
+      if Center in No_Point | Infinity_Points then
          return No_Circle;
       else
-         return (Center => Center,
-                 Radius => Distance (Center, P1));
+         return (Center => Center, Radius => Distance (Center, P1));
       end if;
    end To_Circle;
 

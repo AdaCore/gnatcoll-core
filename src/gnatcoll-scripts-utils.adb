@@ -48,7 +48,7 @@ package body GNATCOLL.Scripts.Utils is
             Len := Len + Args (J)'Length + 3;
 
             for T in Args (J)'Range loop
-               if Args (J)(T) = Quote or else Args (J)(T) = '\' then
+               if Args (J) (T) in Quote | '\' then
                   Len := Len + 1;
                end if;
             end loop;

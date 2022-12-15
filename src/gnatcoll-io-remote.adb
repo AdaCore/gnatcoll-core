@@ -54,7 +54,7 @@ package body GNATCOLL.IO.Remote is
    begin
       --  Regexps might return file strings with a trailing CR or LF. Let's
       --  remove those before creating the File record.
-      while Path (Last) = ASCII.CR or else Path (Last) = ASCII.LF loop
+      while Path (Last) in ASCII.CR | ASCII.LF loop
          Last := Last - 1;
       end loop;
 

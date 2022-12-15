@@ -664,16 +664,13 @@ package body GNATCOLL.IO.Native is
          GNAT.Directory_Operations.Read (D, Item, Last);
          exit when Last = 0;
 
-         if Item (1 .. Last) /= "."
-           and then Item (1 .. Last) /= ".."
+         if Item (1 .. Last) not in "." | ".."
            and then
-             (not Dirs_Only
-              or else
-                GNAT.OS_Lib.Is_Directory (Name & Item (1 .. Last)))
+           (not Dirs_Only
+            or else GNAT.OS_Lib.Is_Directory (Name & Item (1 .. Last)))
            and then
-             (not Files_Only
-              or else
-                GNAT.OS_Lib.Is_Regular_File (Name & Item (1 .. Last)))
+           (not Files_Only
+            or else GNAT.OS_Lib.Is_Regular_File (Name & Item (1 .. Last)))
          then
             if Ret = null then
                Ret := new GNAT.Strings.String_List (1 .. 10);
@@ -685,7 +682,7 @@ package body GNATCOLL.IO.Native is
                Ret := Tmp;
             end if;
 
-            N := N + 1;
+            N       := N + 1;
             Ret (N) := new String'(Item (1 .. Last));
          end if;
       end loop;

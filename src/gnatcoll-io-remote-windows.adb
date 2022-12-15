@@ -760,8 +760,7 @@ package body GNATCOLL.IO.Remote.Windows is
             exit when Matched (0) = No_Match;
             Index := Matched (1).Last + 1;
 
-            if Output (Matched (1).First .. Matched (1).Last) /= "."
-              and then Output (Matched (1).First .. Matched (1).Last) /= ".."
+            if Output (Matched (1).First .. Matched (1).Last) not in "." | ".."
             then
                Nb_Files := Nb_Files + 1;
             end if;
@@ -779,12 +778,12 @@ package body GNATCOLL.IO.Remote.Windows is
                exit when Matched (0) = No_Match;
                Index := Matched (1).Last + 1;
 
-               if Output (Matched (1).First .. Matched (1).Last) /= "."
-                 and then Output (Matched (1).First .. Matched (1).Last)
-                           /= ".."
+               if Output (Matched (1).First .. Matched (1).Last) not in "." |
+                     ".."
                then
-                  List (File_Idx) := new String'
-                    (Output (Matched (1).First .. Matched (1).Last));
+                  List (File_Idx) :=
+                    new String'
+                      (Output (Matched (1).First .. Matched (1).Last));
                   File_Idx := File_Idx + 1;
                end if;
             end loop;

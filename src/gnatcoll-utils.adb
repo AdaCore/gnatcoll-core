@@ -60,11 +60,7 @@ package body GNATCOLL.Utils is
 
    function Is_Whitespace (Char : Character) return Boolean is
    begin
-      if Char = ' '
-        or else Char = ASCII.HT
-        or else Char = ASCII.LF
-        or else Char = ASCII.CR
-      then
+      if Char in ' ' | ASCII.HT | ASCII.LF | ASCII.CR then
          return True;
       end if;
       return False;
@@ -394,7 +390,7 @@ package body GNATCOLL.Utils is
       --  In addition to the default directory_separator allow the '/' to
       --  act as separator since this a valid path separator on Windows
       --  systems.
-      return C = GNAT.OS_Lib.Directory_Separator or else C = '/';
+      return C in GNAT.OS_Lib.Directory_Separator | '/';
    end Is_Directory_Separator;
 
    -------------------------
@@ -841,7 +837,7 @@ package body GNATCOLL.Utils is
       end if;
 
       for J in reverse Str'First .. Index loop
-         if Str (J) = ASCII.LF or else Str (J) = ASCII.CR then
+         if Str (J) in ASCII.LF | ASCII.CR then
             if J < Str'Last then
                return J + 1;
             else
@@ -861,7 +857,7 @@ package body GNATCOLL.Utils is
       Index : constant Natural := Natural'Max (Str'First, P);
    begin
       for J in Index .. Str'Last loop
-         if Str (J) = ASCII.LF or else Str (J) = ASCII.CR then
+         if Str (J) in ASCII.LF | ASCII.CR then
             return J - 1;
          end if;
       end loop;
@@ -1208,9 +1204,7 @@ package body GNATCOLL.Utils is
            and then Str (It) /= ASCII.CR
            and then Str (It) /= ASCII.LF
          loop
-            if Str (It) /= ' '
-              and then Str (It) /= ASCII.HT
-            then
+            if Str (It) not in ' ' | ASCII.HT then
                return False;
             end if;
 

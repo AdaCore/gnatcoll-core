@@ -1757,8 +1757,7 @@ package body GNATCOLL.Projects is
 
             Source := Element (Curs);
             loop
-               Imports := Source.Project = Project_Type (Self)
-                 or else Source.Project = No_Project;
+               Imports := Source.Project in Project_Type (Self) | No_Project;
                --  predefined source file
                if not Imports then
                   Iter := Self.Start
@@ -2487,8 +2486,8 @@ package body GNATCOLL.Projects is
             Lang := GPR.No_Name;
             NS := Tree.Env.Naming_Schemes;
             while NS /= null loop
-               if +Ext = NS.Default_Spec_Suffix.all
-                 or else +Ext = NS.Default_Body_Suffix.all
+               if +Ext in NS.Default_Spec_Suffix.all |
+                     NS.Default_Body_Suffix.all
                then
                   Lang := Get_String (NS.Language.all);
                   exit;
@@ -2692,8 +2691,7 @@ package body GNATCOLL.Projects is
       function Has_Predefined_Prefix (S : String) return Boolean is
          C : constant Character := S (S'First);
       begin
-         return S (S'First + 1) = '-'
-           and then (C = 'a' or else C = 'g' or else C = 'i' or else C = 's');
+         return S (S'First + 1) = '-' and then (C in 'a' | 'g' | 'i' | 's');
       end Has_Predefined_Prefix;
 
       Unit    : Name_Id;
@@ -3102,8 +3100,7 @@ package body GNATCOLL.Projects is
       --  Special case for the naming scheme, since we need to get access to
       --  the default registered values for foreign languages
 
-      if Attribute = Spec_Suffix_Attribute
-        or else Attribute = Specification_Suffix_Attribute
+      if Attribute in Spec_Suffix_Attribute | Specification_Suffix_Attribute
       then
          Lang := Get_Language_From_Name (View, Index);
          if Lang /= null then
@@ -3121,8 +3118,8 @@ package body GNATCOLL.Projects is
             end;
          end if;
 
-      elsif Attribute = Impl_Suffix_Attribute
-        or else Attribute = Implementation_Suffix_Attribute
+      elsif Attribute in Impl_Suffix_Attribute |
+            Implementation_Suffix_Attribute
       then
          Lang := Get_Language_From_Name (View, Index);
          if Lang /= null then
@@ -3164,19 +3161,15 @@ package body GNATCOLL.Projects is
             return "";
          end if;
 
-      elsif Attribute = Old_Implementation_Attribute
-        or else Attribute = Body_Attribute
-      then
+      elsif Attribute in Old_Implementation_Attribute | Body_Attribute then
          --  Index is a unit name
-         Unit := Units_Htable.Get
-           (Project.Tree_View.Units_HT,
-            Get_String (Index));
-         if Unit /= No_Unit_Index
-           and then Unit.File_Names (Impl) /= null
-         then
+         Unit :=
+           Units_Htable.Get (Project.Tree_View.Units_HT, Get_String (Index));
+         if Unit /= No_Unit_Index and then Unit.File_Names (Impl) /= null then
             if Unit.File_Names (Impl).Index /= 0 then
-               return Get_String (Unit.File_Names (Impl).Display_File)
-                 & " at" & Unit.File_Names (Impl).Index'Img;
+               return
+                 Get_String (Unit.File_Names (Impl).Display_File) & " at" &
+                 Unit.File_Names (Impl).Index'Img;
             else
                return Get_String (Unit.File_Names (Impl).Display_File);
             end if;
@@ -3188,18 +3181,15 @@ package body GNATCOLL.Projects is
             null;
          end if;
 
-      elsif Attribute = Old_Specification_Attribute
-        or else Attribute = Spec_Attribute
-      then
+      elsif Attribute in Old_Specification_Attribute | Spec_Attribute then
          --  Index is a unit name
-         Unit := Units_Htable.Get
-           (Project.Tree_View.Units_HT, Get_String (Index));
-         if Unit /= No_Unit_Index
-           and then Unit.File_Names (Spec) /= null
-         then
+         Unit :=
+           Units_Htable.Get (Project.Tree_View.Units_HT, Get_String (Index));
+         if Unit /= No_Unit_Index and then Unit.File_Names (Spec) /= null then
             if Unit.File_Names (Spec).Index /= 0 then
-               return Get_String (Unit.File_Names (Spec).Display_File)
-                 & " at" & Unit.File_Names (Spec).Index'Img;
+               return
+                 Get_String (Unit.File_Names (Spec).Display_File) & " at" &
+                 Unit.File_Names (Spec).Index'Img;
             else
                return Get_String (Unit.File_Names (Spec).Display_File);
             end if;
@@ -3265,7 +3255,7 @@ package body GNATCOLL.Projects is
       end if;
 
       Pkg_Id := Package_Node_Id_Of (Get_String (Lower_Pkg));
-      if Pkg_Id = Empty_Package or else Pkg_Id = Unknown_Package then
+      if Pkg_Id in Empty_Package | Unknown_Package then
          --  We don't even have such a package.
          return False;
       end if;
@@ -6751,7 +6741,7 @@ package body GNATCOLL.Projects is
          Ext : constant String :=
                  GNAT.Directory_Operations.File_Extension (+Filename);
       begin
-         if  Ext = ".ads" or else Ext = ".adb" then
+         if Ext in ".ads" | ".adb" then
             return Filename'Last - 4;
          end if;
       end;
@@ -8277,8 +8267,7 @@ package body GNATCOLL.Projects is
       function Process_Gnatls (Gnatls : String) return Boolean is
       begin
          if Tree.Data.Env.Gnatls = null or else
-           (Tree.Data.Env.Gnatls.all /= Gnatls and then
-            Tree.Data.Env.Gnatls.all /= No_Gnatls)
+            (Tree.Data.Env.Gnatls.all not in Gnatls | No_Gnatls)
          then
             Tree.Data.Env.Set_Path_From_Gnatls
                (Gnatls       => Gnatls,
@@ -9768,10 +9757,8 @@ package body GNATCOLL.Projects is
                --  we must ensure that the project_id matches the view from the
                --  tree, otherwise the project will not be found by the prj*
                --  packages.
-               if P.Data.Tree.View = null
-                  or else P.Data.Tree.View = Tree
-               then
-                  P.Data.View := Proj;
+               if P.Data.Tree.View in null | Tree then
+                  P.Data.View      := Proj;
                   P.Data.Tree.View := Tree;  --  must match Proj
                end if;
             elsif Active (Me) then
@@ -9986,15 +9973,15 @@ package body GNATCOLL.Projects is
          declare
             Ls : constant String := P.Attribute_Value (Gnatlist_Attribute);
          begin
-            if Ls /= "" and then Ls /= Gnatls then
+            if Ls not in "" | Gnatls then
                --  We do not want to mark the project as incomplete for this
                --  warning, so we do not need to pass an actual Error_Handler
                GPR.Err.Error_Msg
                  (Flags => Create_Flags (null),
                   Msg   =>
-                   "?the project attribute IDE.gnatlist doesn't have"
-                  & " the same value as in the root project."
-                  & " The value """ & Gnatls & """ will be used",
+                    "?the project attribute IDE.gnatlist doesn't have" &
+                    " the same value as in the root project." &
+                    " The value """ & Gnatls & """ will be used",
                   Project => Get_View (P));
             end if;
          end;
@@ -10597,10 +10584,10 @@ package body GNATCOLL.Projects is
 
       if Lower_Pkg /= "" then
          Pkg_Id := Package_Node_Id_Of (Get_String (Lower_Pkg));
-         if Pkg_Id = Empty_Package or else Pkg_Id = Unknown_Package then
+         if Pkg_Id in Empty_Package | Unknown_Package then
             Trace (Me, "Register_New_Package (" & Lower_Pkg & ")");
-            Register_New_Package (Name  => Lower_Pkg, Id => Pkg_Id);
-            if Pkg_Id = Empty_Package or else Pkg_Id = Unknown_Package then
+            Register_New_Package (Name => Lower_Pkg, Id => Pkg_Id);
+            if Pkg_Id in Empty_Package | Unknown_Package then
                Trace (Me, "Error registering new package");
             end if;
          end if;

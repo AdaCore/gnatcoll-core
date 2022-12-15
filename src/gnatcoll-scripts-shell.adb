@@ -284,7 +284,7 @@ package body GNATCOLL.Scripts.Shell is
                  (Data, "File not found: """ & Filename & '"');
          end;
 
-      elsif Command = "echo" or else Command = "echo_error" then
+      elsif Command in "echo" | "echo_error" then
          declare
             Result : Unbounded_String;
          begin
@@ -297,12 +297,10 @@ package body GNATCOLL.Scripts.Shell is
 
             if Command = "echo" then
                Insert_Text
-                 (Get_Script (Data),
-                  Txt => To_String (Result) & ASCII.LF);
+                 (Get_Script (Data), Txt => To_String (Result) & ASCII.LF);
             else
                Insert_Error
-                 (Get_Script (Data),
-                  Txt => To_String (Result) & ASCII.LF);
+                 (Get_Script (Data), Txt => To_String (Result) & ASCII.LF);
             end if;
          end;
 
@@ -577,9 +575,7 @@ package body GNATCOLL.Scripts.Shell is
 
          --  Do not display the prompt in the shell console if we did not
          --  output to it
-         if not Hide_Output
-           and then (Console = null or else Console = Old_Console)
-         then
+         if not Hide_Output and then (Console in null | Old_Console) then
             Display_Prompt (Script, Script.Console);
          end if;
       end;
@@ -1072,8 +1068,7 @@ package body GNATCOLL.Scripts.Shell is
          First := Command'First;
          while First <= Command'Last loop
             while First <= Command'Last
-              and then (Command (First) = ' '
-                        or else Command (First) = ASCII.HT)
+              and then (Command (First) in ' ' | ASCII.HT)
             loop
                First := First + 1;
             end loop;
@@ -1089,10 +1084,8 @@ package body GNATCOLL.Scripts.Shell is
             --  Search until the beginning of the next command (separated by
             --  semicolon or newline).
             while Last <= Command'Last loop
-               exit when not Quoted
-                 and then not Triple_Quoted
-                 and then (Command (Last) = ';'
-                           or else Command (Last) = ASCII.LF);
+               exit when not Quoted and then not Triple_Quoted
+                 and then (Command (Last) in ';' | ASCII.LF);
 
                if Command (Last) = '"' then
                   if Last <= Command'Last - 2

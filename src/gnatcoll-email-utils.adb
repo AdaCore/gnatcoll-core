@@ -240,7 +240,7 @@ package body GNATCOLL.Email.Utils is
    is
       Start : constant Integer := Index;
    begin
-      if S (Index) = '-' or else S (Index) = '+' then
+      if S (Index) in '-' | '+' then
          Index := Index + 1;
       end if;
 
@@ -360,11 +360,9 @@ package body GNATCOLL.Email.Utils is
       begin
          --  Timezone (we might have none in badly formed dates)
          if Index < Date'Last then
-            if Date (Index) = '-' or else Date (Index) = '+' or else
-               Date (Index) in '0' .. '9'
-            then
-               Read_Integer (Date (Index .. Date'Last), Index,
-                             Value => TZ_Local);
+            if Date (Index) in '-' | '+' | '0' .. '9' then
+               Read_Integer
+                 (Date (Index .. Date'Last), Index, Value => TZ_Local);
                TZ := Time_Offset ((TZ_Local / 100) * 60 + TZ_Local mod 100);
             else
 
@@ -380,8 +378,9 @@ package body GNATCOLL.Email.Utils is
                then
                   TZ := 0;
                else
-                  TZ := Named_TZ_Offset
-                    (Named_TZ'Value (Date (Index .. Index + 2)));
+                  TZ :=
+                    Named_TZ_Offset
+                      (Named_TZ'Value (Date (Index .. Index + 2)));
                end if;
             end if;
          end if;
@@ -642,10 +641,7 @@ package body GNATCOLL.Email.Utils is
       --  Skip spaces
 
       while From <= Str'Last
-        and then (Str (From) = ASCII.LF
-                  or else Str (From) = ASCII.CR
-                  or else Str (From) = ASCII.HT
-                  or else Str (From) = ' ')
+        and then (Str (From) in ASCII.LF | ASCII.CR | ASCII.HT | ' ')
       loop
          From := From + 1;
       end loop;
@@ -682,15 +678,11 @@ package body GNATCOLL.Email.Utils is
 
             --  ',' is the standard separator in mail messages, but ';' is
             --  often used by users when manually typing a list of addresses
-            elsif Str (From) = ','
-              or else Str (From) = ';'
-              or else Str (From) = ASCII.LF
-              or else Str (From) = ASCII.CR
-              or else Str (From) = ASCII.HT
+            elsif Str (From) in ',' | ';' | ASCII.LF | ASCII.CR | ASCII.HT
               or else (Buffer_Has_At and then Str (From) = ' ')
             then
                --  End of current address
-               From := From + 1;
+               From  := From + 1;
                Found := True;
                return;
 
@@ -1180,12 +1172,10 @@ package body GNATCOLL.Email.Utils is
        Is_EOL : Boolean) return Boolean
    is
    begin
-      if Char = ' ' or else Char = ASCII.HT then
+      if Char in ' ' | ASCII.HT then
          return Is_EOL or else Where in Any_Header;
 
-      elsif Char = '='
-              or else Char = '?'
-              or else Character'Pos (Char) not in 32 .. 126
+      elsif Char in '=' | '?' or else Character'Pos (Char) not in 32 .. 126
       then
          return True;
 
@@ -1211,7 +1201,7 @@ package body GNATCOLL.Email.Utils is
 
          --  No need to quote whitespace unless at EOL
 
-         if (Str (J) = ' ' or else Str (J) = ASCII.HT) and then not EOL then
+         if (Str (J) in ' ' | ASCII.HT) and then not EOL then
             null;
 
          elsif Needs_Quoting (Str (J), Where, EOL) then
@@ -1695,27 +1685,14 @@ package body GNATCOLL.Email.Utils is
 
       if Set = Charset_US_ASCII then
          Encoding := Encoding_7bit;
-      elsif Set = Charset_ISO_8859_1
-        or else Set = "latin_1" or else Set = "latin-1"
-        or else Set = Charset_ISO_8859_2
-        or else Set = "latin_2" or else Set = "latin-2"
-        or else Set = Charset_ISO_8859_3
-        or else Set = "latin_3" or else Set = "latin-3"
-        or else Set = Charset_ISO_8859_4
-        or else Set = "latin_4" or else Set = "latin-4"
-        or else Set = Charset_ISO_8859_9
-        or else Set = "latin_5" or else Set = "latin-5"
-        or else Set = Charset_ISO_8859_10
-        or else Set = "latin_6" or else Set = "latin-6"
-        or else Set = Charset_ISO_8859_13
-        or else Set = "latin_7" or else Set = "latin-7"
-        or else Set = Charset_ISO_8859_14
-        or else Set = "latin_8" or else Set = "latin-8"
-        or else Set = Charset_ISO_8859_15
-        or else Set = "latin_9" or else Set = "latin-9"
-        or else Set = Charset_Windows_1252
-        or else Set = "viscii"
-        or else Set = Charset_UTF_8 or else Set = "utf8"
+      elsif Set in Charset_ISO_8859_1 | "latin_1" | "latin-1" |
+            Charset_ISO_8859_2 | "latin_2" | "latin-2" | Charset_ISO_8859_3 |
+            "latin_3" | "latin-3" | Charset_ISO_8859_4 | "latin_4" |
+            "latin-4" | Charset_ISO_8859_9 | "latin_5" | "latin-5" |
+            Charset_ISO_8859_10 | "latin_6" | "latin-6" | Charset_ISO_8859_13 |
+            "latin_7" | "latin-7" | Charset_ISO_8859_14 | "latin_8" |
+            "latin-8" | Charset_ISO_8859_15 | "latin_9" | "latin-9" |
+            Charset_Windows_1252 | "viscii" | Charset_UTF_8 | "utf8"
       then
          Encoding := Encoding_QP;
       else

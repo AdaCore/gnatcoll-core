@@ -732,13 +732,12 @@ package body GNATCOLL.Opt_Parse is
       Result : in out Parsed_Arguments) return Parser_Return
    is
    begin
-      if Args (Pos) = Self.Long or else Args (Pos) = Self.Short then
+      if Args (Pos) in Self.Long | Self.Short then
 
          declare
-            Res : constant Parser_Result_Access := new Flag_Parser_Result'
-              (Start_Pos => Pos,
-               End_Pos   => Pos,
-               Result    =>  True);
+            Res : constant Parser_Result_Access :=
+              new Flag_Parser_Result'
+                (Start_Pos => Pos, End_Pos => Pos, Result => True);
          begin
             Result.Ref.Get.Results (Self.Position) := Res;
          end;
@@ -1165,7 +1164,7 @@ package body GNATCOLL.Opt_Parse is
             end;
          end if;
 
-         if Args (Pos) /= +Long and then Args (Pos) /= +Short then
+         if Args (Pos) not in +Long | +Short then
             return Error_Return;
          end if;
 
