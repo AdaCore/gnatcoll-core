@@ -1511,16 +1511,19 @@ package body GNATCOLL.Email.Utils is
       Block_Suffix    : constant String := "?=";
       Block_Separator : constant String := " ";
 
-      In_Bytes : Stream_Element_Array (Stream_Element_Offset (Str'First)
-                                       .. Stream_Element_Offset (Str'Last))
-        with Import;
-      for In_Bytes'Address use Str'Address;
+      In_Bytes :
+        Stream_Element_Array
+          (Stream_Element_Offset (Str'First) ..
+               Stream_Element_Offset (Str'Last)) with
+        Import, Address => Str'Address;
 
       Max : constant Natural :=
         Integer'Max
           (1,
-           (Integer'Min (Max_Block_Len, 75)
-            - Block_Prefix'Length - Block_Suffix'Length) / 4) * 3;
+           (Integer'Min (Max_Block_Len, 75) - Block_Prefix'Length -
+            Block_Suffix'Length) /
+           4) *
+        3;
       --  Length of the original data producing output of Max_Block_Len.
       --  Divide by 4 and multiply by 3 because base64 encoder takes 3
       --  original bytes (i.e. 24 bits) and produces 4 6-bit-coded characters.
@@ -1547,8 +1550,8 @@ package body GNATCOLL.Email.Utils is
          In_Last   : Stream_Element_Offset;
          Out_Last  : Stream_Element_Offset;
          Out_Chars : String (1 .. (Str'Length + 2) * 4 / 3);
-         Out_Bytes : Stream_Element_Array (1 .. Out_Chars'Length) with Import;
-         for Out_Bytes'Address use Out_Chars'Address;
+         Out_Bytes : Stream_Element_Array (1 .. Out_Chars'Length) with
+           Import, Address => Out_Chars'Address;
       begin
          Put_Parts (Block_Prefix);
 
@@ -1560,8 +1563,8 @@ package body GNATCOLL.Email.Utils is
          Coder.Close;
 
          Put_Parts
-           (Out_Chars (1 .. Natural (Out_Last)) & Block_Suffix
-            & (if Last_One then "" else Block_Separator));
+           (Out_Chars (1 .. Natural (Out_Last)) & Block_Suffix &
+            (if Last_One then "" else Block_Separator));
       end Encode_Append;
 
       Start, Next, Fit : Integer;
@@ -1607,11 +1610,12 @@ package body GNATCOLL.Email.Utils is
             declare
                Out_Last : Stream_Element_Offset;
                Text     : String (1 .. Integer'Min (Max_Block_Len, 76));
-               Buffer   : Stream_Element_Array (1 .. Text'Length) with Import;
-               for Buffer'Address use Text'Address;
+               Buffer   : Stream_Element_Array (1 .. Text'Length) with
+                 Import, Address => Text'Address;
                Flush : constant Flush_Mode :=
-                         (if Index > In_Bytes'Last - Text'Length * 3 / 4 + 1
-                          then Finish else No_Flush);
+                 (if Index > In_Bytes'Last - Text'Length * 3 / 4 + 1 then
+                    Finish
+                  else No_Flush);
                First : constant Boolean := Index = In_Bytes'First;
             begin
                Coder.Transcode
@@ -1644,14 +1648,14 @@ package body GNATCOLL.Email.Utils is
    is
       use Ada.Streams;
       Decoder : Base64.Decoder_Type;
-      Src     : Stream_Element_Array (1 .. Str'Length) with Import;
-      for Src'Address use Str'Address;
-      Index   : Stream_Element_Offset := Src'First;
-      Dest    : Stream_Element_Array (1 .. 4096);
-      Last    : Stream_Element_Offset;
-      Text    : String (1 .. Dest'Length);
-      for Text'Address use Dest'Address;
-      Flush   : Flush_Mode := No_Flush;
+      Src     : Stream_Element_Array (1 .. Str'Length) with
+        Import, Address => Str'Address;
+      Index : Stream_Element_Offset := Src'First;
+      Dest  : Stream_Element_Array (1 .. 4_096);
+      Last  : Stream_Element_Offset;
+      Text  : String (1 .. Dest'Length) with
+        Address => Dest'Address;
+      Flush : Flush_Mode := No_Flush;
    begin
       Decoder.Initialize;
       Result := Null_Unbounded_String;
