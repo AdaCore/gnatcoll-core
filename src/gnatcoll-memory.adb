@@ -110,7 +110,7 @@ package body GNATCOLL.Memory is
    procedure Free (Ptr : System.Address) is
    begin
 
-      if Ptr /= System.Null_Address and not Memory_Check then
+      if Ptr /= System.Null_Address and then not Memory_Check then
          if Memory_Monitor then
 
             Initialize_System_Memory_Debug_Pool;
@@ -287,9 +287,8 @@ package body GNATCOLL.Memory is
 
       Memory_Check := Disable_Free;
 
-      if Activate_Monitor and not Memory_Monitor then
-         Initialize_System_Memory_Debug_Pool
-           (Has_Unhandled_Memory => True);
+      if Activate_Monitor and then not Memory_Monitor then
+         Initialize_System_Memory_Debug_Pool (Has_Unhandled_Memory => True);
          Memory_Monitor := True;
       end if;
 

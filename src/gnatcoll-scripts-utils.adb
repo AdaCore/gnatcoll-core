@@ -215,7 +215,7 @@ package body GNATCOLL.Scripts.Utils is
             Max_Args := Max_Args * 2;
          end if;
 
-         if Start_With_Triple and End_With_Triple then
+         if Start_With_Triple and then End_With_Triple then
             New_Argv (New_Argc) :=
               new String'(Arg_String (Start_Idx + 3 .. Idx - 4));
          else

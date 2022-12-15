@@ -154,7 +154,7 @@ package body GNATCOLL.Email is
 
    function Is_Whitespace (Char : Character) return Boolean is
    begin
-      return Char = ' ' or Char = ASCII.HT;
+      return Char = ' ' or else Char = ASCII.HT;
    end Is_Whitespace;
 
    ----------------------
@@ -1297,7 +1297,7 @@ package body GNATCOLL.Email is
          end if;
 
       else
-         if MIME_Type /= "" and not Prepend then
+         if MIME_Type /= "" and then not Prepend then
             Replace_Header (Msg, H_CT);
             if H_CTE = Null_Header then
                Delete_Headers (Msg, Content_Transfer_Encoding);

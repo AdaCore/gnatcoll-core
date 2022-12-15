@@ -4950,7 +4950,7 @@ package body GNATCOLL.Projects is
             Is_Limited_With  => Is_Limited_With);
       end if;
 
-      return Imports and Is_Limited_With;
+      return Imports and then Is_Limited_With;
 
    end Is_Limited_With;
 
@@ -4978,7 +4978,7 @@ package body GNATCOLL.Projects is
             Is_Limited_With  => Is_Limited_With);
       end if;
 
-      return Imports and Is_Limited_With;
+      return Imports and then Is_Limited_With;
    end Is_Limited_With;
 
    ----------
@@ -8452,7 +8452,7 @@ package body GNATCOLL.Projects is
          begin
             Trace (Me, "Output of gnatls is " & S);
 
-            if S = "" and Errors /= null then
+            if S = "" and then Errors /= null then
                Errors ("The output from '" & Gnatls & "-v' is empty");
             end if;
 
@@ -10265,9 +10265,7 @@ package body GNATCOLL.Projects is
    function Get_Environment
      (Self : Project_Type) return Project_Environment_Access is
    begin
-      if Self = No_Project
-        or Self.Data.Tree = null
-      then
+      if Self = No_Project or else Self.Data.Tree = null then
          return null;
       else
          return Self.Data.Tree.Env;

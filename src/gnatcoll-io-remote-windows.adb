@@ -276,7 +276,7 @@ package body GNATCOLL.IO.Remote.Windows is
       Exec.Execute_Remotely (Args, Output, Status);
       Free (Args);
 
-      if Status and Output /= null then
+      if Status and then Output /= null then
          S := GNATCOLL.Utils.Split (Output.all, ' ');
 
          begin
