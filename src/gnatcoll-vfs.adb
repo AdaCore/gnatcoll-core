@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2019, AdaCore                     --
+--                     Copyright (C) 2003-2022, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1629,7 +1629,7 @@ package body GNATCOLL.VFS is
                FS_String (Dir.Full_Name.all), FS_String (Name))));
       Ensure_Directory (New_Dir);
 
-      if Is_Directory (New_Dir) and then True then
+      if Is_Directory (New_Dir) then
          return New_Dir;
       else
          return No_File;
