@@ -436,15 +436,10 @@ package body GNATCOLL.Projects.Normalize is
                  Ext_Variable_Name;
 
             when N_Variable_Reference =>
-               for J in Variable_Nodes'First .. Variable_Nodes_Last loop
-                  if GPR.Tree.Name_Of (Node, Tree) =
-                    GPR.Tree.Name_Of (Variable_Nodes (J), Tree)
-                  then
-                     return True;
-                  end if;
-               end loop;
-
-               return False;
+               return
+                 (for some J in Variable_Nodes'First .. Variable_Nodes_Last =>
+                    GPR.Tree.Name_Of (Node, Tree) =
+                    GPR.Tree.Name_Of (Variable_Nodes (J), Tree));
 
             when others =>
                return False;
