@@ -3903,13 +3903,7 @@ package body GNATCOLL.Projects is
          return True;
       end if;
 
-      for T of Host_Targets_List loop
-         if T = Tgt then
-            return True;
-         end if;
-      end loop;
-
-      return False;
+      return (for some T of Host_Targets_List => T = Tgt);
    end Target_Same_As_Host;
 
    ------------------
@@ -5378,12 +5372,7 @@ package body GNATCOLL.Projects is
          Ext_Name : GPR.Name_Id) return Boolean
       is
       begin
-         for I in 1 .. Last - 1 loop
-            if UVs (I).Name = Ext_Name then
-               return False;
-            end if;
-         end loop;
-         return True;
+         return (for all I in 1 .. Last - 1 => (UVs (I).Name /= Ext_Name));
       end Not_Already;
 
       ------------------

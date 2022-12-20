@@ -1609,13 +1609,9 @@ package body GNATCOLL.JSON is
    function Has_Field (Val : JSON_Value; Field : UTF8_String) return Boolean is
       Vals : Object_Items_Pkg.Vector renames Val.Data.Obj_Value.Vals;
    begin
-      for J in Vals.First_Index .. Vals.Last_Index loop
-         if Field = Vals.Element (J).Key then
-            return True;
-         end if;
-      end loop;
-
-      return False;
+      return
+        (for some J in Vals.First_Index .. Vals.Last_Index =>
+           Field = Vals.Element (J).Key);
    end Has_Field;
 
    ---------
@@ -1748,16 +1744,14 @@ package body GNATCOLL.JSON is
             then
                return False;
             else
-               for J in Left.Data.Arr_Value.Arr.Vals.First_Index ..
-                 Left.Data.Arr_Value.Arr.Vals.Last_Index
-               loop
-                  if not (Left.Data.Arr_Value.Arr.Vals (J) =  --  recursive
-                            Right.Data.Arr_Value.Arr.Vals (J))
-                  then
-                     return False;
-                  end if;
-               end loop;
-               return True;
+               return
+                 (for all J in
+                    Left.Data.Arr_Value.Arr.Vals.First_Index ..
+                      Left.Data.Arr_Value.Arr.Vals.Last_Index
+                  =>
+                    (Left.Data.Arr_Value.Arr.Vals (J) =  --  recursive
+
+                     Right.Data.Arr_Value.Arr.Vals (J)));
             end if;
 
          when JSON_Object_Type =>

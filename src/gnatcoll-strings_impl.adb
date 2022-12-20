@@ -2512,12 +2512,7 @@ package body GNATCOLL.Strings_Impl is
 
       function Is_Upper (Self : XString) return Boolean is
       begin
-         for C of Self loop
-            if C /= To_Upper (C) then
-               return False;
-            end if;
-         end loop;
-         return True;
+         return (for all C of Self => (C = To_Upper (C)));
       end Is_Upper;
 
       --------------
@@ -2526,12 +2521,7 @@ package body GNATCOLL.Strings_Impl is
 
       function Is_Lower (Self : XString) return Boolean is
       begin
-         for C of Self loop
-            if C /= To_Lower (C) then
-               return False;
-            end if;
-         end loop;
-         return True;
+         return (for all C of Self => (C = To_Lower (C)));
       end Is_Lower;
 
    end Strings;
