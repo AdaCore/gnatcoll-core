@@ -409,7 +409,7 @@ package body GNATCOLL.Mmap is
 
    function Is_Mutable (Region : Mapped_Region) return Boolean is
    begin
-      return Region.Mutable or Region.Write;
+      return Region.Mutable or else Region.Write;
    end Is_Mutable;
 
    ----------------

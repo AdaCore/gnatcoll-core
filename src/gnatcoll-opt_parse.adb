@@ -149,7 +149,7 @@ package body GNATCOLL.Opt_Parse is
      (Self : Flag_Parser) return String
    is
    begin
-      if Self.Long /= "" and Self.Short /= "" then
+      if Self.Long /= "" and then Self.Short /= "" then
          return
            "[" & To_String (Self.Long) & "|" & To_String (Self.Short) & "]";
       elsif Self.Long /= "" then
@@ -166,7 +166,7 @@ package body GNATCOLL.Opt_Parse is
      (Self : Flag_Parser) return String
    is
    begin
-      if Self.Long /= "" and Self.Short /= "" then
+      if Self.Long /= "" and then Self.Short /= "" then
          return To_String (Self.Long) & ", " & To_String (Self.Short);
       elsif Self.Long /= "" then
          return To_String (Self.Long);
@@ -732,13 +732,12 @@ package body GNATCOLL.Opt_Parse is
       Result : in out Parsed_Arguments) return Parser_Return
    is
    begin
-      if Args (Pos) = Self.Long or else Args (Pos) = Self.Short then
+      if Args (Pos) in Self.Long | Self.Short then
 
          declare
-            Res : constant Parser_Result_Access := new Flag_Parser_Result'
-              (Start_Pos => Pos,
-               End_Pos   => Pos,
-               Result    =>  True);
+            Res : constant Parser_Result_Access :=
+              new Flag_Parser_Result'
+                (Start_Pos => Pos, End_Pos => Pos, Result => True);
          begin
             Result.Ref.Get.Results (Self.Position) := Res;
          end;
@@ -789,10 +788,10 @@ package body GNATCOLL.Opt_Parse is
       end Get;
 
    begin
-      if Long = "" and Short = "" then
+      if Long = "" and then Short = "" then
          raise Opt_Parse_Error
            with "A long or short flag must be provided for Parse_Flag";
-      elsif Long = "" and Name = "" then
+      elsif Long = "" and then Name = "" then
          raise Opt_Parse_Error
            with "Either Long or Name must be provided for Parse_Flag";
       elsif Enabled then
@@ -854,7 +853,7 @@ package body GNATCOLL.Opt_Parse is
            (if Name /= "" then Name else To_Upper (+Self.Name));
       begin
          if Usage_Text = "" then
-            if Long /= "" and Short /= "" then
+            if Long /= "" and then Short /= "" then
                return "[" & Long & "|" & Short & " " & Usage_Name & "]";
             elsif Long /= "" then
                return "[" & Long & " " & Usage_Name & "]";
@@ -872,7 +871,7 @@ package body GNATCOLL.Opt_Parse is
         (Dummy : Option_Parser) return String
       is
       begin
-         if Long /= "" and Short /= "" then
+         if Long /= "" and then Short /= "" then
             return Long & ", " & Short;
          elsif Long /= "" then
             return Long;
@@ -932,10 +931,10 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      if Long = "" and Short = "" then
+      if Long = "" and then Short = "" then
          raise Opt_Parse_Error
            with "A long or short flag must be provided for Parse_Option";
-      elsif Long = "" and Name = "" then
+      elsif Long = "" and then Name = "" then
          raise Opt_Parse_Error
            with "Either Long or Name must be provided for Parse_Option";
       elsif Enabled then
@@ -998,10 +997,10 @@ package body GNATCOLL.Opt_Parse is
       renames Internal_Option.Get;
 
    begin
-      if Long = "" and Short = "" then
+      if Long = "" and then Short = "" then
          raise Opt_Parse_Error
            with "A long or short flag must be provided for Parse_Enum_Option";
-      elsif Long = "" and Name = "" then
+      elsif Long = "" and then Name = "" then
          raise Opt_Parse_Error
            with "Either Long or Name must be provided for Parse_Enum_Option";
       end if;
@@ -1062,12 +1061,14 @@ package body GNATCOLL.Opt_Parse is
       is
       begin
          if Usage_Text = "" then
-            if Long /= "" and Short /= "" then
-               return "[" & Long & "|" & Short & " " & (+Self.Name) &
-                      " [" & (+Self.Name) & "...]]";
+            if Long /= "" and then Short /= "" then
+               return
+                 "[" & Long & "|" & Short & " " & (+Self.Name) & " [" &
+                 (+Self.Name) & "...]]";
             elsif Long /= "" then
-               return "[" & Long & " " & (+Self.Name) &
-                      " [" & (+Self.Name) & "...]]";
+               return
+                 "[" & Long & " " & (+Self.Name) & " [" & (+Self.Name) &
+                 "...]]";
             end if;
             return "[" & Short & " " & (+Self.Name) &
                    " [" & (+Self.Name) & "...]]";
@@ -1083,7 +1084,7 @@ package body GNATCOLL.Opt_Parse is
         (Dummy : Option_List_Parser) return String
       is
       begin
-         if Long /= "" and Short /= "" then
+         if Long /= "" and then Short /= "" then
             return Long & ", " & Short;
          elsif Long /= "" then
             return Long;
@@ -1163,7 +1164,7 @@ package body GNATCOLL.Opt_Parse is
             end;
          end if;
 
-         if Args (Pos) /= +Long and then Args (Pos) /= +Short then
+         if Args (Pos) not in +Long | +Short then
             return Error_Return;
          end if;
 
@@ -1192,10 +1193,10 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      if Long = "" and Short = "" then
+      if Long = "" and then Short = "" then
          raise Opt_Parse_Error
            with "A long or short flag must be provided for Parse_Option_List";
-      elsif Long = "" and Name = "" then
+      elsif Long = "" and then Name = "" then
          raise Opt_Parse_Error
            with "Either Long or Name must be provided for Parse_Option_List";
       elsif Enabled then
@@ -1349,7 +1350,7 @@ package body GNATCOLL.Opt_Parse is
       New_Pos     : out Parser_Return) return XString
    is
    begin
-      if Args (Pos) = Long or Args (Pos) = Short then
+      if Args (Pos) = Long or else Args (Pos) = Short then
          if Pos + 1 > Args'Last then
             raise Opt_Parse_Error with "Incomplete option";
          end if;

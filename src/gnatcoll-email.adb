@@ -136,12 +136,7 @@ package body GNATCOLL.Email is
       L_Name : constant String := To_Lower (Name);
    begin
 
-      if L_Name = "from"
-           or else L_Name = "sender"
-           or else L_Name = "to"
-           or else L_Name = "cc"
-           or else L_Name = "bcc"
-      then
+      if L_Name in "from" | "sender" | "to" | "cc" | "bcc" then
          return Addr_Header;
       else
          return Other_Header;
@@ -154,7 +149,7 @@ package body GNATCOLL.Email is
 
    function Is_Whitespace (Char : Character) return Boolean is
    begin
-      return Char = ' ' or Char = ASCII.HT;
+      return Char in ' ' | ASCII.HT;
    end Is_Whitespace;
 
    ----------------------
@@ -1297,7 +1292,7 @@ package body GNATCOLL.Email is
          end if;
 
       else
-         if MIME_Type /= "" and not Prepend then
+         if MIME_Type /= "" and then not Prepend then
             Replace_Header (Msg, H_CT);
             if H_CTE = Null_Header then
                Delete_Headers (Msg, Content_Transfer_Encoding);

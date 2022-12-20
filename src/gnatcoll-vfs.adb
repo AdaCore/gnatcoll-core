@@ -1788,21 +1788,21 @@ package body GNATCOLL.VFS is
             declare
                B : constant Filesystem_String := Files (F).Base_Name;
             begin
-               if B /= "." and then B /= ".." then
+               if B not in "." | ".." then
                   if Extension = ""
-                     or else Files (F).File_Extension = Extension
+                    or else Files (F).File_Extension = Extension
                   then
                      case Filter is
-                     when Dirs_Only =>
-                        if Files (F).Is_Directory then
+                        when Dirs_Only =>
+                           if Files (F).Is_Directory then
+                              Append (Result, Files (F));
+                           end if;
+                        when Files_Only =>
+                           if Files (F).Is_Regular_File then
+                              Append (Result, Files (F));
+                           end if;
+                        when All_Files =>
                            Append (Result, Files (F));
-                        end if;
-                     when Files_Only =>
-                        if Files (F).Is_Regular_File then
-                           Append (Result, Files (F));
-                        end if;
-                     when All_Files =>
-                        Append (Result, Files (F));
                      end case;
                   end if;
 

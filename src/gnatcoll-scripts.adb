@@ -368,9 +368,7 @@ package body GNATCOLL.Scripts is
 
       for T in Tmp'Range loop
          if Tmp (T) = Scripting_Language (Script) then
-            if List (T) /= null
-              and then List (T) /= Data
-            then
+            if List (T) not in null | Data then
                Free (List (T));
             end if;
 

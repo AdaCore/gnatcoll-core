@@ -703,7 +703,7 @@ package body GNATCOLL.Email.Mailboxes is
       is
          C : Container_Access;
       begin
-         if Parent_Cont = null or else Parent_Cont = Cont then
+         if Parent_Cont in null | Cont then
             return;
          end if;
 

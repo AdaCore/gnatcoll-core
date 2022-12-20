@@ -101,18 +101,17 @@ package body GNATCOLL.Projects.Krunch is
          Buffer (2 .. Len - 5) := Buffer (7 .. Len);
          Curlen := Len - 5;
          if (Curlen >= 3 and then Buffer (Curlen - 2 .. Curlen) = "128")
-           or else (Len >= 9 and then
-                       (Buffer (3 .. 9) = "exn_lll"
-                         or else Buffer (3 .. 9) = "exp_lll"
-                         or else Buffer (3 .. 9) = "img_lll"
-                         or else Buffer (3 .. 9) = "val_lll"
-                         or else Buffer (3 .. 9) = "wid_lll"))
+           or else
+           (Len >= 9
+            and then
+            (Buffer (3 .. 9) in "exn_lll" | "exp_lll" | "img_lll" | "val_lll" |
+                 "wid_lll"))
            or else (Curlen = 10 and then Buffer (3 .. 6) = "pack")
          then
             if Len >= 15 and then Buffer (3 .. 15) = "compare_array" then
-               Buffer (3 .. 4) := "ca";
+               Buffer (3 .. 4)           := "ca";
                Buffer (5 .. Curlen - 11) := Buffer (16 .. Curlen);
-               Curlen := Curlen - 11;
+               Curlen                    := Curlen - 11;
             end if;
             Krlen := 9;
          else
@@ -163,10 +162,8 @@ package body GNATCOLL.Projects.Krunch is
          --  of predefined units use a tilde rather than a minus as the second
          --  character of the file name.
 
-      elsif Len > 1
-        and then Buffer (2) = '-'
-        and then (B1 = 'a' or else B1 = 'g' or else B1 = 'i' or else B1 = 's')
-        and then Len <= Maxlen
+      elsif Len > 1 and then Buffer (2) = '-'
+        and then (B1 in 'a' | 'g' | 'i' | 's') and then Len <= Maxlen
       then
          Buffer (2) := '~';
          return;
@@ -221,9 +218,9 @@ package body GNATCOLL.Projects.Krunch is
 
       Num_Seps := 0;
       for J in Startloc .. Curlen loop
-         if Buffer (J) = '-' or else Buffer (J) = '_' then
+         if Buffer (J) in '-' | '_' then
             Buffer (J) := ' ';
-            Num_Seps := Num_Seps + 1;
+            Num_Seps   := Num_Seps + 1;
          end if;
       end loop;
 

@@ -423,9 +423,7 @@ package body GNATCOLL.Traces is
 
       function Stream_Name return String is
       begin
-         if Tmp.Stream /= null
-            and then Tmp.Stream /= Global.Streams_List
-         then
+         if Tmp.Stream not in null | Global.Streams_List then
             return " >" & Tmp.Stream.Name.all;
          else
             return "";
@@ -536,9 +534,9 @@ package body GNATCOLL.Traces is
                declare
                   V : constant String := To_Lower (A (A'First + 7 .. A'Last));
                begin
-                  if V = "on" or else V = "true" then
+                  if V in "on" | "true" then
                      Default_Colors := GNATCOLL.Terminal.Yes;
-                  elsif V = "off" or else V = "false" then
+                  elsif V in "off" | "false" then
                      Default_Colors := GNATCOLL.Terminal.No;
                   else
                      Default_Colors := GNATCOLL.Terminal.Auto;
@@ -983,9 +981,8 @@ package body GNATCOLL.Traces is
       if Handle.all in Trace_Decorator_Record'Class then
          Dec := Trace_Decorator (Handle);
 
-         if Dec /= Global.Colors
-            and then Dec /= Global.Finalize_Traces
-            and then Dec /= Global.Split_Lines
+         if Dec not in Global.Colors | Global.Finalize_Traces |
+               Global.Split_Lines
          then
             --  If active, store it in the list of active decorators
             if Active then
@@ -1004,7 +1001,7 @@ package body GNATCOLL.Traces is
                for A in 1 .. Global.Active_Last loop
                   if Global.Active_Decorators (A) = Dec then
                      Global.Active_Decorators (A .. Global.Active_Last - 1) :=
-                        Global.Active_Decorators (A + 1 .. Global.Active_Last);
+                       Global.Active_Decorators (A + 1 .. Global.Active_Last);
                      Global.Active_Last := Global.Active_Last - 1;
                      exit;
                   end if;
@@ -1012,9 +1009,7 @@ package body GNATCOLL.Traces is
             end if;
          end if;
 
-         if Dec = Global.Colors
-            or else Dec = Global.Absolute_Time
-            or else Dec = Global.Absolute_Date
+         if Dec in Global.Colors | Global.Absolute_Time | Global.Absolute_Date
          then
             Tmp := Global.Handles_List;
             while Tmp /= null loop
@@ -1695,10 +1690,8 @@ package body GNATCOLL.Traces is
       Status : int;
       pragma Unreferenced (Status);
    begin
-      if Stream.File /= stdout
-         and then Stream.File /= stderr
-      then
-         Status := fclose (Stream.File);
+      if Stream.File not in stdout | stderr then
+         Status      := fclose (Stream.File);
          Stream.File := NULL_Stream;
       end if;
 

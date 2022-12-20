@@ -333,7 +333,7 @@ package body GNATCOLL.Coders.Base64 is
 
    overriding function Finished (Coder : Decoder_Type) return Boolean is
    begin
-      return Coder.Finish and not Coder.Has;
+      return Coder.Finish and then not Coder.Has;
    end Finished;
 
    -----------

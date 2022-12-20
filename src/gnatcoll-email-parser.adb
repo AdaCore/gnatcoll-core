@@ -50,7 +50,7 @@ package body GNATCOLL.Email.Parser is
 
       case N (N'First) is
          when 'c' =>
-            return N = "cc" or else N = "content-type";
+            return N in "cc" | "content-type";
          when 'd' =>
             return N = "date";
          when 'f' =>
@@ -58,9 +58,9 @@ package body GNATCOLL.Email.Parser is
          when 'i' =>
             return N = "in-reply-to";
          when 'm' =>
-            return N = "message-id" or else N = "mime-version";
+            return N in "message-id" | "mime-version";
          when 'r' =>
-            return N = "references" or else N = "reply-to";
+            return N in "references" | "reply-to";
          when 's' =>
             return N = "subject";
          when 't' =>
