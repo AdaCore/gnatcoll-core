@@ -1520,10 +1520,8 @@ package body GNATCOLL.Email.Utils is
       Max : constant Natural :=
         Integer'Max
           (1,
-           (Integer'Min (Max_Block_Len, 75) - Block_Prefix'Length -
-            Block_Suffix'Length) /
-           4) *
-        3;
+           (Integer'Min (Max_Block_Len, 75)
+            - Block_Prefix'Length - Block_Suffix'Length) / 4) * 3;
       --  Length of the original data producing output of Max_Block_Len.
       --  Divide by 4 and multiply by 3 because base64 encoder takes 3
       --  original bytes (i.e. 24 bits) and produces 4 6-bit-coded characters.
@@ -1613,9 +1611,8 @@ package body GNATCOLL.Email.Utils is
                Buffer   : Stream_Element_Array (1 .. Text'Length) with
                  Import, Address => Text'Address;
                Flush : constant Flush_Mode :=
-                 (if Index > In_Bytes'Last - Text'Length * 3 / 4 + 1 then
-                    Finish
-                  else No_Flush);
+                         (if Index > In_Bytes'Last - Text'Length * 3 / 4 + 1
+                          then Finish else No_Flush);
                First : constant Boolean := Index = In_Bytes'First;
             begin
                Coder.Transcode
@@ -1650,12 +1647,12 @@ package body GNATCOLL.Email.Utils is
       Decoder : Base64.Decoder_Type;
       Src     : Stream_Element_Array (1 .. Str'Length) with
         Import, Address => Str'Address;
-      Index : Stream_Element_Offset := Src'First;
-      Dest  : Stream_Element_Array (1 .. 4_096);
-      Last  : Stream_Element_Offset;
-      Text  : String (1 .. Dest'Length) with
+      Index   : Stream_Element_Offset := Src'First;
+      Dest    : Stream_Element_Array (1 .. 4096);
+      Last    : Stream_Element_Offset;
+      Text    : String (1 .. Dest'Length) with
         Address => Dest'Address;
-      Flush : Flush_Mode := No_Flush;
+      Flush   : Flush_Mode := No_Flush;
    begin
       Decoder.Initialize;
       Result := Null_Unbounded_String;
