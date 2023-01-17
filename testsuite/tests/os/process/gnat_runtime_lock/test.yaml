@@ -1,0 +1,2 @@
+title: Check that GNATCOLL.OS.Process release runtime lock in case of error
+timeout: 10

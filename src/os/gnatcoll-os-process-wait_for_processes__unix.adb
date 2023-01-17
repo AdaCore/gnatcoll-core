@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                     Copyright (C) 2021-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -112,12 +112,14 @@ is
       Status := Init_Sigchld_Monitoring;
 
       if Status /= Success then
+         GNAT.Task_Lock.Unlock;
          raise OS_Error with "cannot set SIGCHLD signal handler";
       end if;
 
       Status := Add_Monitoring_Fd (Pipe_Write);
 
       if Status /= Success then
+         GNAT.Task_Lock.Unlock;
          raise OS_Error
             with "cannot call more than 256 concurrent wait_for_processes";
       end if;
@@ -134,6 +136,7 @@ is
       Status := Remove_Monitoring_Fd (Pipe_Write);
 
       if Status /= Success then
+         GNAT.Task_Lock.Unlock;
          raise OS_Error with "invalid SIGCHLD monitoring Fd";
       end if;
 

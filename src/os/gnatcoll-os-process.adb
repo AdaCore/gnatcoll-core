@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021-2022, AdaCore                   --
+--                       Copyright (C) 2021-2023, AdaCore                   --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -476,7 +476,6 @@ package body GNATCOLL.OS.Process is
 
       use type OS.FS.File_Descriptor;
    begin
-      GNAT.Task_Lock.Lock;
 
       --  Handle special cases for file descriptors
       --  First ensure all file descriptors are valid
@@ -507,20 +506,33 @@ package body GNATCOLL.OS.Process is
          Real_Stderr := Real_Stdout;
       end if;
 
-      FS.Set_Close_On_Exec (Real_Stdin, False);
-      FS.Set_Close_On_Exec (Real_Stdout, False);
-      FS.Set_Close_On_Exec (Real_Stderr, False);
+      --  A global lock is necessary here in order to avoid unwanted leaks
+      --  of the file descriptors that are associated with stdin, stdout
+      --  and stderr if other tasks also do process spawning at the same time.
+      GNAT.Task_Lock.Lock;
 
-      Result := Internal_Spawn
-        (Args,
-         Cwd,
-         Env,
-         Real_Stdin, Real_Stdout, Real_Stderr,
-         Priority);
+      begin
+         FS.Set_Close_On_Exec (Real_Stdin, False);
+         FS.Set_Close_On_Exec (Real_Stdout, False);
+         FS.Set_Close_On_Exec (Real_Stderr, False);
 
-      FS.Set_Close_On_Exec (Real_Stdin, True);
-      FS.Set_Close_On_Exec (Real_Stdout, True);
-      FS.Set_Close_On_Exec (Real_Stderr, True);
+         Result := Internal_Spawn
+           (Args,
+            Cwd,
+            Env,
+            Real_Stdin, Real_Stdout, Real_Stderr,
+            Priority);
+
+         FS.Set_Close_On_Exec (Real_Stdin, True);
+         FS.Set_Close_On_Exec (Real_Stdout, True);
+         FS.Set_Close_On_Exec (Real_Stderr, True);
+
+         GNAT.Task_Lock.Unlock;
+      exception
+         when others =>
+            GNAT.Task_Lock.Unlock;
+            raise;
+      end;
 
       if Close_Stdout then
          OS.FS.Close (Real_Stdout);
@@ -534,7 +546,6 @@ package body GNATCOLL.OS.Process is
          OS.FS.Close (Real_Stdin);
       end if;
 
-      GNAT.Task_Lock.Unlock;
       return Result;
    end Start;
 
