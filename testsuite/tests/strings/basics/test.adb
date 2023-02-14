@@ -1099,13 +1099,12 @@ function Test return Integer is
          declare
             R : constant XString_Array := S.Split (Space);
          begin
-            --  3 copies per non-null substring when not copy-on-write
+            --  2 copies per non-null substring when not copy-on-write
             --     1 copy when creating the slide
-            --     2 copies when returning the array, since have a temporary
-            --        created by the compiler
+            --     1 copies when returning the array
 
             A.Assert (Memory.Allocs =
-                      (if Is_Long and not Copy_On_Write then 9 else 0),
+                      (if Is_Long and not Copy_On_Write then 6 else 0),
                       Title);
             A.Assert (Memory.Reallocs = 0, Title);
 
@@ -1145,9 +1144,9 @@ function Test return Integer is
          declare
             R : constant XString_Array := S.Right_Split (Space);
          begin
-            --  Three copies per non-null substring when not copy-on-write
+            --  Two copies per non-null substring when not copy-on-write
             A.Assert (Memory.Allocs =
-                      (if Is_Long and not Copy_On_Write then 9 else 0),
+                      (if Is_Long and not Copy_On_Write then 6 else 0),
                       Title);
             A.Assert (Memory.Reallocs = 0, Title);
 
