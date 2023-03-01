@@ -27,6 +27,9 @@ General:
 * `prefix`: location of the installation, the default is the running GNAT
   installation root.
 
+* `ENABLE_SHARED`: Use relocatable and static-pic libraries in addition
+  to static ones (default is 'yes').
+
 * `BUILD`: control the build options: `PROD` (default) or `DEBUG`
 
 * `PROCESSORS`: parallel compilation (default is 0, which uses all available
