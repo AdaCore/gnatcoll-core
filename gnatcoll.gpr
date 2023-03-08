@@ -217,6 +217,12 @@ project GnatColl is
               use "gnatcoll-os-dir-close__unix.adb";
             for Implementation ("GNATCOLL.OS.Dir.Read")
               use "gnatcoll-os-dir-read__unix.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Copy_File_Content")
+              use "gnatcoll-os-fsutil-copy_file_content__unix.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Copy_Permissions")
+              use "gnatcoll-os-fsutil-copy_permissions__unix.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Copy_Timestamps")
+              use "gnatcoll-os-fsutil-copy_timestamps__unix.adb";
          when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
@@ -258,6 +264,12 @@ project GnatColl is
               use "gnatcoll-os-dir-close__win32.adb";
             for Implementation ("GNATCOLL.OS.Dir.Read")
               use "gnatcoll-os-dir-read__win32.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Copy_File_Content")
+              use "gnatcoll-os-fsutil-copy_file_content__win32.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Copy_Permissions")
+              use "gnatcoll-os-fsutil-copy_permissions__win32.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Copy_Timestamps")
+              use "gnatcoll-os-fsutil-copy_timestamps__win32.adb";
       end case;
 
       case OS is

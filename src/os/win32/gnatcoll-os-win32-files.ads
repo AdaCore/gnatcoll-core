@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2020-2021, AdaCore                     --
+--                     Copyright (C) 2022-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -270,6 +270,11 @@ package GNATCOLL.OS.Win32.Files is
    with Import => True,
         Convention => C,
         External_Name => "_wopen";
+
+   function CopyFile
+     (Existing_File_Name : OS.C_WString; New_File_Name : OS.C_WString;
+      Fail_If_Exists     : BOOL) return BOOL with
+     Import => True, Convention => Stdcall, External_Name => "CopyFileW";
 
    function CreatePipe
       (ReadPipe       : out HANDLE;

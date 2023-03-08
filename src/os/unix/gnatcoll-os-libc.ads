@@ -187,6 +187,16 @@ package GNATCOLL.OS.Libc is
         Convention    => C,
         External_Name => "getcwd";
 
+   --  See Posix sendfile documentation
+   --  A fallback implementation is used for system whithout sendfile.
+   function Send_File
+     (Out_Fd : FS.File_Descriptor;
+      In_Fd : FS.File_Descriptor;
+      Offset : access Uint_64;
+      Count : Uint_64)
+     return Sint_64;
+   pragma Import (C, Send_File, "__gnatcoll_sendfile");
+
    --  See Posix setpriority documentation
    function Setpriority (Which : Priority_Target;
                          Who   : Integer;

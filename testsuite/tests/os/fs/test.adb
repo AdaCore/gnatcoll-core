@@ -1,5 +1,5 @@
 with GNATCOLL.OS.FS; use GNATCOLL.OS.FS;
-with GNATCOLL.OS; use GNATCOLL.OS;
+with GNATCOLL.OS;    use GNATCOLL.OS;
 with Test_Assert;
 with Ada.Text_IO;
 
@@ -16,23 +16,23 @@ begin
       A.Assert (FD = Invalid_FD);
 
       declare
-         Buffer : String (1 .. 4096);
+         Buffer : String (1 .. 4_096);
          Size   : Integer;
       begin
          Size := Read (FD, Buffer);
          A.Assert
-            (False,
-             Msg => "OS_Error should be raised: bytes read:" & Size'Img);
+           (False, Msg => "OS_Error should be raised: bytes read:" & Size'Img);
       exception
          when OS_Error =>
             A.Assert (True, Msg => "OS_Error raised");
-         when others =>
+         when others   =>
             A.Assert (False, Msg => "Wrong exception raised");
       end;
 
       FD := Open ("./new_file", Mode => Write_Mode);
-      A.Assert (FD /= Invalid_FD,
-                Msg => "in write mode unexisting file should be created");
+      A.Assert
+        (FD /= Invalid_FD,
+         Msg => "in write mode unexisting file should be created");
       Write (FD, "this is the first line");
       A.Assert (not Is_Console (FD));
       Close (FD);
@@ -91,7 +91,6 @@ begin
          end;
          Close (FD);
       end;
-
    end;
    return A.Report;
 end Test;

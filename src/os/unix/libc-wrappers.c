@@ -28,6 +28,10 @@
 
 #include <sys/stat.h>
 #include <sys/statvfs.h>
+#if defined(__linux__)
+#include <sys/sendfile.h>
+#endif
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -221,6 +225,78 @@ int __gnatcoll_posix_fadvise(int fd, sint_64 offset, sint_64 length,int advice)
    }
 
    return posix_fadvise(fd, (off_t) offset, (off_t) length, effective_advice);
+#endif
+}
+
+#if defined(__linux__)
+/* sendfile will transfer at most 0x7ffff000 (2,147,479,552) bytes */
+#define SENDFILE_MAX_COUNT (2*1024*1024*1024LLU - 4096LLU)
+#else
+#define READ_WRITE_BUF_SIZE (64*1024)
+#endif
+
+ssize_t __gnatcoll_sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
+{
+#if defined(__linux__)
+    ssize_t ret = 0, tmp;
+
+    while(count > 0){
+        if(count > SENDFILE_MAX_COUNT){
+            count -= SENDFILE_MAX_COUNT;
+
+            tmp = sendfile(out_fd, in_fd, offset, SENDFILE_MAX_COUNT);
+            ret += tmp;
+
+            if(tmp != SENDFILE_MAX_COUNT){
+                return ret;
+            }
+        }else{
+            ret += sendfile(out_fd, in_fd, offset, count);
+            count = 0;
+        }
+    }
+
+    return ret;
+#else
+    /* Sendfile is not available on all UNIX systems.
+     * Basic POSIX system calls are used instead in these cases. */
+    size_t buf_size, remaining_count, sub_count;
+    ssize_t ret;
+    uint8_t *buffer;
+
+    buffer = malloc(READ_WRITE_BUF_SIZE * sizeof(uint8_t));
+    if(buffer == NULL){
+        errno = ENOMEM;
+        return -1;
+    }
+
+    remaining_count = count;
+    while (remaining_count > 0){
+        if(remaining_count > READ_WRITE_BUF_SIZE){
+            sub_count = READ_WRITE_BUF_SIZE;
+        }else{
+            sub_count = remaining_count;
+        }
+
+        remaining_count -= sub_count;
+
+        ret = read(in_fd, buffer, sub_count);
+        if(ret != sub_count){
+            free(buffer);
+            errno = EBADF;
+            return -1;
+        }
+
+        ret = write(out_fd, buffer, sub_count);
+        if(ret != sub_count){
+            free(buffer);
+            errno = EBADF;
+            return -1;
+        }
+    }
+
+    free(buffer);
+    return count;
 #endif
 }
 
