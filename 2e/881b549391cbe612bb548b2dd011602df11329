@@ -1,0 +1,7 @@
+Code-Review+2: Feodor Rybin <frybin@adacore.com>
+Code-Review-1: CI Builder <ci-builder@adacore.com>
+Submitted-by: Anthony Leonardo Gracio <leonardo@adacore.com>
+Submitted-at: Mon, 13 Mar 2023 16:01:58 +0000
+Reviewed-on: https://git.adacore-it.com/c/gnatcoll-core/+/129487
+Project: gnatcoll-core
+Branch: refs/heads/master
