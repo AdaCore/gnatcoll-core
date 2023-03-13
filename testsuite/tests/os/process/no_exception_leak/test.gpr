@@ -1,0 +1,14 @@
+with "gnatcoll";
+project Test is
+
+   for Main use ("test.adb");
+
+   package Compiler is
+      for Switches ("Ada") use ("-g", "-gnateE");
+      for Switches ("s-memory.adb") use ("-gnatg") & Compiler'Switches ("Ada");
+   end Compiler;
+
+   package Binder is
+      for Switches ("Ada") use ("-E");
+   end Binder;
+end Test;

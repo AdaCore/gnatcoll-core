@@ -188,6 +188,11 @@ package body GNATCOLL.OS.Process is
                      Status => Status);
       Process_Types.Deallocate (Final_Args);
       return Result;
+
+   exception
+      when others =>
+         Process_Types.Deallocate (Final_Args);
+         raise;
    end Run;
 
    function Run
@@ -221,6 +226,12 @@ package body GNATCOLL.OS.Process is
       Process_Types.Deallocate (Final_Args);
       Process_Types.Deallocate (Final_Env);
       return Result;
+
+   exception
+      when others =>
+         Process_Types.Deallocate (Final_Args);
+         Process_Types.Deallocate (Final_Env);
+         raise;
    end Run;
 
    function Run
@@ -359,6 +370,12 @@ package body GNATCOLL.OS.Process is
       Process_Types.Deallocate (Final_Args);
       Process_Types.Deallocate (Final_Env);
       return Result;
+
+   exception
+      when others =>
+         Process_Types.Deallocate (Final_Args);
+         Process_Types.Deallocate (Final_Env);
+         raise;
    end Run;
 
    function Run
@@ -383,6 +400,12 @@ package body GNATCOLL.OS.Process is
       Process_Types.Deallocate (Final_Args);
       Process_Types.Deallocate (Final_Env);
       return Result;
+
+   exception
+      when others =>
+         Process_Types.Deallocate (Final_Args);
+         Process_Types.Deallocate (Final_Env);
+         raise;
    end Run;
 
    function Run
@@ -430,6 +453,12 @@ package body GNATCOLL.OS.Process is
       Process_Types.Deallocate (Final_Args);
       Process_Types.Deallocate (Final_Env);
       return Result;
+
+   exception
+      when others =>
+         Process_Types.Deallocate (Final_Args);
+         Process_Types.Deallocate (Final_Env);
+         raise;
    end Start;
 
    function Start
@@ -452,6 +481,12 @@ package body GNATCOLL.OS.Process is
       Process_Types.Deallocate (Final_Args);
       Process_Types.Deallocate (Final_Env);
       return Result;
+
+   exception
+      when others =>
+         Process_Types.Deallocate (Final_Args);
+         Process_Types.Deallocate (Final_Env);
+         raise;
    end Start;
 
    function Start
