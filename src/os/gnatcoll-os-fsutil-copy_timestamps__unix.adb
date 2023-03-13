@@ -21,14 +21,85 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
+with Interfaces.C; use Interfaces.C;
+with GNATCOLL.OS.FS;           use GNATCOLL.OS.FS;
+with GNATCOLL.OS.Stat;
+with GNATCOLL.OS.Libc;         use GNATCOLL.OS.Libc;
+with GNATCOLL.OS.Libc.Utime;   use GNATCOLL.OS.Libc.Utime;
+with Ada.Calendar;             use Ada.Calendar;
+with Ada.Calendar.Conversions; use Ada.Calendar.Conversions;
 
 separate (GNATCOLL.OS.FSUtil)
 function Copy_Timestamps
   (Src : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String) return Boolean
 is
-   pragma Warnings (Off, Src);
-   pragma Warnings (Off, Dst);
+
+   function Set_Modif_And_Access_Time
+     (File : UTF8.UTF_8_String; Modification : Time; Last_Access : Time)
+      return Boolean;
+   --  Set last modification and last access timestamp of specified file.
+   --  Success is set to false if an error occurs
+
+   function Set_Modif_And_Access_Time
+     (File : UTF8.UTF_8_String; Modification : Time; Last_Access : Time)
+      return Boolean
+   is
+
+      function To_Timespec (T : Time) return Timespec;
+      --  Translate Time in Timespec
+
+      function To_Timespec (T : Time) return Timespec is
+         Nano           : constant                        := 1_000_000_000;
+         Unix_Time_Nano : constant Interfaces.C.long_long :=
+           To_Unix_Nano_Time (T);
+         T_Spec         : Timespec;
+      begin
+         T_Spec.TV_Sec  := Interfaces.C.long (Unix_Time_Nano / Nano);
+         T_Spec.TV_NSec := Interfaces.C.long (Unix_Time_Nano mod Nano);
+
+         return T_Spec;
+      end To_Timespec;
+
+      Timespecs : Libc.Utime.Timespec_Array;
+   begin
+
+      Timespecs (1) := To_Timespec (Last_Access);
+      Timespecs (2) := To_Timespec (Modification);
+
+      declare
+         Status : Libc_Status;
+         FD     : File_Descriptor;
+      begin
+         FD := Open (File, Read_Mode);
+         if FD = Invalid_FD then
+            return False;
+         end if;
+
+         Status := Libc.Utime.Futimens (FD, Timespecs);
+         Close (FD);
+         if Status = Libc.Error then
+            return False;
+         end if;
+      end;
+
+      return True;
+
+   end Set_Modif_And_Access_Time;
+
+   File_Attr : File_Attributes;
 begin
-   return False;
+
+   File_Attr := GNATCOLL.OS.Stat.Stat (Src);
+   if not Exists (File_Attr) then
+      return False;
+   end if;
+
+   declare
+      T : constant Time := Modification_Time (File_Attr);
+   begin
+
+      --  Last modification and access are set to the same timestamp
+
+      return Set_Modif_And_Access_Time (Dst, T, T);
+   end;
 end Copy_Timestamps;
