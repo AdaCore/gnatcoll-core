@@ -83,6 +83,9 @@ package GNATCOLL.OS.FSUtil is
    --  SHA1_Digest is a fixed sized String. It can be used with both String
    --  and UTF_8_String.
 
+   function Remove_File (Path : UTF8.UTF_8_String) return Boolean;
+   --  Remove a file. Return True on success.
+
    function Copy_File
      (Src                  : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String;
       Preserve_Timestamps  : Boolean := False;

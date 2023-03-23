@@ -99,6 +99,12 @@ package body GNATCOLL.OS.FSUtil is
        Buffer_Size : Positive := FS.Default_Buffer_Size)
       return SHA256_Digest renames Internal_SHA256;
 
+   -----------------
+   -- Remove_File --
+   -----------------
+
+   function Remove_File (Path : UTF8.UTF_8_String) return Boolean is separate;
+
    ------------------
    -- Copy_Content --
    ------------------
