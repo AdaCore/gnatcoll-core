@@ -8,3 +8,5 @@ import os
 fileSizeInBytes = 4*1024*1024*1024 + 1024*1024
 with open('huge_file', 'wb') as fout:
     fout.write(os.urandom(fileSizeInBytes))
+
+os.mkdir("already_existing_dir")

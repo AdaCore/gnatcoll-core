@@ -166,4 +166,11 @@ package body GNATCOLL.OS.FSUtil is
      (Src : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String)
       return Boolean is separate;
 
+   ----------------------
+   -- Create_Directory --
+   ----------------------
+
+   function Create_Directory
+     (Path : UTF8.UTF_8_String) return Boolean is separate;
+
 end GNATCOLL.OS.FSUtil;

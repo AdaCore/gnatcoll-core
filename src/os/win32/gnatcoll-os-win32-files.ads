@@ -378,4 +378,10 @@ package GNATCOLL.OS.Win32.Files is
       return BOOL with
      Import => True, Convention => Stdcall, External_Name => "SetFileTime";
 
+   function CreateDirectory
+     (Path_Name           : C_WString;
+      Security_Attributes : LPSECURITY_ATTRIBUTES := null) return BOOL with
+     Import        => True, Convention => Stdcall,
+     External_Name => "CreateDirectoryW";
+
 end GNATCOLL.OS.Win32.Files;
