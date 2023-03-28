@@ -34,8 +34,14 @@ package body Memory_Statistics is
       Report : Report_Type := All_Reports)
       return String
    is
+
+      procedure Trace_Put (S : String);
+      procedure Trace_Put_Line (S : String);
+
       Buffer : Unbounded_String := To_Unbounded_String
-        (Image(Date => Clock, Time_Zone => Ada.Calendar.Time_Zones.UTC_Time_Offset) &
+        (Image
+           (Date => Clock,
+            Time_Zone => Ada.Calendar.Time_Zones.UTC_Time_Offset) &
          " " & Comment & " - Dump_Memory_Statistics at 0x" &
          System.Address_Image (Dump_Memory_Statistics'Address) & ASCII.LF);
 
@@ -113,7 +119,7 @@ package body Memory_Statistics is
    -------------------------
 
    function Get_Ada_Allocations return Watermark_Info is
-      Ada_Allocations : GNATCOLL.Memory.Watermark_Info :=
+      Ada_Allocations : constant GNATCOLL.Memory.Watermark_Info :=
         GNATCOLL.Memory.Get_Ada_Allocations;
    begin
       return
@@ -137,6 +143,5 @@ package body Memory_Statistics is
       return (High    => Byte_Count (Get_Peak_RSS),
               Current => Byte_Count (Get_Current_RSS));
    end Get_Allocations;
-
 
 end Memory_Statistics;
