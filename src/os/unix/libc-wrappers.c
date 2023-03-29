@@ -34,6 +34,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <ftw.h>
 #include <fcntl.h>
 #include <spawn.h>
 #include <unistd.h>
@@ -389,6 +390,30 @@ void __gnatcoll_readdir(DIR *dirp, struct gnatcoll_dirent *buf)
      buf->file_type = 0;
      buf->name[0] = '\0';
   }
+}
+
+
+static int rm_files(const char *pathname, const struct stat *sbuf, int type, struct FTW *ftwb)
+{
+    if(remove(pathname) < 0)
+    {
+        perror("ERROR: remove");
+        return -1;
+    }
+    return 0;
+}
+
+int __gnatcoll_rmdir(const char *pathname)
+{
+    /* Delete the directory and its contents by traversing the tree in reverse
+       order, without crossing mount boundaries and symbolic links */
+    if (nftw(pathname, rm_files, 100, FTW_DEPTH|FTW_MOUNT|FTW_PHYS) < 0)
+    {
+        perror("ERROR: ntfw");
+        return -1;
+    }
+
+    return 0;
 }
 
 /* Wrappers around errno are necessary as errno maybe a MACRO */

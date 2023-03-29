@@ -173,4 +173,11 @@ package body GNATCOLL.OS.FSUtil is
    function Create_Directory
      (Path : UTF8.UTF_8_String) return Boolean is separate;
 
+   ----------------------
+   -- Remove_Directory --
+   ----------------------
+
+   function Remove_Directory
+     (Path : UTF8.UTF_8_String) return Boolean is separate;
+
 end GNATCOLL.OS.FSUtil;

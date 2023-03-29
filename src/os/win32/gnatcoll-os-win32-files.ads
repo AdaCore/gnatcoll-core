@@ -384,4 +384,48 @@ package GNATCOLL.OS.Win32.Files is
      Import        => True, Convention => Stdcall,
      External_Name => "CreateDirectoryW";
 
+   subtype HWND is HANDLE;
+
+   FO_MOVE   : constant UINT := 1;
+   FO_COPY   : constant UINT := 2;
+   FO_DELETE : constant UINT := 3;
+   FO_RENAME : constant UINT := 4;
+
+   subtype FILEOP_FLAGS is UINT;
+
+   FOF_MULTIDESTFILES        : constant FILEOP_FLAGS := 16#0001#;
+   FOF_CONFIRMOUSE           : constant FILEOP_FLAGS := 16#0002#;
+   FOF_SILENT                : constant FILEOP_FLAGS := 16#0004#;
+   FOF_RENAMEONCOLLISION     : constant FILEOP_FLAGS := 16#0008#;
+   FOF_NOCONFIRMATION        : constant FILEOP_FLAGS := 16#0010#;
+   FOF_WANTMAPPINGHANDLE     : constant FILEOP_FLAGS := 16#0020#;
+   FOF_ALLOWUNDO             : constant FILEOP_FLAGS := 16#0040#;
+   FOF_FILESONLY             : constant FILEOP_FLAGS := 16#0080#;
+   FOF_SIMPLEPROGRESS        : constant FILEOP_FLAGS := 16#0100#;
+   FOF_NOCONFIRMMKDIR        : constant FILEOP_FLAGS := 16#0200#;
+   FOF_NOERRORUI             : constant FILEOP_FLAGS := 16#0400#;
+   FOF_NOCOPYSECURITYATTRIBS : constant FILEOP_FLAGS := 16#0800#;
+   FOF_NORECURSION           : constant FILEOP_FLAGS := 16#1000#;
+   FOF_NO_CONNECTED_ELEMENTS : constant FILEOP_FLAGS := 16#2000#;
+   FOF_WANTNUKEWARNING       : constant FILEOP_FLAGS := 16#4000#;
+   FOF_NO_UI                 : constant FILEOP_FLAGS :=
+     (FOF_SILENT or FOF_NOCONFIRMATION or FOF_NOERRORUI or FOF_NOCONFIRMMKDIR);
+
+   type SHFileOpStructW is record
+      Wnd                  : HWND;
+      Func                 : UINT;
+      From                 : C_WString;
+      To                   : C_WString;
+      Flags                : FILEOP_FLAGS;
+      AnyOperationsAborted : BOOL;
+      NameMappings         : LPVOID;
+      ProgressTitle        : C_WString;
+   end record with
+     Convention => C_Pass_By_Copy;
+
+   function SHFileOperation
+     (FileOp : in out SHFileOpStructW) return Integer with
+     Import        => True, Convention => Stdcall,
+     External_Name => "SHFileOperationW";
+
 end GNATCOLL.OS.Win32.Files;
