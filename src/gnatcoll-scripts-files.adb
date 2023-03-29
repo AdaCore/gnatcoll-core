@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2003-2021, AdaCore                     --
+--                     Copyright (C) 2003-2023, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -268,13 +268,14 @@ package body GNATCOLL.Scripts.Files is
          declare
             use GNATCOLL.Projects;
             Project        : constant GNATCOLL.Projects.Project_Type :=
-                               Get_Project (Info, Default_To_Root => True);
+              P.Root_Project;
             Is_Native      : constant Boolean := Project.Get_Target = "native"
               or else Project.Target_Same_As_Host
               or else Project.Get_Target = "";
             Include_Suffix : constant Boolean := Is_Native
               or else Project.Attribute_Value
-                (Attribute => Build ("Builder", "Executable_Suffix")) /= "";
+                (Attribute    => Build ("Builder", "Executable_Suffix"),
+                 Use_Extended => True) /= "";
          begin
             --  Don't include the suffix for non-native targets, unless if the
             --  Builder'Executable_Suffix has been explicitly set in the
