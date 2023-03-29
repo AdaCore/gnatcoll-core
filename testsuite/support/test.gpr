@@ -18,5 +18,6 @@ project Test is
         ("-g", "-O1", "-gnata", "-gnatyg", "-gnateE",
          "-gnatwaCJe", "-fstack-check", "-gnatw.P");
       for Switches ("C") use ("-g", "-Wunreachable-code");
+      for Switches ("s-memory.adb") use ("-gnatg") & Compiler'Switches ("Ada");
    end Compiler;
 end Test;

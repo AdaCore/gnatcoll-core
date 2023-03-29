@@ -15,7 +15,7 @@
 -- of the license.                                                          --
 ------------------------------------------------------------------------------
 
-with GNAT.Debug_Pools; use GNAT.Debug_Pools;
+with GNAT.Debug_Pools;
 
 pragma Warnings (Off);
 with System.Memory;
