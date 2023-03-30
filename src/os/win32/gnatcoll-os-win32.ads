@@ -66,6 +66,7 @@ package GNATCOLL.OS.Win32 is
    type PHANDLE is access all HANDLE;
    NULL_LPVOID : constant LPVOID := LPVOID (System.Null_Address);
    NULL_HANDLE : constant HANDLE := HANDLE (0);
+   INVALID_HANDLE_VALUE : constant HANDLE := HANDLE'Last;
 
    --  Unicode strings used by Windows Native interfaces
    type UNICODE_STRING is record
