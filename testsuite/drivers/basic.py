@@ -26,6 +26,9 @@ class BasicTestDriver(ClassicTestDriver):
     6- If you need to do some operation before compiling and running the test
        just create Python file called pre_test.py that will be executed in the
        test working dir.
+    7- If you need to do some operation after running the test just create 
+       Python file called post_test.py that will be executed in the
+       test working dir.
     """
 
     # We want to copy only specific files (files referenced by the "data" key
@@ -66,6 +69,12 @@ class BasicTestDriver(ClassicTestDriver):
             [os.path.join(self.test_env['working_dir'], test_exe)],
             timeout=self.default_process_timeout)
         self.output += process.out.decode('utf-8')
+
+        post_test_py = os.path.join(self.test_env['test_dir'], 'post_test.py')
+        if os.path.isfile(post_test_py):
+            check_call(self, [interpreter(), post_test_py],
+                       cwd=self.test_env['working_dir'],
+                       timeout=self.default_process_timeout)
 
     def compute_failures(self):
         return (['Success marker not found']
