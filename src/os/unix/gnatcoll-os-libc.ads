@@ -257,4 +257,18 @@ package GNATCOLL.OS.Libc is
         Convention    => C,
         External_Name => "__gnatcoll_set_errno";
 
+   function Symlink
+     (Target : C_String; Link_Path : C_String) return Libc_Status with
+     Import => True, Convention => C, External_Name => "symlink";
+   --
+   function SymlinkAt
+     (Target : C_String; New_Dir_FD : FS.File_Descriptor; Link_Path : C_String)
+      return Libc_Status with
+     Import => True, Convention => C, External_Name => "symlinkat";
+
+   function ReadLink
+     (Path_Name : C_String; Buf : out char_array; Buf_Size : Uint_64)
+      return Sint_64 with
+     Import => True, Convention => C, External_Name => "readlink";
+
 end GNATCOLL.OS.Libc;
