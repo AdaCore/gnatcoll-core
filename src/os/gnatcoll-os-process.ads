@@ -168,13 +168,23 @@ package GNATCOLL.OS.Process is
    function State (H : Process_Handle) return Process_State;
    --  Return the process state
 
+   INFINITE_TIMEOUT : constant Duration := 4_294_967.0;
+   --  Beyond that value timeouts are considered to be infinite. This
+   --  corresponds roughly to a bit more than 49 days. The value comes from
+   --  the fact that on Windows the max timeout that can be used is
+   --  2 ** 16 - 1 (4_294_967_294) milliseconds. Using that special value
+   --  rather than a special negative value, ensures good arithmetic properties
+   --  and protection against overflows.
+
    function Wait_For_Processes
-      (Processes : Process_Array;
-       Timeout   : Duration)
+     (Processes : Process_Array;
+      Timeout   : Duration := INFINITE_TIMEOUT)
       return Process_Handle;
    --  Wait for multiple processes and return the first process for which
    --  state is WAITABLE. If the timeout is reached or there is no process in
-   --  a WAITABLE state then Invalid_Handle is returned.
+   --  a WAITABLE state then Invalid_Handle is returned. If INFINITE_TIMEOUT or
+   --  greater value is used as Timeout value then the function wait
+   --  indefinitely.
    --
    --  Unix limitations: the maximum length for Processes is 1024,
    --  and the number of simultaneous calls per process to that function is
