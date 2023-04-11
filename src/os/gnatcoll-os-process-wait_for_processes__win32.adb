@@ -27,8 +27,8 @@ with GNATCOLL.OS.Win32; use GNATCOLL.OS.Win32;
 separate (GNATCOLL.OS.Process)
 
 function Wait_For_Processes
-   (Processes : Process_Array;
-    Timeout   : Duration)
+  (Processes : Process_Array;
+   Timeout   : Duration := INFINITE_TIMEOUT)
    return Process_Handle
 is
    Result                : Process_Handle := Invalid_Handle;
@@ -59,10 +59,14 @@ begin
       raise OS_Error with "cannot wait for more than 64 processes";
    end if;
 
-   if Timeout < 0.0 then
+   if Timeout >= INFINITE_TIMEOUT then
+      --  if Timeout > 4294967 it means we will overflow DWORD'Last after
+      --  multiplication by 1000.0. In that case use INFINITE as timeout
       Milliseconds_Timeout := INFINITE;
-   else
+   elsif Timeout > 0.0 then
       Milliseconds_Timeout := DWORD (Timeout * 1000.0);
+   else
+      Milliseconds_Timeout := 0;
    end if;
 
    Wait_Result := WaitForMultipleObjects

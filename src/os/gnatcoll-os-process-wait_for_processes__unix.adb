@@ -29,8 +29,8 @@ with GNAT.Task_Lock;
 separate (GNATCOLL.OS.Process)
 
 function Wait_For_Processes
-   (Processes : Process_Array;
-    Timeout   : Duration)
+  (Processes : Process_Array;
+   Timeout   : Duration := INFINITE_TIMEOUT)
    return Process_Handle
 is
    package FS renames GNATCOLL.OS.FS;
@@ -84,7 +84,8 @@ is
    Pipe_Read, Pipe_Write : OS.FS.File_Descriptor;
    Status                : Libc_Status;
    Result                : Process_Handle := Process.Invalid_Handle;
-   End_Time              : constant Cal.Time := Cal.Clock + Timeout;
+   End_Time              : Cal.Time;
+   Is_Infinite_Timeout   : Boolean := False;
    --  Maximum end time
 
    --------------------------------
@@ -157,9 +158,13 @@ begin
       return Result;
    end if;
 
-   if Timeout = 0.0 then
+   if Timeout <= 0.0 then
       --  No need to wait
       return Result;
+   elsif Timeout >= INFINITE_TIMEOUT then
+      Is_Infinite_Timeout := True;
+   else
+      End_Time := Cal.Clock + Timeout;
    end if;
 
    --  Put in place the monitoring infrastructure
@@ -181,12 +186,13 @@ begin
       declare
          --  Remaining max waiting time in microseconds
          Microsecond_Timeout : constant Sint_64 :=
-            Sint_64 ((End_Time - Cal.Clock) * 1_000_000);
+            (if Is_Infinite_Timeout
+             then -1
+             else Sint_64 ((End_Time - Cal.Clock) * 1_000_000));
       begin
-
          --  Exit when timeout is reached and Timeout is not infinite
          --  (i.e < 0.0)
-         if Microsecond_Timeout < 0 and then Timeout > 0.0 then
+         if Microsecond_Timeout < 0 and then not Is_Infinite_Timeout then
             exit;
          end if;
 
