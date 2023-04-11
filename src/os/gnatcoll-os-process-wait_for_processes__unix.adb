@@ -31,7 +31,7 @@ separate (GNATCOLL.OS.Process)
 function Wait_For_Processes
   (Processes : Process_Array;
    Timeout   : Duration := INFINITE_TIMEOUT)
-   return Process_Handle
+   return Integer
 is
    package FS renames GNATCOLL.OS.FS;
    package Cal renames Ada.Calendar;
@@ -69,9 +69,10 @@ is
    --  Wait during timeout (in microseconds) for a write on Fd. If Timeout is
    --  < 0 then infinite is assumed.
 
-   function Get_First_Waitable_Process return Process.Process_Handle;
+   function Get_First_Waitable_Process return Integer;
    --  Loop other the monitored processes and returned the first process in the
-   --  WAITABLE state.
+   --  WAITABLE state. If no process is in WAITABLE state, return WAIT_TIMEOUT
+   --  if at least one is in RUNNING state. Otherwise return WAIT_NO_PROCESS.
 
    procedure Init_SIGCHLD_Monitoring
    with Inline => True;
@@ -83,7 +84,7 @@ is
 
    Pipe_Read, Pipe_Write : OS.FS.File_Descriptor;
    Status                : Libc_Status;
-   Result                : Process_Handle := Process.Invalid_Handle;
+   Result                : Integer := WAIT_NO_PROCESS;
    End_Time              : Cal.Time;
    Is_Infinite_Timeout   : Boolean := False;
    --  Maximum end time
@@ -92,15 +93,18 @@ is
    -- Get_First_Waitable_Process --
    --------------------------------
 
-   function Get_First_Waitable_Process return Process.Process_Handle is
+   function Get_First_Waitable_Process return Integer is
+      Result : Integer := WAIT_NO_PROCESS;
    begin
       for Index in Processes'Range loop
          if State (Processes (Index)) = WAITABLE then
-            return Processes (Index);
+            return Index;
+         elsif State (Processes (Index)) = RUNNING then
+            Result := WAIT_TIMEOUT;
          end if;
       end loop;
 
-      return Invalid_Handle;
+      return Result;
    end Get_First_Waitable_Process;
 
    -----------------------------
@@ -154,7 +158,7 @@ begin
 
    --  Perform a first check that will avoid need for locks, ...
    Result := Get_First_Waitable_Process;
-   if Result /= Process.Invalid_Handle then
+   if Result /= WAIT_TIMEOUT then
       return Result;
    end if;
 
@@ -176,7 +180,7 @@ begin
    --  check
    Result := Get_First_Waitable_Process;
 
-   if Result /= Process.Invalid_Handle then
+   if Result /= WAIT_TIMEOUT then
       Finalize_SIGCHLD_Monitoring;
       return Result;
    end if;
@@ -203,7 +207,7 @@ begin
             --  A SIGCHLD has been received. Check if the process is in our
             --  list.
             Result := Get_First_Waitable_Process;
-            if Result /= Invalid_Handle then
+            if Result /= WAIT_TIMEOUT then
                exit;
             end if;
          end if;
