@@ -75,6 +75,11 @@ class BasicTestDriver(ClassicTestDriver):
             timeout=self.default_process_timeout)
         self.output += process.out.decode('utf-8')
 
+        # Store result output, so the python post test can access it if needed.
+        result_file = open(os.path.join(self.test_env['working_dir'], "test_results.out"), "w")
+        result_file.write(self.output.__str__())
+        result_file.close()
+
         post_test_py = os.path.join(self.test_env['test_dir'], 'post_test.py')
         if os.path.isfile(post_test_py):
             check_call(self, [interpreter(), post_test_py],
