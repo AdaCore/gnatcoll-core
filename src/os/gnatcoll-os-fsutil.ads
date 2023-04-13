@@ -119,6 +119,11 @@ package GNATCOLL.OS.FSUtil is
       return Boolean;
    --  Return the symbolic link target path. Return True on success.
 
+   function Copy_Symbolic_Link
+     (Src_Path : UTF8.UTF_8_String; Dst_Path : UTF8.UTF_8_String)
+     return Boolean;
+   --  Copy a symbolic link. Return True on success.
+
    function Symbolic_Link_Is_Internal
      (Top_Dir_Path : UTF8.UTF_8_String; Link_Path : UTF8.UTF_8_String)
      return Boolean;

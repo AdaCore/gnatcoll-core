@@ -347,9 +347,55 @@ begin
          end;
          Dir.Close (DH);
       end;
-
-      return A.Report;
-
    end;
+
+   --  Test symbolic link copy
+   declare
+      Target_Name    : constant String := "file";
+      Link_Name      : constant String := "file_link";
+      Link_Copy_Name : constant String := "file_link_copy";
+      FA             : Stat.File_Attributes;
+   begin
+
+      FD := Open (Target_Name, Mode => Write_Mode);
+      Write (FD, "Input content");
+      Close (FD);
+
+      A.Assert (Check_File_Content (Target_Name, "Input content"));
+
+      A.Assert (Create_Symbolic_Link (Link_Name, Target_Name));
+      A.Assert (Check_File_Content (Link_Name, "Input content"));
+      FA := Stat.Stat (Link_Name, Follow_Symlinks => False);
+      A.Assert (Stat.Is_Symbolic_Link (FA));
+      FA := Stat.Stat (Link_Name, Follow_Symlinks => True);
+      A.Assert (Stat.Is_File (FA));
+      A.Assert (not Create_Symbolic_Link (Link_Name, Target_Name));
+
+      A.Assert (Copy_Symbolic_Link (Link_Name, Link_Copy_Name));
+      A.Assert (Check_File_Content (Link_Copy_Name, "Input content"));
+      FA := Stat.Stat (Link_Copy_Name, Follow_Symlinks => False);
+      A.Assert (Stat.Is_Symbolic_Link (FA));
+      FA := Stat.Stat (Link_Copy_Name, Follow_Symlinks => True);
+      A.Assert (Stat.Is_File (FA));
+
+      declare
+         Target_Path      : Unbounded_String;
+         Target_Path_Copy : Unbounded_String;
+      begin
+         A.Assert (Read_Symbolic_Link (Link_Name, Target_Path));
+         A.Assert (Read_Symbolic_Link (Link_Copy_Name, Target_Path_Copy));
+         A.Assert (To_String (Target_Path) = Target_Name);
+         A.Assert (To_String (Target_Path_Copy) = Target_Name);
+      end;
+
+      A.Assert (Remove_File (Link_Name));
+      A.Assert (Remove_File (Link_Copy_Name));
+
+      --  Ensure that we do not erase the target when removing the link
+      A.Assert (Check_File_Content (Target_Name, "Input content"));
+      A.Assert (Remove_File (Target_Name));
+   end;
+
+   return A.Report;
 
 end Test;
