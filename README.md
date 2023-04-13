@@ -13,8 +13,7 @@ Dependencies
 ------------
 
 GNATCOLL requires a recent GNAT compiler. Building it also requires
-GPRbuild. GNATCOLL.Projects depends on LIBGPR library which is bundled with
-the GNAT installations provided by AdaCore, and is otherwise part of
+GPRbuild. GNATCOLL.Projects depends on LIBGPR library which is part of
 GPRbuild project.
 
 Configuring the build process
