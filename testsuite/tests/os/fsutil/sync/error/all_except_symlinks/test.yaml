@@ -1,0 +1,2 @@
+description: Test for GNATCOLL.OS.FSUtil.Sync_Trees errors, except the ones
+             involving symbolic links

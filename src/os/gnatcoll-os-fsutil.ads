@@ -135,4 +135,34 @@ package GNATCOLL.OS.FSUtil is
    --    top directory. For example, the path `../top_dir/my_file`, under
    --    the top directory `top_dir`, is external.
 
+   type Sync_Trees_Mode is (TIMESTAMP, CHECKSUM);
+   --  Comparison modes used to decide if a file shall be synchronized.
+   --  TIMESTAMP: the timestamp of the file is checked, coupled with the
+   --  file length. Faster than CHECKSUM mode, but can make errors.
+   --  CHECKSUM: Files content are compared.
+
+   type Sync_Trees_Symlink_Mode is
+     (SKIP_SYMLINKS,
+     --  Skip symbolic links
+
+     COPY_SYMLINKS,
+     --  Copy symbolic links
+
+     COPY_SYMLINKS_TARGET,
+     --  Copies symbolic links target instead of the link itself
+
+     COPY_SAFE_SYMLINKS,
+     --  Copy only internal symbolic links, and skip external links
+
+     COPY_UNSAFE_SYMLINKS);
+   --  Copy internal symbolic links, and copy external symbolic links
+   --  targets
+
+   function Sync_Trees
+     (Src          : UTF8.UTF_8_String; Dst : String; Mode : Sync_Trees_Mode;
+      Symlink_Mode : Sync_Trees_Symlink_Mode := SKIP_SYMLINKS) return Boolean;
+   --  Synchronize source and destination directories. Source directory is
+   --  copied to the destination one, and entities only present in destination
+   --  directory are removed.
+
 end GNATCOLL.OS.FSUtil;
