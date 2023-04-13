@@ -611,9 +611,27 @@ package body GNATCOLL.OS.Process is
 
    function Wait (H : Process_Handle) return Integer is separate;
 
+   ------------------------
+   -- Wait_For_Processes --
+   ------------------------
+
    function Wait_For_Processes
      (Processes : Process_Array;
       Timeout   : Duration := INFINITE_TIMEOUT)
-      return Process_Handle is separate;
+      return Integer is separate;
+
+   function Wait_For_Processes
+     (Processes : Process_Array;
+      Timeout   : Duration := INFINITE_TIMEOUT)
+      return Process_Handle
+   is
+      Result : constant Integer := Wait_For_Processes (Processes, Timeout);
+   begin
+      if Result < 0 then
+         return Invalid_Handle;
+      else
+         return Processes (Result);
+      end if;
+   end Wait_For_Processes;
 
 end GNATCOLL.OS.Process;

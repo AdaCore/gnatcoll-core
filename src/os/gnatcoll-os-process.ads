@@ -176,21 +176,35 @@ package GNATCOLL.OS.Process is
    --  rather than a special negative value, ensures good arithmetic properties
    --  and protection against overflows.
 
+   WAIT_NO_PROCESS : constant Integer := -1;
+   WAIT_TIMEOUT    : constant Integer := -2;
+
+   function Wait_For_Processes
+     (Processes : Process_Array;
+      Timeout   : Duration := INFINITE_TIMEOUT)
+     return Integer;
+   --  Wait for multiple processes and return the index of the first process
+   --  for which state is WAITABLE. If the timeout is reached then WAIT_TIMEOUT
+   --  is returned. If there is no process RUNNING then WAIT_NO_PROCESS is
+   --  returned.
+   --
+   --  If INFINITE_TIMEOUT or greater value is used as Timeout value then the
+   --  function waits indefinitely.
+   --
+   --  Unix limitations: there is no maximum length for Processes,
+   --  and the number of simultaneous calls per process to that function is
+   --  256.
+   --
+   --  Windows limitation: the maximum length for Processes is 4096. Note that
+   --  beyond 64 processes some foreign native threads are used.
+
    function Wait_For_Processes
      (Processes : Process_Array;
       Timeout   : Duration := INFINITE_TIMEOUT)
       return Process_Handle;
-   --  Wait for multiple processes and return the first process for which
-   --  state is WAITABLE. If the timeout is reached or there is no process in
-   --  a WAITABLE state then Invalid_Handle is returned. If INFINITE_TIMEOUT or
-   --  greater value is used as Timeout value then the function wait
-   --  indefinitely.
-   --
-   --  Unix limitations: the maximum length for Processes is 1024,
-   --  and the number of simultaneous calls per process to that function is
-   --  256.
-   --
-   --  Windows limitation: the maximum length for Processes is 64.
+   --  Same as previous function except that the Handle is returned instead of
+   --  the index in Processes. Note that if the status was WAIT_TIMEOUT or
+   --  WAIT_NO_PROCESS then Invalid_Handle is returned.
 
    function Run
       (Args        : Argument_List;

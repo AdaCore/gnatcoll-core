@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                       Copyright (C) 2021, AdaCore                        --
+--                   Copyright (C) 2021-2023, AdaCore                       --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -81,6 +81,20 @@ package GNATCOLL.OS.Win32.Process is
    with Import        => True,
         Convention    => Stdcall,
         External_Name => "WaitForMultipleObjects";
+
+   function ThreadedWaitForMultipleObjects
+      (Count        : DWORD;
+       Handles      : LPVOID;
+       WaitForAll   : BOOL;
+       Milliseconds : DWORD)
+      return Integer
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_wait_for_multiple_objects";
+   --  Alternative to WaitForMultipleObjects that can wait for up to 4096
+   --  handles instead of 64. Note that the function returns -1 in case of
+   --  error, -2 in case of timeout, and in case of success the index in
+   --  Handles of the signaled or abandoned object.
 
    INFINITE         : constant DWORD := 16#ffffffff#;
    WAIT_OBJECT_0    : constant DWORD := 16#00000000#;
