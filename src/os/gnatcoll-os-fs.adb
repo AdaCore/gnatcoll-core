@@ -21,7 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces.C; use Interfaces.C;
+with Interfaces.C;     use Interfaces.C;
 with System;
 
 package body GNATCOLL.OS.FS is

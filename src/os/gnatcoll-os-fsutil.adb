@@ -22,11 +22,18 @@
 ------------------------------------------------------------------------------
 
 with Ada.Unchecked_Deallocation;
+with GNATCOLL.OS.Stat; use GNATCOLL.OS.Stat;
 
 package body GNATCOLL.OS.FSUtil is
 
    type String_Access is access String;
    procedure Free is new Ada.Unchecked_Deallocation (String, String_Access);
+
+   function Copy_File_Content
+     (Src : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String) return Boolean;
+   --  Copy file content. Return True on success.
+   --  Raises a CONSTRAINT_ERROR exception if the source file
+   --  length can not be contained in a SInt_64.
 
    -------------
    -- Process --
@@ -91,5 +98,66 @@ package body GNATCOLL.OS.FSUtil is
       (Path        : UTF8.UTF_8_String;
        Buffer_Size : Positive := FS.Default_Buffer_Size)
       return SHA256_Digest renames Internal_SHA256;
+
+   ------------------
+   -- Copy_Content --
+   ------------------
+
+   function Copy_File_Content
+     (Src : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String)
+      return Boolean is separate;
+
+   ---------------
+   -- Copy_File --
+   ---------------
+
+   function Copy_File
+     (Src                  : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String;
+      Preserve_Timestamps  : Boolean := False;
+      Preserve_Permissions : Boolean := False) return Boolean
+   is
+      Src_File_Attr : File_Attributes;
+
+   begin
+      Src_File_Attr := GNATCOLL.OS.Stat.Stat (Src);
+      if not Exists (Src_File_Attr) or else not Is_File (Src_File_Attr) then
+         --  File does not exist, or is not a regular file.
+         return False;
+      end if;
+
+      if not Copy_File_Content (Src, Dst) then
+         return False;
+      end if;
+
+      if Preserve_Permissions then
+         if not Copy_Permissions (Src, Dst) then
+            return False;
+         end if;
+      end if;
+
+      if Preserve_Timestamps then
+         if not Copy_Timestamps (Src, Dst) then
+            return False;
+         end if;
+      end if;
+
+      return True;
+   end Copy_File;
+
+   ---------------------
+   -- Copy_Timestamps --
+   ---------------------
+
+   function Copy_Timestamps
+     (Src : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String)
+      return Boolean is separate;
+
+   ----------------------
+   -- Copy_Permissions --
+   ----------------------
+
+   function Copy_Permissions
+     (Src : UTF8.UTF_8_String; Dst : UTF8.UTF_8_String)
+      return Boolean is separate;
 
 end GNATCOLL.OS.FSUtil;
