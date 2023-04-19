@@ -1,5 +1,2 @@
 title: GNATCOLL.OS.FSUtil test
 data: ["data.txt"]
-control:
-    - [XFAIL, "'x86-linux' in env.target.platform",
-       "W417-016 - Under unvestigation. Interface between Ada code and C sendfile is incorrect for 32 bits systems."]
