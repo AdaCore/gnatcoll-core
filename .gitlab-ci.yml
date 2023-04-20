@@ -1,0 +1,35 @@
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: always
+
+variables:
+   ANOD_DEFAULT_SANDBOX_DIR: /it/wave
+   HOST: x86_64-linux
+
+stages:
+  - test
+
+build_and_test:
+  services:
+    - image:sandbox
+    - cpu:8
+    - mem:16
+  stage: test
+  script:
+    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+    - anod build --latest gnatcoll-core-doc
+    - anod build --latest gnatcoll-core
+    - anod test  --latest gnatcoll-core
+    # TODO: replace build space by something computed
+    - e3-testsuite-report
+        --failure-exit-code 1
+        --xunit-output $CI_PROJECT_DIR/test.xml
+        --xunit-name gnatcoll-core
+        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test/results/new/ || exit 1
+  interruptible: true
+  artifacts:
+    paths:
+      - test.xml
+    reports:
+      junit: test.xml
