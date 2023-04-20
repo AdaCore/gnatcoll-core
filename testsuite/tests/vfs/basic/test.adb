@@ -28,6 +28,7 @@ with GNATCOLL.OS.Constants; use GNATCOLL.OS, GNATCOLL.OS.Constants;
 
 with Ada.Directories;
 with Ada.Containers.Hashed_Maps;
+with Ada.Environment_Variables;
 with Interfaces.C.Strings;
 
 with Test_Assert;
@@ -46,7 +47,10 @@ function Test return Integer is
       Str         : String_Access;
       Success     : Boolean;
       Dirs, Files : File_Array_Access;
+      Root        : Boolean;
    begin
+      Root := Ada.Environment_Variables.Value ("USER") = "root";
+
       --  A file that does not exist yet
       F := Create_From_Dir
         (Dir => Dir, Base_Name => "foo.txt");
@@ -80,14 +84,13 @@ function Test return Integer is
 
       Set_Readable (F, False);
       A.Assert (Is_Regular_File (F), "is regular file when unreadable");
-      A.Assert (not Is_Readable (F) or else OS = Windows, "is readable");
+      A.Assert (not Is_Readable (F) or else OS = Windows or else Root,
+                "is readable");
 
       --  Try and read the file
 
       Str := Read_File (F);
-      if Str /= null then
-         A.Assert (False, "can read unreadable file?");
-      end if;
+      A.Assert (Str = null or Root, "can read unreadable file?");
       Free (Str);
 
       --  Make it readable again, and read again
@@ -101,7 +104,8 @@ function Test return Integer is
       --  Make the file read-only
 
       Set_Writable (F, False);
-      A.Assert (not Is_Writable (F) or else OS = Windows, "is writable");
+      A.Assert (not Is_Writable (F) or else OS = Windows or else Root,
+                "is writable");
 
       --  Check directory operations
 
