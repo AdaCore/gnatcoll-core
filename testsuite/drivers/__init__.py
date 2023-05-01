@@ -170,7 +170,7 @@ def gprbuild(driver,
     return True
 
 
-def bin_check_call(driver, cmd, test_name=None, result=None, timeout=None,
+def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
                env=None, cwd=None):
 
     if cwd is None and "working_dir" in driver.test_env:
@@ -240,7 +240,7 @@ def bin_check_call(driver, cmd, test_name=None, result=None, timeout=None,
     return process
 
 
-def run_test_program(driver, cmd, test_name=None, result=None, **kwargs):
+def run_test_program(driver, cmd, slot, test_name=None, result=None, **kwargs):
     """
     Run a test program. This dispatches to running it under Valgrind or
     "gnatcov run", depending on the testsuite options.
@@ -255,7 +255,7 @@ def run_test_program(driver, cmd, test_name=None, result=None, **kwargs):
     else:
         wrapper = bin_check_call
 
-    return wrapper(driver, cmd, test_name, result, **kwargs)
+    return wrapper(driver, cmd, slot, test_name, result, **kwargs)
 
 
 class GNATcollTestDriver(TestDriver):
@@ -268,5 +268,5 @@ class GNATcollTestDriver(TestDriver):
         """Timeout (in seconds) for subprocess to launch."""
         return self.test_env.get('timeout', self.DEFAULT_TIMEOUT)
 
-    def run_test_program(self, cmd, test_name=None, result=None, **kwargs):
-        return run_test_program(self, cmd, test_name, result, **kwargs)
+    def run_test_program(self, cmd, slot, test_name=None, result=None, **kwargs):
+        return run_test_program(self, cmd, slot, test_name, result, **kwargs)

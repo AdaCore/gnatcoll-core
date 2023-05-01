@@ -37,6 +37,7 @@ class BuildAndRunDriver(ClassicTestDriver):
         process = run_test_program(
             self,
             [self.working_dir("test")],
+            self.slot,
             timeout=self.default_process_timeout
         )
         self.output += process.out.decode('utf-8')
