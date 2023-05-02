@@ -23,6 +23,7 @@
 with GNATCOLL.OS.FS;
 with GNATCOLL.OS.Libc_Constants;
 with Interfaces.C; use Interfaces.C;
+with GNATCOLL.Memory;
 
 package GNATCOLL.OS.Libc is
 
@@ -187,15 +188,29 @@ package GNATCOLL.OS.Libc is
         Convention    => C,
         External_Name => "getcwd";
 
+   subtype Send_File_Count is GNATCOLL.Memory.size_t range 0 .. 16#7ffff000#;
+   --  sendfile() will transfer at most 0x7ffff000 (2,147,479,552) bytes
+
    --  See Posix sendfile documentation
-   --  A fallback implementation is used for system whithout sendfile.
    function Send_File
-     (Out_Fd : FS.File_Descriptor;
-      In_Fd : FS.File_Descriptor;
-      Offset : access Uint_64;
-      Count : Uint_64)
-     return Sint_64;
-   pragma Import (C, Send_File, "__gnatcoll_sendfile");
+     (Out_Fd     : FS.File_Descriptor;
+      In_Fd      : FS.File_Descriptor;
+      Count      : Send_File_Count;
+      Error_Code : not null access Integer)
+      return GNATCOLL.Memory.ssize_t
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_sendfile";
+
+   function Read_Write_Copy
+     (Out_Fd     : FS.File_Descriptor;
+      In_Fd      : FS.File_Descriptor;
+      Count      : GNATCOLL.Memory.ssize_t;
+      Error_Code : not null access Integer)
+      return GNATCOLL.Memory.ssize_t
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_rw_copy";
 
    --  See Posix setpriority documentation
    function Setpriority (Which : Priority_Target;
@@ -216,6 +231,9 @@ package GNATCOLL.OS.Libc is
 
    EPERM : constant Integer := 1;
    --  EPERM is set to 1 on all supported system
+
+   EINVAL : constant Integer := 22;
+   ENOSYS : constant Integer := 38;
 
    function Errno return Integer
    with Import        => True,

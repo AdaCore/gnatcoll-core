@@ -23,6 +23,7 @@
 
 with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
 with GNATCOLL.OS.FS;   use GNATCOLL.OS.FS;
+with GNATCOLL.Memory;  use GNATCOLL.Memory;
 
 separate (GNATCOLL.OS.FSUtil)
 function Copy_File_Content
@@ -48,23 +49,49 @@ begin
    end if;
 
    declare
-      type Ref_UInt_64 is access Uint_64;
-      Count            : constant Uint_64 := Uint_64 (Length (Src_File_Attr));
-      Nb_Bytes_Written : Sint_64;
-      Offset           : constant Ref_UInt_64 := new Uint_64'(0);
+      Count            : Long_Long_Integer := Length (Src_File_Attr);
+      Nb_Bytes_Written : GNATCOLL.Memory.ssize_t;
+      Err_Code         : aliased Integer;
+      Count_S          : Send_File_Count;
+      Ret              : Boolean           := True;
    begin
-      Nb_Bytes_Written := Send_File (Dst_FD, Src_FD, Offset, Count);
+
+      while Count > 0 loop
+         --  Count is 64 bits long, even for 32 bits systems. Need to split
+         --  the count in several sub count for 32 bits systems.
+         Count_S :=
+           Send_File_Count
+             (Long_Long_Integer'Min
+                (Long_Long_Integer (Send_File_Count'Last), Count));
+
+         Nb_Bytes_Written :=
+           Send_File (Dst_FD, Src_FD, Count_S, Err_Code'Access);
+         if Nb_Bytes_Written = -1 then
+
+            if Err_Code = EINVAL or Err_Code = ENOSYS then
+               --  Fallback to Read/write copy.
+               Nb_Bytes_Written :=
+                 Read_Write_Copy
+                   (Dst_FD, Src_FD,
+                    ssize_t
+                      (Long_Long_Integer'Min
+                         (Long_Long_Integer (ssize_t'Last), Count)),
+                    Err_Code'Access);
+               if Nb_Bytes_Written = -1 then
+                  Ret := False;
+               end if;
+            else
+               Ret := False;
+            end if;
+         end if;
+
+         exit when Ret = False;
+         Count := Count - Long_Long_Integer (Nb_Bytes_Written);
+      end loop;
 
       Close (Src_FD);
       Close (Dst_FD);
+      return Ret;
 
-      --  This cast may raise a constraint error is count is superior to
-      --  Sint_64 maximum value. Nevertheless, we do not handle it, as this
-      --  would be too costly compared to the number of occurences.
-      if Nb_Bytes_Written /= Sint_64 (Count) then
-         return False;
-      end if;
    end;
-
-   return True;
 end Copy_File_Content;

@@ -228,75 +228,71 @@ int __gnatcoll_posix_fadvise(int fd, sint_64 offset, sint_64 length,int advice)
 #endif
 }
 
-#if defined(__linux__)
-/* sendfile will transfer at most 0x7ffff000 (2,147,479,552) bytes */
-#define SENDFILE_MAX_COUNT (2*1024*1024*1024LLU - 4096LLU)
-#else
-#define READ_WRITE_BUF_SIZE (64*1024)
-#endif
+#define READ_WRITE_BUF_SIZE (64 * 1024)
 
-ssize_t __gnatcoll_sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
-{
-#if defined(__linux__)
-    ssize_t ret = 0, tmp;
+/* Read/write copy.
+ * Return the number of bytes copied, or -1 in case of error with errcode set.
+ */
+ssize_t __gnatcoll_rw_copy(int out_fd, int in_fd, ssize_t count, int *errcode) {
+  ssize_t ret, remaining_count, sub_count;
+  uint8_t *buffer;
 
-    while(count > 0){
-        if(count > SENDFILE_MAX_COUNT){
-            count -= SENDFILE_MAX_COUNT;
+  *errcode = 0;
+  buffer = malloc(READ_WRITE_BUF_SIZE * sizeof(uint8_t));
+  if (buffer == NULL) {
+    *errcode = ENOMEM;
+    return -1;
+  }
 
-            tmp = sendfile(out_fd, in_fd, offset, SENDFILE_MAX_COUNT);
-            ret += tmp;
-
-            if(tmp != SENDFILE_MAX_COUNT){
-                return ret;
-            }
-        }else{
-            ret += sendfile(out_fd, in_fd, offset, count);
-            count = 0;
-        }
+  remaining_count = count;
+  while (remaining_count > 0) {
+    if (remaining_count > READ_WRITE_BUF_SIZE) {
+      sub_count = READ_WRITE_BUF_SIZE;
+    } else {
+      sub_count = remaining_count;
     }
 
-    return ret;
-#else
-    /* Sendfile is not available on all UNIX systems.
-     * Basic POSIX system calls are used instead in these cases. */
-    size_t buf_size, remaining_count, sub_count;
-    ssize_t ret;
-    uint8_t *buffer;
+    remaining_count -= sub_count;
 
-    buffer = malloc(READ_WRITE_BUF_SIZE * sizeof(uint8_t));
-    if(buffer == NULL){
-        errno = ENOMEM;
-        return -1;
+    ret = read(in_fd, buffer, sub_count);
+    if (ret != sub_count) {
+      *errcode = EBADF;
+      break;
     }
 
-    remaining_count = count;
-    while (remaining_count > 0){
-        if(remaining_count > READ_WRITE_BUF_SIZE){
-            sub_count = READ_WRITE_BUF_SIZE;
-        }else{
-            sub_count = remaining_count;
-        }
-
-        remaining_count -= sub_count;
-
-        ret = read(in_fd, buffer, sub_count);
-        if(ret != sub_count){
-            free(buffer);
-            errno = EBADF;
-            return -1;
-        }
-
-        ret = write(out_fd, buffer, sub_count);
-        if(ret != sub_count){
-            free(buffer);
-            errno = EBADF;
-            return -1;
-        }
+    ret = write(out_fd, buffer, sub_count);
+    if (ret != sub_count) {
+      *errcode = EBADF;
+      break;
     }
+  }
 
-    free(buffer);
+  free(buffer);
+  if (*errcode != 0) {
+    return -1;
+  } else {
     return count;
+  }
+}
+
+/*
+ * Sendfile wrapper. If sendfile does not exist, then errcode is set to ENOSYS,
+ * and -1 is returned.
+ *
+ * Return the number of bytes copied, or -1 in case of error with errcode set.
+ */
+ssize_t __gnatcoll_sendfile(int in_fd, int out_fd, size_t count, int *errcode) {
+#if defined(__linux__)
+  ssize_t res = sendfile(in_fd, out_fd, NULL, count);
+  if (res == -1) {
+    *errcode = errno;
+  } else {
+    *errcode = 0;
+  }
+  return res;
+#else
+  *errcode = ENOSYS;
+  return -1;
 #endif
 }
 

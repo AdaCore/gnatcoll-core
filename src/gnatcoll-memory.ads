@@ -66,6 +66,11 @@ package GNATCOLL.Memory is
    --  Same as System.Memory.size_t, but defined here to avoid elaboration
    --  circularity issues
 
+   type ssize_t is
+     range -(2**(Standard'Address_Size - 1)) ..
+         2**(Standard'Address_Size - 1) - 1;
+   --  Signed version of size_t.
+
    function Alloc (Size : size_t) return System.Address;
    --  This is the low level allocation routine. Given a size in storage
    --  units, it returns the address of a maximally aligned block of
