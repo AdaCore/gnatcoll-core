@@ -28,13 +28,10 @@ class MyTestsuite(Testsuite):
 
     def add_options(self, parser):
         parser.add_argument(
-            '--gcov',
-            help="compute code coverage of GNATcoll with gcov",
-            default=False,
-            action="store_true")
-        parser.add_argument(
             '--gnatcov',
-            help="compute code coverage of GNATcoll with GNATcoverage",
+            help="compute code coverage of GNATcoll with GNATcoverage." +
+            " Not compatible with the --recompile option." +
+            " If both are specified, only --recompile is used",
             default=False,
             action="store_true")
         parser.add_argument(
@@ -43,128 +40,46 @@ class MyTestsuite(Testsuite):
             action="store_true")
         parser.add_argument(
             '--recompile',
-            help="recompile debug version of gnatcoll for testing",
+            help="recompile debug version of gnatcoll for testing." +
+            " Not compatible with the --gnatcov option." +
+            " If both are specified, only --recompile is used.",
             default=False,
             action="store_true")
 
     def set_up(self):
-        self.env.gcov = self.main.args.gcov
         self.env.gnatcov = self.main.args.gnatcov
         self.env.valgrind = self.main.args.valgrind
 
         # Reject incompatible options
-        incompatible = [name for name in ('gcov', 'gnatcov', 'valgrind')
+        incompatible = [name for name in ('gnatcov', 'valgrind')
                         if getattr(self.env, name)]
         if len(incompatible) > 1:
             raise RuntimeError('The following options are incompatible: {}'
                                .format(' '.join(incompatible)))
 
-        # If doing a gcov or GNATcoverage-based testsuite run, rebuild GNATcoll
-        # accordingly and update directories.
-        if self.env.gcov or self.env.gnatcov:
-            if self.env.gcov:
-                subdir = 'gcov'
+        self.env.gnatcoll_gpr_dir = None
+        if self.env.gnatcov:
+            if self.main.args.recompile:
+                print("WARNING: --gnatcov option is not compatible with the" +
+                      " --recompile option. --gnatcov is ignored.")
+                self.env.gnatcov = False
             else:
-                subdir = 'gnatcov'
-
-            work_dir = os.path.join(TESTSUITE_ROOT_DIR, subdir)
-            gpr_dir, src_dir, obj_dir = make_gnatcoll(
-                work_dir, gcov=self.env.gcov, gnatcov=self.env.gnatcov)
-            self.env.gnatcoll_gpr_dir = gpr_dir
-            self.env.gnatcoll_src_dir = src_dir
-            self.env.gnatcoll_obj_dir = obj_dir
-
-            if self.env.gnatcov:
-                # Prepare a directory to host checkpoint files. Make sure it's
-                # empty so that we don't re-use coverage data from previous
-                # runs.
-                self.env.checkpoints_dir = os.path.join(
-                    TESTSUITE_ROOT_DIR, 'gnatcov', 'checkpoints')
-                rm(self.env.checkpoints_dir, recursive=True)
-                mkdir(self.env.checkpoints_dir)
-
-                # Gather the list of ALI files
-                self.env.ali_files_list = os.path.join(
-                    self.env.gnatcoll_obj_dir, 'ali_files.txt')
-                list_to_file(find(self.env.gnatcoll_obj_dir, '*.ali'),
-                             self.env.ali_files_list)
-
-        else:
-            self.env.gnatcoll_gpr_dir = None
+                self.env.gnatcov_traces = os.path.join(
+                    TESTSUITE_ROOT_DIR, "gnatcov", "traces")
+                rm(self.env.gnatcov_traces, recursive=True)
+                mkdir(self.env.gnatcov_traces)
 
         if self.main.args.recompile:
             work_dir = os.path.join(TESTSUITE_ROOT_DIR, 'debug')
             gpr_dir, _, _ = make_gnatcoll(work_dir, debug=True)
             self.env.gnatcoll_debug_gpr_dir = gpr_dir
-            if self.env.gnatcoll_gpr_dir is None:
-                self.env.gnatcoll_gpr_dir = gpr_dir
-        else:
-            self.env.gnatcoll_debug_gpr_dir = None
 
     def tear_down(self):
         wd = TESTSUITE_ROOT_DIR
 
         # If requested, produce coverage reports
-        if self.env.gcov:
-
-            # We need to call gcov on gcda present both in gnatcoll itself and
-            # tests (for generics coverage).
-            gcda_files = \
-                find(os.path.join(self.env.gnatcoll_obj_dir), '*.gcda') + \
-                find(os.path.join(self.env.working_dir), '*.gcda')
-            mkdir(os.path.join(wd, 'gcov', 'results'))
-            gcr = os.path.join(wd, 'gcov', 'results')
-            Run(['gcov'] + gcda_files,
-                cwd=os.path.join(wd, 'gcov', 'results'))
-            total_sources = 0
-            total_covered = 0
-
-            for source_file in ls(
-                    os.path.join(self.env.gnatcoll_src_dir, '*')):
-                base_file = os.path.basename(source_file)
-                if not os.path.isfile(os.path.join(gcr, base_file + '.gcov')):
-                    total = 1
-                    covered = 0
-                    with open(source_file) as fd:
-                        total = len([line for line in fd
-                                     if line.strip() and
-                                     not re.match(r' *--', line)])
-                else:
-                    with open(os.path.join(gcr, base_file + '.gcov')) as fd:
-                        total = 0
-                        covered = 0
-                        for line in fd:
-                            if re.match(r' *-:', line):
-                                pass
-                            elif re.match(r' *[#=]{5}:', line):
-                                total += 1
-                            else:
-                                total += 1
-                                covered += 1
-                total_sources += total
-                total_covered += covered
-
-                logging.info('%6.2f %% %8d/%-8d %s',
-                             float(covered) * 100.0 / float(total),
-                             covered,
-                             total,
-                             os.path.basename(source_file))
-
-            logging.info('%6.2f %% %8d/%-8d %s',
-                         float(total_covered) * 100.0 / float(total_sources),
-                         total_covered,
-                         total_sources,
-                         'TOTAL')
-
-        elif self.env.gnatcov:
-            checkpoint_list = os.path.join(wd, 'gnatcov', 'checkpoints',
-                                           'checkpoint_list.txt')
-            list_to_file(find(self.env.checkpoints_dir, '*.ckpt'),
-                         checkpoint_list)
-            produce_report(os.path.join(wd, 'gnatcov', 'results'),
-                           checkpoint_list,
-                           self.env.gnatcoll_src_dir)
-
+        if self.env.gnatcov:
+            produce_report(self, self.output_dir)
         super(MyTestsuite, self).tear_down()
 
     @property

@@ -55,6 +55,12 @@ WHICH := which
 
 # check for out-of-tree build
 SOURCE_DIR := $(dir $(MAKEFILE_LIST))
+
+# make -f with absolute path to current directory Makefile is in-tree build
+ifeq ($(SOURCE_DIR), $(shell pwd)/)
+	SOURCE_DIR := ./
+endif
+
 ifeq ($(SOURCE_DIR),./)
   RBD=
   GNATCOLL_GPR=gnatcoll.gpr
@@ -83,6 +89,7 @@ PROCESSORS    = 0
 BUILD_DIR     =
 ENABLE_SHARED = yes
 INTEGRATED    = no
+GNATCOV       =
 
 all: build
 
@@ -97,9 +104,21 @@ else
    LIBRARY_TYPES=static
 endif
 
+ifeq ($(GNATCOV), yes)
+   LIBRARY_TYPES=static
+   GNATCOV_RTS=gnatcovrts
+   GNATCOV_BUILD_OPTS=--src-subdirs=gnatcov-instr --implicit-with=gnatcov_rts
+   GNATCOV_PROJECT_PATH=GPR_PROJECT_PATH=$(CURDIR)/gnatcov_rts/share/gpr:$(GPR_PROJECT_PATH)
+else
+   GNATCOV_RTS=
+   GNATCOV_BUILD_OPTS=
+   GNATCOV_PROJECT_PATH=
+endif
+
 ifeq ($(INTEGRATED), yes)
    integrated_install=/$(NORMALIZED_TARGET)
 endif
+
 
 
 GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
@@ -111,8 +130,9 @@ GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
 # Used to pass extra options to GPRBUILD, like -d for instance
 GPRBUILD_OPTIONS=
 
-BUILDER=gprbuild -p -m $(GTARGET) $(RBD) -j$(PROCESSORS) $(GPR_VARS) \
-	$(GPRBUILD_OPTIONS)
+BUILDER=$(GNATCOV_PROJECT_PATH) gprbuild -p -m $(GTARGET) $(RBD) \
+        -j$(PROCESSORS) $(GPR_VARS) \
+	$(GPRBUILD_OPTIONS) $(GNATCOV_BUILD_OPTS)
 INSTALLER=gprinstall -p -f $(GTARGET) $(GPR_VARS) \
 	$(RBD) --sources-subdir=include/gnatcoll --prefix=$(prefix)$(integrated_install)
 CLEANER=gprclean -q $(RBD) $(GTARGET)
@@ -124,9 +144,20 @@ UNINSTALLER=$(INSTALLER) -p -f --install-name=gnatcoll --uninstall
 
 build: $(LIBRARY_TYPES:%=build-%)
 
-build-%:
+build-%: $(GNATCOV_RTS)
+ifeq ($(GNATCOV), yes)
+	gnatcov instrument -P $(GNATCOLL_GPR) $(RBD) \
+		--no-subprojects --level=stmt+decision
+endif
 	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		$(GPR_VARS) $(GNATCOLL_GPR)
+		$(GPR_VARS) $(GNATCOLL_GPR) -v
+
+###################
+# Instrumentation #
+###################
+
+gnatcovrts:
+	gnatcov setup --prefix=gnatcov_rts
 
 ###########
 # Install #

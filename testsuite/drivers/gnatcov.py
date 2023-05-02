@@ -1,5 +1,7 @@
+import glob
 import logging
 import os
+from random import getrandbits
 
 from e3.os.process import Run
 
@@ -20,57 +22,68 @@ def list_to_file(str_list, filename):
             f.write(item + '\n')
 
 
-def gnatcov_run(driver, cmd, test_name=None, result=None, **kwargs):
+def gnatcov_call(driver, cmd, slot, test_name=None, result=None, **kwargs):
     """
-    Wrapper for `bin_check_call` that runs the process under
-    "gnatcov run" and that produces a checkpoint in
-    `driver.env.checkpoints_dir` for the corresponding partial coverage report.
+    Wrapper for `bin_check_call` that set environment gnatcov trace_file name.
     """
     test_name = test_name or driver.test_env['test_name']
-    trace_file = os.path.join(driver.test_env['working_dir'],
-                              '{}.trace'.format(test_name))
-    checkpoint_file = os.path.join(driver.env.checkpoints_dir,
-                                   '{}.ckpt'.format(test_name))
+    trace_file = os.path.join(
+        driver.env.gnatcov_traces, str(getrandbits(128)) + ".strace")
 
-    cmd = ['gnatcov', 'run', '-o', trace_file, '-eargs'] + cmd
-    result = bin_check_call(driver, cmd, test_name, result, **kwargs)
+    env = os.environ.copy()
+    env["GNATCOV_TRACE_FILE"] = trace_file
 
-    p = Run(['gnatcov', 'coverage',
-             '--level={}'.format(COVERAGE_LEVEL),
-             '--scos=@{}'.format(driver.env.ali_files_list),
-             '--save-checkpoint={}'.format(checkpoint_file),
-             trace_file])
-    if p.status:
-        logging.error('converting gnatcov trace file to checkpoint failed:\n'
-                      '{}'.format(p.out))
+    provided_env = kwargs.pop('env', None)
+    if provided_env is not None:
+        env.update(provided_env)
 
-    return result
+    return bin_check_call(driver, cmd, slot, test_name, result, env=env, **kwargs)
 
 
-def produce_report(output_dir, checkpoint_list, src_dir):
-    """Produce a coverage reports.
-
-    :param str output_dir: Name of the directory to contain the DHTML coverage
-        report.
-    :param str checkpoint_list: Name of the file that contains the list of
-        checkpoints to use.
-    :param str src_dir: Name of the directory that contains installed sources.
+def ensure_clean_dir(dirname):
     """
-    args = ['gnatcov', 'coverage', '--annotate=dhtml',
-            '--level={}'.format(COVERAGE_LEVEL),
-            '--output-dir={}'.format(output_dir),
-            '--checkpoint=@{}'.format(checkpoint_list),
+    If it exists, remove the ``dirname`` directory tree and create an empty
+    directory instead.
+    """
+    if os.path.exists(dirname):
+        shutil.rmtree(dirname)
+    os.mkdir(dirname)
 
-            # TODO: GNATcoverage is not be able to find the source file for a
-            # unit that is not used by any test program. This is a problem for
-            # units that are not tested at all. Let it know where to find the
-            # source file to avoid spurious warnings. Note that these units are
-            # reported as uncovered in any case.
-            '--source-search={}'.format(src_dir)]
-    p = Run(args, output=None)
+
+def produce_report(driver, output_dir, formats=['dhtml', 'xml', 'cobertura']):
+    "Produce a coverage reports."
+
+    traces_list = os.path.join(driver.env.gnatcov_traces, 'traces.txt')
+    with open(traces_list, 'w') as fp:
+        for t in glob.glob(os.path.join(driver.env.gnatcov_traces, '*.strace')):
+            fp.write(f"{t}\n")
+    # Produce a checkpoint from them
+    checkpoint_file = os.path.join(driver.env.gnatcov_traces, 'report.ckpt')
+    args = ['gnatcov', 'coverage', '--level', COVERAGE_LEVEL,
+            '-P', 'gnatcoll.gpr',
+            '-XLIBRARY_TYPE=static', '-XGNATCOLL_BUILD_MODE=DEBUG',
+            '--save-checkpoint', checkpoint_file, f'@{traces_list}']
+    p = Run(args)
     if p.status:
-        logging.error('could not produce the coverage report:\n'
-                      '{}'.format(p.out))
-    elif p.out:
-        logging.info('output of "gnatcov coverage" is not empty:\n'
-                     '{}'.format(p.out))
+        logging.error(
+            f"error creating gnatcov checkpoint:\n$ {' '.join(args)}\n{p.out}")
+        return
+
+    # Finally produce the reports
+    for fmt in formats:
+        report_dir = os.path.join(output_dir, 'coverage-' + fmt)
+        ensure_clean_dir(report_dir)
+        path_opt = []
+        args = ['gnatcov', 'coverage',
+                '--annotate', fmt,
+                '--level={}'.format(COVERAGE_LEVEL),
+                '--output-dir', report_dir,
+                '-P', 'gnatcoll.gpr',
+                '-XLIBRARY_TYPE=static', '-XGNATCOLL_BUILD_MODE=DEBUG',
+                '--checkpoint', checkpoint_file]
+        p = Run(args, output=None)
+        if p.status:
+            logging.error('could not produce the coverage report:\n'
+                          '{}'.format(p.out))
+        else:
+            logging.info(fmt + " coverage report produced in " + report_dir)

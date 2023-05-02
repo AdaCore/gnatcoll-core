@@ -26,6 +26,7 @@ lib/
 *.deps
 *.pyc
 /gnat_src
+*~
 
 testsuite/debug
 testsuite/gcov

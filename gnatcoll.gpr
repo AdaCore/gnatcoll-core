@@ -55,23 +55,31 @@ project GnatColl is
 
    for Library_Kind use Library_Type;
 
+   Read_Only := external ("EXTERNALLY_BUILT", "false");
+   for Externally_Built use Read_Only;
+
+   --  If gnatcoll-core is built out of tree, and is used by an external
+   --  afterwards, then GNATCOLL_OBJECT_ROOT can be used so gnatcoll.gpr
+   --  Object_Dir and Library_Dir point to the correct directory.
+   Object_Root := external ("GNATCOLL_OBJECT_ROOT", "");
+
    case OS is
       when "windows" | "osx" =>
          --  On MacOS and Windows all object are relocatable by default
          --  thus the same object directory can be used
-         for Object_Dir use "obj/gnatcoll/all";
+         for Object_Dir use Object_Root & "obj/gnatcoll/all";
       when "unix" =>
          --  On Unix static-pic and relocatable shared the same objects
          case Library_Type is
             when "relocatable" | "static-pic" =>
-               for Object_Dir use "obj/gnatcoll/pic";
+               for Object_Dir use Object_Root & "obj/gnatcoll/pic";
             when "static" =>
-               for Object_Dir use "obj/gnatcoll/static";
+               for Object_Dir use Object_Root & "obj/gnatcoll/static";
          end case;
    end case;
 
    for Library_Dir
-      use "lib/gnatcoll/" & Project'Library_Kind;
+      use Object_Root & "lib/gnatcoll/" & Project'Library_Kind;
    for Library_Name    use Name;
 
    for Languages use ("Ada", "C");
