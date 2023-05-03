@@ -141,6 +141,8 @@ def gprbuild(driver,
         # tests with debug info, as they will reference installed sources
         # (while GNATCOLL objects reference original sources).
         gprbuild_cmd += ['-g0']
+    if driver.env.is_cross:
+        gprbuild_cmd.append("--target={target}".format(target=driver.env.target.triplet))
 
     # Adjust process environment
     env = kwargs.pop('env', None)
