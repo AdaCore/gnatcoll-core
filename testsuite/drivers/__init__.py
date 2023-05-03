@@ -3,6 +3,7 @@ import os
 import subprocess
 
 from e3.fs import mkdir
+from e3.env import Env
 from e3.os.process import Run, get_rlimit
 from e3.testsuite import TestAbort
 from e3.testsuite.driver import TestDriver
@@ -11,6 +12,7 @@ from e3.testsuite.driver.classic import (
 )
 from e3.testsuite.process import check_call
 from e3.testsuite.result import Log, TestStatus
+from pycross.runcross.main import run_cross
 
 
 # Root directory of respectively the testsuite and the gnatcoll
@@ -170,26 +172,44 @@ def gprbuild(driver,
 
 def bin_check_call(driver, cmd, test_name=None, result=None, timeout=None,
                env=None, cwd=None):
+
     if cwd is None and "working_dir" in driver.test_env:
         cwd = driver.test_env["working_dir"]
     if result is None:
         result = driver.result
     if test_name is None:
         test_name = driver.test_name
-    if timeout is not None:
-        cmd = [get_rlimit(), str(timeout)] + cmd
 
-    # Use directly subprocess instead of e3.os.process.Run, since the latter
-    # does not handle binary outputs.
-    subp = subprocess.Popen(
-        cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-    )
-    stdout, _ = subp.communicate()
-    process = ProcessResult(subp.returncode, stdout)
+    if driver.env.is_cross:
+        run = run_cross(
+            cmd,
+            cwd=cwd,
+            mode=None,
+            timeout=timeout,
+            output=None,
+            slot=slot,
+        )
+
+        # Here process.out holds utf-8 encoded data.
+        process = ProcessResult(run.status, run.out.encode('utf-8'))
+
+    else:
+        if timeout is not None:
+            cmd = [get_rlimit(), str(timeout)] + cmd
+
+        # Use directly subprocess instead of e3.os.process.Run, since the latter
+        # does not handle binary outputs.
+        subp = subprocess.Popen(
+            cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+        stdout, _ = subp.communicate()
+        # stdout here is bytes
+        process = ProcessResult(subp.returncode, stdout)
+
     result.processes.append(
         {
-            "output": Log(stdout),
+            "output": Log(process.out),
             "status": process.status,
             "cmd": cmd,
             "timeout": timeout,
@@ -202,11 +222,12 @@ def bin_check_call(driver, cmd, test_name=None, result=None, timeout=None,
     # investigation.
     result.log += "Status code: {}\n".format(process.status)
     result.log += "Output:\n"
+
     try:
-        stdout = stdout.decode('utf-8')
+        out = process.out.decode('utf-8')
     except UnicodeDecodeError:
-        stdout = str(stdout)
-    result.log += stdout
+        out = str(process.out)
+    result.log += out
 
     if process.status != 0:
         if isinstance(driver, ClassicTestDriver):
@@ -215,6 +236,7 @@ def bin_check_call(driver, cmd, test_name=None, result=None, timeout=None,
             result.set_status(TestStatus.FAIL, "command call fails")
             driver.push_result(result)
             raise TestAbort
+
     return process
 
 
