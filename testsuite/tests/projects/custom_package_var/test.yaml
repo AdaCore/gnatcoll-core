@@ -1,0 +1,7 @@
+description: >
+  Check that reference of variable declared in a custom
+  package is properly rejected.
+data:
+    - "test.adb"
+    - "prj.gpr"
+    - "subprj.gpr"
