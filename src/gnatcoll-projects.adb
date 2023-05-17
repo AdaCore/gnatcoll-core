@@ -8959,6 +8959,12 @@ package body GNATCOLL.Projects is
 
             return;
          end if;
+
+         if not Success then
+            Project := Empty_Project_Node;
+            GPR.Err.Finalize;
+            return;
+         end if;
       end;
 
       Override_Flags (Tree.Data.Env.Env, Create_Flags (null));
