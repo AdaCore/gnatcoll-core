@@ -67,7 +67,6 @@ class BasicTestDriver(ClassicTestDriver):
         process = run_test_program(
             self,
             [os.path.join(self.test_env['working_dir'], test_exe)],
-            self.slot,
             timeout=self.default_process_timeout)
         self.output += process.out.decode('utf-8')
 

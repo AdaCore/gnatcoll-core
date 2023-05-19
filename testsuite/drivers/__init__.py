@@ -3,7 +3,6 @@ import os
 import subprocess
 
 from e3.fs import mkdir
-from e3.env import Env
 from e3.os.process import Run, get_rlimit
 from e3.testsuite import TestAbort
 from e3.testsuite.driver import TestDriver
@@ -12,7 +11,6 @@ from e3.testsuite.driver.classic import (
 )
 from e3.testsuite.process import check_call
 from e3.testsuite.result import Log, TestStatus
-from pycross.runcross.main import run_cross
 
 
 # Root directory of respectively the testsuite and the gnatcoll
@@ -143,8 +141,6 @@ def gprbuild(driver,
         # tests with debug info, as they will reference installed sources
         # (while GNATCOLL objects reference original sources).
         gprbuild_cmd += ['-g0']
-    if driver.env.is_cross:
-        gprbuild_cmd.append("--target={target}".format(target=driver.env.target.triplet))
 
     # Adjust process environment
     env = kwargs.pop('env', None)
@@ -170,46 +166,28 @@ def gprbuild(driver,
     return True
 
 
-def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
+def bin_check_call(driver, cmd, test_name=None, result=None, timeout=None,
                env=None, cwd=None):
-
     if cwd is None and "working_dir" in driver.test_env:
         cwd = driver.test_env["working_dir"]
     if result is None:
         result = driver.result
     if test_name is None:
         test_name = driver.test_name
+    if timeout is not None:
+        cmd = [get_rlimit(), str(timeout)] + cmd
 
-    if driver.env.is_cross:
-        run = run_cross(
-            cmd,
-            cwd=cwd,
-            mode=None,
-            timeout=timeout,
-            output=None,
-            slot=slot,
-        )
-
-        # Here process.out holds utf-8 encoded data.
-        process = ProcessResult(run.status, run.out.encode('utf-8'))
-
-    else:
-        if timeout is not None:
-            cmd = [get_rlimit(), str(timeout)] + cmd
-
-        # Use directly subprocess instead of e3.os.process.Run, since the latter
-        # does not handle binary outputs.
-        subp = subprocess.Popen(
-            cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
-        )
-        stdout, _ = subp.communicate()
-        # stdout here is bytes
-        process = ProcessResult(subp.returncode, stdout)
-
+    # Use directly subprocess instead of e3.os.process.Run, since the latter
+    # does not handle binary outputs.
+    subp = subprocess.Popen(
+        cmd, cwd=cwd, env=env, stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+    )
+    stdout, _ = subp.communicate()
+    process = ProcessResult(subp.returncode, stdout)
     result.processes.append(
         {
-            "output": Log(process.out),
+            "output": Log(stdout),
             "status": process.status,
             "cmd": cmd,
             "timeout": timeout,
@@ -222,12 +200,11 @@ def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
     # investigation.
     result.log += "Status code: {}\n".format(process.status)
     result.log += "Output:\n"
-
     try:
-        out = process.out.decode('utf-8')
+        stdout = stdout.decode('utf-8')
     except UnicodeDecodeError:
-        out = str(process.out)
-    result.log += out
+        stdout = str(stdout)
+    result.log += stdout
 
     if process.status != 0:
         if isinstance(driver, ClassicTestDriver):
@@ -236,11 +213,10 @@ def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
             result.set_status(TestStatus.FAIL, "command call fails")
             driver.push_result(result)
             raise TestAbort
-
     return process
 
 
-def run_test_program(driver, cmd, slot, test_name=None, result=None, **kwargs):
+def run_test_program(driver, cmd, test_name=None, result=None, **kwargs):
     """
     Run a test program. This dispatches to running it under Valgrind or
     "gnatcov run", depending on the testsuite options.
@@ -255,7 +231,7 @@ def run_test_program(driver, cmd, slot, test_name=None, result=None, **kwargs):
     else:
         wrapper = bin_check_call
 
-    return wrapper(driver, cmd, slot, test_name, result, **kwargs)
+    return wrapper(driver, cmd, test_name, result, **kwargs)
 
 
 class GNATcollTestDriver(TestDriver):
@@ -268,5 +244,5 @@ class GNATcollTestDriver(TestDriver):
         """Timeout (in seconds) for subprocess to launch."""
         return self.test_env.get('timeout', self.DEFAULT_TIMEOUT)
 
-    def run_test_program(self, cmd, slot, test_name=None, result=None, **kwargs):
-        return run_test_program(self, cmd, slot, test_name, result, **kwargs)
+    def run_test_program(self, cmd, test_name=None, result=None, **kwargs):
+        return run_test_program(self, cmd, test_name, result, **kwargs)
