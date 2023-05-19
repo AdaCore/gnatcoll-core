@@ -3,7 +3,7 @@ import os
 from e3.testsuite.driver.classic import TestAbortWithError
 from e3.testsuite.driver.diff import DiffTestDriver, OutputRefiner, Substitute
 
-from drivers import gprbuild, run_test_program
+from drivers import gprbuild
 
 
 class ToLower(OutputRefiner):
@@ -73,15 +73,7 @@ class BuildRunDiffDriver(DiffTestDriver):
         )
 
         # Run the test program
-        if self.env.is_cross:
-            p = run_test_program(
-                self,
-                [self.working_dir("test")],
-                self.slot,
-                timeout=self.default_process_timeout
-            )
-        else:
-            p = self.shell(["bash", "test.sh"], catch_error=False)
+        p = self.shell(["bash", "test.sh"], catch_error=False)
 
         if p.status:
             self.output += ">>>program returned status code {}\n".format(
