@@ -9,6 +9,10 @@ Getting Started
 To run it you need to have **Python** installed along with the package
 **e3-testsuite**.
 
+Note there is a dependency on an internal tool called pycross for cross
+platforms only. This is a work in progress and access to the dependency may
+be revised soon.
+
 To install e3-testsuite:
 
 ```sh
