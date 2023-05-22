@@ -262,6 +262,51 @@ package GNATCOLL.OS.Win32.Files is
            Convention => Stdcall,
            External_Name => "NtQueryDirectoryFile";
 
+   subtype ACCESS_MODE is DWORD;
+
+   GENERIC_READ    : constant ACCESS_MODE := 16#8000_0000#;
+   GENERIC_WRITE   : constant ACCESS_MODE := 16#4000_0000#;
+   GENERIC_EXECUTE : constant ACCESS_MODE := 16#2000_0000#;
+   GENERIC_ALL     : constant ACCESS_MODE := 16#1000_0000#;
+
+   subtype CF_SHARE_MODE is DWORD;
+
+   --  Note: FILE_SHARE_NONE does not exist, only the value 0 is given
+   --  in the CreateFile documentation.
+   CF_FILE_SHARE_NONE   : constant CF_SHARE_MODE := 16#0000_0000#;
+   CF_FILE_SHARE_DELETE : constant CF_SHARE_MODE := 16#0000_0004#;
+   CF_FILE_SHARE_READ   : constant CF_SHARE_MODE := 16#0000_0001#;
+   CF_FILE_SHARE_WRITE  : constant CF_SHARE_MODE := 16#0000_0002#;
+
+   subtype CF_CREATION_DISPOSITION is DWORD;
+
+   CF_CREATE_ALWAYS     : constant CF_CREATION_DISPOSITION := 16#0000_0002#;
+   CF_CREATE_NEW        : constant CF_CREATION_DISPOSITION := 16#0000_0001#;
+   CF_OPEN_ALWAYS       : constant CF_CREATION_DISPOSITION := 16#0000_0004#;
+   CF_OPEN_EXISTING     : constant CF_CREATION_DISPOSITION := 16#0000_0003#;
+   CF_TRUNCATE_EXISTING : constant CF_CREATION_DISPOSITION := 16#0000_0005#;
+
+   subtype CF_FILE_ATTRIBUTE is DWORD;
+
+   CF_FILE_ATTRIBUTE_ARCHIVE     : constant CF_FILE_ATTRIBUTE := 16#0000_0020#;
+   CF_FILE_ATTRIBUTE_ENCRYPTED   : constant CF_FILE_ATTRIBUTE := 16#0000_4000#;
+   CF_FILE_ATTRIBUTE_HIDDEN      : constant CF_FILE_ATTRIBUTE := 16#0000_0002#;
+   CF_FILE_ATTRIBUTE_NORMAL      : constant CF_FILE_ATTRIBUTE := 16#0000_0080#;
+   CF_FILE_ATTRIBUTE_OFFLINE     : constant CF_FILE_ATTRIBUTE := 16#0000_1000#;
+   CF_FILE_ATTRIBUTE_READONLY    : constant CF_FILE_ATTRIBUTE := 16#0000_0001#;
+   CF_FILE_ATTRIBUTE_SYSTEM      : constant CF_FILE_ATTRIBUTE := 16#0000_0004#;
+   CF_FILE_ATTRIBUTE_TEMPORARY   : constant CF_FILE_ATTRIBUTE := 16#0000_0100#;
+   CF_FILE_FLAG_BACKUP_SEMANTICS : constant CF_FILE_ATTRIBUTE := 16#0200_0000#;
+
+   function CreateFile
+     (Filename            : OS.C_WString; DesiredAccess : ACCESS_MODE;
+      ShareMode           : CF_SHARE_MODE;
+      SecurityAttributes  : LPSECURITY_ATTRIBUTES := null;
+      CreationDisposition : CF_CREATION_DISPOSITION;
+      FlagsAndAttributes  : CF_FILE_ATTRIBUTE;
+      TemplateFile        : HANDLE := NULL_HANDLE) return HANDLE with
+     Import => True, Convention => Stdcall, External_Name => "CreateFileW";
+
    function Open
       (Filename : C_WString;
        Flags    : Open_Mode;
