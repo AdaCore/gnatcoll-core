@@ -1,0 +1,5 @@
+abstract project Subprj is
+   package Custom is
+      X := "-gnat05";
+   end Custom;
+end Subprj;

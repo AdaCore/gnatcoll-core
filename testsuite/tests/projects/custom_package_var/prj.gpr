@@ -1,0 +1,7 @@
+with "subprj.gpr";
+
+project Prj is
+   package Compiler is
+      for Default_Switches ("Ada") use (Subprj.Custom.X);
+   end Compiler;
+end Prj;
