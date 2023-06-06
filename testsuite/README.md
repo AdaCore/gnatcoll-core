@@ -148,14 +148,15 @@ Test can also be skipped based on a set of given conditions. For example:
 ```yaml
 
 description: A test
-skip:
-    - ['XFAIL', 'env.build.os.name == "windows"']
+control:
+    - [XFAIL, 'env.build.os.name == "windows"']
 ```
 
-The skip entry is a list of tuple of the form (status, condition). If the
-condition (a **Python** expression) is True then test is skipped and test
-status set to ``status``. Note that currently only the following symbols are
-available in the conditions: ``env`` (a BaseEnv object), ``test_env`` (the
-test.yaml file as a **Python** dict) and the function ``disk_space`` (return
-the available disk space in the working directory).
+The control entry is a list of tuple of the form (status, condition, optional message).
+If the condition (a **Python** expression) is True then the action described in the
+status is performed on the test (e.g. SKIP, XFAIL) and test status set to ``status``.
+Note that currently only the following symbols are available in the conditions:
+``env`` (a BaseEnv object), ``test_env`` (the test.yaml file as a **Python** dict)
+and the function ``disk_space`` (return the available disk space in the working
+directory).
 
