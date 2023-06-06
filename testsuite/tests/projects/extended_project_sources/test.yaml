@@ -8,3 +8,5 @@ data:
     - "src_p"
     - "src_q"
     - "src_r"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

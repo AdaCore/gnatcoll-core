@@ -7,3 +7,5 @@ data:
     - "ada_test.adb"
     - "my_test.gpr"
     - "my_test_c.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

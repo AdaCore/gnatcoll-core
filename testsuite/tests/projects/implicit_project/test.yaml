@@ -1,3 +1,5 @@
 description: Check that Load_Implicit_Project works.
 data:
     - "test.adb"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

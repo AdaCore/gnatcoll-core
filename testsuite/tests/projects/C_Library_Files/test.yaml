@@ -9,3 +9,6 @@ data:
   - "foo.h"
   - "main.adb"
   - "my_obj"
+
+control:
+  - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

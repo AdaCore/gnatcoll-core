@@ -11,3 +11,5 @@ data:
     - "pkg_0-pack.adb"
     - "pkg_0.adb"
     - "pkg_0.ads"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

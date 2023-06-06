@@ -4,3 +4,5 @@ description: >
 data:
     - "foo1.gpr"
     - "foo.adb"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

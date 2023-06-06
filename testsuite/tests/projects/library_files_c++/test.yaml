@@ -4,3 +4,5 @@ description:
     assume that C++ headers had ".hpp" suffixes (likewise, and it's ".hh" by
     default).
 data: ["p.gpr", "foo.cpp", "foo.cpp.gli", "foo.hh", "bar.hh", "bar.hh.gli"]
+control:
+  - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

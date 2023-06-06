@@ -2,3 +2,5 @@ description: Check that warning issued on package name typo
 data:
     - "typo.gpr"
     - "common.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

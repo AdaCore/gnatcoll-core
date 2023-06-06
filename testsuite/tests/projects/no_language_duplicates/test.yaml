@@ -6,3 +6,5 @@ description: >
 data:
     - "t1.gpr"
     - "t2.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

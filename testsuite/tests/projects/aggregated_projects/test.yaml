@@ -15,3 +15,4 @@ data:
     - "src_e.ads"
 control:
     - [XFAIL, "env.valgrind", "Known memory leak: see S912-003"]
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]
