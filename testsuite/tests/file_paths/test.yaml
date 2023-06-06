@@ -1,2 +1,4 @@
 description: Extensive test for the GNATCOLL.File_Paths API
 driver: build_run_diff
+control:
+    - [SKIP, "env.is_cross", "Tests using test.sh currently not supported on cross targets, see T616-039"]
