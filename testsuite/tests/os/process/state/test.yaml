@@ -1,2 +1,4 @@
 title: GNATCOLL.OS.Process State
 data: ["test_data/*.py"]
+control:
+  - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]
