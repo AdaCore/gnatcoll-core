@@ -5,3 +5,5 @@ data:
     - "options.gpr"
     - "main.gpr"
     - "simple.ads"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

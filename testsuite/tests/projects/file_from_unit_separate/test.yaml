@@ -1,3 +1,5 @@
 description: File_From_Unit works for separates
 data:
     - "prj.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

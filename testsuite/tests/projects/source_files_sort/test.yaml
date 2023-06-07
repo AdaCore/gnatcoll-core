@@ -4,3 +4,5 @@ data:
     - "foo1.gpr"
     - "foo_a"
     - "foo_b"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

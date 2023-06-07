@@ -4,3 +4,5 @@ description: >
   remain in place.
 data:
     - "p.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

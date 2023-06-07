@@ -3,3 +3,5 @@ description: >
   references as Scenario Variables.
 data:
     - "a.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

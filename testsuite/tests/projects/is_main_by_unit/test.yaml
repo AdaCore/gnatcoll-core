@@ -6,3 +6,5 @@ data:
     - "r.gpr"
     - "main.ada2"
     - "main2.c2"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]
