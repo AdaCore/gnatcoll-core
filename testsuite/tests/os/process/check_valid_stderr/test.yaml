@@ -1,1 +1,3 @@
 title: GNATCOLL.OS.Process Check that we can write on stderr in the child process
+control:
+  - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]

@@ -1,4 +1,5 @@
 title: GNATCOLL.OS.Process Priority Tests (High Level API)
 control:
     - ["SKIP", "env.build.os.name == 'windows'", "Unix only test"]
+    - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]
 data: ["test_data/*.py"]

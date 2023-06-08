@@ -1,1 +1,3 @@
 title: GNATCOLL.OS.Process Low Level interface tests
+control:
+  - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]
