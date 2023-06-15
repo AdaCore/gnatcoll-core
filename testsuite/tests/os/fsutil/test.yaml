@@ -1,2 +1,4 @@
 title: GNATCOLL.OS.FSUtil test
 data: ["data.txt"]
+control:
+    - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]
