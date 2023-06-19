@@ -8,27 +8,60 @@ variables:
    HOST: x86_64-linux
 
 stages:
+  - build
   - test
 
-build_and_test:
+build:
   services:
     - image:sandbox
     - cpu:8
     - mem:16
-  stage: test
+  stage: build
   script:
     - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
     - anod build --latest gnatcoll-core-doc
     - anod build --latest gnatcoll-core
-    - anod test  --latest gnatcoll-core -Qexternal
-    # TODO: replace build space by something computed
+
+    - echo "packaging $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/install/" ;
+    - tar czf $CI_PROJECT_DIR/$pkg.tar.gz -C $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/ install/ ;
+    - cd $CI_PROJECT_DIR
+    - ls -l *.tar.gz
+
+  artifacts:
+    paths:
+      - gnatcoll-core-current.tar.gz
+
+test:
+  services:
+     - image:sandbox
+     - cpu:8
+     - mem:16
+  stage: test
+  allow_failure: true
+  script:
+    # unpack the packages
+    - cd $ANOD_DEFAULT_SANDBOX_DIR
+    - mkdir -p $HOST/gnatcoll-core-current
+    - tar zxf $CI_PROJECT_DIR/gnatcoll-core-current.tar.gz -C $HOST/gnatcoll-core-current
+    - rm -f $CI_PROJECT_DIR/*.tar.gz
+
+    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+
+    - anod test --latest gnatcoll-core
     - e3-testsuite-report
         --failure-exit-code 1
         --xunit-output $CI_PROJECT_DIR/test.xml
         --xunit-name gnatcoll-core
         $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test/results/new/ || exit 1
-  interruptible: true
+
+    # We previously prevented the pipeline from halting if a test failed, to make
+    # sure all tests were run. If a test failed now we exit with a non-zero code
+    - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
+  needs:
+    - job: build
   artifacts:
+    when:
+      always
     paths:
       - test.xml
     reports:
