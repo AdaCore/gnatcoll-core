@@ -23,7 +23,7 @@ build:
     - anod build --latest gnatcoll-core
 
     - echo "packaging $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/install/" ;
-    - tar czf $CI_PROJECT_DIR/$pkg.tar.gz -C $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/ install/ ;
+    - tar czf $CI_PROJECT_DIR/gnatcoll-core-current.tar.gz -C $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/ install/ ;
     - cd $CI_PROJECT_DIR
     - ls -l *.tar.gz
 
@@ -66,3 +66,59 @@ test:
       - test.xml
     reports:
       junit: test.xml
+
+build_and_test_coverage:
+  services:
+    - image:sandbox
+    - cpu:8
+    - mem:16
+  stage: build
+  script:
+    - anybadge -l Coverage -v "Under Construction" -f coverage.svg -c steelblue
+    - anybadge -l "Tests Passing" -v "Error" -f test-count.svg -c red
+
+    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+    - anod build --latest gnatcoll-core -Qcoverage
+    - anod test  --latest gnatcoll-core -Qcoverage
+    # TODO: replace build space by something computed
+    - e3-testsuite-report
+        --failure-exit-code 1
+        --xunit-output $CI_PROJECT_DIR/test-coverage.xml
+        --xunit-name gnatcoll-core
+        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test-cov/results/new/ || exit 1
+
+    # Create test count badge
+    - cd $CI_PROJECT_DIR
+    - rm test-count.svg  # remove placeholder error badge
+    - create_xunit_badge --xunit_reports test-coverage.xml
+
+    # Move coverage reports and log coverage summaries
+    - mkdir $CI_PROJECT_DIR/coverage
+    - mv /it/wave/x86_64-linux/gnatcoll-core-current-test-cov/results/new/coverage-xml $CI_PROJECT_DIR/coverage/xml
+    - mv /it/wave/x86_64-linux/gnatcoll-core-current-test-cov/results/new/coverage-dhtml $CI_PROJECT_DIR/coverage/dhtml
+    - mv /it/wave/x86_64-linux/gnatcoll-core-current-test-cov/results/new/coverage-cobertura $CI_PROJECT_DIR/coverage/cobertura
+    - echo_coverage_stats --coverage-file $CI_PROJECT_DIR/coverage/xml/index.xml
+
+    # We previously prevented the pipeline from halting if a test failed, to make
+    # sure all tests were run. If a test failed now we exit with a non-zero code
+    - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
+  coverage: '/^Stmt Coverage:\s+(\d+\.\d+\%) \(\d+ \/ \d+\)$/'
+  allow_failure: true
+  artifacts:
+    when:
+      always
+    paths:
+      - $PACKAGE
+      - test-coverage.xml
+      - coverage.svg
+      - test-count.svg
+      - coverage/xml
+      - coverage/dhtml
+      - coverage/cobertura
+    reports:
+      junit: test-coverage.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura/cobertura.xml
+
+  interruptible: true
