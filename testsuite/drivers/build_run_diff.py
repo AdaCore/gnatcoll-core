@@ -68,7 +68,6 @@ class BuildRunDiffDriver(DiffTestDriver):
         gprbuild(
             self,
             project_file="test.gpr",
-            gcov=self.env.gcov,
             gpr_project_path=gpr_project_path
         )
 
@@ -81,7 +80,14 @@ class BuildRunDiffDriver(DiffTestDriver):
                 timeout=self.default_process_timeout
             )
         else:
-            p = self.shell(["bash", "test.sh"], catch_error=False)
+            p = run_test_program(
+                self,
+                ["bash", self.working_dir("test.sh")],
+                self.slot,
+                timeout=self.default_process_timeout,
+            )
+            # Output explicitly to be compared with the expected output.
+            self.output += p.out.decode('utf-8')
 
         if p.status:
             self.output += ">>>program returned status code {}\n".format(

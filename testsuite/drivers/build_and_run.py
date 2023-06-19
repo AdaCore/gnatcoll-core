@@ -29,7 +29,6 @@ class BuildAndRunDriver(ClassicTestDriver):
         gprbuild(
             self,
             project_file="test.gpr",
-            gcov=self.env.gcov,
             gpr_project_path=gpr_project_path
         )
 

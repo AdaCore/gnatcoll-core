@@ -49,7 +49,7 @@ class BasicTestDriver(ClassicTestDriver):
             gpr_project_path = self.env.gnatcoll_debug_gpr_dir
         else:
             gpr_project_path = self.env.gnatcoll_gpr_dir
-        gprbuild(self, gcov=self.env.gcov, gpr_project_path=gpr_project_path)
+        gprbuild(self, gpr_project_path=gpr_project_path)
 
         # Copy the requested data files
         for data in self.test_env.get('data', []):

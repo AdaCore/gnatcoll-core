@@ -12,7 +12,6 @@ from e3.testsuite.driver.classic import (
 from e3.testsuite.process import check_call
 from e3.testsuite.result import Log, TestStatus
 
-
 # Root directory of respectively the testsuite and the gnatcoll
 # repository.
 TESTSUITE_ROOT_DIR = os.path.dirname(
@@ -22,35 +21,20 @@ GNATCOLL_ROOT_DIR = os.path.dirname(TESTSUITE_ROOT_DIR)
 DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
 
-def make_gnatcoll(work_dir, debug=False, gcov=False, gnatcov=False):
-    """Build gnatcoll core with or without gcov instrumentation.
+def make_gnatcoll(work_dir, debug=False):
+    """Build gnatcoll core. 
 
     :param str work_dir: Working directory. GNATcoll is built in `build` subdir
         and installed in `install` subdir.
 
     :param bool debug: Whether to build GNATCOLL in debug mode. Otherwise, use
-        the prod mode. Note that gcov and gnatcov modes automatically enable
-        debug mode.
-
-    :param bool gcov: If true, build GNATCOLL with gcov instrumentation in
-        debgu mode.
-
-    :param bool gnatcov: If True, build GNATCOLL with the compile options that
-        GNATcoverage require in debug mode.
+        the prod mode.
 
     :return: A triplet (project path, source path, object path).
     :rtype: (str, str, str)
     :raise AssertError: In case compilation of installation fails.
     """
-    assert not (gcov and gnatcov)
-
-    if gcov:
-        tag = ' (gcov)'
-    elif gnatcov:
-        tag = ' (gnatcov)'
-    else:
-        tag = ''
-    logging.info('Compiling gnatcoll{}'.format(tag))
+    logging.info('Compiling gnatcoll')
 
     # Create build tree structure
     build_dir = os.path.join(work_dir, 'build')
@@ -62,16 +46,7 @@ def make_gnatcoll(work_dir, debug=False, gcov=False, gnatcov=False):
     make_gnatcoll_cmd = [
         'make', '-f', os.path.join(GNATCOLL_ROOT_DIR, 'Makefile'),
         'ENABLE_SHARED=no',
-        'BUILD={}'.format('DEBUG' if debug or gcov or gnatcov else 'PROD')]
-    if gcov:
-        make_gnatcoll_cmd += [
-            'GPRBUILD_OPTIONS=-cargs -fprofile-arcs -ftest-coverage'
-            ' -cargs:Ada -gnatwn'
-            ' -gargs']
-    elif gnatcov:
-        make_gnatcoll_cmd += [
-            'GPRBUILD_OPTIONS=-cargs -fdump-scos -fpreserve-control-flow'
-            ' -gargs']
+        'BUILD={}'.format('DEBUG' if debug else 'PROD')]
 
     # Build & Install
     p = Run(make_gnatcoll_cmd, cwd=build_dir, timeout=DEFAULT_TIMEOUT)
@@ -89,7 +64,6 @@ def make_gnatcoll(work_dir, debug=False, gcov=False, gnatcov=False):
 def gprbuild(driver,
              project_file=None,
              cwd=None,
-             gcov=False,
              scenario=None,
              gpr_project_path=None,
              timeout=DEFAULT_TIMEOUT,
@@ -103,8 +77,6 @@ def gprbuild(driver,
     :param cwd: directory in which to run gprbuild. If None the gprbuild build
         is run in the default working dir for the test.
     :type cwd: str | None
-    :param gcov: if True link with gcov libraries
-    :type gcov: bool
     :param scenario: scenario variable values
     :type scenario: dict
     :param gpr_project_path: if not None prepent this value to GPR_PROJECT_PATH
@@ -125,24 +97,13 @@ def gprbuild(driver,
                                         'support', 'test.gpr')
             scenario['TEST_SOURCES'] = driver.test_env['test_dir']
 
+    scenario_cmd = []
+    for k, v in scenario.items():
+        scenario_cmd.append('-X%s=%s' % (k, v))
+
     if cwd is None:
         cwd = driver.test_env['working_dir']
     mkdir(cwd)
-    gprbuild_cmd = [
-        'gprbuild', '--relocate-build-tree', '-p', '-P', project_file]
-    for k, v in scenario.items():
-        gprbuild_cmd.append('-X%s=%s' % (k, v))
-    if gcov:
-        gprbuild_cmd += ['-largs', '-lgcov', '-cargs',
-                         '-fprofile-arcs', '-ftest-coverage', '-g']
-    elif driver.env.gnatcov:
-        # TODO: GNATcoverage relies on debug info to do its magic. It needs
-        # consistent paths to source files in the debug info, so do not build
-        # tests with debug info, as they will reference installed sources
-        # (while GNATCOLL objects reference original sources).
-        gprbuild_cmd += ['-g0']
-    if driver.env.is_cross:
-        gprbuild_cmd.append("--target={target}".format(target=driver.env.target.triplet))
 
     # Adjust process environment
     env = kwargs.pop('env', None)
@@ -155,6 +116,36 @@ def gprbuild(driver,
         if 'GPR_PROJECT_PATH' in os.environ:
             new_gpr_path += os.path.pathsep + os.environ['GPR_PROJECT_PATH']
         env['GPR_PROJECT_PATH'] = new_gpr_path
+
+    # Determine the gprbuild command line
+    gprbuild_cmd = [
+        'gprbuild', '--relocate-build-tree', '-p', '-P', project_file
+    ] + scenario_cmd
+
+    if driver.env.gnatcov:
+        from drivers.gnatcov import COVERAGE_LEVEL
+
+        gnatcov_cmd = [
+            "gnatcov", "instrument", "--level", COVERAGE_LEVEL,
+            "--relocate-build-tree",
+            "--dump-trigger=atexit",
+            "--projects", "gnatcoll",
+            "--externally-built-projects",
+            "-XEXTERNALLY_BUILT=true",
+            "--no-subprojects",
+            "-P", project_file] + scenario_cmd
+
+        check_call(driver, gnatcov_cmd,
+                   cwd=cwd,
+                   env=env,
+                   ignore_environ=ignore_environ,
+                   timeout=timeout,
+                   **kwargs)
+        gprbuild_cmd += [
+            "-margs", "-v", "-g", "-O0", "--src-subdirs=gnatcov-instr", "--implicit-with=gnatcov_rts", "-XLIBRARY_TYPE=static", "-XEXTERNALLY_BUILT=true"]
+
+    if driver.env.is_cross:
+        gprbuild_cmd.append("--target={target}".format(target=driver.env.target.triplet))
 
     check_call(
         driver,
@@ -169,8 +160,7 @@ def gprbuild(driver,
 
 
 def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
-               env=None, cwd=None):
-
+                   env=None, cwd=None, **kwargs):
     if cwd is None and "working_dir" in driver.test_env:
         cwd = driver.test_env["working_dir"]
     if result is None:
@@ -220,6 +210,7 @@ def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
 
     # Append the status code and process output to the log to ease post-mortem
     # investigation.
+    result.log += f"Cmd_Line: {' '.join(cmd)}"
     result.log += "Status code: {}\n".format(process.status)
     result.log += "Output:\n"
 
@@ -245,13 +236,13 @@ def run_test_program(driver, cmd, slot, test_name=None, result=None, **kwargs):
     Run a test program. This dispatches to running it under Valgrind or
     "gnatcov run", depending on the testsuite options.
     """
-    from drivers.gnatcov import gnatcov_run
+    from drivers.gnatcov import gnatcov_call
     from drivers.valgrind import check_call_valgrind
 
     if driver.env.valgrind:
         wrapper = check_call_valgrind
     elif driver.env.gnatcov:
-        wrapper = gnatcov_run
+        wrapper = gnatcov_call
     else:
         wrapper = bin_check_call
 
