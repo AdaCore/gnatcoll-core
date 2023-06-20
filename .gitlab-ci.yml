@@ -52,7 +52,7 @@ test:
         --failure-exit-code 1
         --xunit-output $CI_PROJECT_DIR/test.xml
         --xunit-name gnatcoll-core
-        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test/results/new/ || exit 1
+        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test/results/new/ || FAILED=true
 
     # We previously prevented the pipeline from halting if a test failed, to make
     # sure all tests were run. If a test failed now we exit with a non-zero code
@@ -85,7 +85,7 @@ build_and_test_coverage:
         --failure-exit-code 1
         --xunit-output $CI_PROJECT_DIR/test-coverage.xml
         --xunit-name gnatcoll-core
-        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test-cov/results/new/ || exit 1
+        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test-cov/results/new/ || FAILED=true
 
     # Create test count badge
     - cd $CI_PROJECT_DIR
