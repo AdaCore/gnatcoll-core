@@ -41,13 +41,19 @@ test:
   script:
     # unpack the packages
     - cd $ANOD_DEFAULT_SANDBOX_DIR
+    - mkdir -p fingerprints
     - mkdir -p $HOST/gnatcoll-core-current
     - tar zxf $CI_PROJECT_DIR/gnatcoll-core-current.tar.gz -C $HOST/gnatcoll-core-current
+    - touch fingerprints/$HOST.gnatcoll-core-current.install.json.assume-unchanged
+    - touch fingerprints/$HOST.gnatcoll-core-current.download-bin.json.assume-unchanged
+
     - rm -f $CI_PROJECT_DIR/*.tar.gz
 
     - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
 
-    - anod test --latest gnatcoll-core
+    # -Qexternal is required to use the version built outside the compiler during
+    # the build stage.
+    - anod test --latest gnatcoll-core -Qexternal
     - e3-testsuite-report
         --failure-exit-code 1
         --xunit-output $CI_PROJECT_DIR/test.xml
