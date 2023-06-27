@@ -10,10 +10,6 @@ the standard malloc and free system calls. However, it calls those through
 an Ada proxy, in the package `System.Memory` that you can also
 replace in your own application if need be.
 
-Like this::
-
-   procedure Ada
-
 `gnatcoll` provides such a possible replacement. Its implementation
 is also based on `malloc` and `free`, but if you so chose you
 can activate extra monitoring capabilities to help you find out which parts
@@ -46,11 +42,31 @@ preparation in your application:
        begin
           return M.Realloc (Ptr, M.size_t (Size));
        end Realloc;
-    end;
+    end System.Memory;
 
-* You then need to compile your application with the extra switch
-  `-a` passed to `gnatmake` or `gprbuild`, so that this
-  file is appropriately compiled and linked with your application
+* You then need to compile your application so it incorporates the
+  alternative implementation, through the following steps for example:
+
+  #. Create a subdir, say "custom_rts" where you will put the alternative
+     version of s-memory.adb,
+
+  #. Create a custom_rts.gpr project file with this contents
+
+     .. code-block::
+
+       with "gnatcoll.gpr";
+       project Custom_Rts is
+          for Source_Dirs use (Project'Name);
+          for Object_Dir use "obj-" & Project'Name;
+
+          package Compiler is
+            for Switches ("Ada") use ("-gnatg");
+          end Compiler;
+       end Custom_Rts;
+
+  #. Add a `with "custom_rts.gpr";` clause to your main project
+     file and a `with System.Memory;` clause to one of the units in
+     you program closure.
 
 * If you only do this, the monitor is disabled by default. This
   basically has zero overhead for your application (apart from the initial
