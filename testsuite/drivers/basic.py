@@ -52,9 +52,12 @@ class BasicTestDriver(ClassicTestDriver):
         gprbuild(self, gpr_project_path=gpr_project_path)
 
         # Copy the requested data files
+        copy_files_on_target = []
+
         for data in self.test_env.get('data', []):
             cp(os.path.join(self.test_env['test_dir'], data),
                self.test_env['working_dir'], recursive=True)
+            copy_files_on_target.append(os.path.join(self.test_env['working_dir'], data))
 
         pre_test_py = os.path.join(self.test_env['test_dir'], 'pre_test.py')
         if os.path.isfile(pre_test_py):
@@ -67,7 +70,8 @@ class BasicTestDriver(ClassicTestDriver):
         process = run_test_program(
             self,
             [os.path.join(self.test_env['working_dir'], test_exe)],
-            self.slot,
+            slot=self.slot,
+            copy_files_on_target=copy_files_on_target,
             timeout=self.default_process_timeout)
         self.output += process.out.decode('utf-8')
 

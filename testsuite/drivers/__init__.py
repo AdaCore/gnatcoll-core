@@ -160,7 +160,7 @@ def gprbuild(driver,
 
 
 def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
-                   env=None, cwd=None, **kwargs):
+                   env=None, cwd=None, copy_files_on_target=None, **kwargs):
     if cwd is None and "working_dir" in driver.test_env:
         cwd = driver.test_env["working_dir"]
     if result is None:
@@ -178,6 +178,7 @@ def bin_check_call(driver, cmd, slot, test_name=None, result=None, timeout=None,
             timeout=timeout,
             output=None,
             slot=slot,
+            copy_files_on_target=copy_files_on_target,
         )
 
         # Here process.out holds utf-8 encoded data.
