@@ -6,3 +6,5 @@ control:
        "On older darwin versions the test might crash servers for unknown reason"]
     - [SKIP, "env.build.os.name == 'windows' and env.build.os.version == '2012'",
        "Test takes too long and hits rlimit"]
+    - [SKIP, "env.target.machine == 'qemu'",
+       "Not enough disk space on cross qemu configuration"]
