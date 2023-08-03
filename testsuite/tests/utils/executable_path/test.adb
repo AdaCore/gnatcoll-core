@@ -19,10 +19,10 @@ begin
       Success : Boolean;
    begin
       A.Assert (OS.Is_Regular_File (Exe_Path));
-      if not OS.Is_Directory ("Bin") then
-         Dir.Create_Directory ("Bin");
-         OS.Copy_File (Exe_Path, "Bin", Success, Preserve => OS.Full);
-         Process_Status := OS.Spawn ("Bin/test", Args => (1 .. 0 => null));
+      if not OS.Is_Directory ("bin") then
+         Dir.Create_Directory ("bin");
+         OS.Copy_File (Exe_Path, "bin", Success, Preserve => OS.Full);
+         Process_Status := OS.Spawn ("bin/test", Args => (1 .. 0 => null));
          A.Assert (Process_Status = 0);
       end if;
       Dir.Set_Directory ("..");
