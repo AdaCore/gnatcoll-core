@@ -1,0 +1,4 @@
+title: GNATCOLL.Traces test
+data: [".gnatdebug"]
+control:
+    - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]

@@ -1,0 +1,4 @@
+trace_pid > log_pid.$$
+trace_D > log_D.$D
+trace_T > log_T.$T
+trace_FOO > log_FOO.$FOO
