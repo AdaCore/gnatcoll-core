@@ -2,3 +2,6 @@ title: GNATCOLL.Traces.Parse_Config_File
 description: Test parsing of config files
 data:
     - my.cfg
+control:
+    - [SKIP, "env.target.machine == 'qemu'",
+       "Temporary XFAIL until issue gnatcoll-core#9 resolved"]
