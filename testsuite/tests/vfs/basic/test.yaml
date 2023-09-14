@@ -1,1 +1,4 @@
 description: Basic test for GNATCOLL.VFS.
+control:
+    - [SKIP, "env.is_cross",
+       "Temporary XFAIL until issue gnatcoll-core#8 resolved"]
