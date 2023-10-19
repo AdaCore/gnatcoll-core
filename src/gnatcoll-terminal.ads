@@ -140,6 +140,11 @@ package GNATCOLL.Terminal is
    --  Return the width of the terminal, or -1 if that width is either
    --  unknown or does not apply (as is the case for files for instance).
 
+   function Get_Lines (Self : Terminal_Info) return Integer;
+   --  Return the height of the terminal, or -1 if that height is either
+   --  unknown or does not apply (as is the case for files for instance).
+
+
    -----------
    -- Utils --
    -----------
@@ -179,5 +184,7 @@ private
       FD : FD_Type := Stdout;
       --  Whether the associated terminal is stdout (windows only)
    end record;
+
+
 
 end GNATCOLL.Terminal;
