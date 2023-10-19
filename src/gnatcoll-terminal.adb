@@ -432,4 +432,24 @@ package body GNATCOLL.Terminal is
          return Internal (Boolean'Pos (Self.FD = Stderr));
       end if;
    end Get_Width;
+
+
+   ---------------
+   -- Get_Lines --
+   ---------------
+
+   function Get_Lines (Self : Terminal_Info) return Integer is
+      function Internal (Stderr : Integer) return Integer;
+      pragma Import (C, Internal, "gnatcoll_terminal_lines");
+   begin
+      if Self.FD = File or else Self.Colors = Unsupported then
+         return -1;
+      else
+         return Internal (Boolean'Pos (Self.FD = Stderr));
+      end if;
+   end Get_Lines;
+
+
+
 end GNATCOLL.Terminal;
+
