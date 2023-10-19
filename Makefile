@@ -146,7 +146,7 @@ build: $(LIBRARY_TYPES:%=build-%)
 
 build-%: $(GNATCOV_RTS)
 ifeq ($(GNATCOV), yes)
-	gnatcov instrument -P $(GNATCOLL_GPR) $(RBD) \
+	$(GNATCOV_PROJECT_PATH) gnatcov instrument -P $(GNATCOLL_GPR) $(RBD) \
 		--no-subprojects --level=stmt+decision
 endif
 	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
