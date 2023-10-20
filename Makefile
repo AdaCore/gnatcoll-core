@@ -157,9 +157,9 @@ build-%: $(GNATCOV_RTS)
 # the user choice.
 
 ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(SED) -i 's/^--  with "gpr"/with "gpr"/g' $(GNATCOLL_GPR)
+	$(SED) -e 's/^--  with "gpr"/with "gpr"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
 else
-	$(SED) -i 's/^with "gpr"/--  with "gpr"/g' $(GNATCOLL_GPR)
+	$(SED) -e 's/^with "gpr"/--  with "gpr"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
 endif
 
 ifeq ($(GNATCOV), yes)
