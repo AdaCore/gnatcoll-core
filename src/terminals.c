@@ -124,7 +124,6 @@ int gnatcoll_terminal_width(int forStderr) {
       return (int)(csbiInfo.srWindow.Right-csbiInfo.srWindow.Left + 1); // window width
    }
    return -1;
-
 #else
 #ifdef TIOCGWINSZ
     struct winsize w;
@@ -145,7 +144,6 @@ int gnatcoll_terminal_lines(int forStderr) {
       return (int)(csbiInfo.srWindow.Bottom-csbiInfo.srWindow.Top + 1); // window height
    }
    return -1;
-
 #else
 #ifdef TIOCGWINSZ   // Linux/OSX
     struct winsize w;
