@@ -184,6 +184,4 @@ private
       --  Whether the associated terminal is stdout (windows only)
    end record;
 
-
-
 end GNATCOLL.Terminal;
