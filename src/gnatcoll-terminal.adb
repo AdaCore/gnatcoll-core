@@ -433,7 +433,6 @@ package body GNATCOLL.Terminal is
       end if;
    end Get_Width;
 
-
    ---------------
    -- Get_Lines --
    ---------------
@@ -448,8 +447,6 @@ package body GNATCOLL.Terminal is
          return Internal (Boolean'Pos (Self.FD = Stderr));
       end if;
    end Get_Lines;
-
-
 
 end GNATCOLL.Terminal;
 
