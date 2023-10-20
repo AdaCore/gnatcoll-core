@@ -29,8 +29,9 @@ project GnatColl is
    Name    := "gnatcoll";
 
    type Yes_No is ("yes", "no");
-   Mmap      : Yes_No := External ("GNATCOLL_MMAP", "yes");
-   Madvise   : Yes_No := External ("GNATCOLL_MADVISE", "yes");
+   Mmap     : Yes_No := External ("GNATCOLL_MMAP", "yes");
+   Madvise  : Yes_No := External ("GNATCOLL_MADVISE", "yes");
+   Projects : Yes_No := External ("GNATCOLL_PROJECTS", "yes");
 
    type Build_Type is ("DEBUG", "PROD");
    Build : Build_Type :=
@@ -49,6 +50,13 @@ project GnatColl is
          Sources := Sources & ("src/os/unix");
       when "windows" =>
          Sources := Sources & ("src/os/win32");
+   end case;
+
+   case Projects is
+      when "yes" =>
+         Sources := Sources & ("src/projects");
+      when others =>
+         null;
    end case;
 
    for Source_Dirs use Sources;

@@ -43,15 +43,18 @@
 #
 # Project specific:
 #
-#   GNATCOLL_MMAP    : whether MMAP is supported (yes/no)
-#                      default is "yes"; has no effect on Windows
-#   GNATCOLL_MADVISE : whether MADVISE is supported (yes/no)
-#                      default is "yes"; has no effect on Windows
+#   GNATCOLL_MMAP     : whether MMAP is supported (yes/no)
+#                       default is "yes"; has no effect on Windows
+#   GNATCOLL_MADVISE  : whether MADVISE is supported (yes/no)
+#                       default is "yes"; has no effect on Windows
+#   GNATCOLL_PROJECTS : whether GNATCOLL projects package is included (yes/no)
+#                       default is "yes";
 
 # helper programs
 CAT := cat
 ECHO  := echo
 WHICH := which
+SED := sed
 
 # check for out-of-tree build
 SOURCE_DIR := $(dir $(MAKEFILE_LIST))
@@ -83,6 +86,7 @@ prefix := $(dir $(shell $(WHICH) gnatls))..
 GNATCOLL_VERSION := $(shell $(CAT) $(SOURCE_DIR)/version_information)
 GNATCOLL_MMAP := yes
 GNATCOLL_MADVISE := yes
+GNATCOLL_PROJECTS := yes
 
 BUILD         = PROD
 PROCESSORS    = 0
@@ -123,6 +127,7 @@ endif
 
 GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
 	 -XGNATCOLL_MADVISE=$(GNATCOLL_MADVISE) \
+	 -XGNATCOLL_PROJECTS=$(GNATCOLL_PROJECTS) \
 	 -XGNATCOLL_VERSION=$(GNATCOLL_VERSION) \
 	 -XGNATCOLL_OS=$(GNATCOLL_OS) \
 	 -XBUILD=$(BUILD)
@@ -145,6 +150,18 @@ UNINSTALLER=$(INSTALLER) -p -f --install-name=gnatcoll --uninstall
 build: $(LIBRARY_TYPES:%=build-%)
 
 build-%: $(GNATCOV_RTS)
+
+# Gnatcoll projects related packages need libgpr. As conditional
+# with does not exist in GPR, `with "gpr"` at the beginning of
+# gnatcoll.gpr needs to be commented or uncommented depending on
+# the user choice.
+
+ifeq ($(GNATCOLL_PROJECTS), yes)
+	$(SED) -i 's/^--  with "gpr"/with "gpr"/g' $(GNATCOLL_GPR)
+else
+	$(SED) -i 's/^with "gpr"/--  with "gpr"/g' $(GNATCOLL_GPR)
+endif
+
 ifeq ($(GNATCOV), yes)
 	$(GNATCOV_PROJECT_PATH) gnatcov instrument -P $(GNATCOLL_GPR) $(RBD) \
 		--no-subprojects --level=stmt+decision
@@ -204,6 +221,7 @@ setup:
 	$(ECHO) "GNATCOLL_VERSION=$(GNATCOLL_VERSION)" >> makefile.setup
 	$(ECHO) "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
 	$(ECHO) "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
+	$(ECHO) "GNATCOLL_PROJECTS=$(GNATCOLL_PROJECTS)" >> makefile.setup
 
 # Let gprbuild handle parallelisation. In general, we don't support parallel
 # runs in this Makefile, as concurrent gprinstall processes may crash.
