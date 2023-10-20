@@ -144,7 +144,6 @@ package GNATCOLL.Terminal is
    --  Return the height of the terminal, or -1 if that height is either
    --  unknown or does not apply (as is the case for files for instance).
 
-
    -----------
    -- Utils --
    -----------
