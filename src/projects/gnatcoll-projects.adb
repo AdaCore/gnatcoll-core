@@ -8599,6 +8599,41 @@ package body GNATCOLL.Projects is
       F, L : Natural;
 
    begin
+      --  Trying to guess the value of implicit native target
+      if Self.Forced_Target = null then
+         declare
+
+            Matcher : constant Pattern_Matcher := Compile
+              ("\/lib(32|64)?\/gcc(-lib)?\/([a-zA-Z0-9_-]+)\/");
+            Matches : Match_Array (3 .. 3);
+
+            Output_Local : String := Output;
+         begin
+            --  Unixify all paths
+            for J in Output_Local'Range loop
+               if Output_Local (J) = '\' then
+                  Output_Local (J) := '/';
+               end if;
+            end loop;
+
+            F := Output_Local'First;
+            while F <= Output_Local'Last loop
+               L := EOL (Output_Local (F .. Output_Local'Last));
+
+               Match (Matcher, Output_Local (F .. L - 1), Matches);
+
+               if Matches (3) /= No_Match then
+                  GPR.Opt.Target_Value := new String'
+                    (Normalize_Target_Name
+                       (Output_Local (Matches (3).First .. Matches (3).Last)));
+                  exit;
+               end if;
+
+               F := L + 1;
+            end loop;
+         end;
+      end if;
+
       F := Output'First;
       Skip_Blanks (Output, F);
 

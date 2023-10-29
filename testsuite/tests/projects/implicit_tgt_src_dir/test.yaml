@@ -1,0 +1,8 @@
+description: >
+  Check that source directories that reference value
+  of Target attribute are correct when native target
+  is specified implicitly.
+data:
+    - "foo.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]
