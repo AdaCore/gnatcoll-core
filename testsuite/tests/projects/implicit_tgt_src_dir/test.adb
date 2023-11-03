@@ -19,6 +19,7 @@ begin
    Make_Dir (Create ("src_x86_64-windows"));
    Make_Dir (Create ("src_x86-linux"));
    Make_Dir (Create ("src_x86_64-linux"));
+   Make_Dir (Create ("src_aarch64-linux"));
 
    Initialize (Env);
    PT.Load
