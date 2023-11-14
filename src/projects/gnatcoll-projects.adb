@@ -11716,6 +11716,8 @@ package body GNATCOLL.Projects is
 
          Unchecked_Free (Self);
       end if;
+
+      Free (GPR.Opt.Target_Value);
    end Free;
 
    ----------
