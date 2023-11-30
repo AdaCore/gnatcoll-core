@@ -8623,6 +8623,7 @@ package body GNATCOLL.Projects is
                Match (Matcher, Output_Local (F .. L - 1), Matches);
 
                if Matches (3) /= No_Match then
+                  Free (GPR.Opt.Target_Value);
                   GPR.Opt.Target_Value := new String'
                     (Normalize_Target_Name
                        (Output_Local (Matches (3).First .. Matches (3).Last)));
