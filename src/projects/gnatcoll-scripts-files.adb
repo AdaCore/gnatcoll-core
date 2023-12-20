@@ -267,8 +267,10 @@ package body GNATCOLL.Scripts.Files is
 
          declare
             use GNATCOLL.Projects;
-            Project        : constant GNATCOLL.Projects.Project_Type :=
-              P.Root_Project;
+            --  Aggregate projects can't define executables: retrieve the first
+            --  project containing Info.
+            Project        : constant Project_Type :=
+              File_Info (P.Info_Set (Info).First_Element).Project;
             Is_Native      : constant Boolean := Project.Get_Target = "native"
               or else Project.Target_Same_As_Host
               or else Project.Get_Target = "";
