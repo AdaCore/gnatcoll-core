@@ -78,6 +78,12 @@ package GNATCOLL.OS.Win32.Files is
    FILE_OPEN_FOR_BACKUP_INTENT : constant OPEN_OPTION := 16#00004000#;
    FILE_SYNCHRONOUS_IO_NONALERT : constant OPEN_OPTION := 16#00000020#;
 
+   type FILETIME is record
+      DwLowDateTime  : DWORD;
+      DwHighDateTime : DWORD;
+   end record with
+     Convention => C_Pass_By_Copy;
+
    type OBJECT_ATTRIBUTES is record
       Length                   : ULONG;
       RootDirectory            : HANDLE;
@@ -355,5 +361,21 @@ package GNATCOLL.OS.Win32.Files is
 
    function DeleteFile (Path : C_WString) return BOOL with
      Import => True, Convention => Stdcall, External_Name => "DeleteFileW";
+
+   function GetFileTime
+     (File             : HANDLE;
+      Creation_Time    : out FILETIME;
+      Last_Access_Time : out FILETIME;
+      Last_Write_Time  : out FILETIME)
+      return BOOL with
+     Import => True, Convention => Stdcall, External_Name => "GetFileTime";
+
+   function SetFileTime
+     (File             : HANDLE;
+      Creation_Time    : in out FILETIME;
+      Last_Access_Time : in out FILETIME;
+      Last_Write_Time  : in out FILETIME)
+      return BOOL with
+     Import => True, Convention => Stdcall, External_Name => "SetFileTime";
 
 end GNATCOLL.OS.Win32.Files;

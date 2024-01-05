@@ -43,6 +43,7 @@
 
 typedef unsigned long long int uint_64;
 typedef unsigned int uint_32;
+typedef long int sint_32;
 typedef long long int sint_64;
 
 /* Simpler mapping of libc statvfs struct. This structure should stay
@@ -193,6 +194,30 @@ int __gnatcoll_lstat(const char *path, struct gnatcoll_stat *buf)
 
 #endif
   return status;
+}
+
+/*
+ time_t may be implemented as a 32 or 64 bits signed integer.
+ The lower bound is taken, to avoid differences between systems.
+*/
+struct gnatcoll_timespec {
+  sint_32 tv_sec;
+  sint_32 tv_nsec;
+};
+
+/*
+  Wrapper to standardize the required timespec. See struct gnatcoll_timespec
+  description.
+*/
+int __gnatcoll_futimens(int fd, const struct gnatcoll_timespec times[2])
+{
+  struct timespec fu_times[2];
+  for (int i = 0 ; i < 2 ; i++)
+  {
+    fu_times[i].tv_sec = times[i].tv_sec;
+    fu_times[i].tv_nsec = times[i].tv_nsec;
+  }
+  return futimens(fd, fu_times);
 }
 
 int __gnatcoll_open(const char *path, int mode, int perm)
