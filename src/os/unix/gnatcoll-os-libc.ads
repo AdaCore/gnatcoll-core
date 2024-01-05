@@ -191,6 +191,12 @@ package GNATCOLL.OS.Libc is
    subtype Send_File_Count is GNATCOLL.Memory.size_t range 0 .. 16#7ffff000#;
    --  sendfile() will transfer at most 0x7ffff000 (2,147,479,552) bytes
 
+   --  See Posix remove documentation
+   function Remove (Path : C_String) return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "remove";
+
    --  See Posix sendfile documentation
    function Send_File
      (Out_Fd     : FS.File_Descriptor;

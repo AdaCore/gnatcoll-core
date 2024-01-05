@@ -75,5 +75,25 @@ begin
    --  easier to deal with huge files.
    A.Assert (Copy_File ("huge_file", "huge_file_copy"));
 
+   --  Test file removal
+   declare
+      FD : File_Descriptor;
+   begin
+      FD := Open ("remove_file_test", Mode => Write_Mode);
+      A.Assert (FD /= Invalid_FD);
+      Close (FD);
+
+      FD := Open ("remove_file_test", Mode => Read_Mode);
+      A.Assert (FD /= Invalid_FD);
+      Close (FD);
+
+      A.Assert (Remove_File ("remove_file_test"));
+
+      FD := Open ("remove_file_test", Mode => Read_Mode);
+      A.Assert (FD = Invalid_FD);
+
+      A.Assert (not Remove_File ("remove_file_test"));
+   end;
+
    return A.Report;
 end Test;

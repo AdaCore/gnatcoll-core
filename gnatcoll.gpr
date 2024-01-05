@@ -239,6 +239,8 @@ project GnatColl is
               use "gnatcoll-os-fsutil-copy_permissions__unix.adb";
             for Implementation ("GNATCOLL.OS.FSUtil.Copy_Timestamps")
               use "gnatcoll-os-fsutil-copy_timestamps__unix.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Remove_File")
+              use "gnatcoll-os-fsutil-remove_file__unix.adb";
          when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
@@ -286,6 +288,8 @@ project GnatColl is
               use "gnatcoll-os-fsutil-copy_permissions__win32.adb";
             for Implementation ("GNATCOLL.OS.FSUtil.Copy_Timestamps")
               use "gnatcoll-os-fsutil-copy_timestamps__win32.adb";
+            for Implementation ("GNATCOLL.OS.FSUtil.Remove_File")
+              use "gnatcoll-os-fsutil-remove_file__win32.adb";
       end case;
 
       case OS is

@@ -353,4 +353,7 @@ package GNATCOLL.OS.Win32.Files is
         Convention    => Stdcall,
         External_Name => "SetHandleInformation";
 
+   function DeleteFile (Path : C_WString) return BOOL with
+     Import => True, Convention => Stdcall, External_Name => "DeleteFileW";
+
 end GNATCOLL.OS.Win32.Files;
