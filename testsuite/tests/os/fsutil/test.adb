@@ -145,6 +145,7 @@ begin
 
    --  Files content are check by a python post-test script, as it is
    --  easier to deal with huge files.
+
    A.Assert (Copy_File ("huge_file", "huge_file_copy"));
 
    --  Test file removal
@@ -166,6 +167,30 @@ begin
 
       A.Assert (not Remove_File ("remove_file_test"));
    end;
+
+   --  Create_Directory tests
+
+   A.Assert (not Create_Directory ("already_existing_dir"));
+
+   A.Assert (Create_Directory ("Not_already_existing_dir"));
+
+   A.Assert (not Create_Directory ("Not_already_existing_dir"));
+
+   A.Assert (Create_Directory ("Not_already_existing_dir/sub_dir"));
+
+   --  Delete empty directory
+   A.Assert (Remove_Directory ("already_existing_dir"));
+
+   --  Delete directory which contains files. This directory is created by the
+   --  pre-test python script.
+   A.Assert (Remove_Directory ("directory_with_files"));
+
+   --  Delete a directory which contains subdirectories.
+   A.Assert (Remove_Directory ("Not_already_existing_dir"));
+
+   A.Assert (not Remove_Directory ("already_existing_dir"));
+   A.Assert (not Remove_Directory ("directory_with_files"));
+   A.Assert (not Remove_Directory ("Not_already_existing_dir"));
 
    return A.Report;
 end Test;

@@ -188,6 +188,12 @@ package GNATCOLL.OS.Libc is
         Convention    => C,
         External_Name => "getcwd";
 
+   --  See Posix mkdir chdir documentation
+   function Mkdir (Path : C_String; Mode : File_Mode) return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "mkdir";
+
    subtype Send_File_Count is GNATCOLL.Memory.size_t range 0 .. 16#7ffff000#;
    --  sendfile() will transfer at most 0x7ffff000 (2,147,479,552) bytes
 
