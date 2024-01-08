@@ -23,6 +23,7 @@
 
 with Ada.Unchecked_Deallocation;
 with GNATCOLL.OS.Stat; use GNATCOLL.OS.Stat;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 package body GNATCOLL.OS.FSUtil is
 
@@ -173,11 +174,27 @@ package body GNATCOLL.OS.FSUtil is
    function Create_Directory
      (Path : UTF8.UTF_8_String) return Boolean is separate;
 
+   --------------------------
+   -- Create_Symbolic_Link --
+   --------------------------
+
+   function Create_Symbolic_Link
+     (Link_Path : UTF8.UTF_8_String; Target_Path : UTF8.UTF_8_String)
+      return Boolean is separate;
+
    ----------------------
    -- Remove_Directory --
    ----------------------
 
    function Remove_Directory
      (Path : UTF8.UTF_8_String) return Boolean is separate;
+
+   ------------------------
+   -- Read_Symbolic_Link --
+   ------------------------
+
+   function Read_Symbolic_Link
+     (Link_Path : UTF8.UTF_8_String; Target_Path : out Unbounded_String)
+      return Boolean is separate;
 
 end GNATCOLL.OS.FSUtil;

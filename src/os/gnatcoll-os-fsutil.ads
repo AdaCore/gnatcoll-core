@@ -27,11 +27,13 @@ with Ada.Strings.UTF_Encoding;
 with GNATCOLL.OS.FS;
 with GNAT.SHA1;
 with GNAT.SHA256;
+with Ada.Strings.Unbounded;
 
 package GNATCOLL.OS.FSUtil is
 
    package UTF8 renames Ada.Strings.UTF_Encoding;
    package FS renames GNATCOLL.OS.FS;
+   package UB renames Ada.Strings.Unbounded;
 
    generic
       type State_Type is private;
@@ -106,5 +108,15 @@ package GNATCOLL.OS.FSUtil is
 
    function Remove_Directory (Path : UTF8.UTF_8_String) return Boolean;
    --  Remove a directory. Return False on error.
+
+   function Create_Symbolic_Link
+     (Link_Path : UTF8.UTF_8_String; Target_Path : UTF8.UTF_8_String)
+      return Boolean;
+   --  Create a symbolic link. Return True on success.
+
+   function Read_Symbolic_Link
+     (Link_Path : UTF8.UTF_8_String; Target_Path : out UB.Unbounded_String)
+      return Boolean;
+   --  Return the symbolic link target path. Return True on success.
 
 end GNATCOLL.OS.FSUtil;
