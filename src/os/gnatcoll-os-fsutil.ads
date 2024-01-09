@@ -119,4 +119,15 @@ package GNATCOLL.OS.FSUtil is
       return Boolean;
    --  Return the symbolic link target path. Return True on success.
 
+   function Symbolic_Link_Is_Internal
+     (Top_Dir_Path : UTF8.UTF_8_String; Link_Path : UTF8.UTF_8_String)
+     return Boolean;
+   --  Return true if the symbolic link target is internal to the specified
+   --  top directory. Several cases make the target external:
+   --  - The target is located outside the top directory
+   --  - The target is an absolute path
+   --  - The target is a relative paths crossing a path outside the top
+   --    top directory. For example, the path `../top_dir/my_file`, under
+   --    the top directory `top_dir`, is external.
+
 end GNATCOLL.OS.FSUtil;

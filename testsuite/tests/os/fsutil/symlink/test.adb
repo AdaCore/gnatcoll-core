@@ -1,14 +1,20 @@
 with GNATCOLL.OS.FSUtil;    use GNATCOLL.OS.FSUtil;
 with GNATCOLL.OS.FS;        use GNATCOLL.OS.FS;
+with GNATCOLL.OS.Dir;
 with GNATCOLL.OS.Stat;
+with GNATCOLL.OS.Constants;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Test_Assert;
 with Ada.Text_IO;
+with GNATCOLL.Strings_Impl;
+with Ada.Characters.Handling;
 
 function Test return Integer is
    package A renames Test_Assert;
    package IO renames Ada.Text_IO;
    package Stat renames GNATCOLL.OS.Stat;
+   package Dir renames GNATCOLL.OS.Dir;
+   package C renames GNATCOLL.OS.Constants;
 
    function Check_File_Content
      (File_Name : String; Expected_Content : String) return Boolean;
@@ -223,6 +229,127 @@ begin
       A.Assert (not Stat.Exists (FA));
    end;
 
-   return A.Report;
+   --  Test Symbolic_Link_Is_Internal
+   declare
+
+      use Ada.Characters.Handling;
+      package Strings is new GNATCOLL.Strings_Impl.Strings
+        (GNATCOLL.Strings_Impl.Optimal_String_Size, Character, String);
+      use Strings;
+
+      function Basename (Path : String) return String;
+
+      function Basename (Path : String) return String is
+         X : Strings.XString;
+      begin
+         X.Set (Path);
+
+         declare
+            X_Arr : constant Strings.XString_Array :=
+              X.Right_Split
+                (Sep => C.Dir_Sep, Max_Split => 2, Omit_Empty => True);
+            --  Extract symbolic link basename
+         begin
+            return X_Arr (1).To_String;
+            --  Resolve symbolic links if needed, and normalize path
+            --  to final link directory.
+         end;
+
+      end Basename;
+
+      function Test_Symbolic_Link_Is_Internal
+        (Target_Name : String; Should_Be_Internal : Boolean;
+         Link_Name   : String := "link") return Boolean;
+
+      function Test_Symbolic_Link_Is_Internal
+        (Target_Name : String; Should_Be_Internal : Boolean;
+         Link_Name   : String := "link") return Boolean
+      is
+
+         Top_Dir_Path : constant String := Dir.Path (Dir.Open ("."));
+         FA           : Stat.File_Attributes;
+      begin
+         if not Create_Symbolic_Link (Link_Name, Target_Name) then
+            IO.Put_Line ("Failed to create the symbolic link");
+            return False;
+         end if;
+
+         FA := Stat.Stat (Link_Name, Follow_Symlinks => False);
+         if not Stat.Is_Symbolic_Link (FA) then
+            IO.Put_Line ("Symbolic link created is not a symbolic link");
+            return False;
+         end if;
+
+         declare
+            R : Boolean;
+         begin
+            if Should_Be_Internal then
+               R := Symbolic_Link_Is_Internal (Top_Dir_Path, Link_Name);
+            else
+               R := not Symbolic_Link_Is_Internal (Top_Dir_Path, Link_Name);
+            end if;
+
+            if not Remove_File (Link_Name) then
+               IO.Put_Line ("Failed to remove link");
+               return False;
+            end if;
+
+            return R;
+         end;
+      end Test_Symbolic_Link_Is_Internal;
+   begin
+
+      A.Assert (Test_Symbolic_Link_Is_Internal ("file", True, "link"));
+
+      A.Assert
+        (Test_Symbolic_Link_Is_Internal
+           ("." & C.Dir_Sep & "file", True, "link"));
+
+      A.Assert
+        (not Test_Symbolic_Link_Is_Internal ("" & C.Dir_Sep, True, "link"));
+
+      A.Assert
+        (not Test_Symbolic_Link_Is_Internal (C.Dir_Sep & "tmp", True, "link"));
+
+      A.Assert
+        (not Test_Symbolic_Link_Is_Internal
+           (C.Dir_Sep &
+            "veryloooooooooooooooooooooongpathasthefunctioncomparepathslength",
+            True, "link"));
+
+      A.Assert
+        (not Test_Symbolic_Link_Is_Internal
+           (".." & C.Dir_Sep & "file", True, "link"));
+
+      A.Assert (Create_Directory ("dir1"));
+      A.Assert
+        (Test_Symbolic_Link_Is_Internal
+           (".." & C.Dir_Sep & "file", True, "dir1" & C.Dir_Sep & "link"));
+
+      A.Assert
+        (Test_Symbolic_Link_Is_Internal
+           (".." & C.Dir_Sep & "dir1" & C.Dir_Sep & ".." & C.Dir_Sep & "dir1" &
+            C.Dir_Sep & ".." & C.Dir_Sep & "file",
+            True, "dir1" & C.Dir_Sep & "link"));
+
+      A.Assert (Remove_Directory ("dir1"));
+
+      declare
+         DH : Dir.Dir_Handle := Dir.Open (".");
+      begin
+         declare
+            Test_Dir_Basename : constant String := Basename (Dir.Path (DH));
+         begin
+            A.Assert
+              (not Test_Symbolic_Link_Is_Internal
+                 (".." & C.Dir_Sep & Test_Dir_Basename & C.Dir_Sep & "file",
+                  True, "link"));
+         end;
+         Dir.Close (DH);
+      end;
+
+      return A.Report;
+
+   end;
 
 end Test;
