@@ -295,12 +295,13 @@ package body GNATCOLL.OS.Dir is
    ----------
 
    procedure Walk
-      (Path            : UTF8.UTF_8_String;
-       File_Handler    : Process_File;
-       Dir_Handler     : Process_Directory := null;
-       Max_Depth       : Positive          := 256;
-       On_Error        : Process_Error     := Ignore;
-       Follow_Symlinks : Boolean           := False)
+      (Path                 : UTF8.UTF_8_String;
+       File_Handler         : Process_File;
+       Dir_Handler          : Process_Directory := null;
+       Max_Depth            : Positive          := 256;
+       On_Error             : Process_Error     := Ignore;
+       Follow_Symlinks      : Boolean           := False;
+       Propagate_Exceptions : Boolean           := False)
    is
       Stack     : Dir_Handle_Stack := Allocate_Stack (Size => Max_Depth - 1);
       Cur_Dir   : Dir_Handle;
@@ -363,6 +364,10 @@ package body GNATCOLL.OS.Dir is
    exception
       when others =>
          Deallocate_Stack (Stack);
+
+         if Propagate_Exceptions then
+            raise;
+         end if;
    end Walk;
 
 end GNATCOLL.OS.Dir;
