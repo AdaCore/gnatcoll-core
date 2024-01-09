@@ -2,7 +2,7 @@
 ##                                                                          ##
 ##                              GNATCOLL LIBRARY                            ##
 ##                                                                          ##
-##                         Copyright (C) 2017, AdaCore.                     ##
+##                      Copyright (C) 2017-2024 AdaCore.                    ##
 ##                                                                          ##
 ## This library is free software;  you can redistribute it and/or modify it ##
 ## under terms of the  GNU General Public License  as published by the Free ##
@@ -40,7 +40,7 @@
 #   TARGET        : target triplet for cross-compilation
 #   INTEGRATED    : installs the project as part of the compiler installation;
 #                   this adds NORMALIZED_TARGET subdir to prefix
-#
+#   PROJECT       : gnatcoll, gnatcoll_projects or gnatcoll_core
 # Project specific:
 #
 #   GNATCOLL_MMAP     : whether MMAP is supported (yes/no)
@@ -56,6 +56,8 @@ ECHO  := echo
 WHICH := which
 SED := sed
 
+PROJECT=gnatcoll
+
 # check for out-of-tree build
 SOURCE_DIR := $(dir $(MAKEFILE_LIST))
 
@@ -67,10 +69,14 @@ endif
 ifeq ($(SOURCE_DIR),./)
   RBD=
   GNATCOLL_GPR=gnatcoll.gpr
+  GNATCOLL_CORE_GPR=gnatcoll_core.gpr
+  GNATCOLL_PROJECTS_GPR=gnatcoll_projects.gpr
   MAKEPREFIX=
 else
   RBD=--relocate-build-tree
   GNATCOLL_GPR=$(SOURCE_DIR)/gnatcoll.gpr
+  GNATCOLL_CORE_GPR=$(SOURCE_DIR)/gnatcoll_core.gpr
+  GNATCOLL_PROJECTS_GPR=$(SOURCE_DIR)/gnatcoll_projects.gpr
   MAKEPREFIX=$(SOURCE_DIR)/
 endif
 
@@ -139,9 +145,9 @@ BUILDER=$(GNATCOV_PROJECT_PATH) gprbuild -p -m $(GTARGET) $(RBD) \
         -j$(PROCESSORS) $(GPR_VARS) \
 	$(GPRBUILD_OPTIONS) $(GNATCOV_BUILD_OPTS)
 INSTALLER=gprinstall -p -f $(GTARGET) $(GPR_VARS) \
-	$(RBD) --sources-subdir=include/gnatcoll --prefix=$(prefix)$(integrated_install)
+	$(RBD) --prefix=$(prefix)$(integrated_install)
 CLEANER=gprclean -q $(RBD) $(GTARGET)
-UNINSTALLER=$(INSTALLER) -p -f --install-name=gnatcoll --uninstall
+UNINSTALLER=$(INSTALLER) -p -f --uninstall
 
 #########
 # build #
@@ -157,17 +163,21 @@ build-%: $(GNATCOV_RTS)
 # the user choice.
 
 ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(SED) -e 's/^--  with "gpr"/with "gpr"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
+	$(SED) -e 's/^--  with "gnatcoll_projects"/with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
 else
-	$(SED) -e 's/^with "gpr"/--  with "gpr"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
+	$(SED) -e 's/^with "gnatcoll_projects"/--  with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
 endif
 
 ifeq ($(GNATCOV), yes)
-	$(GNATCOV_PROJECT_PATH) gnatcov instrument -P $(GNATCOLL_GPR) $(RBD) \
+	$(GNATCOV_PROJECT_PATH) gnatcov instrument -P $(GNATCOLL_CORE_GPR) $(RBD) \
 		--no-subprojects --level=stmt+decision
 endif
 	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		$(GPR_VARS) $(GNATCOLL_GPR) -v
+		$(GPR_VARS) $(GNATCOLL_CORE_GPR) -v
+ifeq ($(GNATCOLL_PROJECTS), yes)
+	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
+		$(GPR_VARS) $(GNATCOLL_PROJECTS_GPR) -v
+endif
 
 ###################
 # Instrumentation #
@@ -181,17 +191,34 @@ gnatcovrts:
 ###########
 
 uninstall:
-ifneq (,$(wildcard $(prefix)$(integrated_install)/share/gpr/manifests/gnatcoll))
-	$(UNINSTALLER) $(GNATCOLL_GPR)
+ifneq (,$(wildcard $(prefix)$(integrated_install)/share/gpr/manifests/gnatcoll_core))
+	$(UNINSTALLER) $(GNATCOLL_CORE_GPR)  --install-name=gnatcoll_core --sources-subdir=include/gnatcoll_core
 endif
+ifeq ($(GNATCOLL_PROJECTS), yes)
+ifneq (,$(wildcard $(prefix)$(integrated_install)/share/gpr/manifests/gnatcoll_projects))
+	$(UNINSTALLER) $(GNATCOLL_PROJECTS_GPR) --install-name=gnatcoll_projects --sources-subdir=include/gnatcoll_projects
+endif
+endif
+
+
+
 
 install: uninstall $(LIBRARY_TYPES:%=install-%)
 
 install-%:
 	$(INSTALLER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
 		--build-name=$* $(GPR_VARS) \
+		 --sources-subdir=include/gnatcoll_core \
 		--build-var=LIBRARY_TYPE --build-var=GNATCOLL_BUILD \
-		--build-var=GNATCOLL_CORE_BUILD $(GNATCOLL_GPR)
+		--build-var=GNATCOLL_CORE_BUILD $(GNATCOLL_CORE_GPR)
+ifeq ($(GNATCOLL_PROJECTS), yes)
+	$(INSTALLER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
+		--build-name=$* $(GPR_VARS) \
+		 --sources-subdir=include/gnatcoll_projects \
+		--build-var=LIBRARY_TYPE --build-var=GNATCOLL_BUILD \
+		--build-var=GNATCOLL_CORE_BUILD $(GNATCOLL_PROJECTS_GPR)
+endif
+	cp $(GNATCOLL_GPR) $(prefix)/share/gpr
 
 ###########
 # Cleanup #
@@ -200,8 +227,13 @@ install-%:
 clean: $(LIBRARY_TYPES:%=clean-%)
 
 clean-%:
+ifeq ($(GNATCOLL_PROJECTS), yes)
 	-$(CLEANER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		$(GPR_VARS) $(GNATCOLL_GPR)
+		$(GPR_VARS) $(GNATCOLL_PROJECTS_GPR)
+endif
+	-$(CLEANER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
+		$(GPR_VARS) $(GNATCOLL_CORE_GPR)
+
 
 #########
 # setup #

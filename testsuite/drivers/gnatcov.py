@@ -60,7 +60,7 @@ def produce_report(driver, output_dir, source_root=None, formats=['dhtml', 'xml'
     # Produce a checkpoint from them
     checkpoint_file = os.path.join(driver.env.gnatcov_traces, 'report.ckpt')
     args = ['gnatcov', 'coverage', '--level', COVERAGE_LEVEL,
-            '-P', 'gnatcoll.gpr',
+            '-P', 'gnatcoll_core.gpr',
             '-XLIBRARY_TYPE=static', '-XGNATCOLL_BUILD_MODE=DEBUG',
             '--save-checkpoint', checkpoint_file, f'@{traces_list}']
     if source_root:
@@ -80,7 +80,7 @@ def produce_report(driver, output_dir, source_root=None, formats=['dhtml', 'xml'
                 '--annotate', fmt,
                 '--level={}'.format(COVERAGE_LEVEL),
                 '--output-dir', report_dir,
-                '-P', 'gnatcoll.gpr',
+                '-P', 'gnatcoll_core.gpr',
                 '-XLIBRARY_TYPE=static', '-XGNATCOLL_BUILD_MODE=DEBUG',
                 '--checkpoint', checkpoint_file]
         if source_root:
