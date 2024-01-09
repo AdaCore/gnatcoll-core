@@ -348,4 +348,24 @@ package body GNATCOLL.OS.FSUtil is
       return True;
    end Symbolic_Link_Is_Internal;
 
+   ------------------------
+   -- Copy_Symbolic_Link --
+   ------------------------
+
+   function Copy_Symbolic_Link
+     (Src_Path : UTF8.UTF_8_String; Dst_Path : UTF8.UTF_8_String)
+      return Boolean
+   is
+      Target_Path : Unbounded_String;
+   begin
+
+      if not Read_Symbolic_Link (Src_Path, Target_Path) then
+         return False;
+      end if;
+
+      return Create_Symbolic_Link
+               (Link_Path   => Dst_Path,
+                Target_Path => To_String (Target_Path));
+   end Copy_Symbolic_Link;
+
 end GNATCOLL.OS.FSUtil;
