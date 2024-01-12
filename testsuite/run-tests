@@ -35,6 +35,13 @@ class MyTestsuite(Testsuite):
             default=False,
             action="store_true")
         parser.add_argument(
+            '--source-root',
+            help="Option specific to the GNATcoverage Cobertura coverage" +
+            " report: remove the specified prefix from the filenames in" +
+            " the report. Must be used with the --gnatcov option.",
+            default=None,
+            action="store")
+        parser.add_argument(
             '--valgrind',
             help="check memory usage with Valgrind (memcheck tool)",
             action="store_true")
@@ -49,6 +56,7 @@ class MyTestsuite(Testsuite):
     def set_up(self):
         self.env.gnatcov = self.main.args.gnatcov
         self.env.valgrind = self.main.args.valgrind
+        self.env.source_root = self.main.args.source_root
 
         # Reject incompatible options
         incompatible = [name for name in ('gnatcov', 'valgrind')
@@ -79,7 +87,7 @@ class MyTestsuite(Testsuite):
 
         # If requested, produce coverage reports
         if self.env.gnatcov:
-            produce_report(self, self.output_dir)
+            produce_report(self, self.output_dir, self.env.source_root)
         super(MyTestsuite, self).tear_down()
 
     @property

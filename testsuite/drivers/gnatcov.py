@@ -50,7 +50,7 @@ def ensure_clean_dir(dirname):
     os.mkdir(dirname)
 
 
-def produce_report(driver, output_dir, formats=['dhtml', 'xml', 'cobertura']):
+def produce_report(driver, output_dir, source_root=None, formats=['dhtml', 'xml', 'cobertura']):
     "Produce a coverage reports."
 
     traces_list = os.path.join(driver.env.gnatcov_traces, 'traces.txt')
@@ -63,6 +63,8 @@ def produce_report(driver, output_dir, formats=['dhtml', 'xml', 'cobertura']):
             '-P', 'gnatcoll.gpr',
             '-XLIBRARY_TYPE=static', '-XGNATCOLL_BUILD_MODE=DEBUG',
             '--save-checkpoint', checkpoint_file, f'@{traces_list}']
+    if source_root:
+        args.append("--source-root="+source_root)
     p = Run(args)
     if p.status:
         logging.error(
@@ -81,6 +83,8 @@ def produce_report(driver, output_dir, formats=['dhtml', 'xml', 'cobertura']):
                 '-P', 'gnatcoll.gpr',
                 '-XLIBRARY_TYPE=static', '-XGNATCOLL_BUILD_MODE=DEBUG',
                 '--checkpoint', checkpoint_file]
+        if source_root:
+            args.append("--source-root="+source_root)
         p = Run(args, output=None)
         if p.status:
             logging.error('could not produce the coverage report:\n'
