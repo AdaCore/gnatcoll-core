@@ -11,11 +11,63 @@ stages:
   - build
   - test
 
-build:
+default:
+  before_script: |
+    echo "before script executing..."
+
+    #######################
+    ## colored execution ##
+    #######################
+
+    exec() {
+       # dark green + $ + command line + grey
+       echo -e "\e[0;32m\$ $@\e[0;37m"
+       $@
+       # save the result
+       res=$?
+       # back to normal output
+       echo -e -n "\e[0m"
+       # make sure we translate the exit code
+       return $res
+    }
+
+    # Enable generic CI for building with Anod
+
+    cmd="generic_anod_ci"
+
+    exec eval $cmd
+    echo "sourcing the generic CI environment"
+    . /tmp/ci_env.sh
+
+    # generic_anod_ci modifies the rebuild strategy of anod.
+    # Set it back to full, so we do not rebuild the packages depending
+    # on gnatcoll-core and contained in GNAT.
+    exec anod tune --full
+    exec anod vcs --list
+
+################
+# JOB TEMPLATE #
+################
+
+.job_template:
   services:
-    - image:sandbox
+    - image:e3
     - cpu:8
     - mem:16
+  interruptible: true
+
+.test_template:
+  extends: .job_template
+  stage: test
+  needs: ["build"]
+  allow_failure: true
+
+########
+# JOBS #
+########
+
+build:
+  extends: .job_template
   stage: build
   script:
     - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
@@ -32,12 +84,7 @@ build:
       - gnatcoll-core-current.tar.gz
 
 test:
-  services:
-     - image:sandbox
-     - cpu:8
-     - mem:16
-  stage: test
-  allow_failure: true
+  extends: .test_template
   script:
     # unpack the packages
     - cd $ANOD_DEFAULT_SANDBOX_DIR
@@ -63,8 +110,6 @@ test:
     # We previously prevented the pipeline from halting if a test failed, to make
     # sure all tests were run. If a test failed now we exit with a non-zero code
     - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
-  needs:
-    - job: build
   artifacts:
     when:
       always
@@ -74,10 +119,7 @@ test:
       junit: test.xml
 
 build_and_test_coverage:
-  services:
-    - image:sandbox
-    - cpu:8
-    - mem:16
+  extends: .job_template
   stage: build
   script:
     - anybadge -l Coverage -v "Under Construction" -f coverage.svg -c steelblue
