@@ -24,4 +24,19 @@ with "gnatcoll_core";
 with "gnatcoll_projects";
 
 abstract project GNATCOLL is
+ 
+   --  The following declarations are needed for the projects part of
+   --  gnatcoll_bindings which are referencing the So_Ext variable.
+   type OS_Kind is ("windows", "unix", "osx");
+   OS : OS_Kind := External ("GNATCOLL_OS", "unix");
+
+   So_Ext := "";
+   case OS is
+        when "windows" =>
+           So_Ext := ".dll";
+        when "osx" =>
+           So_Ext := ".dylib";
+        when others =>
+           So_Ext := ".so";
+   end case;
 end GNATCOLL;
