@@ -218,7 +218,7 @@ ifeq ($(GNATCOLL_PROJECTS), yes)
 		--build-var=LIBRARY_TYPE --build-var=GNATCOLL_BUILD \
 		--build-var=GNATCOLL_CORE_BUILD $(GNATCOLL_PROJECTS_GPR)
 endif
-	cp $(GNATCOLL_GPR) $(prefix)/share/gpr
+	cp $(GNATCOLL_GPR) $(prefix)$(integrated_install)/share/gpr
 
 ###########
 # Cleanup #
