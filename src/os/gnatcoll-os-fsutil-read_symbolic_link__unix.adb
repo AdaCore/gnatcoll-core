@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Interfaces.C;
+with GNATCOLL.Memory; use GNATCOLL.Memory;
 with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
 with GNATCOLL.String_Builders;
 with Ada.Strings.Unbounded;
@@ -38,13 +39,12 @@ is
    use all type SB.Static_String_Builder;
 
    Link_C_Path : SB.Static_String_Builder (Link_Path'Length + 1);
-   Bytes_Read  : Sint_64;
+   Bytes_Read  : GNATCOLL.Memory.ssize_t;
    C_Buf       : C.char_array (1 .. 4096) := (others => C.nul);
    --  PATH_MAX is usually set to 4096 bytes, so we set the maximum
    --  target path length to this value.
 
 begin
-
    Append (Link_C_Path, Link_Path);
 
    Bytes_Read :=

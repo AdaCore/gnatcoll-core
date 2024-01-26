@@ -267,8 +267,10 @@ package GNATCOLL.OS.Libc is
      Import => True, Convention => C, External_Name => "symlinkat";
 
    function ReadLink
-     (Path_Name : C_String; Buf : out char_array; Buf_Size : Uint_64)
-      return Sint_64 with
+     (Path_Name : C_String;
+      Buf       : out char_array;
+      Buf_Size  : GNATCOLL.Memory.size_t)
+      return GNATCOLL.Memory.ssize_t with
      Import => True, Convention => C, External_Name => "readlink";
 
 end GNATCOLL.OS.Libc;
