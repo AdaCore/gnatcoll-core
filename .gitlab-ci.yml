@@ -40,6 +40,12 @@ default:
 
     cmd="generic_anod_ci"
 
+    # generic anod ci requires --continuous-builder-mode when not run in a
+    # MR context
+    if [[ $CI_PIPELINE_SOURCE != "merge_request_event" ]]; then
+      cmd="$cmd --continuous-builder-mode"
+    fi
+
     exec eval $cmd
     echo "sourcing the generic CI environment"
     . /tmp/ci_env.sh
