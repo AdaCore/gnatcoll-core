@@ -23,7 +23,6 @@
 with GNATCOLL.OS.FS;
 with GNATCOLL.OS.Libc_Constants;
 with Interfaces.C; use Interfaces.C;
-with GNATCOLL.Memory;
 
 package GNATCOLL.OS.Libc is
 
@@ -37,6 +36,12 @@ package GNATCOLL.OS.Libc is
    subtype Sint_32 is Integer;
 
    type Uint is mod 2 ** Standard'Address_Size;
+
+   type Size_t is mod 2 ** Standard'Address_Size;
+   type Ssize_t is
+     range -(2**(Standard'Address_Size - 1)) ..
+         2**(Standard'Address_Size - 1) - 1;
+   --  Signed version of Size_t.
 
    --  Status returned by most libc functions.
    subtype Libc_Status is Sint_32 range -1 .. 0;
@@ -194,7 +199,7 @@ package GNATCOLL.OS.Libc is
         Convention    => C,
         External_Name => "mkdir";
 
-   subtype Send_File_Count is GNATCOLL.Memory.size_t range 0 .. 16#7ffff000#;
+   subtype Send_File_Count is Size_t range 0 .. 16#7ffff000#;
    --  sendfile() will transfer at most 0x7ffff000 (2,147,479,552) bytes
 
    --  See Posix remove documentation
@@ -209,7 +214,7 @@ package GNATCOLL.OS.Libc is
       In_Fd      : FS.File_Descriptor;
       Count      : Send_File_Count;
       Error_Code : not null access Integer)
-      return GNATCOLL.Memory.ssize_t
+      return Ssize_t
    with Import        => True,
         Convention    => C,
         External_Name => "__gnatcoll_sendfile";
@@ -217,9 +222,9 @@ package GNATCOLL.OS.Libc is
    function Read_Write_Copy
      (Out_Fd     : FS.File_Descriptor;
       In_Fd      : FS.File_Descriptor;
-      Count      : GNATCOLL.Memory.ssize_t;
+      Count      : Ssize_t;
       Error_Code : not null access Integer)
-      return GNATCOLL.Memory.ssize_t
+      return Ssize_t
    with Import        => True,
         Convention    => C,
         External_Name => "__gnatcoll_rw_copy";
@@ -269,8 +274,8 @@ package GNATCOLL.OS.Libc is
    function ReadLink
      (Path_Name : C_String;
       Buf       : out char_array;
-      Buf_Size  : GNATCOLL.Memory.size_t)
-      return GNATCOLL.Memory.ssize_t with
+      Buf_Size  : Size_t)
+      return Ssize_t with
      Import => True, Convention => C, External_Name => "readlink";
 
 end GNATCOLL.OS.Libc;

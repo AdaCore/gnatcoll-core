@@ -23,7 +23,6 @@
 
 with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
 with GNATCOLL.OS.FS;   use GNATCOLL.OS.FS;
-with GNATCOLL.Memory;  use GNATCOLL.Memory;
 
 separate (GNATCOLL.OS.FSUtil)
 function Copy_File_Content
@@ -50,7 +49,7 @@ begin
 
    declare
       Count            : Long_Long_Integer := Length (Src_File_Attr);
-      Nb_Bytes_Written : GNATCOLL.Memory.ssize_t;
+      Nb_Bytes_Written : Ssize_t;
       Err_Code         : aliased Integer;
       Count_S          : Send_File_Count;
       Ret              : Boolean           := True;
@@ -73,9 +72,9 @@ begin
                Nb_Bytes_Written :=
                  Read_Write_Copy
                    (Dst_FD, Src_FD,
-                    ssize_t
+                    Ssize_t
                       (Long_Long_Integer'Min
-                         (Long_Long_Integer (ssize_t'Last), Count)),
+                         (Long_Long_Integer (Ssize_t'Last), Count)),
                     Err_Code'Access);
                if Nb_Bytes_Written = -1 then
                   Ret := False;
