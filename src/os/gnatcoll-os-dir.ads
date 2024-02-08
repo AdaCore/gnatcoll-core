@@ -136,13 +136,14 @@ package GNATCOLL.OS.Dir is
    Ignore         : constant Process_Error := null;
    Raise_OS_Error : constant Process_Error := Raise_Exception_On_Error'Access;
 
-   procedure Walk
-      (Path            : UTF8.UTF_8_String;
-       File_Handler    : Process_File;
-       Dir_Handler     : Process_Directory := null;
-       Max_Depth       : Positive          := 256;
-       On_Error        : Process_Error     := Ignore;
-       Follow_Symlinks : Boolean           := False);
+      procedure Walk
+      (Path                 : UTF8.UTF_8_String;
+       File_Handler         : Process_File;
+       Dir_Handler          : Process_Directory := null;
+       Max_Depth            : Positive          := 256;
+       On_Error             : Process_Error     := Ignore;
+       Follow_Symlinks      : Boolean           := False;
+       Propagate_Exceptions : Boolean           := False);
    --  Explore recursively a directory Path. For each entry found, call
    --  Dir_Handler if the entry is a directory and File_Handler otherwise.
    --  if a call to Dir_Handler returns True then Walk explores that
@@ -161,6 +162,9 @@ package GNATCOLL.OS.Dir is
    --  target of the link is returned. If False, the link itself is returned.
    --  Note that setting Follow_Symlink to True might lead in theory to
    --  infinite loop. In our case the Max_Depth parameter provides a limit.
+   --
+   --  If Propagate_Exceptions is True, exceptions raised during the dir and
+   --  file handler are propagated to the caller.
 
 private
 

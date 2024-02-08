@@ -1,0 +1,34 @@
+OK   test.adb:83
+Source tree
+===========
+DIR src_top_dir/dir1
+DIR src_top_dir/dir2
+DIR src_top_dir/dir3
+FILE src_top_dir/dir1/file1
+FILE src_top_dir/dir3/file3
+FILE src_top_dir/file1
+SYMLINK src_top_dir/abs_link_to_missing_file -> /tmp/missing-file
+SYMLINK src_top_dir/common_abs_link_to_missing_file -> /tmp/missing-file
+SYMLINK src_top_dir/common_link_to_missing_file -> ./missing-file
+SYMLINK src_top_dir/dir1/dir3_link -> ../dir3
+SYMLINK src_top_dir/file3_link -> ./dir3/file3
+SYMLINK src_top_dir/link_to_missing_file -> ./missing-file
+SYMLINK src_top_dir/relative_external_dir_link -> ../src_top_dir/dir1
+SYMLINK src_top_dir/symlink_in_src_and_dir_in_dst -> /tmp/missing-file
+Destination tree
+================
+DIR dst_top_dir/dir1
+DIR dst_top_dir/dir2
+DIR dst_top_dir/dir3
+FILE dst_top_dir/dir1/file1
+FILE dst_top_dir/dir3/file3
+FILE dst_top_dir/file1
+SYMLINK dst_top_dir/abs_link_to_missing_file -> /tmp/missing-file
+SYMLINK dst_top_dir/common_abs_link_to_missing_file -> /tmp/missing-file
+SYMLINK dst_top_dir/common_link_to_missing_file -> ./missing-file
+SYMLINK dst_top_dir/dir1/dir3_link -> ../dir3
+SYMLINK dst_top_dir/file3_link -> ./dir3/file3
+SYMLINK dst_top_dir/link_to_missing_file -> ./missing-file
+SYMLINK dst_top_dir/relative_external_dir_link -> ../src_top_dir/dir1
+SYMLINK dst_top_dir/symlink_in_src_and_dir_in_dst -> /tmp/missing-file
+<=== TEST PASSED ===>
