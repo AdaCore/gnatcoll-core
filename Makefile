@@ -101,6 +101,22 @@ ENABLE_SHARED = yes
 INTEGRATED    = no
 GNATCOV       =
 
+# Select the right implementation for blake3
+ifeq ($(NORMALIZED_TARGET), x86_64-linux)
+    GNATCOLL_BLAKE3_ARCH := x86_64-linux
+else
+    ifeq ($(NORMALIZED_TARGET), x86_64-windows)
+        GNATCOLL_BLAKE3_ARCH := x86_64-windows
+    else
+	ifeq ($(NORMALIZED_TARGET), aarch64-linux)
+            GNATCOLL_BLAKE3_ARCH := aarch64-linux
+        else
+            GNATCOLL_BLAKE3_ARCH := generic
+        endif
+    endif
+endif
+
+
 all: build
 
 # Load current setup if any
@@ -133,6 +149,7 @@ endif
 
 GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
 	 -XGNATCOLL_MADVISE=$(GNATCOLL_MADVISE) \
+	 -XGNATCOLL_BLAKE3_ARCH=$(GNATCOLL_BLAKE3_ARCH) \
 	 -XGNATCOLL_PROJECTS=$(GNATCOLL_PROJECTS) \
 	 -XGNATCOLL_VERSION=$(GNATCOLL_VERSION) \
 	 -XGNATCOLL_OS=$(GNATCOLL_OS) \

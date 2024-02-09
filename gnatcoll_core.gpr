@@ -29,6 +29,7 @@ library project GNATCOLL_Core is
    type Yes_No is ("yes", "no");
    Mmap     : Yes_No := External ("GNATCOLL_MMAP", "yes");
    Madvise  : Yes_No := External ("GNATCOLL_MADVISE", "yes");
+   Blake3_Arch  := External ("GNATCOLL_BLAKE3_ARCH", "generic");
 
    type Build_Type is ("DEBUG", "PROD");
    Build : Build_Type :=
@@ -40,7 +41,13 @@ library project GNATCOLL_Core is
    type OS_Kind is ("windows", "unix", "osx");
    OS : OS_Kind := External ("GNATCOLL_OS", "unix");
 
-   Sources := ("src", "src/os", "src/paragraph_filling");
+   Sources := ("src",
+               "src/os",
+               "src/paragraph_filling",
+               "src/hash",
+               "src/hash/blake3");
+
+   Project_Languages := ("Ada", "C");
 
    case OS is
       when "unix" | "osx" =>
@@ -48,6 +55,28 @@ library project GNATCOLL_Core is
       when "windows" =>
          Sources := Sources & ("src/os/win32");
    end case;
+
+   Blake3_C_Flags := ();
+
+   case Blake3_Arch is
+      when "x86_64-linux" =>
+         Sources := Sources & ("src/hash/blake3/x86_64-linux");
+         Project_Languages := Project_Languages & ("Asm_Cpp");
+      when "aarch64-linux" =>
+         Sources := Sources & ("src/hash/blake3/aarch64-linux");
+      when "x86_64-windows" =>
+         Sources := Sources & ("src/hash/blake3/x86_64-windows");
+         Project_Languages := Project_Languages & ("Asm_Cpp");
+      when others =>
+         Blake3_C_Flags := ("-DBLAKE3_NO_SSE2",
+                            "-DBLAKE3_NO_SSE41",
+                            "-DBLAKE3_NO_AVX2",
+                            "-DBLAKE3_NO_AVX512",
+                            "-DBLAKE3_USE_NEON=0");
+         null;
+   end case;
+
+   for Languages use Project_Languages;
 
    for Source_Dirs use Sources;
 
@@ -80,7 +109,6 @@ library project GNATCOLL_Core is
       use Object_Root & "lib/gnatcoll_core/" & Project'Library_Kind;
    for Library_Name    use Name;
 
-   for Languages use ("Ada", "C");
 
    Extra_Switches := ();
    Extra_Libs := ();
@@ -149,6 +177,7 @@ library project GNATCOLL_Core is
       for Switches ("Ada") use Compiler'Switches ("Ada")
         & External_As_List ("ADAFLAGS", " ");
       for Switches ("C") use Compiler'Switches ("C")
+        & Blake3_C_Flags
         & External_As_List ("CFLAGS", " ")
         & External_As_List ("CPPFLAGS", " ");
 

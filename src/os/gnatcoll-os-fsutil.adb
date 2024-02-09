@@ -33,8 +33,11 @@ with Ada.Characters.Handling;
 with GNATCOLL.OS.Dir;
 with Ada.Calendar;
 with Ada.Assertions;
+with GNATCOLL.Hash.Blake3;
 
 package body GNATCOLL.OS.FSUtil is
+
+   package Blake renames GNATCOLL.Hash.Blake3;
 
    type String_Access is access String;
    procedure Free is new Ada.Unchecked_Deallocation (String, String_Access);
@@ -83,6 +86,32 @@ package body GNATCOLL.OS.FSUtil is
       Free (Buffer);
       return Result (Context);
    end Process;
+
+   function Blake3
+      (Path        : UTF8.UTF_8_String;
+       Buffer_Size : Positive := FS.Default_Buffer_Size)
+      return String
+   is
+      FD      : FS.File_Descriptor;
+      Context : Blake.Blake3_Context;
+      N       : Integer;
+      Buffer  : String_Access;
+   begin
+      Context.Init_Hash_Context;
+      FD := FS.Open (Path => Path, Advise_Sequential => True);
+
+      Buffer := new String (1 .. Buffer_Size);
+
+      loop
+         N := FS.Read (FD, Buffer.all);
+         exit when N = 0;
+         Context.Update_Hash_Context (Buffer (1 .. N));
+      end loop;
+
+      FS.Close (FD);
+      Free (Buffer);
+      return Context.Hash_Digest;
+   end Blake3;
 
    -------------------
    -- Internal_SHA1 --
