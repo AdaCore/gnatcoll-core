@@ -919,7 +919,8 @@ package body GNATCOLL.OS.FSUtil is
                     Stat.Stat (Path => Dst, Follow_Symlinks => True);
       begin
          if not Stat.Exists (Src_FA) then
-            raise Sync_Trees_Exception with "Source " & Src & " does not exist";
+            raise Sync_Trees_Exception with
+              "Source " & Src & " does not exist";
          elsif not Stat.Is_Directory (Src_FA) then
             raise Sync_Trees_Exception with
               "Source" & Src & " should be a directory";

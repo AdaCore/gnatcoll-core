@@ -188,7 +188,7 @@ package GNATCOLL.OS.Libc is
         External_Name => "chdir";
 
    --  See Posix getcwd documentation
-   function Getcwd (Buf : C_String; Size : size_t) return System.Address
+   function Getcwd (Buf : C_String; Size : Size_t) return System.Address
    with Import        => True,
         Convention    => C,
         External_Name => "getcwd";
