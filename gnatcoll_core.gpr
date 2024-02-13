@@ -30,7 +30,7 @@ library project GNATCOLL_Core is
    Mmap     : Yes_No := External ("GNATCOLL_MMAP", "yes");
    Madvise  : Yes_No := External ("GNATCOLL_MADVISE", "yes");
    Blake3_Arch  := External ("GNATCOLL_BLAKE3_ARCH", "generic");
-
+   XXHash_Arch  := External ("GNATCOLL_XXHASH_ARCH", "generic");
    type Build_Type is ("DEBUG", "PROD");
    Build : Build_Type :=
       External ("GNATCOLL_BUILD_MODE", External ("BUILD", "DEBUG"));
@@ -45,7 +45,8 @@ library project GNATCOLL_Core is
                "src/os",
                "src/paragraph_filling",
                "src/hash",
-               "src/hash/blake3");
+               "src/hash/blake3",
+               "src/hash/xxhash");
 
    Project_Languages := ("Ada", "C");
 
@@ -73,6 +74,13 @@ library project GNATCOLL_Core is
                             "-DBLAKE3_NO_AVX2",
                             "-DBLAKE3_NO_AVX512",
                             "-DBLAKE3_USE_NEON=0");
+         null;
+   end case;
+
+   case XXHash_Arch is
+      when "x86_64" =>
+         Sources := Sources & ("src/hash/xxhash/x86_64");
+      when others =>
          null;
    end case;
 
@@ -211,6 +219,15 @@ library project GNATCOLL_Core is
 
       for Specification  ("GNATCOLL.OS.Constants")
         use "gnatcoll-os-constants__" & OS & ".ads";
+
+      case XXHash_Arch is
+        when "x86_64" =>
+           for Implementation ("GNATCOLL.Hash.xxHash")
+             use "gnatcoll-hash-xxhash__x8664.adb";
+        when others =>
+           for Implementation ("GNATCOLL.Hash.xxHash")
+             use "gnatcoll-hash-xxhash__generic.adb";
+      end case;
 
       case OS is
          when "unix" | "osx" =>

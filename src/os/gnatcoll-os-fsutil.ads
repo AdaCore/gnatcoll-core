@@ -39,8 +39,8 @@ package GNATCOLL.OS.FSUtil is
       type State_Type is private;
       type Result_Type is private;
 
-      Initial_State : State_Type;
-      --  Initial state
+      with procedure Set_Initial_State (C : in out State_Type);
+      --  Set initial state
 
       with procedure Update (C : in out State_Type; Buffer : String);
       --  Called sequentially on each file chunk to update the state
@@ -96,7 +96,17 @@ package GNATCOLL.OS.FSUtil is
    --  SHA1_Digest is a fixed sized String. It can be used with both String
    --  and UTF_8_String.
 
-
+   function XXH3
+      (Path        : UTF8.UTF_8_String;
+       Buffer_Size : Positive := FS.Default_Buffer_Size)
+      return String;
+   --  Compute the SHA256 of the content of the file located at Path. When
+   --  reading the file the function used a finite size Buffer. In most cases
+   --  the default buffer size is the one that provide the most performant
+   --  way to scan the file.
+   --  SHA1_Digest is a fixed sized String. It can be used with both String
+   --  and UTF_8_String.
+ 
    function Remove_File (Path : UTF8.UTF_8_String) return Boolean;
    --  Remove a file. Return True on success.
 

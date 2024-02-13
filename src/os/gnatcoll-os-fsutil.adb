@@ -34,10 +34,12 @@ with GNATCOLL.OS.Dir;
 with Ada.Calendar;
 with Ada.Assertions;
 with GNATCOLL.Hash.Blake3;
+with GNATCOLL.Hash.XXHash;
 
 package body GNATCOLL.OS.FSUtil is
 
    package Blake renames GNATCOLL.Hash.Blake3;
+   package XXHash renames GNATCOLL.Hash.XXHash;
 
    type String_Access is access String;
    procedure Free is new Ada.Unchecked_Deallocation (String, String_Access);
@@ -58,6 +60,12 @@ package body GNATCOLL.OS.FSUtil is
    --  Internal sync function doing all the work.
    --  This is not done directly in Sync_Trees so exceptions can be handled.
 
+   procedure Set_SHA1_Initial_State (S : in out GNAT.SHA1.Context);
+   --  Initialize a SHA1 context.
+
+   procedure Set_SHA256_Initial_State (S : in out GNAT.SHA256.Context);
+   --  Initialize a SHA256 context.
+
    -------------
    -- Process --
    -------------
@@ -68,10 +76,11 @@ package body GNATCOLL.OS.FSUtil is
       return Result_Type
    is
       FD      : FS.File_Descriptor;
-      Context : State_Type := Initial_State;
+      Context : State_Type;
       N       : Integer;
       Buffer  : String_Access;
    begin
+      Set_Initial_State (Context);
       FD := FS.Open (Path => Path, Advise_Sequential => True);
 
       Buffer := new String (1 .. Buffer_Size);
@@ -86,6 +95,32 @@ package body GNATCOLL.OS.FSUtil is
       Free (Buffer);
       return Result (Context);
    end Process;
+
+   function XXH3
+      (Path        : UTF8.UTF_8_String;
+       Buffer_Size : Positive := FS.Default_Buffer_Size)
+      return String
+   is
+      FD      : FS.File_Descriptor;
+      Context : XXHash.XXH3_Context;
+      N       : Integer;
+      Buffer  : String_Access;
+   begin
+      Context.Init_Hash_Context;
+      FD := FS.Open (Path => Path, Advise_Sequential => True);
+
+      Buffer := new String (1 .. Buffer_Size);
+
+      loop
+         N := FS.Read (FD, Buffer.all);
+         exit when N = 0;
+         Context.Update_Hash_Context (Buffer (1 .. N));
+      end loop;
+
+      FS.Close (FD);
+      Free (Buffer);
+      return Context.Hash_Digest;
+   end XXH3;
 
    function Blake3
       (Path        : UTF8.UTF_8_String;
@@ -120,7 +155,7 @@ package body GNATCOLL.OS.FSUtil is
    function Internal_SHA1 is new Process
       (GNAT.SHA1.Context,
        SHA1_Digest,
-       GNAT.SHA1.Initial_Context, GNAT.SHA1.Update, GNAT.SHA1.Digest);
+       Set_SHA1_Initial_State, GNAT.SHA1.Update, GNAT.SHA1.Digest);
 
    ---------------------
    -- Internal_SHA256 --
@@ -129,7 +164,7 @@ package body GNATCOLL.OS.FSUtil is
    function Internal_SHA256 is new Process
       (GNAT.SHA256.Context,
        SHA256_Digest,
-       GNAT.SHA256.Initial_Context, GNAT.SHA256.Update, GNAT.SHA256.Digest);
+       Set_SHA256_Initial_State, GNAT.SHA256.Update, GNAT.SHA256.Digest);
 
    ----------
    -- SHA1 --
@@ -244,6 +279,24 @@ package body GNATCOLL.OS.FSUtil is
    function Read_Symbolic_Link
      (Link_Path : UTF8.UTF_8_String; Target_Path : out Unbounded_String)
       return Boolean is separate;
+
+   ----------------------------
+   -- Set_SHA1_Initial_State --
+   ----------------------------
+
+   procedure Set_SHA1_Initial_State (S : in out GNAT.SHA1.Context) is
+   begin
+      S := GNAT.SHA1.Initial_Context;
+   end Set_SHA1_Initial_State;
+
+   ----------------------------
+   -- Set_SHA256_Initial_State --
+   ----------------------------
+
+   procedure Set_SHA256_Initial_State (S : in out GNAT.SHA256.Context) is
+   begin
+      S := GNAT.SHA256.Initial_Context;
+   end Set_SHA256_Initial_State;
 
    -------------------------------
    -- Symbolic_Link_Is_Internal --

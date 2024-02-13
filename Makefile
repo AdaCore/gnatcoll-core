@@ -116,6 +116,16 @@ else
     endif
 endif
 
+# Select the right implementation for xxhash
+ifeq ($(NORMALIZED_TARGET), x86_64-linux)
+    GNATCOLL_XXHASH_ARCH := x86_64
+else
+    ifeq ($(NORMALIZED_TARGET), x86_64-windows)
+        GNATCOLL_XXHASH_ARCH := x86_64
+    else
+        GNATCOLL_XXHASH_ARCH := generic
+    endif
+endif
 
 all: build
 
@@ -150,6 +160,7 @@ endif
 GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
 	 -XGNATCOLL_MADVISE=$(GNATCOLL_MADVISE) \
 	 -XGNATCOLL_BLAKE3_ARCH=$(GNATCOLL_BLAKE3_ARCH) \
+	 -XGNATCOLL_XXHASH_ARCH=$(GNATCOLL_XXHASH_ARCH) \
 	 -XGNATCOLL_PROJECTS=$(GNATCOLL_PROJECTS) \
 	 -XGNATCOLL_VERSION=$(GNATCOLL_VERSION) \
 	 -XGNATCOLL_OS=$(GNATCOLL_OS) \
