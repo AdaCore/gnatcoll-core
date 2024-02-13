@@ -24,7 +24,6 @@
 with GNATCOLL.OS.Libc;         use GNATCOLL.OS.Libc;
 with GNATCOLL.OS.Libc.Spawn;   use GNATCOLL.OS.Libc.Spawn;
 with GNATCOLL.String_Builders; use GNATCOLL.String_Builders;
-with Interfaces.C;
 with System;
 
 --------------------
@@ -44,7 +43,6 @@ function Internal_Spawn
 is
    use type FS.File_Descriptor;
    use type System.Address;
-   use type Interfaces.C.size_t;
    Pid              : Process_Id := 0;
    Posix_Prio       : GNATCOLL.OS.Libc.Priority;
    FA               : constant File_Actions := Init;
