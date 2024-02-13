@@ -2,3 +2,6 @@ description: Test for GNATCOLL.OS.FSUtil.Sync_Trees errors, except the ones
              involving symbolic links
 control:
     - ["SKIP", "env.build.os.name == 'windows'", "Unix only test"]
+    - ["SKIP", "env.is_cross", "pre and post-test python script are executed on
+       the host only. We need them to set correctly the file rights to reproduce
+       errors"]

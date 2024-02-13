@@ -1,0 +1,41 @@
+Test for GNATCOLL.OS.FSUtil.Sync_Trees
+OK   test.adb:15
+Source tree
+===========
+DIR src_top_dir/dir-0
+DIR src_top_dir/dir-0/dir-0
+DIR src_top_dir/dir-0/dir-1
+DIR src_top_dir/dir-0/dir-2
+DIR src_top_dir/dir-1
+DIR src_top_dir/dir-1/dir-0
+DIR src_top_dir/dir-1/dir-1
+DIR src_top_dir/dir-1/dir-2
+DIR src_top_dir/dir-2
+DIR src_top_dir/dir-2/dir-0
+DIR src_top_dir/dir-2/dir-1
+DIR src_top_dir/dir-2/dir-2
+FILE src_top_dir/file-0
+FILE src_top_dir/file-1
+FILE src_top_dir/file-2
+
+Destination tree
+================
+DIR dst_top_dir/dir-0
+DIR dst_top_dir/dir-0/dir-0
+DIR dst_top_dir/dir-0/dir-1
+DIR dst_top_dir/dir-0/dir-2
+DIR dst_top_dir/dir-1
+DIR dst_top_dir/dir-1/dir-0
+DIR dst_top_dir/dir-1/dir-1
+DIR dst_top_dir/dir-1/dir-2
+DIR dst_top_dir/dir-2
+DIR dst_top_dir/dir-2/dir-0
+DIR dst_top_dir/dir-2/dir-1
+DIR dst_top_dir/dir-2/dir-2
+FILE dst_top_dir/file-0
+FILE dst_top_dir/file-1
+FILE dst_top_dir/file-2
+
+Content checking
+================
+<=== TEST PASSED ===>

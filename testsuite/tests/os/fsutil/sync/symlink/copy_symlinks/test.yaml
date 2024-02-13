@@ -1,5 +1,8 @@
 description: Test for GNATCOLL.OS.Dir.Sync_Trees copy symlinks mode
-data:
-  - expected.out
+driver: build_run_assert_and_diff
+source_dirs:
+  - "../../"
 control:
     - ["SKIP", "env.build.os.name == 'windows'", "Unix only test"]
+    - ["SKIP", "env.is_cross", "Symbolic links setup is complex for cross
+       environment"]

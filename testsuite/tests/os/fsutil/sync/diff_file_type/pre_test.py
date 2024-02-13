@@ -8,6 +8,6 @@ from settings import src_top_dir_name, dst_top_dir_name
 
 mkdir(src_top_dir_name)
 mkdir(dst_top_dir_name)
-for f in range(10):
+for f in range(3):
     touch(os.path.join(src_top_dir_name, str(f"{f}")))
     mkdir(os.path.join(dst_top_dir_name, str(f"{f}")))

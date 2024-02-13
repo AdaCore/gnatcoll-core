@@ -1,4 +1,5 @@
-OK   test.adb:83
+Test for GNATCOLL.OS.FSUtil.Sync_Trees
+OK   test.adb:15
 Source tree
 ===========
 DIR src_top_dir/dir1
@@ -15,6 +16,7 @@ SYMLINK src_top_dir/file3_link -> ./dir3/file3
 SYMLINK src_top_dir/link_to_missing_file -> ./missing-file
 SYMLINK src_top_dir/relative_external_dir_link -> ../src_top_dir/dir1
 SYMLINK src_top_dir/symlink_in_src_and_dir_in_dst -> /tmp/missing-file
+
 Destination tree
 ================
 DIR dst_top_dir/dir1
@@ -31,4 +33,7 @@ SYMLINK dst_top_dir/file3_link -> ./dir3/file3
 SYMLINK dst_top_dir/link_to_missing_file -> ./missing-file
 SYMLINK dst_top_dir/relative_external_dir_link -> ../src_top_dir/dir1
 SYMLINK dst_top_dir/symlink_in_src_and_dir_in_dst -> /tmp/missing-file
+
+Content checking
+================
 <=== TEST PASSED ===>

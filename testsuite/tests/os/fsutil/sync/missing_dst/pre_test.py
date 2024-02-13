@@ -7,9 +7,9 @@ sys.path.insert(1, os.path.join(sys.path[0], ".."))
 from settings import src_top_dir_name
 
 mkdir(src_top_dir_name)
-for f in range(10):
+for f in range(3):
     touch(os.path.join(src_top_dir_name, str(f"file-{f}")))
-for f in range(10):
+for f in range(3):
     mkdir(os.path.join(src_top_dir_name, str(f"dir-{f}")))
-    for g in range(5):
+    for g in range(3):
         mkdir(os.path.join(src_top_dir_name, str(f"dir-{f}"), str(f"dir-{g}")))

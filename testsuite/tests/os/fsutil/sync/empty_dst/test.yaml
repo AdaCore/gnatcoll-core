@@ -1,2 +1,8 @@
 description: Test for GNATCOLL.OS.FSutil.Sync_Trees. Scenario with an empty
              destination directory
+driver: build_run_assert_and_diff
+data:
+  - "src_top_dir"
+  - "dst_top_dir"
+source_dirs:
+  - "../"

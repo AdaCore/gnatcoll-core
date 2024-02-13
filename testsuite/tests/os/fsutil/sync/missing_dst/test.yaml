@@ -1,2 +1,7 @@
 description: Test for GNATCOLL.OS.FSutil.Sync_Trees. Scenario with a missing
              target directory.
+driver: build_run_assert_and_diff
+data:
+  - "src_top_dir"
+source_dirs:
+  - "../"
