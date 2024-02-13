@@ -169,7 +169,7 @@ else
 endif
 
 ifeq ($(GNATCOV), yes)
-	$(GNATCOV_PROJECT_PATH) gnatcov instrument -P $(GNATCOLL_CORE_GPR) $(RBD) \
+	$(GNATCOV_PROJECT_PATH) gnatcov instrument -P $(GNATCOLL_CORE_GPR) $(GPR_VARS) $(RBD) \
 		--no-subprojects --level=stmt+decision
 endif
 	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
