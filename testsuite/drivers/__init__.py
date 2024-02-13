@@ -104,7 +104,10 @@ def gprbuild(
         project_file = os.path.join(driver.test_env["test_dir"], "test.gpr")
         if not os.path.isfile(project_file):
             project_file = os.path.join(TESTSUITE_ROOT_DIR, "support", "test.gpr")
-            scenario["TEST_SOURCES"] = driver.test_env["test_dir"]
+            if "TEST_SOURCES" in scenario:
+                scenario["TEST_SOURCES"] += ","+driver.test_env["test_dir"]
+            else:
+                scenario["TEST_SOURCES"] = driver.test_env["test_dir"]
 
     scenario_cmd = []
     for k, v in scenario.items():

@@ -3,6 +3,7 @@ from drivers import make_gnatcoll, TESTSUITE_ROOT_DIR
 from drivers.basic import BasicTestDriver
 from drivers.build_and_run import BuildAndRunDriver
 from drivers.build_run_diff import BuildRunDiffDriver
+from drivers.build_run_assert_and_diff import BuildRunAssertAndDiffDriver
 from drivers.json_validation import JSONValidationDriver
 from drivers.data_validation import DataValidationDriver
 from drivers.gnatcov import list_to_file, produce_report
@@ -24,6 +25,7 @@ class MyTestsuite(Testsuite):
         'default': BasicTestDriver,
         'build_and_run': BuildAndRunDriver,
         'build_run_diff': BuildRunDiffDriver,
+        'build_run_assert_and_diff': BuildRunAssertAndDiffDriver
     }
 
     def add_options(self, parser):

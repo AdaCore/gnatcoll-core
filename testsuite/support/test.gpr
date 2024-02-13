@@ -5,8 +5,8 @@
 with "gnatcoll";
 
 project Test is
-   Test_Sources := External("TEST_SOURCES");
-   for Source_Dirs use (".", Test_Sources);
+   Test_Sources := External_As_List ("TEST_SOURCES", ",");
+   for Source_Dirs use (".") & Test_Sources;
    for Main use ("test.adb");
    for Languages use ("Ada", "C");
    for Object_Dir use "obj";
