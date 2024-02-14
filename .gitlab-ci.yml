@@ -62,8 +62,7 @@ default:
 .job_template:
   services:
     - image:e3
-    - cpu:8
-    - mem:16
+    - cpu:4
   interruptible: true
 
 ########
@@ -82,7 +81,7 @@ build_doc:
 build-windows:
   services:
     - image:e3
-    - cpu:4
+    - cpu:2
   stage: build
   script:
     - anod install gcc --target=x86_64-windows64
