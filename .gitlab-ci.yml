@@ -14,7 +14,6 @@ variables:
 
 stages:
   - build
-  - test
 
 default:
   before_script: |
@@ -63,54 +62,100 @@ default:
 .job_template:
   services:
     - image:e3
-    - cpu:8
-    - mem:16
+    - cpu:4
   interruptible: true
-
-.test_template:
-  extends: .job_template
-  stage: test
-  needs: ["build"]
-  allow_failure: true
 
 ########
 # JOBS #
 ########
 
-build:
-  extends: .job_template
+build_doc:
+  services:
+    - image:e3
+    - cpu:2
   stage: build
   script:
     - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
     - anod build --latest gnatcoll-core-doc
-    - anod build --latest gnatcoll-core
 
-    - echo "packaging $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/install/" ;
-    - tar czf $CI_PROJECT_DIR/gnatcoll-core-current.tar.gz -C $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/ install/ ;
-    - cd $CI_PROJECT_DIR
-    - ls -l *.tar.gz
-
-  artifacts:
-    paths:
-      - gnatcoll-core-current.tar.gz
-
-test:
-  extends: .test_template
+build-windows:
+  services:
+    - image:e3
+    - cpu:2
+  stage: build
   script:
-    # unpack the packages
-    - cd $ANOD_DEFAULT_SANDBOX_DIR
-    - mkdir -p fingerprints
-    - mkdir -p $HOST/gnatcoll-core-current
-    - tar zxf $CI_PROJECT_DIR/gnatcoll-core-current.tar.gz -C $HOST/gnatcoll-core-current
-    - touch fingerprints/$HOST.gnatcoll-core-current.install.json.assume-unchanged
-    - touch fingerprints/$HOST.gnatcoll-core-current.download-bin.json.assume-unchanged
+    - anod install gcc --target=x86_64-windows64
+    - anod install gcc --target=x86-windows
+    - anod install gcc
+    - anod install gprbuild
+    # Native gcc is needed to get ar. otherwise gprbuild fails
+    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gcc/install/bin:$PATH
+    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-windows64-linux64/gcc/install/bin:$PATH
+    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86-windows-linux64/gcc/install/bin:$PATH
+    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gprbuild/install/bin:$PATH
+    - cd $CI_PROJECT_DIR && make TARGET=x86_64-w64-mingw32 GNATCOLL_PROJECTS=no
+    - cd $CI_PROJECT_DIR && rm -rf lib obj
+    - cd $CI_PROJECT_DIR && make TARGET=i686-pc-mingw32 GNATCOLL_PROJECTS=no
 
-    - rm -f $CI_PROJECT_DIR/*.tar.gz
-
+build_and_test_aarch64_linux:
+  services:
+    - image:e3-aarch64-linux
+    - cpu:4
+    - platform:aarch64-linux
+  stage: build
+  script:
     - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+    - anod build --latest gnatcoll-core
+    - anod test --latest gnatcoll-core -Qexternal
+    - e3-testsuite-report
+        --failure-exit-code 1
+        --xunit-output $CI_PROJECT_DIR/test.xml
+        --xunit-name gnatcoll-core
+        $ANOD_DEFAULT_SANDBOX_DIR/aarch64-linux/gnatcoll-core_external_test/results/new/ || FAILED=true
 
-    # -Qexternal is required to use the version built outside the compiler during
-    # the build stage.
+    # We previously prevented the pipeline from halting if a test failed, to make
+    # sure all tests were run. If a test failed now we exit with a non-zero code
+    - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
+  allow_failure: true
+  artifacts:
+    when:
+      always
+    paths:
+      - test.xml
+    reports:
+      junit: test.xml
+
+build_and_test_x86_linux:
+  extends: .job_template
+  stage: build
+  script:
+    - cp /it/e3/lib/python3.11/site-packages/e3/os/data/rlimit-x86_64-linux /it/e3/lib/python3.11/site-packages/e3/os/data/rlimit-x86-linux
+    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+    - anod build --latest --build=x86-linux gnatcoll-core
+    - anod test --latest --build=x86-linux gnatcoll-core -Qexternal
+    - e3-testsuite-report
+        --failure-exit-code 1
+        --xunit-output $CI_PROJECT_DIR/test.xml
+        --xunit-name gnatcoll-core
+        $ANOD_DEFAULT_SANDBOX_DIR/x86-linux/gnatcoll-core_external_test/results/new/ || FAILED=true
+
+    # We previously prevented the pipeline from halting if a test failed, to make
+    # sure all tests were run. If a test failed now we exit with a non-zero code
+    - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
+  artifacts:
+    when:
+      always
+    paths:
+      - test.xml
+    reports:
+      junit: test.xml
+
+build_and_test_x86_64_linux:
+  extends: .job_template
+  stage: build
+  script:
+    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+    - anod build --latest gnatcoll-core
     - anod test --latest gnatcoll-core -Qexternal
     - e3-testsuite-report
         --failure-exit-code 1
@@ -120,7 +165,7 @@ test:
 
     # We previously prevented the pipeline from halting if a test failed, to make
     # sure all tests were run. If a test failed now we exit with a non-zero code
-    - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
+    - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
   artifacts:
     when:
       always
