@@ -21,5 +21,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+--  Various modern hash implementations (see child packages)
+
 package GNATCOLL.Hash is
 end GNATCOLL.Hash;
