@@ -4,6 +4,16 @@ import os
 
 
 def generate_test_trees(src_top_dir_name, dst_top_dir_name, symlink_to_missing_files):
+    """
+    Generate trees of directories, regular files and symbolic links.
+
+    Parameters:
+        src_top_dir_name (string): Source tree directory name
+        dst_top_dir_name (string): Destination tree directory name
+        symlink_to_missing_files (boolean): If true, create also symbolic link
+          whose target does not exist.
+    """
+
     ###############
     # Source tree #
     ###############
