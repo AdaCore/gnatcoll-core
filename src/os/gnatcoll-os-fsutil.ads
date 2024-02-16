@@ -36,11 +36,11 @@ package GNATCOLL.OS.FSUtil is
    package UB renames Ada.Strings.Unbounded;
 
    generic
-      type State_Type is private;
+      type State_Type is limited private;
       type Result_Type is private;
 
-      Initial_State : State_Type;
-      --  Initial state
+      with procedure Set_Initial_State (C : in out State_Type);
+      --  Set initial state
 
       with procedure Update (C : in out State_Type; Buffer : String);
       --  Called sequentially on each file chunk to update the state
