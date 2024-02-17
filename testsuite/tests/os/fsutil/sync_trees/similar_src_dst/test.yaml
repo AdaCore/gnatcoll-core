@@ -1,0 +1,8 @@
+description: Test for GNATCOLL.OS.FSUtil.Sync_Trees. Scenario with source and
+             target directories being similar.
+driver: build_run_assert_and_diff
+data:
+  - "src_top_dir"
+  - "dst_top_dir"
+source_dirs:
+  - "../"

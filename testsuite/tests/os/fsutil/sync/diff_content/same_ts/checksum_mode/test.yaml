@@ -1,3 +1,0 @@
-description: Test for GNATCOLL.OS.FSutil.Sync_Trees. Scenario with mode set to
-             CHECKSUM and with files having the same timestamps but different
-             content

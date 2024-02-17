@@ -1,5 +1,0 @@
-description: Test for GNATCOLL.OS.Dir.Sync_Trees copy symlinks mode
-data:
-  - expected.out
-control:
-    - ["SKIP", "env.build.os.name == 'windows'", "Unix only test"]

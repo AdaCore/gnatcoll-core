@@ -1,0 +1,53 @@
+Test for GNATCOLL.OS.FSUtil.Sync_Trees
+OK   test.adb:15
+Source tree
+===========
+DIR src_top_dir/dir-0
+DIR src_top_dir/dir-1
+DIR src_top_dir/dir-2
+FILE src_top_dir/dir-0/file-0
+FILE src_top_dir/dir-0/file-1
+FILE src_top_dir/dir-0/file-2
+FILE src_top_dir/dir-1/file-0
+FILE src_top_dir/dir-1/file-1
+FILE src_top_dir/dir-1/file-2
+FILE src_top_dir/dir-2/file-0
+FILE src_top_dir/dir-2/file-1
+FILE src_top_dir/dir-2/file-2
+FILE src_top_dir/file-0
+FILE src_top_dir/file-1
+FILE src_top_dir/file-2
+
+Destination tree
+================
+DIR dst_top_dir/dir-0
+DIR dst_top_dir/dir-1
+DIR dst_top_dir/dir-2
+FILE dst_top_dir/dir-0/file-0
+FILE dst_top_dir/dir-0/file-1
+FILE dst_top_dir/dir-0/file-2
+FILE dst_top_dir/dir-1/file-0
+FILE dst_top_dir/dir-1/file-1
+FILE dst_top_dir/dir-1/file-2
+FILE dst_top_dir/dir-2/file-0
+FILE dst_top_dir/dir-2/file-1
+FILE dst_top_dir/dir-2/file-2
+FILE dst_top_dir/file-0
+FILE dst_top_dir/file-1
+FILE dst_top_dir/file-2
+
+Content checking
+================
+Content differs for the file dir-0/file-0
+Content differs for the file dir-0/file-1
+Content differs for the file dir-0/file-2
+Content differs for the file dir-1/file-0
+Content differs for the file dir-1/file-1
+Content differs for the file dir-1/file-2
+Content differs for the file dir-2/file-0
+Content differs for the file dir-2/file-1
+Content differs for the file dir-2/file-2
+Content differs for the file file-0
+Content differs for the file file-1
+Content differs for the file file-2
+<=== TEST PASSED ===>

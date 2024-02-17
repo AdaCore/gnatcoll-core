@@ -1,0 +1,8 @@
+description: Test for GNATCOLL.OS.FSUtil.Sync_Trees. Check the copy when
+             all files have a different timestamp and content in TIMESTAMP mode
+driver: build_run_assert_and_diff
+data:
+  - "src_top_dir"
+  - "dst_top_dir"
+source_dirs:
+  - "../../"
