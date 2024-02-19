@@ -17,8 +17,10 @@ for f in range(3):
     fd.close()
 
     # Set the timestamps
-    touch(os.path.join(src_top_dir_name, str(f"file-{f}")))
-    touch(os.path.join(dst_top_dir_name, str(f"file-{f}")))
+    stats = os.stat(os.path.join(src_top_dir_name, str(f"file-{f}")))
+    time_info = (stats.st_atime, stats.st_mtime)
+    os.utime(os.path.join(src_top_dir_name, str(f"file-{f}")), time_info)
+    os.utime(os.path.join(dst_top_dir_name, str(f"file-{f}")), time_info)
 
 
 for f in range(3):
@@ -37,5 +39,13 @@ for f in range(3):
         fd.close()
 
         # Set the timestamps
-        touch(os.path.join(src_top_dir_name, str(f"dir-{f}"), str(f"file-{g}")))
-        touch(os.path.join(dst_top_dir_name, str(f"dir-{f}"), str(f"file-{g}")))
+        stats = os.stat(
+            os.path.join(src_top_dir_name, str(f"dir-{f}"), str(f"file-{g}"))
+        )
+        time_info = (stats.st_atime, stats.st_mtime)
+        os.utime(
+            os.path.join(src_top_dir_name, str(f"dir-{f}"), str(f"file-{g}")), time_info
+        )
+        os.utime(
+            os.path.join(dst_top_dir_name, str(f"dir-{f}"), str(f"file-{g}")), time_info
+        )
