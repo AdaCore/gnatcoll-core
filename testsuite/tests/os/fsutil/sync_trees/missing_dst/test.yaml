@@ -5,3 +5,5 @@ data:
   - "src_top_dir"
 source_dirs:
   - "../"
+control:
+    - [SKIP, "env.is_cross", "Copy of tests directories fail from windows host to board (eng/toolchain/gnatcoll-core#35)"]
