@@ -67,6 +67,9 @@ begin
       Result.Symbolic_Link := (Stat_Result.Mode and S_IFMT) = S_IFLNK;
       Result.Regular       := (Stat_Result.Mode and S_IFMT) = S_IFREG;
       Result.Directory     := (Stat_Result.Mode and S_IFMT) = S_IFDIR;
+      Result.Readable      := (Stat_Result.Mode and S_IRUSR) > 0;
+      Result.Writable      := (Stat_Result.Mode and S_IWUSR) > 0;
+      Result.Executable    := (Stat_Result.Mode and S_IXUSR) > 0;
       Result.Stamp         := To_Ada_Time
          (Interfaces.C.long (Stat_Result.Mtime / Nano)) +
          Duration (Stat_Result.Mtime mod Nano) / Nano;

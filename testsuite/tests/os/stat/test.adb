@@ -26,6 +26,11 @@ begin
                 Msg => "check that directory is a dir");
       A.Assert (not Is_Symbolic_Link (FA),
                 Msg => "check that directory is not a symbolic link");
+      A.Assert (Is_Executable (FA), Msg => "check if directory is executable");
+      A.Assert (Is_Readable (FA), Msg => "check if directory is readable");
+      A.Assert (Is_Writable (FA), Msg => "check if directory is writable");
+      A.Assert (not Is_Executable_File (FA),
+                Msg => "check if directory is executable file");
 
       FA := Stat ("regular_file");
       IO.Put_Line (Image (FA));
