@@ -45,6 +45,24 @@ begin
       end;
       Close (FD);
 
+      FD := Open ("./new_file", Mode => Read_Mode);
+      declare
+         File_Content : String (1 .. 6) := (others => 'A');
+         N : Integer;
+      begin
+         N := Read (FD, File_Content, 2, 5);
+         A.Assert (N, 4);
+         A.Assert (File_Content, "AthisA");
+
+         begin
+            N := Read (FD, File_Content, 7, 10);
+         exception
+            when OS_Error =>
+               A.Assert (True, Msg => "OS_Error expected");
+         end;
+      end;
+      Close (FD);
+
       FD := Open ("./new_file", Mode => Append_Mode);
       Write (FD, " and it continues");
       Close (FD);

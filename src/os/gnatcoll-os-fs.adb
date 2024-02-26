@@ -95,6 +95,36 @@ package body GNATCOLL.OS.FS is
    end Read;
 
    function Read
+      (FD     : File_Descriptor;
+       Buffer : in out String;
+       First  : Integer;
+       Last   : Integer)
+      return Integer
+   is
+      function C_Read
+        (Fd     : File_Descriptor;
+         Buffer : System.Address;
+         Size   : size_t)
+         return int;
+      pragma Import (C, C_Read, "read");
+
+      Result : int;
+   begin
+      if First < Buffer'First or else Last > Buffer'Last then
+         raise OS_Error with "invalid buffer slice";
+      end if;
+
+      Result := C_Read (FD, Buffer (First)'Address, size_t (Last - First + 1));
+
+      if Result < 0 then
+         raise OS_Error with "read error";
+      end if;
+
+      return Integer (Result);
+   end Read;
+
+
+   function Read
       (FD          : File_Descriptor;
        Buffer_Size : Positive := Default_Buffer_Size)
       return Unbounded_String
