@@ -20,8 +20,9 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
-
 --  Posix Interface to stat system call
+
+with GNATCOLL.OS.FS;
 
 package GNATCOLL.OS.Libc.Stat is
 
@@ -53,6 +54,15 @@ package GNATCOLL.OS.Libc.Stat is
    with Import        => True,
         Convention    => C,
         External_Name => "__gnatcoll_lstat";
+
+   --  See Posix fstat documentation
+   function Fstat
+      (FD   : GNATCOLL.OS.FS.File_Descriptor;
+       Info : in out Stat_Info)
+      return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_fstat";
 
    type Statvfs_Info is record
       Bsize    : Uint_64;  --  File system block size

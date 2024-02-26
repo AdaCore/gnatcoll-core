@@ -25,17 +25,19 @@
 
 with Ada.Calendar; use Ada.Calendar;
 with Ada.Strings.UTF_Encoding;
+with GNATCOLL.OS.FS;
 
 package GNATCOLL.OS.Stat is
 
    package UTF8 renames Ada.Strings.UTF_Encoding;
+   package FS renames GNATCOLL.OS.FS;
 
    type File_Attributes is private;
    --  Record containing information about a file or directory on the
    --  filesystem
 
    function Stat
-      (Path         : UTF8.UTF_8_String;
+      (Path            : UTF8.UTF_8_String;
        Follow_Symlinks : Boolean := True)
       return File_Attributes;
    --  Retrieve file information about a file located at Path. If
@@ -49,6 +51,9 @@ package GNATCOLL.OS.Stat is
    --
    --  In case Path is not a valid UTF-8 string the function behaves as if the
    --  file does not exist.
+
+   function Fstat (FD : FS.File_Descriptor) return File_Attributes;
+   --  Retrieve file information for file descriptor FD.
 
    function Exists (Self : File_Attributes) return Boolean;
    --  Return True if the file exist on the filesystem

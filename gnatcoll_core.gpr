@@ -239,6 +239,8 @@ library project GNATCOLL_Core is
               use "gnatcoll-io-native-codec__unix.adb";
             for Implementation ("GNATCOLL.Plugins")
               use "gnatcoll-plugins__unix.adb";
+            for Implementation ("GNATCOLL.OS.Stat.Fstat")
+              use "gnatcoll-os-stat-fstat__unix.adb";
             for Implementation ("GNATCOLL.OS.Stat.Stat")
               use "gnatcoll-os-stat-stat__unix.adb";
             for Implementation ("GNATCOLL.OS.FS.Null_File")
@@ -294,6 +296,8 @@ library project GNATCOLL_Core is
               use "gnatcoll-io-native-codec__win32.adb";
             for Implementation ("GNATCOLL.Plugins")
               use "gnatcoll-plugins__windows.adb";
+            for Implementation ("GNATCOLL.OS.Stat.Fstat")
+              use "gnatcoll-os-stat-fstat__win32.adb";
             for Implementation ("GNATCOLL.OS.Stat.Stat")
               use "gnatcoll-os-stat-stat__win32.adb";
             for Implementation ("GNATCOLL.OS.FS.Is_Console")
