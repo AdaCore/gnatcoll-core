@@ -242,6 +242,10 @@ def bin_check_call(
                 stderr=subprocess.STDOUT,
             )
             stdout, _ = subp.communicate()
+            stdout = stdout.replace(
+                b"it looks like wine32 is missing, you should install it.\n", b"")
+            stdout = stdout.replace(
+                b'as root, please execute "apt-get install wine32"\n', b"")
             # stdout here is bytes
             process = ProcessResult(subp.returncode, stdout)
         else:
