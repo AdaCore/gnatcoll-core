@@ -18,9 +18,17 @@ class JSONValidationDriver(DataValidationDriver):
             # Escape non-ASCII codepoints. This is necessary to avoid errors
             # when logging wide characters on ancient encodings, such as CP1252
             # on Windows.
-            got = got.encode('unicode_escape').decode('ascii')
-            expected = expected.encode('unicode_escape').decode('ascii')
-            logging.debug('%s\n<=>\n%s', got, expected)
+            try:
+                got_str = json.dumps(got)
+            except Exception:
+                got_str = got
+            try:
+                expected_str = json.dumps(expected)
+            except Exception:
+                expected_str = expected
+            got_str = got_str.encode('unicode_escape').decode('ascii')
+            expected_str = expected_str.encode('unicode_escape').decode('ascii')
+            logging.debug(f'Got: {got_str}\n<=>\nExp: {expected_str}')
             result.set_status(TestStatus.FAIL)
-            result.push_result()
+            self.push_result(result)
         return True

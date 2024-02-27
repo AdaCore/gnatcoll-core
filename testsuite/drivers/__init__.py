@@ -226,22 +226,44 @@ def bin_check_call(
         test_name = driver.test_name
 
     if driver.env.is_cross:
-        # Import pycross only when necessary for cross targets
-        from pycross.runcross.main import run_cross
+        if driver.env.target.os.name == "windows":
+            cmd = ["wine"] + cmd
+            if timeout is not None:
+                cmd = [get_rlimit(), str(timeout)] + cmd
 
-        run = run_cross(
-            cmd,
-            cwd=cwd,
-            mode=None,
-            timeout=timeout,
-            output=None,
-            slot=slot,
-            copy_files_on_target=copy_files_on_target,
-        )
+            # Use directly subprocess instead of e3.os.process.Run, since the latter
+            # does not handle binary outputs.
+            subp = subprocess.Popen(
+                cmd,
+                cwd=cwd,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            stdout, _ = subp.communicate()
+            stdout = stdout.replace(
+                b"it looks like wine32 is missing, you should install it.\n", b"")
+            stdout = stdout.replace(
+                b'as root, please execute "apt-get install wine32"\n', b"")
+            # stdout here is bytes
+            process = ProcessResult(subp.returncode, stdout)
+        else:
+            # Import pycross only when necessary for cross targets
+            from pycross.runcross.main import run_cross
 
-        # Here process.out holds utf-8 encoded data.
-        process = ProcessResult(run.status, run.out.encode("utf-8"))
+            run = run_cross(
+                cmd,
+                cwd=cwd,
+                mode=None,
+                timeout=timeout,
+                output=None,
+                slot=slot,
+                copy_files_on_target=copy_files_on_target,
+            )
 
+            # Here process.out holds utf-8 encoded data.
+            process = ProcessResult(run.status, run.out.encode("utf-8"))
     else:
         if timeout is not None:
             cmd = [get_rlimit(), str(timeout)] + cmd
