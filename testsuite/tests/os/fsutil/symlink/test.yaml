@@ -1,6 +1,6 @@
 title: GNATCOLL.OS.FSUtil symlink test
 control:
-    - ["SKIP", "env.build.os.name == 'windows'", "Unix only test"]
+    - ["SKIP", "env.target.os.name == 'windows'", "Unix only test"]
     - ["SKIP", "env.target.machine == 'qemu'",
         "FAT file system is usually used by qemu.
         This FS does not support symbolic links"]

@@ -80,22 +80,35 @@ build_doc:
 
 build-windows:
   services:
-    - image:e3
-    - cpu:2
+    - image:e3-wine
+    - cpu:4
   stage: build
   script:
-    - anod install gcc --target=x86_64-windows64
-    - anod install gcc --target=x86-windows
-    - anod install gcc
-    - anod install gprbuild
-    # Native gcc is needed to get ar. otherwise gprbuild fails
-    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gcc/install/bin:$PATH
-    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-windows64-linux64/gcc/install/bin:$PATH
-    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86-windows-linux64/gcc/install/bin:$PATH
-    - export PATH=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gprbuild/install/bin:$PATH
-    - cd $CI_PROJECT_DIR && make TARGET=x86_64-w64-mingw32 GNATCOLL_PROJECTS=no
-    - cd $CI_PROJECT_DIR && rm -rf lib obj
-    - cd $CI_PROJECT_DIR && make TARGET=i686-pc-mingw32 GNATCOLL_PROJECTS=no
+    - anod install --latest gnat --target=x86_64-windows64
+    - anod install --latest gcc
+    - export GNAT_DIR=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-windows64-linux64/gnat/install
+    - export PATH=$GNAT_DIR/bin:$ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gcc/install/bin:$PATH
+    - export GPR_PROJECT_PATH=$GNAT_DIR/x86_64-w64-mingw32/share/gpr
+    - cd $CI_PROJECT_DIR && make TARGET=x86_64-w64-mingw32 && make install prefix=install TARGET=x86_64-w64-mingw32 || exit 1
+    - export GPR_PROJECT_PATH=$CI_PROJECT_DIR/install/share/gpr:$GPR_PROJECT_PATH
+    - cd $CI_PROJECT_DIR/testsuite && ./run-tests --target=x86_64-windows64,,wine || true
+    - e3-testsuite-report
+        --failure-exit-code 1
+        --xunit-output $CI_PROJECT_DIR/test.xml
+        --xunit-name gnatcoll-core
+        $CI_PROJECT_DIR/testsuite/out/new/ || FAILED=true
+
+    # We previously prevented the pipeline from halting if a test failed, to make
+    # sure all tests were run. If a test failed now we exit with a non-zero code
+    - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
+  allow_failure: true
+  artifacts:
+    when:
+      always
+    paths:
+      - test.xml
+    reports:
+      junit: test.xml
 
 build_and_test_aarch64_linux:
   services:
