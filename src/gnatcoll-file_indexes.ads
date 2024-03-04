@@ -41,7 +41,8 @@ package GNATCOLL.File_Indexes is
    --  ensures that SHA1 for a given file is recomputed only when the file
    --  changes
 
-   type Entry_State is (UNCHANGED_FILE, UPDATED_FILE, NEW_FILE, REMOVED_FILE);
+   type Entry_State is
+     (UNCHANGED_FILE, UPDATED_FILE, NEW_FILE, REMOVED_FILE, UNHASHABLE_FILE);
    --  Indication returned when doing a SHA1 query in File_Index:
    --
    --  UNCHANGED_FILE: returned when SHA1 did not change since last query
