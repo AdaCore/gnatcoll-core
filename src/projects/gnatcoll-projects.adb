@@ -9946,6 +9946,14 @@ package body GNATCOLL.Projects is
       Gprbuild_Path : Filesystem_String_Access;
       Project       : Project_Node_Id;
 
+      Codepeer_Fallback : Boolean := False;
+
+      Codepeer_Infix : constant String :=
+        "libexec" &
+        Directory_Separator &
+        "codepeer" &
+        Directory_Separator;
+
       Implicit_Project_File_Path : constant String :=
         "share" &
         Directory_Separator &
@@ -9962,11 +9970,18 @@ package body GNATCOLL.Projects is
 
       Gprbuild_Path := Locate_Exec_On_Path ("gprbuild");
       if Gprbuild_Path = null then
+         Gprbuild_Path := Locate_Exec_On_Path ("codepeer-gprbuild");
+         Codepeer_Fallback := True;
+      end if;
+      if Gprbuild_Path = null then
          Trace (Me, "Gprbuild not found on path");
          return;
       end if;
       Project_File := Get_Parent (Create (Dir_Name (Gprbuild_Path.all)));
-      Project_File := Join (Project_File, +Implicit_Project_File_Path);
+      Project_File := Join
+        (Project_File,
+         +((if Codepeer_Fallback then Codepeer_Infix else "")
+           & Implicit_Project_File_Path));
       Free (Gprbuild_Path);
 
       if not Project_File.Is_Regular_File then
