@@ -26,7 +26,7 @@ with GNAT.OS_Lib;
 package body GNATCOLL.File_Indexes is
 
    -----------------
-   -- Empty_Cache --
+   -- Clear_Cache --
    -----------------
 
    procedure Clear_Cache (Self : in out File_Index) is
@@ -145,7 +145,8 @@ package body GNATCOLL.File_Indexes is
            Save_On_Disk => True));
       Self.Total_Size := Self.Total_Size + Stat.Length (Attrs);
 
-      --  If the hash hash not changed set State to UNCHANGED_FILE
+      --  If the hash has not changed set State to UNCHANGED_FILE
+
       if State = UPDATED_FILE and then New_Hash = Prev_Hash then
          State := UNCHANGED_FILE;
       end if;
