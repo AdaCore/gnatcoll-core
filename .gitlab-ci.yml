@@ -138,6 +138,13 @@ build_and_test_aarch64_linux:
     reports:
       junit: test.xml
 
+build_debug_mode_x86_64_linux:
+  extends: .job_template
+  stage: build
+  script:
+    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+    - anod build --latest gnatcoll-core -Qdbg
+
 build_and_test_x86_linux:
   extends: .job_template
   stage: build

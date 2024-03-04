@@ -84,10 +84,9 @@ package body GNATCOLL.Hash.xxHash is
 
       Status : Integer;
       pragma Unreferenced (Status);
-
    begin
       Self.Opaque_State := XXH3_createState;
-      Status := XXH3_64bits_reset(Self.Opaque_State);
+      Status := XXH3_64bits_reset (Self.Opaque_State);
    end Init_Hash_Context;
 
    -------------------------
