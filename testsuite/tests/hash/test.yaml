@@ -1,1 +1,4 @@
 description: Basic GNATCOLL.Hash test
+control:
+    - [SKIP, "env.target.machine == 'qemu'",
+       "Not enough disk space on cross qemu configuration"]
