@@ -30,45 +30,9 @@ with Ada.Unchecked_Deallocation;
 with GNATCOLL.Atomic;         use GNATCOLL.Atomic;
 with GNATCOLL.JSON.Utility;
 with GNATCOLL.Strings;        use GNATCOLL.Strings;
+with GNATCOLL.String_Builders; use GNATCOLL.String_Builders;
 
 package body GNATCOLL.JSON is
-
-   type Text_Position is record
-      Index : Natural := 0;
-      --  Array index in the input string. For valid positions, this is
-      --  positive.
-
-      Line : Natural := 0;
-      --  Logical line number. For valid positions, this is positive.
-
-      Column : Natural := 0;
-      --  Logical column number. For valid positions, this is positive.
-   end record;
-   --  Record to represent position in a given text
-
-   type Token_Kind is
-     (J_NULL,
-      J_TRUE,
-      J_FALSE,
-      J_NUMBER,
-      J_INTEGER,
-      J_STRING,
-      J_ARRAY,
-      J_OBJECT,
-      J_ARRAY_END,
-      J_OBJECT_END,
-      J_COMMA,
-      J_COLON,
-      J_EOF);
-   --  JSON Token kinds. Note that in ECMA 404 there is no notion of integer.
-   --  Only numbers are supported. In our implementation we return J_INTEGER
-   --  if there is no decimal part in the number. The semantic is that this is
-   --  a J_NUMBER token that "might" be represented as an integer. Special
-   --  token J_EOF means that end of stream has been reached.
-
-   subtype Value_Token is Token_Kind range J_NULL .. J_OBJECT;
-   --  Subset of token kinds for JSON values: null, false, true, a string, a
-   --  number, an array or an object.
 
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_Array_Internal, JSON_Array_Access);
@@ -81,62 +45,6 @@ package body GNATCOLL.JSON is
       Indent  : Natural;
       Ret     : in out Unbounded_String);
    --  Auxiliary write function
-
-   procedure Read
-     (Result    : in out Read_Result;
-      Strm      : String;
-      Pos       : in out Text_Position;
-      Kind      : out Token_Kind;
-      Check_EOF : Boolean := False)
-      with Pre => Result.Success;
-   --  Read and decode a JSON value. On success, this returns a Read_Result
-   --  with Success => True, otherwise it returns an error with a Success =>
-   --  False record.
-   --
-   --  If Check_EOF is true, return an error if we haven't reached the end of
-   --  the input string upon returning. If Check_EOF if false and no value
-   --  could be decoded but we still managed to read a token, just skip this
-   --  token: in that case, a null JSON value is returned.
-   --
-   --  Strm is the content to decode,
-   --
-   --  Pos is the position in Strm from which we start reading. It is updated
-   --  to point past that token.
-   --
-   --  Kind is set to the last read token kind,
-   --
-   --  Note that we use an IN OUT parameter instead of a mere return value for
-   --  the result to avoid a noticeable runtime penalty, probably due to
-   --  the secondary stack management involved.
-
-   type Read_Token_Result (Success : Boolean := True) is record
-      case Success is
-         when True =>
-            Kind : Token_Kind;
-         when False =>
-            Error : Parsing_Error;
-      end case;
-   end record;
-
-   function Read_Token
-     (Strm        : String;
-      Pos         : in out Text_Position;
-      Token_Start : out Text_Position;
-      Token_End   : out Text_Position)
-      return Read_Token_Result;
-   --  Read a token.
-   --
-   --  Strm is the content to decode,
-   --
-   --  Pos is the position in Strm from which the token is read. It is updated
-   --  to point past that token.
-   --
-   --  Token_Start are Token_End are set respectively to the position of the
-   --  first and last character of the token (outside boundaries of Strm if the
-   --  return token is J_EOF).
-   --
-   --  If a parsing error is detected, this returns a Read_Token_Error record
-   --  with Success => False, including the relevant parsing error information.
 
    ------------
    -- Append --
@@ -217,686 +125,337 @@ package body GNATCOLL.JSON is
          & To_String (Error.Message));
    end Format_Parsing_Error;
 
-   ----------------
-   -- Read_Token --
-   ----------------
-
-   function Read_Token
-     (Strm        : String;
-      Pos         : in out Text_Position;
-      Token_Start : out Text_Position;
-      Token_End   : out Text_Position)
-      return Read_Token_Result
+   function Parse_Next
+      (Self : in out JSON_Parser; Data : in out GNATCOLL.Buffer.Reader)
+      return JSON_Parser_Event
    is
-      procedure Next_Char;
-      --  Update Pos to point to next character in Strm
 
-      function Next_Char (Result : Token_Kind) return Read_Token_Result
-         with Inline;
-      --  Shortcut to call the Next_Char procedure after returning Result
+      use GNATCOLL.Buffer;
+      Result : JSON_Parser_Event;
+      CC     : Character;
+      Offset : Integer;
 
-      function Is_Whitespace return Boolean with Inline;
-      --  Return True of current character is a whitespace: line feed, carriage
-      --  return, space or horizontal tabulation.
+      procedure Skip_Whitespaces with Inline_Always => True;
+      procedure Parse_Number with Inline_Always => True;
+      procedure Expect_Value with Inline_Always => True;
 
-      function Is_Structural_Token return Boolean with Inline;
-      --  Return True if current character is one of the structural tokens:
-      --  brackets, parens, comma or colon.
-
-      function Is_Token_Sep return Boolean with Inline;
-      --  Return True if at least of of the following is true:
-      --
-      --    * we reached the end of input string;
-      --    * the current character is a whitespace;
-      --    * the current character is a structural token.
-
-      function Error (Msg : String) return Read_Token_Result;
-      --  Return a parsing error for the current position and the given error
-      --  message.
-
-      function Delimit_Keyword
-        (Kw : String; Kind : Token_Kind) return Read_Token_Result;
-      --  Advance Pos until we reach the next token separator, updating
-      --  Token_End to designate the last character. Return the resulting token
-      --  if it matches Kw/Kind, otherwise raise an error.
-
-      -----------
-      -- Error --
-      -----------
-
-      function Error (Msg : String) return Read_Token_Result is
+      procedure Skip_Whitespaces is
+         Offset : Integer;
       begin
-         return (Success => False,
-                 Error   => (Line    => Pos.Line,
-                             Column  => Pos.Column,
-                             Message => To_Unbounded_String (Msg)));
-      end Error;
-
-      ---------------
-      -- Next_Char --
-      ---------------
-
-      procedure Next_Char is
-      begin
-         Pos.Index := Pos.Index + 1;
-         if Pos.Index > Strm'Last then
-            Pos.Column := Pos.Column + 1;
-         elsif Strm (Pos.Index) = ASCII.LF then
-            Pos.Column := 1;
-            Pos.Line := Pos.Line + 1;
-         else
-            Pos.Column := Pos.Column + 1;
-         end if;
-      end Next_Char;
-
-      function Next_Char (Result : Token_Kind) return Read_Token_Result is
-      begin
-         Next_Char;
-         return (Success => True, Kind => Result);
-      end Next_Char;
-
-      -------------------
-      -- Is_Whitespace --
-      -------------------
-
-      function Is_Whitespace return Boolean is
-      begin
-         return
-           (Pos.Index <= Strm'Last
-            and then Strm (Pos.Index) in ASCII.LF | ASCII.CR | ASCII.HT | ' ');
-      end Is_Whitespace;
-
-      -------------------------
-      -- Is_Structural_Token --
-      -------------------------
-
-      function Is_Structural_Token return Boolean is
-      begin
-         return
-           (Pos.Index <= Strm'Last
-            and then Strm (Pos.Index) in '[' | ']' | '{' | '}' | ',' | ':');
-      end Is_Structural_Token;
-
-      ------------------
-      -- Is_Token_Sep --
-      ------------------
-
-      function Is_Token_Sep return Boolean is
-      begin
-         return (Pos.Index > Strm'Last
-                 or else Is_Whitespace
-                 or else Is_Structural_Token);
-      end Is_Token_Sep;
-
-      ---------------------
-      -- Delimit_Keyword --
-      ---------------------
-
-      function Delimit_Keyword
-        (Kw : String; Kind : Token_Kind) return Read_Token_Result is
-      begin
-         while not Is_Token_Sep loop
-            Token_End := Pos;
-            Next_Char;
-         end loop;
-         if Strm (Token_Start.Index .. Token_End.Index) /= Kw then
-            return Error ("invalid keyword starting with: "
-                          & Strm (Token_Start.Index .. Token_End.Index));
-         else
-            return (Success => True, Kind => Kind);
-         end if;
-      end Delimit_Keyword;
-
-      CC : Character;
-      --  Buffer for the currently analyzed character
-
-      Can_Be_Integer : Boolean := True;
-      --  When reading a number token, this is true if that number can be an
-      --  integer: otherwise, it must be interpreted as a decimal number.
-   begin
-      --  Skip leading whitespaces
-
-      while Is_Whitespace loop
-         Next_Char;
-      end loop;
-
-      --  Initialize token delimiters
-
-      Token_Start := Pos;
-      Token_End   := Pos;
-
-      --  If we reached the end of the input string, just return a EOF token
-
-      if Pos.Index > Strm'Last then
-         return (Success => True, Kind => J_EOF);
-      end if;
-
-      --  Otherwise, all depends on the first non-whitespace character to read
-      --  next...
-
-      CC := Strm (Pos.Index);
-      case CC is
-
-      --  Structual tokens are unambiguously designated by standalone
-      --  characters.
-
-      when '[' => return Next_Char (J_ARRAY);
-      when ']' => return Next_Char (J_ARRAY_END);
-      when '{' => return Next_Char (J_OBJECT);
-      when '}' => return Next_Char (J_OBJECT_END);
-      when ',' => return Next_Char (J_COMMA);
-      when ':' => return Next_Char (J_COLON);
-
-      --  Only named value tokens can start with a letter
-
-      when 'n' => return Delimit_Keyword ("null", J_NULL);
-      when 'f' => return Delimit_Keyword ("false", J_FALSE);
-      when 't' => return Delimit_Keyword ("true", J_TRUE);
-
-      when '"' =>
-
-         --  We expect a string.
-         --
-         --  Just scan till the end the of the string but do not attempt to
-         --  decode it. This means that even if we get a string token it might
-         --  not be a valid string from the ECMA 404 point of view.
-
-         Next_Char;
-         while Pos.Index <= Strm'Last and then Strm (Pos.Index) /= '"' loop
-            CC := Strm (Pos.Index);
-
-            if CC in ASCII.NUL .. ASCII.US then
-               return Error ("control character not allowed in string");
+         Offset := Window_Offset (Data);
+         while Next (Data, CC, Offset) loop
+            if CC > ' ' then
+               exit;
             end if;
 
-            if CC = '\' then
+            case CC is
+               when ' ' | ASCII.HT | ASCII.LF | ASCII.CR =>
+                  null;
+               when others =>
+                  exit;
+            end case;
+         end loop;
+         Set_Window_Offset (Data, Offset);
+         Release (Data);
+      end Skip_Whitespaces;
 
-               --  This is an escape sequence. Make sure we have at least one
-               --  more character to read.
+      procedure Parse_Number is
+         Has_Char : Boolean;
+      begin
+         Offset := Window_Offset (Data);
+         Result.First := Current_Position (Data);
 
-               Next_Char;
+         --  If minus sign is present we expect afterward a number
+         if CC = '-' then
+            if not Next (Data, CC, Offset) or else CC not in '0' .. '9' then
+               raise Invalid_JSON_Stream with "not a valid number";
+            end if;
+         end if;
 
-               if Pos.Index > Strm'Last then
-                  return Error ("non terminated string");
+         --  At this stage, by construction CC is in '0' .. '9'
+         if CC in '1' .. '9' then
+            loop
+               Has_Char := Next (Data, CC, Offset);
+               exit when not Has_Char or else CC not in '0' .. '9';
+            end loop;
+         else
+            Has_Char := Next (Data, CC, Offset);
+         end if;
+
+         if Has_Char and then CC = '.' then
+            --  We have a fractional part
+            Result.Kind := NUMBER_VALUE;
+            Has_Char := Next (Data, CC, Offset);
+            if not Has_Char or else CC not in '0' .. '9' then
+               raise Invalid_JSON_Stream with "not a valid number";
+            end if;
+
+            loop
+               Has_Char := Next (Data, CC, Offset);
+               exit when not Has_Char or else CC not in '0' .. '9';
+            end loop;
+         end if;
+
+         if Has_Char and then (CC = 'e' or else CC = 'E') then
+            --  We have an exponential part
+            Result.Kind := NUMBER_VALUE;
+            Has_Char := Next (Data, CC, Offset);
+            if not Has_Char then
+               raise Invalid_JSON_Stream with "not a valid number";
+            end if;
+
+            if CC = '+' or else CC = '-' then
+               Has_Char := Next (Data, CC, Offset);
+            end if;
+
+            if not Has_Char or else CC not in '0' .. '9' then
+               raise Invalid_JSON_Stream with "not a valid number";
+            end if;
+
+            loop
+               Has_Char := Next (Data, CC, Offset);
+               exit when not Has_Char or else CC not in '0' .. '9';
+            end loop;
+         end if;
+
+         if Has_Char then
+            Set_Window_Offset (Data, Offset - 1);
+            Result.Last := Current_Position (Data);
+         else
+            Set_Window_Offset (Data, Offset);
+            Result.Last := Current_Position (Data);
+         end if;
+      end Parse_Number;
+
+      procedure Expect_Value is
+      begin
+         --  Skip initial white spaces
+         Skip_Whitespaces;
+
+         if Is_End_Of_Data (Data) then
+            Result.Kind := DOC_END;
+            return;
+         end if;
+
+         case Current_Char (Data) is
+            when '{' =>
+               --  This is an object
+               Result.Kind := OBJECT_START;
+               return;
+            when '}' =>
+               Result.Kind := OBJECT_END;
+               return;
+            when '[' =>
+               --  This is an array
+               Result.Kind := ARRAY_START;
+            when ']' =>
+               Result.Kind := ARRAY_END;
+               return;
+            when ':' =>
+               Result.Kind := NAME_SEP;
+               return;
+            when ',' =>
+               Result.Kind := VALUE_SEP;
+               return;
+            when 't' =>
+               --  This is true
+               Result.Kind := TRUE_VALUE;
+               if not GNATCOLL.Buffer.Check (Data, "rue") then
+                  raise Invalid_JSON_Stream with "invalid token";
+               end if;
+            when 'f' =>
+               --  This is false
+               Result.Kind := FALSE_VALUE;
+               if not GNATCOLL.Buffer.Check (Data, "alse") then
+                  raise Invalid_JSON_Stream with "invalid token";
+               end if;
+            when 'n' =>
+               --  This is null
+
+               Result.Kind := NULL_VALUE;
+               if not GNATCOLL.Buffer.Check (Data, "ull") then
+                  raise Invalid_JSON_Stream with "invalid token";
                end if;
 
-               case Strm (Pos.Index) is
-                  when 'u' =>
-                     --  This is a unicode escape sequence ("\uXXXX")
-                     for Idx in 1 .. 4 loop
-                        Next_Char;
-                        if Pos.Index > Strm'Last then
-                           return Error ("non terminated string");
-                        elsif Strm (Pos.Index) not in
-                           'a' .. 'f' | 'A' .. 'F' | '0' .. '9'
-                        then
-                           return Error ("invalid unicode escape sequence");
-                        end if;
-                     end loop;
+            when '"' =>
+               Result.Kind := STRING_VALUE;
+               declare
+                  Offset : Integer;
+               begin
 
-                  when '\' | '/' | '"' | 'b' | 'f' | 'n' | 'r' | 't' =>
-                     --  This is a single-character escape sequence
-                     null;
+                  Offset := Window_Offset (Data);
+                  Result.First := Current_Position (Data);
 
-                  when others =>
-                     return Error ("invalid escape sequence");
-               end case;
-            end if;
-            Next_Char;
-         end loop;
+                  --  This is a string
+                  while Next (Data, CC, Offset) loop
+                     case CC is
+                        when '"' =>
+                           Set_Window_Offset (Data, Offset);
+                           Result.Last := Current_Position (Data);
+                           return;
+                        when ASCII.NUL .. ASCII.US =>
+                           raise Invalid_JSON_Stream
+                            with "control character not allowed in string";
+                        when '\' =>
+                           if not Next (Data, CC, Offset) then
+                              raise Invalid_JSON_Stream
+                              with "non terminated string";
+                           end if;
 
-         --  We could not find a closing quote before the end of the input
-         --  string: this is an error.
+                           case CC is
+                              when '\' | '/' | '"' | 'b' | 'f' |
+                                 'n' | 'r' | 't' =>
+                                 --  This is a single character escape sequence
+                                 null;
+                              when 'u' =>
+                                 for Idx in 1 .. 4 loop
+                                    if not Next (Data, CC, Offset) then
+                                       raise Invalid_JSON_Stream
+                                       with "invalid unicode escape sequence";
+                                    elsif CC not in
+                                       'a' .. 'f' | 'A' .. 'F' | '0' .. '9'
+                                    then
+                                       raise Invalid_JSON_Stream
+                                       with "invalid unicode escape sequence";
+                                    end if;
 
-         if Pos.Index > Strm'Last then
-            return Error ("non terminated string");
-         end if;
+                                 end loop;
+                              when others =>
+                                 raise Invalid_JSON_Stream with "unknown case";
+                           end case;
 
-         Token_End := Pos;
 
-         --  Go to next char and ensure that this is separator. Indeed,
-         --  construction such as "string1""string2" are not allowed.
-
-         Next_Char;
-         if not Is_Token_Sep then
-            return Error ("invalid syntax");
-         end if;
-         return (Success => True, Kind => J_STRING);
-
-      when '-' | '0' .. '9' =>
-
-         --  We expect a number. If it's a negative one, just discard the
-         --  leading dash.
-
-         if CC = '-' then
-            Next_Char;
-            if Pos.Index > Strm'Last then
-               return Error ("invalid number");
-            end if;
-         end if;
-
-         --  Parse the integer part of a number. Leading zeros (except a mere
-         --  "0" of course) are not allowed.
-
-         case Strm (Pos.Index) is
-         when '0' =>
-            Token_End := Pos;
-            Next_Char;
-
-         when '1' .. '9' =>
-            Token_End := Pos;
-            Next_Char;
-            while Pos.Index <= Strm'Last
-                  and then Strm (Pos.Index) in '0' .. '9'
-            loop
-               Token_End := Pos;
-               Next_Char;
-            end loop;
-
-         when others =>
-            return Error ("invalid number");
+                        when others =>
+                           null;
+                     end case;
+                  end loop;
+               end;
+               raise Invalid_JSON_Stream with "non terminated string";
+            when '-' | '0' .. '9' =>
+               --  This is a number
+               Result.Kind := INTEGER_VALUE;
+               Parse_Number;
+            when others =>
+               raise Invalid_JSON_Stream
+                  with "unexpected character '" & Current_Char (Data) & "'";
          end case;
 
-         if Is_Token_Sep then
+      end Expect_Value;
 
-            --  The token stops here, so we have a valid integer number
+      Scan_Next : Boolean := True;
+   begin
+      Offset := Window_Offset (Data);
+      --  Release previous data from the buffer
+      Release (Data);
 
-            return (Success => True, Kind => J_INTEGER);
+      --  Read next token
+      Expect_Value;
 
-         elsif Strm (Pos.Index) not in '.' | 'e' | 'E' then
-
-            --  At this point, we allow only an exponent or a decimal number
-
-            return Error ("invalid number");
-         end if;
-
-         --  If present, handle the decimals
-
-         if Strm (Pos.Index) = '.' then
-            Can_Be_Integer := False;
-            Token_End := Pos;
-            Next_Char;
-            if Pos.Index > Strm'Last or else
-              Strm (Pos.Index) not in '0' .. '9'
-            then
-               return Error ("invalid number");
-            end if;
-
-            while Pos.Index <= Strm'Last and then
-              Strm (Pos.Index) in '0' .. '9'
-            loop
-               Token_End := Pos;
-               Next_Char;
-            end loop;
-
-         end if;
-
-         --  If present, handle the exponent
-
-         if Pos.Index <= Strm'Last and then Strm (Pos.Index) in 'e' | 'E' then
-            Token_End := Pos;
-            Next_Char;
-            if Pos.Index > Strm'Last then
-               return Error ("invalid number");
-            end if;
-
-            --  Skip the sign, if present
-
-            case Strm (Pos.Index) is
-               when '-' =>
-
-                  --  The exponent is negative. Even though several corner
-                  --  cases (such as having "1" as the prefix) can lead to an
-                  --  integer, assume that the number is not an integer.
-
-                  Can_Be_Integer := False;
-                  Next_Char;
-
-               when '+'   => Next_Char;
-               when others => null;
-            end case;
-
-            if Pos.Index > Strm'Last or else Strm (Pos.Index) not in '0' .. '9'
-            then
-               return Error ("invalid number");
-            end if;
-
-            while Pos.Index <= Strm'Last
-                  and then Strm (Pos.Index) in '0' .. '9'
-            loop
-               Token_End := Pos;
-               Next_Char;
-            end loop;
-         end if;
-
-         if Is_Token_Sep then
-
-            --  The token stops here, so we have a valid integer number
-
-            return
-              (Success => True,
-               Kind    => (if Can_Be_Integer then J_INTEGER else J_NUMBER));
+      if Self.State (Self.State_Current) = EXPECT_OBJECT_NAME_SEP then
+         if Result.Kind = NAME_SEP then
+            Self.State (Self.State_Current) := EXPECT_OBJECT_VALUE;
+            Expect_Value;
          else
-            return Error ("invalid number");
+            raise Invalid_JSON_Stream with "colon expected";
          end if;
+      elsif Self.State (Self.State_Current) = EXPECT_OBJECT_SEP then
+         if Result.Kind = VALUE_SEP then
+            Self.State (Self.State_Current) := EXPECT_OBJECT_KEY;
+            Expect_Value;
+         elsif Result.Kind = OBJECT_END then
+            Self.State_Current := Self.State_Current - 1;
+            Scan_Next := False;
+         else
+            raise Invalid_JSON_Stream with "coma or } expected";
+         end if;
+      elsif Self.State (Self.State_Current) = EXPECT_ARRAY_SEP then
+         if Result.Kind = VALUE_SEP then
+            Self.State (Self.State_Current) := EXPECT_ARRAY_VALUE;
+            Expect_Value;
+         elsif Result.Kind = ARRAY_END then
+            Self.State_Current := Self.State_Current - 1;
+            Scan_Next := False;
+         else
+            raise Invalid_JSON_Stream with "coma or ] expected";
+         end if;
+      end if;
 
-      when others =>
-         return Error ("Unexpected character '" & CC & ''');
-      end case;
-   end Read_Token;
+      if Scan_Next then
+         case Self.State (Self.State_Current) is
+            when EXPECT_VALUE =>
+               if Result.Kind not in STRING_VALUE .. OBJECT_START then
+                  raise Invalid_JSON_Stream
+                     with "value expected (got " & Result.Kind'Img & ")";
+               end if;
+               Self.State (Self.State_Current) := EXPECT_DOC_END;
+
+            when EXPECT_OBJECT_KEY =>
+               if Result.Kind = STRING_VALUE then
+                  Self.State (Self.State_Current) := EXPECT_OBJECT_NAME_SEP;
+               else
+                  raise Invalid_JSON_Stream with "string expected";
+               end if;
+
+            when EXPECT_OBJECT_FIRST_KEY =>
+               if Result.Kind = STRING_VALUE then
+                  Self.State (Self.State_Current) := EXPECT_OBJECT_NAME_SEP;
+               elsif Result.Kind = OBJECT_END then
+                  Self.State_Current := Self.State_Current - 1;
+               else
+                  raise Invalid_JSON_Stream with "string expected";
+               end if;
+
+            when EXPECT_OBJECT_VALUE =>
+               if Result.Kind not in STRING_VALUE .. OBJECT_START then
+                  raise Invalid_JSON_Stream with "json valud expected";
+               end if;
+
+               Self.State (Self.State_Current) := EXPECT_OBJECT_SEP;
+
+            when EXPECT_ARRAY_FIRST_VALUE =>
+               if Result.Kind = ARRAY_END then
+                  Self.State_Current := Self.State_Current - 1;
+               elsif Result.Kind not in STRING_VALUE .. OBJECT_START then
+                  raise Invalid_JSON_Stream with "array element expected";
+               else
+                  Self.State (Self.State_Current) := EXPECT_ARRAY_SEP;
+               end if;
+
+            when EXPECT_ARRAY_VALUE =>
+               if Result.Kind not in STRING_VALUE .. OBJECT_START then
+                  raise Invalid_JSON_Stream with "array element expected";
+               else
+                  Self.State (Self.State_Current) := EXPECT_ARRAY_SEP;
+               end if;
+
+            when EXPECT_DOC_END =>
+               if Result.Kind /= DOC_END then
+                  raise Invalid_JSON_Stream with "end of doc expected";
+               end if;
+            when others =>
+               raise Invalid_JSON_Stream with
+                  "unknown state " & Self.State (Self.State_Current)'Img;
+         end case;
+      end if;
+
+      --  Handle value beginning of object or array
+      if Result.Kind = OBJECT_START then
+         Self.State_Current := Self.State_Current + 1;
+         Self.State (Self.State_Current) := EXPECT_OBJECT_FIRST_KEY;
+      end if;
+
+      if Result.Kind = ARRAY_START then
+         Self.State_Current := Self.State_Current + 1;
+         Self.State (Self.State_Current) := EXPECT_ARRAY_FIRST_VALUE;
+      end if;
+
+      return Result;
+
+   end Parse_Next;
 
    ----------
    -- Read --
    ----------
-
-   procedure Read
-     (Result    : in out Read_Result;
-      Strm      : String;
-      Pos       : in out Text_Position;
-      Kind      : out Token_Kind;
-      Check_EOF : Boolean := False)
-   is
-
-      function Error (Msg : String) return Read_Result;
-      --  Return a parsing error for the current position and the given error
-      --  message.
-
-      function Error (Result : Read_Token_Result) return Read_Result
-         with Pre => not Result.Success;
-      --  Transform a parsing error from Read_Token into a Read_Result
-
-      -----------
-      -- Error --
-      -----------
-
-      function Error (Msg : String) return Read_Result is
-      begin
-         return (Success => False,
-                 Error   => (Line    => Pos.Line,
-                             Column  => Pos.Column,
-                             Message => To_Unbounded_String (Msg)));
-      end Error;
-
-      function Error (Result : Read_Token_Result) return Read_Result is
-      begin
-         return (Success => False, Error => Result.Error);
-      end Error;
-
-      Token_Start, Token_End : Text_Position;
-      --  Boundaries for the currently analyzed token
-
-      Token_Result : Read_Token_Result;
-      --  Buffer for token reads
-   begin
-      --  The first token we get determines the kind of JSON value to return
-
-      Token_Result := Read_Token (Strm, Pos, Token_Start, Token_End);
-      if not Token_Result.Success then
-         Result := Error (Token_Result);
-         Kind := J_EOF;
-         return;
-      end if;
-      Kind := Token_Result.Kind;
-
-      case Kind is
-         when J_EOF =>
-            Result := Error ("empty stream");
-            return;
-
-         when J_NULL =>
-            Result.Value := Create;
-
-         when J_FALSE =>
-            Result.Value := Create (False);
-
-         when J_TRUE =>
-            Result.Value := Create (True);
-
-         when J_STRING =>
-            begin
-               declare
-                  Str_Value : constant UTF8_XString := Utility.Un_Escape_String
-                    (Strm, Token_Start.Index, Token_End.Index);
-               begin
-                  Result.Value := Create (Str_Value);
-               end;
-            exception
-               when Exc : Invalid_JSON_Stream =>
-                  Result := Error (Ada.Exceptions.Exception_Message (Exc));
-                  return;
-            end;
-
-         when J_ARRAY =>
-            declare
-               --  In order to avoid the costly array copy in Create
-               --  (JSON_Array), we use an aggregate below in order to build
-               --  the result, so directly allocate the JSON_Array_Access here.
-
-               Arr : JSON_Array_Access := new JSON_Array_Internal;
-
-               ST : Token_Kind;
-               --  Buffer for the kind of tokens we read
-
-               Element : Read_Result;
-               --  Buffer for the JSON values that constitute array elements
-
-               Is_First : Boolean := True;
-               --  True if we are still reading the first array element. False
-               --  afterwards.
-            begin
-               --  Read all elements in the array until we reach the closing
-               --  token ("]").
-
-               loop
-                  Read (Element, Strm, Pos, ST);
-                  if not Element.Success then
-                     Free (Arr);
-                     Result := Element;
-                     return;
-                  end if;
-
-                  case ST is
-                  when J_ARRAY_END =>
-                     exit when Is_First;
-                     Free (Arr);
-                     Result := Error ("syntax error");
-                     return;
-
-                  when Value_Token =>
-                     --  We got a new array element: append it
-
-                     Append (Arr.Arr, Element.Value);
-
-                     --  Now see what is next: the end of the array or a comma
-                     --  (hence another array element after).
-
-                     Read (Element, Strm, Pos, ST);
-                     if not Element.Success then
-                        Free (Arr);
-                        Result := Element;
-                        return;
-                     end if;
-
-                     case ST is
-                     when J_ARRAY_END =>
-                        exit;
-
-                     when J_COMMA =>
-                        --  We have a comma, so we expect another element in
-                        --  the array. Continue reading.
-
-                        null;
-
-                     when others =>
-                        Free (Arr);
-                        Result := Error ("comma expected");
-                        return;
-                     end case;
-
-                  when others =>
-                     Free (Arr);
-                     Result := Error ("syntax error");
-                     return;
-                  end case;
-
-                  Is_First := False;
-               end loop;
-
-               Result.Value :=
-                 (Ada.Finalization.Controlled with
-                  Data => (Kind => JSON_Array_Type, Arr_Value => Arr));
-            end;
-
-         when J_OBJECT =>
-            declare
-               Is_First : Boolean := True;
-               --  True if we are still reading the first object member. False
-               --  afterwards.
-
-               ST : Token_Kind;
-               --  Buffer for the kind of tokens we read
-
-               Key, Value : Read_Result;
-               --  Buffer for the JSON values that constitute keys and member
-               --  values.
-            begin
-               --  Allocate internal container for the result
-
-               Result.Value :=
-                 (Ada.Finalization.Controlled with
-                  Data => (Kind      => JSON_Object_Type,
-                           Obj_Value => new JSON_Object_Internal));
-
-               --  Read all members for this object until we reach the closing
-               --  token ("}").
-
-               loop
-                  --  First try to read the key for the next member
-
-                  Read (Key, Strm, Pos, ST);
-                  if not Key.Success then
-                     Result := Key;
-                     return;
-                  end if;
-
-                  case ST is
-                  when J_OBJECT_END =>
-                     exit when Is_First;
-                     Result := Error ("string value expected");
-                     return;
-
-                  when J_STRING =>
-                     --  Consume the colon token, then get the member value
-
-                     Read (Value, Strm, Pos, ST);
-                     if not Value.Success then
-                        Result := Value;
-                        return;
-                     elsif ST /= J_COLON then
-                        Result := Error ("colon expected");
-                        return;
-                     end if;
-
-                     Read (Value, Strm, Pos, ST);
-                     if not Value.Success then
-                        Result := Value;
-                        return;
-                     elsif ST not in Value_Token then
-                        Result := Error ("non expected token");
-                        return;
-                     end if;
-
-                     --  Register this new member.
-                     --
-                     --  As we checked above that reading Key parsed a string
-                     --  token, we know that coercing Key to a string cannot
-                     --  fail.
-
-                     declare
-                        Key_Str : constant UTF8_XString := Get (Key.Value);
-                     begin
-                        Set_Field (Result.Value, Key_Str, Value.Value);
-                     end;
-
-                     --  Now see what is next: the end of the object or a comma
-                     --  (hence another object member after).
-
-                     Read (Value, Strm, Pos, ST);
-                     if not Value.Success then
-                        Result := Value;
-                        return;
-                     end if;
-                     case ST is
-                     when J_OBJECT_END =>
-                        exit;
-
-                     when J_COMMA =>
-                        --  We have a comma, so we expect another member in the
-                        --  object. Continue reading.
-
-                        null;
-
-                     when others =>
-                        Result := Error ("comma expected");
-                        return;
-                     end case;
-
-                  when others =>
-                     Result := Error ("string value expected");
-                     return;
-                  end case;
-                  Is_First := False;
-               end loop;
-            end;
-
-         when J_NUMBER | J_INTEGER =>
-            declare
-               Number_Str  : constant String :=
-                  Strm (Token_Start.Index .. Token_End.Index);
-               Has_Integer : Boolean := False;
-            begin
-               if Kind = J_INTEGER then
-                  declare
-                     Result_Int : Long_Long_Integer;
-                  begin
-                     Result_Int := Long_Long_Integer'Value (Number_Str);
-                     Result.Value := Create (Result_Int);
-                     Has_Integer := True;
-                  exception
-                     when Constraint_Error =>
-                        null;
-                  end;
-               end if;
-
-               if not Has_Integer then
-                  begin
-                     Result.Value := Create (Long_Float'Value (Number_Str));
-                  exception
-                     when Constraint_Error =>
-                        Result := Error
-                          ("cannot convert JSON number to Long_Float");
-                        return;
-                  end;
-               end if;
-            end;
-
-         when others =>
-            if Check_EOF then
-               Result := Error ("invalid JSON stream");
-               return;
-            else
-               Result.Value := Create;
-            end if;
-      end case;
-
-      if Check_EOF then
-         Token_Result := Read_Token (Strm, Pos, Token_Start, Token_End);
-         if not Token_Result.Success or else Token_Result.Kind /= J_EOF then
-            Result := Error ("additional data after end of JSON stream");
-            return;
-         end if;
-      end if;
-   end Read;
 
    function Read
      (Strm     : Unbounded_String;
@@ -936,12 +495,119 @@ package body GNATCOLL.JSON is
    end Read;
 
    function Read (Strm : String) return Read_Result is
-      Pos    : Text_Position := (Strm'First, 1, 1);
-      Kind   : Token_Kind;
-      Result : Read_Result := (Success => True, others => <>);
+      use GNATCOLL.Buffer;
+      Buf    : Reader := Open_String (Strm);
+      Parser : JSON_Parser;
+      Event  : JSON_Parser_Event;
+      Result : JSON_Value;
+      Cursor : JSON_Value;
+      Tmp    : JSON_Value;
+
+      Current_Key : String_Builder;
+      Expect_Key : array (1 .. 512) of Boolean := (others => False);
+      Cursors : array (1 .. 512) of JSON_Value;
+      Expect_Key_Last : Integer := 0;
    begin
-      Read (Result, Strm, Pos, Kind, Check_EOF => True);
-      return Result;
+
+      loop
+         Event := Parse_Next (Parser, Buf);
+         exit when Event.Kind = DOC_END;
+
+         if Event.Kind /= OBJECT_END and then
+            Expect_Key_Last > 0 and then
+            Expect_Key (Expect_Key_Last)
+         then
+            Set (Current_Key, Token (Buf, Event.First, Event.Last));
+            Event := Parse_Next (Parser, Buf);
+         end if;
+
+         case Event.Kind is
+            when OBJECT_START =>
+               Tmp := Create_Object;
+            when ARRAY_START =>
+               Tmp := Create (Empty_Array);
+            when STRING_VALUE =>
+               declare
+                  Str : constant String :=
+                     Token (Buf, Event.First, Event.Last);
+               begin
+                  Tmp := Create
+                     (Utility.Un_Escape_String (Str, Str'First, Str'Last));
+               end;
+            when INTEGER_VALUE =>
+               Tmp := Create
+                  (Integer'Value (Token (Buf, Event.First, Event.Last)));
+            when NUMBER_VALUE =>
+               Tmp := Create
+                  (Long_Float'Value (Token (Buf, Event.First, Event.Last)));
+            when TRUE_VALUE =>
+               Tmp := Create (True);
+            when FALSE_VALUE =>
+               Tmp := Create (False);
+            when NULL_VALUE =>
+               Tmp := Create;
+            when others =>
+               null;
+         end case;
+
+         if Event.Kind = OBJECT_END then
+            Expect_Key_Last := Expect_Key_Last - 1;
+            if Expect_Key_Last > 0 then
+               Cursor := Cursors (Expect_Key_Last);
+            end if;
+
+         elsif Event.Kind = ARRAY_END then
+            Expect_Key_Last := Expect_Key_Last - 1;
+            if Expect_Key_Last > 0 then
+               Cursor := Cursors (Expect_Key_Last);
+            end if;
+
+         else
+            if Expect_Key_Last > 0 then
+               if Expect_Key (Expect_Key_Last) then
+                  declare
+                     Str : constant String := As_String (Current_Key);
+                  begin
+                     Set_Field
+                        (Cursor,
+                         Utility.Un_Escape_String (Str, Str'First, Str'Last),
+                         Tmp);
+                  end;
+               else
+                  Append (Cursor, Tmp);
+               end if;
+            else
+               Result := Tmp;
+            end if;
+
+            if Event.Kind = OBJECT_START then
+               Expect_Key_Last := Expect_Key_Last + 1;
+               Cursors (Expect_Key_Last) := Tmp;
+               Expect_Key (Expect_Key_Last) := True;
+               Cursor := Tmp;
+            elsif Event.Kind = ARRAY_START then
+               Expect_Key_Last := Expect_Key_Last + 1;
+               Cursors (Expect_Key_Last) := Tmp;
+               Expect_Key (Expect_Key_Last) := False;
+               Cursor := Tmp;
+            end if;
+         end if;
+
+      end loop;
+
+      return (Success => True, Value => Result);
+   exception
+      when E : Invalid_JSON_Stream =>
+         declare
+            Line, Column : Integer;
+         begin
+            Buf.Current_Text_Position (Line, Column);
+
+            return (Success => False,
+                    Error => (Line, Column,
+                    To_Unbounded_String
+                       (Ada.Exceptions.Exception_Message (E))));
+         end;
    end Read;
 
    -----------

@@ -51,11 +51,71 @@
 with Ada.Finalization;
 with Ada.Strings.Unbounded;
 with GNATCOLL.Strings;
-
+with GNATCOLL.Buffer;
 private with Ada.Containers.Vectors;
 private with GNATCOLL.Atomic;
 
 package GNATCOLL.JSON is
+
+   -----------------
+   -- JSON Parser --
+   -----------------
+
+   type JSON_Parser is tagged limited private;
+   --  A JSON Parser object used mainly with SAX like API.
+
+   type JSON_Parser_Event_Kind is
+      (STRING_VALUE,
+       INTEGER_VALUE,
+       NUMBER_VALUE,
+       TRUE_VALUE,
+       FALSE_VALUE,
+       NULL_VALUE,
+       ARRAY_START,
+       OBJECT_START,
+       ARRAY_END,
+       OBJECT_END,
+       VALUE_SEP,
+       NAME_SEP,
+       DOC_END);
+
+   type JSON_Parser_Event is record
+      Kind  : JSON_Parser_Event_Kind;
+      First : Long_Long_Integer;
+      Last  : Long_Long_Integer;
+   end record;
+   --  A JSON Event is emitted by Parse_Next for each value and some
+   --  structural elements. Parse_Next never emits VALUE_SEP and NAME_SEP
+   --  events (used only internally by the parser).
+   --
+   --  An event consists a Kind that identify the nature of the element and
+   --  a range that allows to retrieve the content of the associated token
+   --  by calling the Token function of the associated Reader object.
+   --
+   --  The end user is in charge of calling the right conversion function to
+   --  convert a Token into the final value.
+   --
+   --  STRING_VALUE: a string value. Call
+   --      GNATCOLL.JSON.Utility.Un_Escape_String to decode the string.
+   --  INTEGER_VALUE: an integer value. 'Value on an integer like type can be
+   --      called. Notice that JSON format does not impose any limit on the
+   --      integer size.
+   --  NUMBER_VALUE: a number value that may not be an integer. Float'Value
+   --      and Long_Float'Value can be used to convert the value. Some
+   --      rounding might occurs during conversion depending on the target
+   --      float format used.
+   --  TRUE_VALUE, FALSE_VALUE, NULL_VALUE: No conversion is needed to infer
+   --      the final value
+   --  ARRAY_START, ARRAY_END: Events emitted at the start and end of an array
+   --  OBJECT_START, OBJECT_END: Events emitted at the start and end of an
+   --    object. Once inside an object the parser will return sequentially the
+   --    keys and associated value.
+   --  DOC_END: emitted when the end of a stream is reached
+
+   function Parse_Next
+      (Self : in out JSON_Parser; Data : in out GNATCOLL.Buffer.Reader)
+      return JSON_Parser_Event;
+   --  Fetch the next JSON parser event.
 
    type JSON_Value_Type is
      (JSON_Null_Type,
@@ -197,7 +257,7 @@ package GNATCOLL.JSON is
    ----------------------------------------------
 
    type Parsing_Error is record
-      Line, Column : Positive;
+      Line, Column : Natural;
       --  Line and column numbers at which a parsing error is detected
 
       Message : UTF8_Unbounded_String;
@@ -514,8 +574,32 @@ package GNATCOLL.JSON is
 
 private
 
+   type JSON_Parser_State is
+      (EXPECT_VALUE,
+
+       EXPECT_OBJECT_KEY,
+       EXPECT_OBJECT_FIRST_KEY,
+       EXPECT_OBJECT_NAME_SEP,
+       EXPECT_OBJECT_VALUE,
+       EXPECT_OBJECT_SEP,
+
+       EXPECT_ARRAY_FIRST_VALUE,
+       EXPECT_ARRAY_VALUE,
+       EXPECT_ARRAY_SEP,
+
+       EXPECT_DOC_END);
+
+   type JSON_Parser_States is array (Integer range <>) of JSON_Parser_State;
+
+   type JSON_Parser is new Ada.Finalization.Limited_Controlled with record
+      State         : JSON_Parser_States (1 .. 512) :=
+         (others => EXPECT_VALUE);
+      State_Current : Integer := 1;
+   end record;
+
    type JSON_Array_Internal;
    type JSON_Array_Access is access all JSON_Array_Internal;
+
    type JSON_Object_Internal;
    type JSON_Object_Access is access all JSON_Object_Internal;
 
