@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                        Copyright (C) 2023, AdaCore                       --
+--                        Copyright (C) 2023-2024, AdaCore                  --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,7 +26,7 @@ with GNAT.OS_Lib;
 package body GNATCOLL.File_Indexes is
 
    -----------------
-   -- Empty_Cache --
+   -- Clear_Cache --
    -----------------
 
    procedure Clear_Cache (Self : in out File_Index) is
@@ -76,7 +76,8 @@ package body GNATCOLL.File_Indexes is
 
       Normalized_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
          (Path, Resolve_Links => True);
-      Prev_Cursor    : constant Cursor := Find (Self.DB, Normalized_Path);
+
+      Prev_Cursor    : Cursor := Find (Self.DB, Normalized_Path);
       Prev_Hash      : FSUtil.SHA1_Digest;
       New_Hash       : FSUtil.SHA1_Digest;
       Trust_New_Hash : Boolean := True;
@@ -92,9 +93,19 @@ package body GNATCOLL.File_Indexes is
                return;
             end if;
 
-            --  Hash is going to be recomputed. Remove the current entry
-            --  length from the the total length.
+            --  Two possibilities:
+            --  - Hash is going to be recomputed
+            --  - File does not exist anymore
+            --  In both cases, previous file length must be removed
+            --  from the total length.
+
             Self.Total_Size := Self.Total_Size - Stat.Length (Prev.Attrs);
+
+            if not Stat.Exists (Attrs) then
+               Delete (Self.DB, Prev_Cursor);
+               State := REMOVED_FILE;
+               return;
+            end if;
 
             --  default state is now UPDATED_FILE
             State := UPDATED_FILE;
@@ -107,9 +118,14 @@ package body GNATCOLL.File_Indexes is
          State := NEW_FILE;
       end if;
 
-      --  Compute the new hash
-      New_Hash := FSUtil.SHA1 (Path => Normalized_Path);
-
+      begin
+         --  Compute the new hash
+         New_Hash := FSUtil.SHA1 (Path => Normalized_Path);
+      exception
+         when others =>
+            State := UNHASHABLE_FILE;
+            return;
+      end;
       --  Some file system do not have a better resolution than 1s for
       --  modification time. If at the time of the query the file has been
       --  modified less than 1s ago, there is a possible race condition in
@@ -129,7 +145,8 @@ package body GNATCOLL.File_Indexes is
            Save_On_Disk => True));
       Self.Total_Size := Self.Total_Size + Stat.Length (Attrs);
 
-      --  If the hash hash not changed set State to UNCHANGED_FILE
+      --  If the hash has not changed set State to UNCHANGED_FILE
+
       if State = UPDATED_FILE and then New_Hash = Prev_Hash then
          State := UNCHANGED_FILE;
       end if;
