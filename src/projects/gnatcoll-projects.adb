@@ -8100,7 +8100,11 @@ package body GNATCOLL.Projects is
          if Gcc = "" then
             return
               "gnatls -v"
-              & (if Runtime = "" then "" else "--RTS=" & Runtime);
+              & (if Runtime = "" then "" else " --RTS=" & Runtime);
+         elsif Gcc = "gnaamp" then
+            return
+              "gnaampls -v"
+              & (if Runtime = "" then "" else " --RTS=" & Runtime);
          else
             Idx := Index (Gcc, "gcc", Backward);
 
@@ -8290,6 +8294,10 @@ package body GNATCOLL.Projects is
                exit;
             end if;
          end loop;
+
+         if Target = "aamp" then
+            return "gnaampls";
+         end if;
 
          if Runtime /= Unset
             or else Target /= Unset
