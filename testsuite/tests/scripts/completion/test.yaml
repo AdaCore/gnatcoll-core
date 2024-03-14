@@ -1,3 +1,0 @@
-description: Completion test for GNATCOLL.Scripts and GNATCOLL.Scripts.Shell
-control:
-    - [XFAIL, "env.valgrind", "Known memory leak: see S912-005"]
