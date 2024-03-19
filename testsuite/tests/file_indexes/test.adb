@@ -50,6 +50,8 @@ begin
    Total_Size := Total_Size + Integer (St.Length (St.Stat ("file_2")));
    Assert (Integer (Indexed_Content_Size (File_Index)), Total_Size);
 
+   Assert (Remove_File ("file_2"));
+
    --  File 1
 
    Hash (File_Index, "file_1", State, Digest);
@@ -94,6 +96,8 @@ begin
    Assert (Create_Directory ("dir_1"));
    Hash (File_Index, "dir_1", State, Digest);
    Assert (Entry_State'Pos (State), Entry_State'Pos (UNHASHABLE_FILE));
+
+   Assert (Remove_Directory ("dir_1"));
 
    return Report;
 end Test;
