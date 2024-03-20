@@ -1098,16 +1098,11 @@ package body GNATCOLL.Utils is
                --  pattern will consume a character from Str
                --  (i.e next character in Pattern is not a ' * ').
 
-               for Index in S_I .. Str'Last loop
-                  if Match
-                    (Str (Index .. Str'Last),
-                     Pattern (P_I .. Pattern'Last))
-                  then
-                     return True;
-                  end if;
-               end loop;
-
-               return False;
+               return
+                 (for some Index in S_I .. Str'Last =>
+                    Match
+                      (Str (Index .. Str'Last),
+                       Pattern (P_I .. Pattern'Last)));
 
             when others =>
                Next_Str_Char;
