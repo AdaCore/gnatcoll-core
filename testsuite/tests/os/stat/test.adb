@@ -2,19 +2,21 @@ with Ada.Calendar; use Ada.Calendar;
 with GNATCOLL.OS.Stat; use GNATCOLL.OS.Stat;
 with GNATCOLL.OS.Constants; use GNATCOLL.OS.Constants;
 with GNATCOLL.OS;
+with GNATCOLL.OS.FS;
 with Test_Assert;
 with Ada.Text_IO;
 
 function Test return Integer is
    package A renames Test_Assert;
    package IO renames Ada.Text_IO;
-
+   package FS renames GNATCOLL.OS.FS;
    use type GNATCOLL.OS.OS_Type;
 
 begin
    IO.Put_Line ("GNATCOLL.OS.Stat test");
    declare
       FA : File_Attributes;
+      FD : FS.File_Descriptor;
       D  : Duration;
    begin
       FA := Stat ("directory");
@@ -24,6 +26,11 @@ begin
                 Msg => "check that directory is a dir");
       A.Assert (not Is_Symbolic_Link (FA),
                 Msg => "check that directory is not a symbolic link");
+      A.Assert (Is_Executable (FA), Msg => "check if directory is executable");
+      A.Assert (Is_Readable (FA), Msg => "check if directory is readable");
+      A.Assert (Is_Writable (FA), Msg => "check if directory is writable");
+      A.Assert (not Is_Executable_File (FA),
+                Msg => "check if directory is executable file");
 
       FA := Stat ("regular_file");
       IO.Put_Line (Image (FA));
@@ -37,6 +44,21 @@ begin
          (D < 100.0,
           Msg => "check that modification time is less than 100s in the past: "
           & D'Img);
+
+      FD := FS.Open ("regular_file");
+      FA := Fstat (FD);
+      IO.Put_Line (Image (FA));
+      A.Assert (Is_File (FA), Msg => "check that regular_file is a file");
+      A.Assert (not Is_Directory (FA),
+                Msg => "check that regular_file is not a dir");
+      A.Assert (not Is_Symbolic_Link (FA),
+                Msg => "check that regular_file is not a symbolic link");
+      D := Clock - Modification_Time (FA);
+      A.Assert
+         (D < 100.0,
+          Msg => "check that modification time is less than 100s in the past: "
+          & D'Img);
+      FS.Close (FD);
 
       IO.Put_Line ("test file with utf-8 name");
       FA := Stat (Character'Val (16#C3#) & Character'Val (16#A9#) & ".txt");

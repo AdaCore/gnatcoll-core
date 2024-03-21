@@ -40,7 +40,7 @@ function Test return Integer is
       declare
          Error : constant String := Format_Parsing_Error (Result.Error);
       begin
-         A.Assert (Error = Expected_Error, Label & " (error message)");
+         A.Assert (Error, Expected_Error, Label & " (error message)");
       end;
    end Check_Error;
 
@@ -178,8 +178,8 @@ begin
    Check_Image (Read ("{}").Value, "{}");
    Check_Image (Read (To_Unbounded_String ("{}")).Value, "{}");
 
-   Check_Error (Read ("{"), "1:2: empty stream");
-   Check_Error (Read (To_Unbounded_String ("{")), "1:2: empty stream");
+   Check_Error (Read ("{"), "1:1: string expected");
+   Check_Error (Read (To_Unbounded_String ("{")), "1:1: string expected");
 
    -----------------------------
    -- Creation of JSON values --

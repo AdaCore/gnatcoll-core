@@ -1,3 +1,5 @@
 title: GNATCOLL.OS.Stat tests
 control:
-    - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]
+    - [SKIP,
+       "env.is_cross and not (env.target.os.name == 'windows' and env.target.machine == 'wine')",
+       "Test uses python which is not available on cross targets"]

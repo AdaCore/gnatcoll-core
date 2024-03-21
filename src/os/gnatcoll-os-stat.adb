@@ -28,6 +28,9 @@ package body GNATCOLL.OS.Stat is
        Follow_Symlinks : Boolean := True)
       return File_Attributes is separate;
 
+   function Fstat (FD : FS.File_Descriptor) return File_Attributes is
+      separate;
+
    ------------
    -- Exists --
    ------------

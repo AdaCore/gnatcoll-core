@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import subprocess
 
 from e3.fs import mkdir
@@ -105,7 +106,7 @@ def gprbuild(
         if not os.path.isfile(project_file):
             project_file = os.path.join(TESTSUITE_ROOT_DIR, "support", "test.gpr")
             if "TEST_SOURCES" in scenario:
-                scenario["TEST_SOURCES"] += ","+driver.test_env["test_dir"]
+                scenario["TEST_SOURCES"] += "," + driver.test_env["test_dir"]
             else:
                 scenario["TEST_SOURCES"] = driver.test_env["test_dir"]
 
@@ -145,28 +146,35 @@ def gprbuild(
         # project variables are passed to select right implementations. This
         # should stay in sync with the Makefile logic
         gnatcoll_config_vars = []
-        if driver.env.target.platform in ("x86_64-linux",
-                                          "x86_64-windows64",
-                                          "aarch64-linux"):
+        if driver.env.target.platform in (
+            "x86_64-linux",
+            "x86_64-windows64",
+            "aarch64-linux",
+        ):
             platform = driver.env.target.platform.replace("windows64", "windows")
             gnatcoll_config_vars.append(f"-XGNATCOLL_BLAKE3_ARCH={platform}")
         if driver.env.target.platform in ("x86_64-linux", "x86_64-windows64"):
             gnatcoll_config_vars.append(f"-XGNATCOLL_XXHASH_ARCH=x86_64")
 
-        gnatcov_cmd = [
-            "gnatcov",
-            "instrument",
-            "--level",
-            COVERAGE_LEVEL,
-            "--relocate-build-tree",
-            "--dump-trigger=atexit",
-            "--projects", "gnatcoll_core",
-            "--externally-built-projects",
-            "-XEXTERNALLY_BUILT=true",
-            "--no-subprojects",
-            "-P",
-            project_file,
-        ] + gnatcoll_config_vars + scenario_cmd
+        gnatcov_cmd = (
+            [
+                "gnatcov",
+                "instrument",
+                "--level",
+                COVERAGE_LEVEL,
+                "--relocate-build-tree",
+                "--dump-trigger=atexit",
+                "--projects",
+                "gnatcoll_core",
+                "--externally-built-projects",
+                "-XEXTERNALLY_BUILT=true",
+                "--no-subprojects",
+                "-P",
+                project_file,
+            ]
+            + gnatcoll_config_vars
+            + scenario_cmd
+        )
 
         check_call(
             driver,
@@ -227,6 +235,7 @@ def bin_check_call(
 
     if driver.env.is_cross:
         if driver.env.target.os.name == "windows":
+            os.environ["WINEDEBUG"] = "-all"
             cmd = ["wine"] + cmd
             if timeout is not None:
                 cmd = [get_rlimit(), str(timeout)] + cmd
@@ -242,10 +251,19 @@ def bin_check_call(
                 stderr=subprocess.STDOUT,
             )
             stdout, _ = subp.communicate()
+
+            # Dismiss some wine message
             stdout = stdout.replace(
-                b"it looks like wine32 is missing, you should install it.\n", b"")
+                b"it looks like wine32 is missing, you should install it.\n", b""
+            )
             stdout = stdout.replace(
-                b'as root, please execute "apt-get install wine32"\n', b"")
+                b'as root, please execute "apt-get install wine32"\n', b""
+            )
+            stdout = re.sub(
+                b"....:err:msvcrt:_invalid_parameter (null):0 (null): (null) 0\n",
+                b"",
+                stdout,
+            )
             # stdout here is bytes
             process = ProcessResult(subp.returncode, stdout)
         else:

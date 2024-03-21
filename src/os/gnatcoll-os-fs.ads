@@ -100,6 +100,14 @@ package GNATCOLL.OS.FS is
    --  end-of-file is reached when Read returns 0, otherwise the return value
    --  is the number of bytes read.
 
+   function Read (FD     : File_Descriptor;
+                  Buffer : in out String;
+                  First  : Integer;
+                  Last   : Integer) return Integer;
+   --  Read data from FD and put it in Buffer (First .. Last). The call is
+   --  blocking and end-of-file is reached when Read returns 0, otherwise the
+   --  return value is the number of bytes read.
+
    function Read
       (FD          : File_Descriptor;
        Buffer_Size : Positive := Default_Buffer_Size)
