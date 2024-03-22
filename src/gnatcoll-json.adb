@@ -536,7 +536,8 @@ package body GNATCOLL.JSON is
                end;
             when INTEGER_VALUE =>
                Tmp := Create
-                  (Integer'Value (Token (Buf, Event.First, Event.Last)));
+                  (Long_Long_Integer'Value
+                     (Token (Buf, Event.First, Event.Last)));
             when NUMBER_VALUE =>
                Tmp := Create
                   (Long_Float'Value (Token (Buf, Event.First, Event.Last)));
