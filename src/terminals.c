@@ -128,8 +128,8 @@ int gnatcoll_terminal_width(int forStderr) {
 #else
 #ifdef TIOCGWINSZ
     struct winsize w;
-    ioctl(forStderr ? 1 : 0, TIOCGWINSZ, &w);
-    return w.ws_col;
+    int r = ioctl(forStderr ? 1 : 0, TIOCGWINSZ, &w);
+    return r < 0 ? -1 : w.ws_col;
 #else
     return -1;
 #endif
