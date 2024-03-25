@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2014-2018, AdaCore                     --
+--                     Copyright (C) 2014-2024, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -121,7 +121,7 @@ int gnatcoll_terminal_width(int forStderr) {
       GetStdHandle (forStderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
    CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
    if (GetConsoleScreenBufferInfo (handle, &csbiInfo)) {
-      return (int)csbiInfo.dwSize.X;
+      return (int)(csbiInfo.srWindow.Right-csbiInfo.srWindow.Left + 1); // window width
    }
    return -1;
 
@@ -130,6 +130,27 @@ int gnatcoll_terminal_width(int forStderr) {
     struct winsize w;
     int r = ioctl(forStderr ? 1 : 0, TIOCGWINSZ, &w);
     return r < 0 ? -1 : w.ws_col;
+#else
+    return -1;
+#endif
+#endif
+}
+
+int gnatcoll_terminal_lines(int forStderr) {
+#ifdef _WIN32  // MsWin
+   const HANDLE handle =
+      GetStdHandle (forStderr ? STD_ERROR_HANDLE : STD_OUTPUT_HANDLE);
+   CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+   if (GetConsoleScreenBufferInfo (handle, &csbiInfo)) {
+      return (int)(csbiInfo.srWindow.Bottom-csbiInfo.srWindow.Top + 1); // window height
+   }
+   return -1;
+
+#else
+#ifdef TIOCGWINSZ   // Linux/OSX
+    struct winsize w;
+    ioctl(forStderr ? 1 : 0, TIOCGWINSZ, &w);
+    return w.ws_row; //  == lines
 #else
     return -1;
 #endif
