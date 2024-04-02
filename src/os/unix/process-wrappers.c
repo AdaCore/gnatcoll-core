@@ -104,7 +104,7 @@ int __gnatcoll_wait_for_sigchld (int fd, sint_64 timeout)
    }
 
    while (tv.tv_sec > 0 || tv.tv_usec > 0) {
-      retval = select(fd + 1, &fd_list, NULL, NULL, &tv);
+      retval = select(fd + 1, &fd_list, NULL, NULL, effective_timeout);
       if (retval > 0)
       {
          read (fd, buf, 1);
