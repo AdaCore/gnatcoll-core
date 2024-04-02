@@ -104,7 +104,7 @@ int __gnatcoll_wait_for_sigchld (int fd, sint_64 timeout)
    }
 
    while (tv.tv_sec > 0 || tv.tv_usec > 0) {
-      retval = select(fd + 1, &fd_list, NULL, NULL, &tv);
+      retval = select(fd + 1, &fd_list, NULL, NULL, effective_timeout);
       if (retval > 0)
       {
          read (fd, buf, 1);
@@ -129,7 +129,7 @@ int __gnatcoll_init_sigchld_monitoring()
    struct sigaction action;
    action.sa_handler = __gnatcoll_write_on_sigchld;
    sigemptyset(&action.sa_mask);
-   action.sa_flags = 0;
+   action.sa_flags = SA_RESTART;
    return sigaction (SIGCHLD, &action, NULL);
 }
 
