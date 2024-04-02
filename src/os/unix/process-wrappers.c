@@ -129,7 +129,7 @@ int __gnatcoll_init_sigchld_monitoring()
    struct sigaction action;
    action.sa_handler = __gnatcoll_write_on_sigchld;
    sigemptyset(&action.sa_mask);
-   action.sa_flags = 0;
+   action.sa_flags = SA_RESTART;
    return sigaction (SIGCHLD, &action, NULL);
 }
 
