@@ -7939,6 +7939,7 @@ package body GNATCOLL.Projects is
       Free (Self.Forced_Runtime);
       if Target /= "" then
          Self.Forced_Target := new String'(Target);
+         GPR.Opt.Target_Value := new String'(Normalize_Target_Name (Target));
       end if;
       if Runtime /= "" then
          Self.Forced_Runtime := new String'(Runtime);

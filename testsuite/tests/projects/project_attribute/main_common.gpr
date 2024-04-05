@@ -1,0 +1,15 @@
+abstract project Main_Common is
+
+  Target := project'Target;
+
+  Target_Dir := "error :(";
+  case Target is
+    when "x86_64-pc-linux-gnu" =>
+      Target_Dir := "obj-x86";
+    when others =>
+      Target_Dir := "unknown-";
+  end case;
+
+  Build_Dir := "../" &   Target_Dir;
+
+end Main_Common;
