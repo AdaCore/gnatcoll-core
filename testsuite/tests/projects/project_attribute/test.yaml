@@ -1,0 +1,6 @@
+description: Check that the value for the Project attribute is correct
+data:
+    - "main_common.gpr"
+    - "main_x86.gpr"
+control:
+    - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]

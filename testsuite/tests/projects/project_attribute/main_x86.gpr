@@ -1,0 +1,15 @@
+with "main_common.gpr";
+
+project Main_x86 is
+
+  for Target use "x86_64-pc-linux-gnu";
+
+  for Languages use ("Ada");
+
+  for Source_Dirs use (".");
+
+  for Main use ("main.adb");
+
+  for Object_Dir use Main_Common.Build_Dir;
+
+end Main_x86;
