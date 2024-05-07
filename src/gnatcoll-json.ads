@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2011-2020, AdaCore                     --
+--                     Copyright (C) 2011-2024, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -53,6 +53,7 @@ with Ada.Strings.Unbounded;
 with GNATCOLL.Strings;
 with GNATCOLL.Buffer;
 private with Ada.Containers.Vectors;
+private with Ada.Containers.Ordered_Maps;
 private with GNATCOLL.Atomic;
 
 package GNATCOLL.JSON is
@@ -349,10 +350,9 @@ package GNATCOLL.JSON is
    procedure Sort
      (Val  : in out JSON_Value;
       Less : access function (Left, Right : JSON_Value) return Boolean);
-   --  If Val is a JSON array or a JSON object, reorder its elements/fields
+   --  If Val is a JSON array, reorder its elements/fields
    --  such that they are sorted smallest first according to the strict
-   --  comparison that Less implements. Note that for JSON objects, field
-   --  values are compared, not field names.
+   --  comparison that Less implements.
 
    procedure Append (Arr : JSON_Value; Item : JSON_Value)
       with Pre => Arr.Kind = JSON_Array_Type;
@@ -574,6 +574,7 @@ package GNATCOLL.JSON is
 
 private
 
+   --  JSON Parser structure
    type JSON_Parser_State is
       (EXPECT_VALUE,
 
@@ -597,19 +598,29 @@ private
       State_Current : Integer := 1;
    end record;
 
+   --  JSON_Value
    type JSON_Array_Internal;
    type JSON_Array_Access is access all JSON_Array_Internal;
 
    type JSON_Object_Internal;
    type JSON_Object_Access is access all JSON_Object_Internal;
 
+   type JSON_String_Internal;
+   type JSON_String_Access is access all JSON_String_Internal;
+
+   --  Implementation note: it's important to keep Data_Type size as low as
+   --  possible in oder to reduce memory footprint of a JSON_Value and also
+   --  provide performance increase. That's the reason why for example for
+   --  JSON_String_Type an access to a XString is used rather than the
+   --  XString itself. It increase code complexity but reduce by 2 the size
+   --  of the structure.
    type Data_Type (Kind : JSON_Value_Type := JSON_Null_Type) is record
       case Kind is
          when JSON_Null_Type    => null;
          when JSON_Boolean_Type => Bool_Value : Boolean;
          when JSON_Int_Type     => Int_Value  : Long_Long_Integer;
          when JSON_Float_Type   => Flt_Value  : Long_Float;
-         when JSON_String_Type  => Str_Value  : UTF8_XString;
+         when JSON_String_Type  => Str_Value  : JSON_String_Access;
          when JSON_Array_Type   => Arr_Value  : JSON_Array_Access;
          when JSON_Object_Type  => Obj_Value  : JSON_Object_Access;
       end case;
@@ -624,8 +635,7 @@ private
    overriding procedure Adjust (Obj : in out JSON_Value);
    overriding procedure Finalize (Obj : in out JSON_Value);
 
-   --  JSON Array definition:
-
+   --  JSON Array definition
    package Vect_Pkg is new Ada.Containers.Vectors
      (Index_Type   => Positive,
       Element_Type => JSON_Value);
@@ -639,23 +649,27 @@ private
       Arr  : JSON_Array;
    end record;
 
-   Empty_Array : constant JSON_Array := (Vals => Vect_Pkg.Empty_Vector);
-
-   --  JSON Object definition:
-
-   type Object_Item is record
-      Key : UTF8_XString;
-      Val : JSON_Value;
+   --  JSON String definition
+   type JSON_String_Internal is record
+      Cnt : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
+      Str : UTF8_XString;
    end record;
 
-   package Object_Items_Pkg is new Ada.Containers.Vectors
-     (Positive, Object_Item);
+   Empty_Array : constant JSON_Array := (Vals => Vect_Pkg.Empty_Vector);
+
+   --  JSON Object definition
+   package Object_Items_Pkg is new Ada.Containers.Ordered_Maps
+      (Key_Type        => UTF8_XString,
+       Element_Type    => JSON_Value,
+       "<"             => GNATCOLL.Strings."<"
+       );
 
    type JSON_Object_Internal is record
       Cnt  : aliased GNATCOLL.Atomic.Atomic_Counter := 1;
-      Vals : Object_Items_Pkg.Vector;
+      Vals : Object_Items_Pkg.Map;
    end record;
 
+   --  JSON Null constant definition
    JSON_Null : constant JSON_Value :=
       (Ada.Finalization.Controlled with others => <>);
    --  Can't call Create, because we would need to see the body of

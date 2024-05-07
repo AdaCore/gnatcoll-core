@@ -37,4 +37,7 @@ class JSONValidationDriver(DataValidationDriver):
             logging.debug(f"Got: {got_str}\n<=>\nExp: {expected_str}")
             result.set_status(TestStatus.FAIL)
             self.push_result(result)
+        else:
+            result.set_status(TestStatus.PASS)
+            self.push_result(result)
         return True

@@ -1,17 +1,22 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
-
+with GNAT.Source_Info;
 with GNATCOLL.JSON;    use GNATCOLL.JSON;
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 with Test_Assert;
 
 function Test return Integer is
+   package SI renames GNAT.Source_Info;
+
    package A renames Test_Assert;
 
    function Less (Left, Right : JSON_Value) return Boolean;
    --  Arbitrary and incomplete comparison function to test sorting facilities
 
-   procedure Check_Image (Val : JSON_Value; Expected_Image : String);
+   procedure Check_Image
+      (Val            : JSON_Value;
+       Expected_Image : String;
+       Location       : String := SI.Source_Location);
    --  Assert that the compact image for Val is Expected_Image
 
    procedure Check_Error (Result : Read_Result; Expected_Error : String);
@@ -22,10 +27,14 @@ function Test return Integer is
    -- Check_Image --
    -----------------
 
-   procedure Check_Image (Val : JSON_Value; Expected_Image : String) is
+   procedure Check_Image
+      (Val            : JSON_Value;
+       Expected_Image : String;
+       Location       : String := SI.Source_Location)
+   is
       Img : constant String := Val.Write;
    begin
-      A.Assert (Img = Expected_Image, "Check image: " & Img);
+      A.Assert (Img = Expected_Image, "Check image: " & Img, Location);
    end Check_Image;
 
    -----------------
@@ -217,7 +226,7 @@ begin
       Obj.Set_Field ("foo", Int_0);
       Check_Image (Obj, "{""bar"":1,""foo"":0}");
       Obj.Sort (Less'Access);
-      Check_Image (Obj, "{""foo"":0,""bar"":1}");
+      Check_Image (Obj, "{""bar"":1,""foo"":0}");
 
       Check_Image (Arr, "[1,0]");
       Arr.Sort (Less'Access);
@@ -314,13 +323,13 @@ begin
       Check_Image (Obj, "{""foo"":0}");
 
       Obj.Set_Field ("bar", Int_1);
-      Check_Image (Obj, "{""foo"":0,""bar"":1}");
+      Check_Image (Obj, "{""bar"":1,""foo"":0}");
 
       Obj.Set_Field ("foo", Int_1);
-      Check_Image (Obj, "{""foo"":1,""bar"":1}");
+      Check_Image (Obj, "{""bar"":1,""foo"":1}");
 
       Obj.Set_Field (To_XString ("foo"), Int_0);
-      Check_Image (Obj, "{""foo"":0,""bar"":1}");
+      Check_Image (Obj, "{""bar"":1,""foo"":0}");
 
       Obj := Create_Object;
       Check_Image (Obj, "{}");
@@ -368,7 +377,7 @@ begin
       Check_Image (Obj, "{""foo"":[0,1]}");
 
       Obj.Set_Field ("bar", Integer'(1));
-      Check_Image (Obj, "{""foo"":[0,1],""bar"":1}");
+      Check_Image (Obj, "{""bar"":1,""foo"":[0,1]}");
       Obj.Unset_Field ("foo");
       Check_Image (Obj, "{""bar"":1}");
       Obj.Unset_Field ("foo");
@@ -432,9 +441,9 @@ begin
       Obj : constant JSON_Value := Create_Object;
 
       Expected_Trace_1 : constant String :=
-         "foo: 0" & ASCII.LF & "bar: 1" & ASCII.LF;
+         "bar: 1" & ASCII.LF & "foo: 0" & ASCII.LF;
       Expected_Trace_2 : constant String :=
-         "foo" & ASCII.LF & "bar" & ASCII.LF;
+         "bar" & ASCII.LF & "foo" & ASCII.LF;
 
       type Iteration_Data (With_Value : Boolean) is record
          Result : Unbounded_String;

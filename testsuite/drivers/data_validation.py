@@ -54,6 +54,9 @@ class DataValidationDriver(GNATcollTestDriver):
         if b'<=== TEST PASSED ===>' not in process.out:
             result.set_status(TestStatus.FAIL)
             self.push_result(result)
+        else:
+            result.set_status(TestStatus.PASS)
+            self.push_result(result)
         return True
 
     def tear_down(self, previous_values, slot):
