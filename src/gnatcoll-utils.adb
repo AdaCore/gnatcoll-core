@@ -757,21 +757,10 @@ package body GNATCOLL.Utils is
          end if;
       end loop;
 
-      --  In ISO format, the separator between date and time is 'T', whereas
-      --  GNAT.Calendar.Time_IO expects as space.
-
       declare
-         S2    : String := Str (First .. Last);
-         Local : Ada.Calendar.Time;
+         Local : constant Ada.Calendar.Time :=
+                   GNAT.Calendar.Time_IO.Value (Str (First .. Last));
       begin
-         for S in S2'Range loop
-            if S2 (S) = 'T' then
-               S2 (S) := ' ';
-               exit;
-            end if;
-         end loop;
-
-         Local := GNAT.Calendar.Time_IO.Value (S2);
 
          --  GNAT.Calendar.Time_IO.Value uses Ada.Calendars.Time_Of, which
          --  for GNAT assumes the input date is in the local time zone.
