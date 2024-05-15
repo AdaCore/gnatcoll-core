@@ -1,0 +1,8 @@
+description: Test Rename_And_Move and ensure that trailing directory separator are kept
+data:
+    - "p.gpr"
+    - "prj.gpr"
+    - "test.adb"
+    - "src"
+    - "src/subsrc"
+    - "src/subsrc/main.adb"

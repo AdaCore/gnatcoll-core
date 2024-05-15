@@ -1,0 +1,8 @@
+project Foobar_P is
+
+   for Exec_Dir use ".";
+   for Source_Dirs use ("src/" & "subsrc/");
+   for Main use ("main.adb");
+
+end Foobar_P;
+
