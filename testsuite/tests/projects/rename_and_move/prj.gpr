@@ -1,0 +1,7 @@
+with "gnatcoll";
+
+project Prj is
+   for Exec_Dir use ".";
+   for Source_Dirs use (".", "src/" & "subsrc/");
+   for Main use ("test.adb");
+end Prj;

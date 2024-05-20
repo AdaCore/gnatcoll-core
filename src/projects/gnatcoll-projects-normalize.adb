@@ -2934,9 +2934,29 @@ package body GNATCOLL.Projects.Normalize is
                               Get_Host (New_Dir));
                begin
                   if not Is_Absolute_Path (D) then
-                     Set_String_Value_Of
-                       (Node, Tree_Node,
-                        Get_String (+Relative_Path (File, New_Dir)));
+                     declare
+                        Dir_String : constant String := String (D);
+
+                        --  Get whether string ends with a directory separator
+
+                        Ends_With_Separator : constant Boolean :=
+                          Dir_String (Dir_String'Last) = '/' or else
+                          Dir_String (Dir_String'Last) = '\';
+
+                        --  If it does, make sure that it is kept, as it
+                        --  would be removed by Normalize_Pathname.
+
+                        Suffix : constant String :=
+                                   (if Ends_With_Separator then
+                                      "" & Dir_String (Dir_String'Last)
+                                    else
+                                      "");
+                     begin
+                        Set_String_Value_Of
+                           (Node, Tree_Node,
+                            Get_String
+                              (+Relative_Path (File, New_Dir) & Suffix));
+                     end;
                   end if;
                end;
 
