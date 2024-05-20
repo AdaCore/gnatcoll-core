@@ -1,0 +1,43 @@
+== DEBUG.LOCATION=yes
+[PKG] Entering Test.Foo:test.adb:13 (loc:test.adb:13)
+   [PKG] A = 3 (loc:test.adb:15)
+   [PKG] Entering Test.Foo:test.adb:13 (loc:test.adb:13)
+      [PKG] A = 2 (loc:test.adb:15)
+      [PKG] Entering Test.Foo:test.adb:13 (loc:test.adb:13)
+         [PKG] A = 1 (loc:test.adb:15)
+      [PKG] Leaving Test.Foo:test.adb:13 (loc:test.adb:13)
+   [PKG] Leaving Test.Foo:test.adb:13 (loc:test.adb:13)
+[PKG] Leaving Test.Foo:test.adb:13 (loc:test.adb:13)
+
+== DEBUG.LOCATION=no
+[PKG] Entering Test.Foo:test.adb:13
+   [PKG] A = 3
+   [PKG] Entering Test.Foo:test.adb:13
+      [PKG] A = 2
+      [PKG] Entering Test.Foo:test.adb:13
+         [PKG] A = 1
+      [PKG] Leaving Test.Foo:test.adb:13
+   [PKG] Leaving Test.Foo:test.adb:13
+[PKG] Leaving Test.Foo:test.adb:13
+
+== DEBUG.ENCLOSING_ENTITY=yes
+[PKG] Entering Test.Foo:test.adb:13 (entity:Test.Foo)
+   [PKG] A = 3 (entity:Test.Foo)
+   [PKG] Entering Test.Foo:test.adb:13 (entity:Test.Foo)
+      [PKG] A = 2 (entity:Test.Foo)
+      [PKG] Entering Test.Foo:test.adb:13 (entity:Test.Foo)
+         [PKG] A = 1 (entity:Test.Foo)
+      [PKG] Leaving Test.Foo:test.adb:13 (entity:Test.Foo)
+   [PKG] Leaving Test.Foo:test.adb:13 (entity:Test.Foo)
+[PKG] Leaving Test.Foo:test.adb:13 (entity:Test.Foo)
+
+== DEBUG.ENCLOSING_ENTITY=no
+[PKG] Entering Test.Foo:test.adb:13
+   [PKG] A = 3
+   [PKG] Entering Test.Foo:test.adb:13
+      [PKG] A = 2
+      [PKG] Entering Test.Foo:test.adb:13
+         [PKG] A = 1
+      [PKG] Leaving Test.Foo:test.adb:13
+   [PKG] Leaving Test.Foo:test.adb:13
+[PKG] Leaving Test.Foo:test.adb:13

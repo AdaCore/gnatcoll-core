@@ -900,7 +900,8 @@ private
    type Block_Trace_Handle is new Ada.Finalization.Limited_Controlled with
    record
       Me            : Logger;
-      Loc           : GNAT.Strings.String_Access;
+      Location      : GNAT.Strings.String_Access;
+      Entity        : GNAT.Strings.String_Access;
       Style         : Message_Style;
    end record;
    overriding procedure Finalize (Self : in out Block_Logger);
