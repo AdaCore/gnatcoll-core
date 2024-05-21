@@ -1278,7 +1278,7 @@ package body GNATCOLL.Traces is
             end if;
 
             if Global.Location.Active then
-               Msg.Append ("(loc: ");
+               Msg.Append ("(loc:");
                Msg.Append (Location);
                Msg.Append (')');
             end if;
@@ -2178,15 +2178,23 @@ package body GNATCOLL.Traces is
          if Active (Handle) then
             Result.Me := Handle;
             Result.Style := Style;
-            Result.Loc := new String'(Entity & ':' & Location);
+            Result.Location := new String'(Location);
+            Result.Entity := new String'(Entity);
+
+            --  To ensure consistency between all traces, location and entity
+            --  are also displayed in the loc and entity fields of the message,
+            --  despite this piece of information already being contained in
+            --  the first part of the message.
+
             if Message /= "" then
                Increase_Indent
-                  (Handle, "Entering " & Result.Loc.all & ' ' & Message,
-                   Style => Style, Location => "", Entity => "");
+                 (Handle,
+                 "Entering " & Entity & ':' & Location & ' ' & Message,
+                  Style => Style, Location => Location, Entity => Entity);
             else
                Increase_Indent
-                  (Handle, "Entering " & Result.Loc.all,
-                   Style => Style, Location => "", Entity => "");
+                 (Handle, "Entering " & Entity & ':' & Location,
+                  Style => Style, Location => Location, Entity => Entity);
             end if;
          end if;
       end return;
@@ -2200,13 +2208,21 @@ package body GNATCOLL.Traces is
    begin
       --  If we were active when Create was called
       if Self.Me /= null then
+
+         --  To ensure consistency between all traces, location and entity
+         --  are also displayed in the loc and entity fields of the message,
+         --  despite this piece of information already being contained in
+         --  the first part of the message.
+
          Decrease_Indent
-            (Self.Me, "Leaving " & Self.Loc.all,
+            (Self.Me, "Leaving " & Self.Entity.all & ':' & Self.Location.all,
              Style    => Self.Style,
-             Location => "",   --  avoid duplicate info in the output
-             Entity   => "");
+             Location => Self.Location.all,
+             Entity   => Self.Entity.all);
       end if;
-      Free (Self.Loc);
+
+      Free (Self.Location);
+      Free (Self.Entity);
    end Finalize;
 
 end GNATCOLL.Traces;
