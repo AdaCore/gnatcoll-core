@@ -1106,7 +1106,7 @@ package body GNATCOLL.Traces is
       then
          Create_Exception_Handle (Trace_Handle (Handle));
          Trace (Handle.Exception_Handle,
-                Msg & Ada.Exceptions.Exception_Information (E),
+                Msg & " " & Ada.Exceptions.Exception_Information (E),
                 Style => Style);
       end if;
    end Trace;
