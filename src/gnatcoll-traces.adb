@@ -1346,7 +1346,11 @@ package body GNATCOLL.Traces is
             end if;
 
          elsif Message_If_Success'Length /= 0 then
-            Trace (Handle, Message_If_Success, Location, Entity);
+            Trace
+              (Handle   => Handle,
+               Message  => Message_If_Success,
+               Location => Location,
+               Entity   => Entity);
          end if;
       end if;
    end Assert;

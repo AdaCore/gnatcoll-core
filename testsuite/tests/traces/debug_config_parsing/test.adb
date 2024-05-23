@@ -21,4 +21,20 @@ procedure Test is
 begin
    Parse_Config_File (Ada.Command_Line.Argument (1));
    Foo (3);
+
+   Log.all.Assert
+      (
+         Condition          => True,
+         Error_Message      => "[Test error msg]",
+         Message_If_Success => "[Test success msg]",
+         Raise_Exception    => False
+      );
+
+   Log.all.Assert
+      (
+         Condition          => False,
+         Error_Message      => "[Test error msg]",
+         Message_If_Success => "[Test success msg]",
+         Raise_Exception    => False
+      );
 end Test;

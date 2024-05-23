@@ -1,14 +1,10 @@
 echo "== DEBUG.LOCATION=yes"
-./test .gnatdebug_location_yes
-
-echo ""
-echo "== DEBUG.LOCATION=no"
-./test .gnatdebug_location_no
+./test .gnatdebug_location
 
 echo ""
 echo "== DEBUG.ENCLOSING_ENTITY=yes"
-./test .gnatdebug_enclosing_entity_yes
+./test .gnatdebug_enclosing_entity
 
 echo ""
-echo "== DEBUG.ENCLOSING_ENTITY=no"
-./test .gnatdebug_enclosing_entity_no
+echo "== DEBUG.COLORS=yes"
+./test .gnatdebug_colors
