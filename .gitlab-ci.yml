@@ -223,6 +223,9 @@ build_and_test_coverage:
     - mv $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core_coverage_test/results/new/coverage-cobertura $CI_PROJECT_DIR/coverage/cobertura
     - echo_coverage_stats --coverage-file $CI_PROJECT_DIR/coverage/xml/index.xml
 
+    - publish-pages ./coverage/dhtml/ --job
+    - echo "https://pages.gitlab.adacore-it.com/$CI_PROJECT_PATH/jobs/$CI_JOB_ID/index.html"
+
     # We previously prevented the pipeline from halting if a test failed, to make
     # sure all tests were run. If a test failed now we exit with a non-zero code
     - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
