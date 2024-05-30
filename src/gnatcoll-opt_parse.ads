@@ -289,10 +289,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
@@ -321,10 +324,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
@@ -368,10 +374,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
@@ -416,10 +425,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
