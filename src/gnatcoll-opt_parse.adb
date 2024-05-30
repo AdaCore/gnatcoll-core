@@ -37,11 +37,8 @@ package body GNATCOLL.Opt_Parse is
 
    type XString_Vector_Access is access all XString_Vector;
 
-   function "+"
-     (Self : String) return XString renames To_XString;
-
-   function "+"
-     (Self : XString) return String renames To_String;
+   function "+" (Self : String) return XString renames To_XString;
+   function "+" (Self : XString) return String renames To_String;
 
    function Get_Arguments (Arguments : XString_Array) return XString_Array;
    --  Return the arguments in ``Arguments``, if it's not an empty array. Else,
