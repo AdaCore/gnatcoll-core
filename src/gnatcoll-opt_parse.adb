@@ -33,6 +33,35 @@ with GNATCOLL.VFS;
 
 package body GNATCOLL.Opt_Parse is
 
+   generic
+      Short : String;
+      Long  : String;
+      Name  : String;
+   package Flag_Invariants is
+      pragma Assertion_Policy (Assert => Check);
+      --  We always want to check those assertions
+
+      pragma Assert
+        (Short'Length = 0 or else Short (1) = '-',
+         "Short flag should start with a dash");
+
+      pragma Assert
+        (Long'Length = 0 or else Long (1 .. 2) = "--",
+         "Long flag should start with two dashes");
+
+      pragma Assert
+        (Long'Length > 0 or else Name'Length > 0,
+         "Name should be non empty if there is no long flag");
+
+      pragma Assert
+         (Long'Length > 0 or else Short'Length > 0,
+          "You should have either a long or a short flag");
+   end Flag_Invariants;
+   --  This package is an helper package, helping check some invariants at
+   --  runtime. The neat thing about using `pragma Assert` is that in a wide
+   --  variety of use cases, GNAT is actually able to warn you about violating
+   --  those invariants at compile time.
+
    package Cmd_Line renames Ada.Command_Line;
 
    type XString_Vector_Access is access all XString_Vector;
@@ -816,6 +845,9 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Flag is
 
+      package I is new Flag_Invariants (Short, Long, Name);
+      pragma Unreferenced (I);
+
       Self_Val : aliased Flag_Parser := Flag_Parser'
         (Name     => +(if Name /= "" then Name
                        else Long (3 .. Long'Last)),
@@ -850,13 +882,7 @@ package body GNATCOLL.Opt_Parse is
       end Get;
 
    begin
-      if Long = "" and Short = "" then
-         raise Opt_Parse_Error
-           with "A long or short flag must be provided for Parse_Flag";
-      elsif Long = "" and Name = "" then
-         raise Opt_Parse_Error
-           with "Either Long or Name must be provided for Parse_Flag";
-      elsif Enabled then
+      if Enabled then
          Parser.Data.Opts_Parsers.Append (Self);
          Parser.Data.All_Parsers.Append (Self);
          Self.Position := Parser.Data.All_Parsers.Last_Index;
@@ -868,6 +894,9 @@ package body GNATCOLL.Opt_Parse is
    ------------------
 
    package body Parse_Option is
+
+      package I is new Flag_Invariants (Short, Long, Name);
+      pragma Unreferenced (I);
 
       type Option_Parser is new Parser_Type with record
          null;
@@ -993,13 +1022,7 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      if Long = "" and Short = "" then
-         raise Opt_Parse_Error
-           with "A long or short flag must be provided for Parse_Option";
-      elsif Long = "" and Name = "" then
-         raise Opt_Parse_Error
-           with "Either Long or Name must be provided for Parse_Option";
-      elsif Enabled then
+      if Enabled then
          Parser.Data.Opts_Parsers.Append (Self);
          Parser.Data.All_Parsers.Append (Self);
          Self.Position := Parser.Data.All_Parsers.Last_Index;
@@ -1007,6 +1030,10 @@ package body GNATCOLL.Opt_Parse is
    end Parse_Option;
 
    package body Parse_Enum_Option is
+
+      package I is new Flag_Invariants (Short, Long, Name);
+      pragma Unreferenced (I);
+
       function Convert (Arg : String) return Arg_Type;
 
       -------------
@@ -1058,14 +1085,6 @@ package body GNATCOLL.Opt_Parse is
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
       renames Internal_Option.Get;
 
-   begin
-      if Long = "" and Short = "" then
-         raise Opt_Parse_Error
-           with "A long or short flag must be provided for Parse_Enum_Option";
-      elsif Long = "" and Name = "" then
-         raise Opt_Parse_Error
-           with "Either Long or Name must be provided for Parse_Enum_Option";
-      end if;
    end Parse_Enum_Option;
 
    -----------------------
@@ -1073,6 +1092,9 @@ package body GNATCOLL.Opt_Parse is
    -----------------------
 
    package body Parse_Option_List is
+
+      package I is new Flag_Invariants (Short, Long, Name);
+      pragma Unreferenced (I);
 
       package Result_Vectors
       is new Ada.Containers.Vectors (Positive, Arg_Type);
@@ -1253,13 +1275,7 @@ package body GNATCOLL.Opt_Parse is
       end Parse_Args;
 
    begin
-      if Long = "" and Short = "" then
-         raise Opt_Parse_Error
-           with "A long or short flag must be provided for Parse_Option_List";
-      elsif Long = "" and Name = "" then
-         raise Opt_Parse_Error
-           with "Either Long or Name must be provided for Parse_Option_List";
-      elsif Enabled then
+      if Enabled then
          Parser.Data.Opts_Parsers.Append (Self);
          Parser.Data.All_Parsers.Append (Self);
          Self.Position := Parser.Data.All_Parsers.Last_Index;

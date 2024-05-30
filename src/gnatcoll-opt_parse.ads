@@ -107,6 +107,22 @@ package GNATCOLL.Opt_Parse is
    --  raise a ``Disabled_Error`` exception. This feature is useful to disable
    --  one or several options depending on some compile-time configuration
    --  without using complex declarations blocks nested in ``if`` statements.
+   --
+   --  .. note:: If you can, you should activate the ``-gnatw.a`` warning when
+   --     using ``GNATCOLL.Opt_Parse``. This will emit warnings when you're not
+   --     respecting invariants in your parser declaration. For example:
+   --
+   --  .. code:: ada
+   --
+   --     package Opt is new Parse_Option
+   --       (Parser      => Parser,
+   --        Arg_Type    => Unbounded_String,
+   --        Name        => "Option",
+   --        Help        => "Help");
+   --
+   --  Will emit a warning because your option has neither a short or a long
+   --  flag name.
+
 
    ------------------------
    --  General API types --
@@ -311,8 +327,14 @@ package GNATCOLL.Opt_Parse is
       --  Name will be used if both Name and Long are non-empty strings.
 
    package Parse_Flag is
+
+      ----------------------
+      -- Public interface --
+      ----------------------
+
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean;
+
    end Parse_Flag;
    --  Parse a Flag option. A flag takes no other argument, and its result is a
    --  boolean: False if the flag is not passed, True otherwise.
@@ -360,6 +382,11 @@ package GNATCOLL.Opt_Parse is
       --  Name will be used if both Name and Long are non-empty strings.
 
    package Parse_Option is
+
+      ----------------------
+      -- Public interface --
+      ----------------------
+
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
    end Parse_Option;
@@ -468,8 +495,13 @@ package GNATCOLL.Opt_Parse is
 
       No_Results : constant Result_Array (1 .. 0) := (others => <>);
 
+      ----------------------
+      -- Public interface --
+      ----------------------
+
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array;
+
    end Parse_Option_List;
    --  Parse an option list. A regular option is of the form
    --  "--option val, val2, val3", or "-O val val2 val3".
