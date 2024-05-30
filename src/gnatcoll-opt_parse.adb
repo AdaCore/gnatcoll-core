@@ -52,6 +52,13 @@ package body GNATCOLL.Opt_Parse is
       Args        : XString_Array;
       Pos         : Positive;
       New_Pos     : out Parser_Return) return XString;
+   --  Parse one flag option, with the given ``Short`` & ``Long``
+   --  specifications, from the ``Args`` array, starting at ``Pos``.
+   --  Put the new position in ``New_Pos``. Return the option's raw value
+   --
+   --  For short arguments, this handles both ``-a B`` and ``-aB`` forms.
+   --  For long arguments, this handles both ``--long B`` and ``--long=B``
+   --  forms.
 
    ------------------
    -- Text wrapper --
