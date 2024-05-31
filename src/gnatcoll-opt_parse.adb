@@ -484,8 +484,9 @@ package body GNATCOLL.Opt_Parse is
 
       procedure Handle_Failure (Error_Msg : String) is
       begin
+         Self.Data.Last_Error := +Error_Msg;
          Put_Line
-           ("Argument parsing failed: " & Error_Msg);
+           (Standard_Error, "Argument parsing failed: " & Error_Msg);
       end Handle_Failure;
 
       function Internal return Boolean is
@@ -1316,6 +1317,15 @@ package body GNATCOLL.Opt_Parse is
          Parser.Data.Help_Column_Limit := Help_Column_Limit;
       end return;
    end Create_Argument_Parser;
+
+   ----------------
+   -- Last_Error --
+   ----------------
+
+   function Last_Error (Self : Argument_Parser) return String is
+   begin
+      return Self.Data.Last_Error.To_String;
+   end Last_Error;
 
    ----------
    -- Help --
