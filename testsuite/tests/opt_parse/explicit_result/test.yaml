@@ -1,0 +1,2 @@
+description:
+    Test that `Opt_Parse` operations work with an explicit result argument
