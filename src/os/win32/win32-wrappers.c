@@ -55,7 +55,7 @@ typedef struct WaitParameters {
    DWORD result;
 } WAIT_PARAMETERS;
 
-static DWORD thread_wait_for_multiple_objects(LPVOID lpParam)
+static DWORD WINAPI thread_wait_for_multiple_objects(LPVOID lpParam)
 {
 
    WAIT_PARAMETERS *params = (WAIT_PARAMETERS *) lpParam;
