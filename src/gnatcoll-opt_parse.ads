@@ -107,6 +107,22 @@ package GNATCOLL.Opt_Parse is
    --  raise a ``Disabled_Error`` exception. This feature is useful to disable
    --  one or several options depending on some compile-time configuration
    --  without using complex declarations blocks nested in ``if`` statements.
+   --
+   --  .. note:: If you can, you should activate the ``-gnatw.a`` warning when
+   --     using ``GNATCOLL.Opt_Parse``. This will emit warnings when you're not
+   --     respecting invariants in your parser declaration. For example:
+   --
+   --  .. code:: ada
+   --
+   --     package Opt is new Parse_Option
+   --       (Parser      => Parser,
+   --        Arg_Type    => Unbounded_String,
+   --        Name        => "Option",
+   --        Help        => "Help");
+   --
+   --  Will emit a warning because your option has neither a short or a long
+   --  flag name.
+
 
    ------------------------
    --  General API types --
@@ -135,6 +151,23 @@ package GNATCOLL.Opt_Parse is
 
    subtype XString_Vector is XString_Vectors.Vector;
    --  Vector of XStrings. Used to fill unknown args in calls to ``Parse``.
+
+   -------------------------------
+   -- General parser primitives --
+   -------------------------------
+
+   function Create_Argument_Parser
+     (Help              : String;
+      Command_Name      : String := "";
+      Help_Column_Limit : Col_Type := 80) return Argument_Parser;
+   --  Create an argument parser with the provided help string.
+
+   function Help (Self : Argument_Parser) return String;
+   --  Return the help for this parser as a String.
+
+   function Last_Error (Self : Argument_Parser) return String;
+   --  Return the last error produced by this parser if there is one, the empty
+   --  string otherwise.
 
    ------------------------
    -- Parse entry points --
@@ -175,15 +208,6 @@ package GNATCOLL.Opt_Parse is
       Result       : out Parsed_Arguments) return Boolean;
    --  Parse command line arguments for Self. Return arguments explicitly in
    --  ``Result``.
-
-   function Create_Argument_Parser
-     (Help              : String;
-      Command_Name      : String := "";
-      Help_Column_Limit : Col_Type := 80) return Argument_Parser;
-   --  Create an argument parser with the provided help string.
-
-   function Help (Self : Argument_Parser) return String;
-   --  Return the help for this parser as a String.
 
    --------------------------
    -- Conversion functions --
@@ -289,10 +313,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
@@ -308,8 +335,14 @@ package GNATCOLL.Opt_Parse is
       --  Name will be used if both Name and Long are non-empty strings.
 
    package Parse_Flag is
+
+      ----------------------
+      -- Public interface --
+      ----------------------
+
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean;
+
    end Parse_Flag;
    --  Parse a Flag option. A flag takes no other argument, and its result is a
    --  boolean: False if the flag is not passed, True otherwise.
@@ -321,10 +354,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
@@ -354,6 +390,11 @@ package GNATCOLL.Opt_Parse is
       --  Name will be used if both Name and Long are non-empty strings.
 
    package Parse_Option is
+
+      ----------------------
+      -- Public interface --
+      ----------------------
+
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
    end Parse_Option;
@@ -368,10 +409,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
@@ -416,10 +460,13 @@ package GNATCOLL.Opt_Parse is
       Short : String := "";
       --  Short form for this flag. Should start with one dash and be followed
       --  by one or two alphanumeric characters.
+      --
+      --  This can be left empty (i.e. ``Short = ""``) if you don't want this
+      --  argument to have a short form.
 
       Long : String := "";
       --  Long form for this flag. Should start with two dashes.
-      --  This can be left empty (i.e. Long = "") if you don't want this
+      --  This can be left empty (i.e. ``Long = ""``) if you don't want this
       --  argument to have a long form. In this case you must provide a
       --  non-empty Name (i.e. Name /= "") to be used in help text.
 
@@ -456,8 +503,13 @@ package GNATCOLL.Opt_Parse is
 
       No_Results : constant Result_Array (1 .. 0) := (others => <>);
 
+      ----------------------
+      -- Public interface --
+      ----------------------
+
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array;
+
    end Parse_Option_List;
    --  Parse an option list. A regular option is of the form
    --  "--option val, val2, val3", or "-O val val2 val3".
@@ -540,6 +592,10 @@ private
 
    type Argument_Parser_Data is record
       Help, Command_Name                    : XString;
+
+      Last_Error : XString;
+      --  Last error that was generated by the parser
+
       Positional_Args_Parsers, Opts_Parsers : Parser_Vector;
       All_Parsers                           : Parser_Vector;
       Default_Result                        : Parsed_Arguments
@@ -549,6 +605,7 @@ private
       Mutex : aliased Mutual_Exclusion;
       --  Mutex used to make Get_Result thread safe
       Help_Column_Limit                     : Col_Type := 80;
+
    end record;
 
    type Parser_Result is abstract tagged record
