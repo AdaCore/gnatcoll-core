@@ -157,10 +157,11 @@ package GNATCOLL.Opt_Parse is
    -------------------------------
 
    function Create_Argument_Parser
-     (Help              : String;
-      Command_Name      : String := "";
-      Help_Column_Limit : Col_Type := 80;
-      Incremental       : Boolean := False) return Argument_Parser;
+     (Help               : String;
+      Command_Name       : String := "";
+      Help_Column_Limit  : Col_Type := 80;
+      Incremental        : Boolean := False;
+      Generate_Help_Flag : Boolean := True) return Argument_Parser;
    --  Create an argument parser with the provided help string.
    --
    --  ``Command_Name`` refers to the name of your command/executable. This
@@ -176,6 +177,9 @@ package GNATCOLL.Opt_Parse is
    --  given argument can be passed several times without triggering an
    --  error in ``Parse``. This is useful in the context of GNAT's tools,
    --  where you often need to process arguments in several passes.
+   --
+   --  ``Generate_Help_Flag`` will condition the generation of the ``--help``
+   --  flag. Some tools might wish to deactivate it to handle it manually.
 
    function Help (Self : Argument_Parser) return String;
    --  Return the help for this parser as a String.

@@ -1293,10 +1293,11 @@ package body GNATCOLL.Opt_Parse is
    ----------------------------
 
    function Create_Argument_Parser
-     (Help              : String;
-      Command_Name      : String := "";
-      Help_Column_Limit : Col_Type := 80;
-      Incremental       : Boolean := False) return Argument_Parser
+     (Help               : String;
+      Command_Name       : String := "";
+      Help_Column_Limit  : Col_Type := 80;
+      Incremental        : Boolean := False;
+      Generate_Help_Flag : Boolean := True) return Argument_Parser
    is
       XCommand_Name : constant XString :=
         +(if Command_Name = ""
@@ -1312,18 +1313,22 @@ package body GNATCOLL.Opt_Parse is
              (+Help, XCommand_Name,
               Incremental => Incremental,
               others => <>);
-         Parser.Data.Help_Flag := new Help_Flag_Parser'
-           (Name     => +"help",
-            Help     => +"Show this help message",
-            Position => <>,
-            Opt      => True,
-            Parser   => Parser.Data,
-            Short    => +"-h",
-            Long     => +"--help");
-         Parser.Data.Opts_Parsers.Append (Parser.Data.Help_Flag);
-         Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
-         Parser.Data.Help_Flag.Position := Parser.Data.All_Parsers.Last_Index;
-         Parser.Data.Help_Column_Limit := Help_Column_Limit;
+
+         if Generate_Help_Flag then
+            Parser.Data.Help_Flag := new Help_Flag_Parser'
+              (Name     => +"help",
+               Help     => +"Show this help message",
+               Position => <>,
+               Opt      => True,
+               Parser   => Parser.Data,
+               Short    => +"-h",
+               Long     => +"--help");
+            Parser.Data.Opts_Parsers.Append (Parser.Data.Help_Flag);
+            Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
+            Parser.Data.Help_Flag.Position
+              := Parser.Data.All_Parsers.Last_Index;
+            Parser.Data.Help_Column_Limit := Help_Column_Limit;
+         end if;
       end return;
    end Create_Argument_Parser;
 
