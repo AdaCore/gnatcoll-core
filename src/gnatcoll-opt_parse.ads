@@ -34,7 +34,7 @@ with System.Aux_DEC; use System.Aux_DEC;
 
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
-private with Ada.Containers.Vectors;
+with Ada.Containers.Vectors;
 private with GNATCOLL.Refcount;
 private with GNATCOLL.Locks;
 
@@ -131,16 +131,50 @@ package GNATCOLL.Opt_Parse is
    No_Parsed_Arguments : constant Parsed_Arguments;
    --  Constant for a null Parsed_Arguments value.
 
+   package XString_Vectors is new Ada.Containers.Vectors (Positive, XString);
+
+   subtype XString_Vector is XString_Vectors.Vector;
+   --  Vector of XStrings. Used to fill unknown args in calls to ``Parse``.
+
+   ------------------------
+   -- Parse entry points --
+   ------------------------
+
+   --  Those ``Parse`` functions are the entry points to run the argument parse
+   --  on a set of command line arguments.
+   --
+   --  In every case, Arguments can be an explicit argument array. If not
+   --  passed, arguments will be parsed from the application's command line.
+   --
+   --  Those functions will return ``False`` if there is an error during
+   --  parsing, after printing the error on stdout.
+   --
+   --  .. note:: todo, we probably want to print errors on stderr rt. stdout.
+   --
+   --  In overloads without an explicit ``Result``, Results are stored in the
+   --  implicit default ``Parsed_Arguments`` instance. This means that you can
+   --  directly call the corresponding ``Get`` function in parsers to get the
+   --  parsed result.
+
    function Parse
-     (Self      : in out Argument_Parser;
-      Arguments : XString_Array := No_Arguments) return Boolean;
+     (Self         : in out Argument_Parser;
+      Arguments    : XString_Array := No_Arguments) return Boolean;
    --  Parse the command line arguments for Self.
 
    function Parse
-     (Self      : in out Argument_Parser;
-      Arguments : XString_Array := No_Arguments;
-      Result    : out Parsed_Arguments) return Boolean;
-   --  Parse command line arguments for Self. Return arguments explicitly.
+     (Self         : in out Argument_Parser;
+      Arguments    : XString_Array := No_Arguments;
+      Unknown_Arguments : out XString_Vector) return Boolean;
+   --  Parse the command line arguments for Self.
+   --  Unknown arguments will be put in ``Unknown_Arguments``, and no error
+   --  will be raised.
+
+   function Parse
+     (Self         : in out Argument_Parser;
+      Arguments    : XString_Array := No_Arguments;
+      Result       : out Parsed_Arguments) return Boolean;
+   --  Parse command line arguments for Self. Return arguments explicitly in
+   --  ``Result``.
 
    function Create_Argument_Parser
      (Help              : String;
@@ -440,8 +474,6 @@ private
 
    type Argument_Parser_Data;
    type Argument_Parser_Data_Access is access all Argument_Parser_Data;
-
-   package XString_Vectors is new Ada.Containers.Vectors (Positive, XString);
 
    type Parser_Type is abstract tagged record
       Name : XString;
