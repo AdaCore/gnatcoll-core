@@ -483,10 +483,17 @@ package body GNATCOLL.Opt_Parse is
       --------------------
 
       procedure Handle_Failure (Error_Msg : String) is
+         use Error_Handler_References;
       begin
          Self.Data.Last_Error := +Error_Msg;
-         Put_Line
-           (Standard_Error, "Argument parsing failed: " & Error_Msg);
+
+         if Self.Data.Custom_Error_Handler /= Null_Ref then
+            Self.Data.Custom_Error_Handler.Unchecked_Get.Error (Error_Msg);
+         else
+            Put_Line
+              (Standard_Error, "Argument parsing failed: " & Error_Msg);
+         end if;
+
       end Handle_Failure;
 
       function Internal return Boolean is
@@ -1293,11 +1300,13 @@ package body GNATCOLL.Opt_Parse is
    ----------------------------
 
    function Create_Argument_Parser
-     (Help               : String;
-      Command_Name       : String := "";
-      Help_Column_Limit  : Col_Type := 80;
-      Incremental        : Boolean := False;
-      Generate_Help_Flag : Boolean := True) return Argument_Parser
+     (Help                 : String;
+      Command_Name         : String := "";
+      Help_Column_Limit    : Col_Type := 80;
+      Incremental          : Boolean := False;
+      Generate_Help_Flag   : Boolean := True;
+      Custom_Error_Handler : Error_Handler_Ref)
+   return Argument_Parser
    is
       XCommand_Name : constant XString :=
         +(if Command_Name = ""
@@ -1310,9 +1319,11 @@ package body GNATCOLL.Opt_Parse is
       return Parser : Argument_Parser do
          Parser.Data :=
            new Argument_Parser_Data'
-             (+Help, XCommand_Name,
-              Incremental => Incremental,
-              others => <>);
+             (+Help,
+              XCommand_Name,
+              Incremental           => Incremental,
+              Custom_Error_Handler  => Custom_Error_Handler,
+              others                => <>);
 
          if Generate_Help_Flag then
             Parser.Data.Help_Flag := new Help_Flag_Parser'
@@ -1513,5 +1524,25 @@ package body GNATCOLL.Opt_Parse is
       Free (Self.Data.Help_Flag);
       Free (Self.Data);
    end Finalize;
+
+   ------------
+   -- Create --
+   ------------
+
+   function Create (Handler : Error_Handler'Class) return Error_Handler_Ref is
+      Ret : Error_Handler_Ref;
+   begin
+      Ret.Set (Handler);
+      return Ret;
+   end Create;
+
+   -------------
+   -- Release --
+   -------------
+
+   procedure Release_Wrapper (Handler : in out Error_Handler'Class) is
+   begin
+      Handler.Release;
+   end Release_Wrapper;
 
 end GNATCOLL.Opt_Parse;

@@ -35,7 +35,7 @@ with System.Aux_DEC; use System.Aux_DEC;
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 with Ada.Containers.Vectors;
-private with GNATCOLL.Refcount;
+with GNATCOLL.Refcount;
 private with GNATCOLL.Locks;
 
 package GNATCOLL.Opt_Parse is
@@ -152,16 +152,44 @@ package GNATCOLL.Opt_Parse is
    subtype XString_Vector is XString_Vectors.Vector;
    --  Vector of XStrings. Used to fill unknown args in calls to ``Parse``.
 
+   --------------------
+   -- Error handlers --
+   --------------------
+
+   --  Machinery to allow the user to specify custom error handling mechanisms
+   --  if an error should occur during argument processing in Opt_Parse
+
+   type Error_Handler is abstract tagged null record;
+   procedure Error (Self : in out Error_Handler; Msg : String) is abstract;
+   procedure Warning (Self : in out Error_Handler; Msg : String) is abstract;
+   procedure Release (Self : in out Error_Handler) is null;
+
+   procedure Release_Wrapper (Handler : in out Error_Handler'Class);
+   --  Wrapper around Error_Handler.Release
+
+   package Error_Handler_References is new GNATCOLL.Refcount.Shared_Pointers
+     (Error_Handler'Class,
+      Release => Release_Wrapper,
+      Atomic_Counters => True);
+
+   subtype Error_Handler_Ref is Error_Handler_References.Ref;
+
+   Null_Ref : Error_Handler_Ref renames Error_Handler_References.Null_Ref;
+
+   function Create (Handler : Error_Handler'Class) return Error_Handler_Ref;
+
    -------------------------------
    -- General parser primitives --
    -------------------------------
 
    function Create_Argument_Parser
-     (Help               : String;
-      Command_Name       : String := "";
-      Help_Column_Limit  : Col_Type := 80;
-      Incremental        : Boolean := False;
-      Generate_Help_Flag : Boolean := True) return Argument_Parser;
+     (Help                 : String;
+      Command_Name         : String := "";
+      Help_Column_Limit    : Col_Type := 80;
+      Incremental          : Boolean := False;
+      Generate_Help_Flag   : Boolean := True;
+      Custom_Error_Handler : Error_Handler_Ref)
+   return Argument_Parser;
    --  Create an argument parser with the provided help string.
    --
    --  ``Command_Name`` refers to the name of your command/executable. This
@@ -180,6 +208,9 @@ package GNATCOLL.Opt_Parse is
    --
    --  ``Generate_Help_Flag`` will condition the generation of the ``--help``
    --  flag. Some tools might wish to deactivate it to handle it manually.
+   --
+   --  ``Error_Handler`` is the handler that will be used in case of error
+   --  or warning, to process the associated error message.
 
    function Help (Self : Argument_Parser) return String;
    --  Return the help for this parser as a String.
@@ -634,6 +665,11 @@ private
       Incremental : Boolean := False;
       --  Whether this parse is in incremental or normal mode. See the
       --  documentation in `Create_Argument_Parser`.
+
+      Custom_Error_Handler : Error_Handler_Ref
+        := Error_Handler_References.Null_Ref;
+      --  Callback to call in case of error/warning. If null, errors and
+      --  warnings will be emitted on stderr.
    end record;
 
    type Parser_Result is abstract tagged record
