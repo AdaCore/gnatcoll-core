@@ -1204,8 +1204,9 @@ package body GNATCOLL.Opt_Parse is
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array is
       begin
          if not Enabled then
-            return (1 .. 0 => <>);
+            return No_Results;
          end if;
+
          declare
             R : constant Parser_Result_Access := Self.Get_Result (Args);
          begin
@@ -1224,6 +1225,17 @@ package body GNATCOLL.Opt_Parse is
             end if;
          end;
       end Get;
+
+      ------------
+      -- Is_Set --
+      ------------
+
+      function Is_Set
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean
+      is
+      begin
+         return Self.Get_Result (Args) /= null;
+      end Is_Set;
 
       ----------------
       -- Parse_Args --
@@ -1277,7 +1289,19 @@ package body GNATCOLL.Opt_Parse is
          end loop;
 
          if Arg_Count = 0 then
-            return Error_Return;
+            if Allow_Empty then
+
+               Tmp := new Internal_Result'
+                 (Start_Pos => Pos,
+                  End_Pos   => Pos,
+                  Results   => Result_Vectors.Empty_Vector);
+
+               Res := Tmp.all'Unchecked_Access;
+
+               return Pos + 1;
+            else
+               return Error_Return;
+            end if;
          end if;
 
          Tmp := new Internal_Result'

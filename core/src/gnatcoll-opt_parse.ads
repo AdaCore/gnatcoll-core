@@ -558,6 +558,9 @@ package GNATCOLL.Opt_Parse is
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
 
+      Allow_Empty : Boolean := False;
+      --  Whether empty lists are allowed or not.
+
       with function List_Stop_Predicate (S : XString) return Boolean is <>;
       --  Predicate used to detect that we should stop parsing. Customizing
       --  that allows to implement "section-like" behavior.
@@ -575,6 +578,12 @@ package GNATCOLL.Opt_Parse is
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array;
+
+      function Is_Set
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean;
+      --  Whether this list has been explicitly set. Useful if explicit empty
+      --  lists are allowed, if an explicit empty list has a different
+      --  meaning than an implicit empty list.
 
    end Parse_Option_List;
    --  Parse an option list. A regular option is of the form
