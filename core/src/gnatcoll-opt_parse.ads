@@ -188,7 +188,7 @@ package GNATCOLL.Opt_Parse is
       Help_Column_Limit    : Col_Type := 80;
       Incremental          : Boolean := False;
       Generate_Help_Flag   : Boolean := True;
-      Custom_Error_Handler : Error_Handler_Ref)
+      Custom_Error_Handler : Error_Handler_Ref := Null_Ref)
    return Argument_Parser;
    --  Create an argument parser with the provided help string.
    --

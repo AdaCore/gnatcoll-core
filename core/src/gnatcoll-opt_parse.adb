@@ -56,6 +56,14 @@ package body GNATCOLL.Opt_Parse is
       pragma Assert
          (Long'Length > 0 or else Short'Length > 0,
           "You should have either a long or a short flag");
+
+      pragma Assert
+        (Short'Length = 0 or else Short (2)  in 'a' .. 'z' | 'A' .. 'Z',
+         "Short flag should start with an alphabetic character");
+
+      pragma Assert
+        (Long'Length = 0 or else Long (3)  in 'a' .. 'z' | 'A' .. 'Z',
+         "Long flag should start with an alphabetic character");
    end Flag_Invariants;
    --  This package is an helper package, helping check some invariants at
    --  runtime. The neat thing about using `pragma Assert` is that in a wide
@@ -1305,7 +1313,7 @@ package body GNATCOLL.Opt_Parse is
       Help_Column_Limit    : Col_Type := 80;
       Incremental          : Boolean := False;
       Generate_Help_Flag   : Boolean := True;
-      Custom_Error_Handler : Error_Handler_Ref)
+      Custom_Error_Handler : Error_Handler_Ref := Null_Ref)
    return Argument_Parser
    is
       XCommand_Name : constant XString :=
