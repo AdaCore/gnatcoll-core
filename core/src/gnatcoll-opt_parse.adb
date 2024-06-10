@@ -1264,7 +1264,7 @@ package body GNATCOLL.Opt_Parse is
          end if;
 
          for I in Pos + 1 .. Args'Last loop
-            exit when Args (I).Starts_With ("-");
+            exit when List_Stop_Predicate (Args (I));
             Arg_Count := Arg_Count + 1;
          end loop;
 

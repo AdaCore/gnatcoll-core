@@ -279,6 +279,11 @@ package GNATCOLL.Opt_Parse is
 
    function Convert (Arg : String) return Integer;
 
+   function List_Stop_Predicate (S : XString) return Boolean
+   is (S.Starts_With ("-"));
+   --  Default ``List_Stop_Predicate`` for ``Parse_Option_List``. Will stop
+   --  when the next argument starts with '-'.
+
    Opt_Parse_Error : exception;
    --  Exception signaling an error in the parser. This is the error that you
    --  will get in the rare cases where you do something invalid with a Parser
@@ -552,6 +557,12 @@ package GNATCOLL.Opt_Parse is
       --  Name of the parser. Must be provided if Long is not provided.
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
+
+      with function List_Stop_Predicate (S : XString) return Boolean is <>;
+      --  Predicate used to detect that we should stop parsing. Customizing
+      --  that allows to implement "section-like" behavior.
+      --  By default, it will stop on the first argument that starts with a '-'
+      --  character.
 
    package Parse_Option_List is
       type Result_Array is array (Positive range <>) of Arg_Type;
