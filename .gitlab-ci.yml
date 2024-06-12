@@ -89,6 +89,8 @@ build-windows:
     - export GNAT_DIR=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-windows64-linux64/gnat/install
     - export PATH=$GNAT_DIR/bin:$ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gcc/install/bin:$PATH
     - export GPR_PROJECT_PATH=$GNAT_DIR/x86_64-w64-mingw32/share/gpr
+    # Temporary fix until stable gprbuild is bumped and ranlib correctly run on windows cross
+    - ranlib $GNAT_DIR/lib/gpr/static/gpr/libgpr.a $GNAT_DIR/lib/gpr/static-pic/gpr/libgpr.a $GNAT_DIR/x86_64-w64-mingw32/lib/xmlada/*/*.a
     - cd $CI_PROJECT_DIR && make TARGET=x86_64-w64-mingw32 && make install prefix=install TARGET=x86_64-w64-mingw32 || exit 1
     - export GPR_PROJECT_PATH=$CI_PROJECT_DIR/install/share/gpr:$GPR_PROJECT_PATH
     - cd $CI_PROJECT_DIR/testsuite && ./run-tests --target=x86_64-windows64,,wine || true
@@ -222,6 +224,9 @@ build_and_test_coverage:
     - mv $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core_coverage_test/results/new/coverage-dhtml $CI_PROJECT_DIR/coverage/dhtml
     - mv $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core_coverage_test/results/new/coverage-cobertura $CI_PROJECT_DIR/coverage/cobertura
     - echo_coverage_stats --coverage-file $CI_PROJECT_DIR/coverage/xml/index.xml
+
+    - publish-pages ./coverage/dhtml/ --job
+    - echo "https://pages.gitlab.adacore-it.com/$CI_PROJECT_PATH/jobs/$CI_JOB_ID/index.html"
 
     # We previously prevented the pipeline from halting if a test failed, to make
     # sure all tests were run. If a test failed now we exit with a non-zero code
