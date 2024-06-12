@@ -161,7 +161,7 @@ package body GNATCOLL.Opt_Parse is
    -- Flag_Parser --
    -----------------
 
-   type Flag_Parser is new Parser_Type with record
+   type Flag_Parser is new Subparser_Type with record
       Short, Long : XString;
    end record;
 
@@ -377,7 +377,7 @@ package body GNATCOLL.Opt_Parse is
    ----------------
 
    function Get_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Parser_Result_Access
    is
       --  Due to controlled objects finalization, the following code is not
@@ -408,7 +408,7 @@ package body GNATCOLL.Opt_Parse is
    ----------------
 
    function Has_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Boolean is
    begin
       return Self.Get_Result (Args) /= null;
@@ -618,11 +618,12 @@ package body GNATCOLL.Opt_Parse is
    -----------
 
    function Parse
-     (Self   : in out Parser_Type'Class;
+     (Self   : in out Subparser_Type'Class;
       Args   : XString_Array;
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return
    is
+      Ret : Parser_Return;
    begin
       if Self.Has_Result (Result) and then not
         (Self.Does_Accumulate or else Self.Parser.Incremental)
@@ -630,7 +631,14 @@ package body GNATCOLL.Opt_Parse is
          return Error_Return;
       end if;
 
-      return Self.Parse_Args (Args, Pos, Result);
+      Ret := Self.Parse_Args (Args, Pos, Result);
+
+      if Ret /= Error_Return and then Self.Disallow_Msg /= Null_XString then
+         raise Opt_Parse_Error with To_String (Self.Disallow_Msg);
+      end if;
+
+      return Ret;
+
    end Parse;
 
    -------------------------------
@@ -640,7 +648,7 @@ package body GNATCOLL.Opt_Parse is
    package body Parse_Positional_Arg_List is
       type Result_Array_Access is access all Result_Array;
 
-      type Positional_Arg_List_Parser is new Parser_Type with record
+      type Positional_Arg_List_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -664,13 +672,15 @@ package body GNATCOLL.Opt_Parse is
 
       Self_Val : aliased Positional_Arg_List_Parser :=
         Positional_Arg_List_Parser'
-          (Name     => +Name,
-           Help     => +Help,
-           Parser   => Parser.Data,
-           Position => <>,
-           Opt      => Allow_Empty);
+          (Name    => +Name,
+           Help    => +Help,
+           Parser  => Parser.Data,
+           Opt     => Allow_Empty,
+           others  => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       ---------
       -- Get --
@@ -754,7 +764,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Positional_Arg is
 
-      type Positional_Arg_Parser is new Parser_Type with record
+      type Positional_Arg_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -777,13 +787,15 @@ package body GNATCOLL.Opt_Parse is
       overriding procedure Release (Self : in out Internal_Result) is null;
 
       Self_Val : aliased Positional_Arg_Parser :=
-        (Name     => +Name,
-         Help     => +Help,
-         Parser   => Parser.Data,
-         Position => <>,
-         Opt      => False);
+        (Name   => +Name,
+         Help   => +Help,
+         Parser => Parser.Data,
+         Opt    => False,
+         others => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       ---------
       -- Get --
@@ -873,14 +885,16 @@ package body GNATCOLL.Opt_Parse is
       Self_Val : aliased Flag_Parser := Flag_Parser'
         (Name     => +(if Name /= "" then Name
                        else Long (3 .. Long'Last)),
-         Help     => +Help,
-         Long     => +Long,
-         Short    => +Short,
-         Parser   => Parser.Data,
-         Opt      => True,
-         Position => <>);
+         Help   => +Help,
+         Long   => +Long,
+         Short  => +Short,
+         Parser => Parser.Data,
+         Opt    => True,
+         others => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       ---------
       -- Get --
@@ -920,7 +934,7 @@ package body GNATCOLL.Opt_Parse is
       package I is new Flag_Invariants (Short, Long, Name);
       pragma Unreferenced (I);
 
-      type Option_Parser is new Parser_Type with record
+      type Option_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -946,15 +960,16 @@ package body GNATCOLL.Opt_Parse is
 
       Self_Val : aliased Option_Parser :=
         Option_Parser'
-          (Name     => +(if Name /= "" then Name
-                         else Long (3 .. Long'Last)),
-           Help     => +Help,
-           Parser   => Parser.Data,
-           Opt      => True,
-           Position => <>);
+          (Name   => +(if Name /= "" then Name
+                       else Long (3 .. Long'Last)),
+           Help   => +Help,
+           Parser => Parser.Data,
+           Opt    => True,
+           others => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
 
+      function This return Subparser is (Self);
       -----------
       -- Usage --
       -----------
@@ -1107,6 +1122,7 @@ package body GNATCOLL.Opt_Parse is
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
       renames Internal_Option.Get;
 
+      function This return Subparser renames Internal_Option.This;
    end Parse_Enum_Option;
 
    -----------------------
@@ -1121,7 +1137,7 @@ package body GNATCOLL.Opt_Parse is
       package Result_Vectors
       is new Ada.Containers.Vectors (Positive, Arg_Type);
 
-      type Option_List_Parser is new Parser_Type with record
+      type Option_List_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -1154,9 +1170,11 @@ package body GNATCOLL.Opt_Parse is
          Help   => +Help,
          Parser => Parser.Data,
          Opt    => True,
-         Position => <>);
+         others => <>);
 
-      Self     : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self     : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       -----------
       -- Usage --
@@ -1359,13 +1377,13 @@ package body GNATCOLL.Opt_Parse is
 
          if Generate_Help_Flag then
             Parser.Data.Help_Flag := new Help_Flag_Parser'
-              (Name     => +"help",
-               Help     => +"Show this help message",
-               Position => <>,
-               Opt      => True,
-               Parser   => Parser.Data,
-               Short    => +"-h",
-               Long     => +"--help");
+              (Name   => +"help",
+               Help   => +"Show this help message",
+               Opt    => True,
+               Parser => Parser.Data,
+               Short  => +"-h",
+               Long   => +"--help",
+               others => <>);
             Parser.Data.Opts_Parsers.Append (Parser.Data.Help_Flag);
             Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
             Parser.Data.Help_Flag.Position
@@ -1551,7 +1569,7 @@ package body GNATCOLL.Opt_Parse is
         (Argument_Parser_Data, Argument_Parser_Data_Access);
 
       procedure Free is new Ada.Unchecked_Deallocation
-        (Parser_Type'Class, Parser_Access);
+        (Subparser_Type'Class, Subparser);
    begin
       Free (Self.Data.Help_Flag);
       Free (Self.Data);
@@ -1576,5 +1594,23 @@ package body GNATCOLL.Opt_Parse is
    begin
       Handler.Release;
    end Release_Wrapper;
+
+   --------------
+   -- Disallow --
+   --------------
+
+   procedure Disallow (Self : Subparser; Message : String) is
+   begin
+      Self.Disallow_Msg := To_XString (Message);
+   end Disallow;
+
+   -----------
+   -- Allow --
+   -----------
+
+   procedure Allow (Self : Subparser) is
+   begin
+      Self.Disallow_Msg := Null_XString;
+   end Allow;
 
 end GNATCOLL.Opt_Parse;

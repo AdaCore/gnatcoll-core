@@ -152,6 +152,27 @@ package GNATCOLL.Opt_Parse is
    subtype XString_Vector is XString_Vectors.Vector;
    --  Vector of XStrings. Used to fill unknown args in calls to ``Parse``.
 
+   -----------------
+   -- Parser type --
+   -----------------
+
+   type Subparser is private;
+   --  This represents a subparser inside an argument parser.
+   --
+   --  You generally don't have to use this type directly, since you'll declare
+   --  subparsers by instantiating generic packages, and get results via the
+   --  generic ``Get`` procedures.
+   --
+   --  Having access to parsers allow you to do some introspection which can be
+   --  useful in some cases.
+
+   procedure Allow (Self : Subparser);
+   --  Allow the parser
+
+   procedure Disallow (Self : Subparser; Message : String);
+   --  Disallow the parser. If the corresponding argument is successfully
+   --  parsed, an error will be raised with the corresponding message.
+
    --------------------
    -- Error handlers --
    --------------------
@@ -332,6 +353,9 @@ package GNATCOLL.Opt_Parse is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array;
 
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
+
    end Parse_Positional_Arg_List;
    --  Parse a list of positional arguments. This parser can only be the last
    --  positional parser, since it will parse every remaining argument on the
@@ -362,6 +386,10 @@ package GNATCOLL.Opt_Parse is
    package Parse_Positional_Arg is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
+
    end Parse_Positional_Arg;
    --  Parse a positional argument. A positional argument is any argument. If
    --  the conversion fails, then it will make the whole argument parser fail.
@@ -402,6 +430,9 @@ package GNATCOLL.Opt_Parse is
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
 
    end Parse_Flag;
    --  Parse a Flag option. A flag takes no other argument, and its result is a
@@ -457,6 +488,9 @@ package GNATCOLL.Opt_Parse is
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
    end Parse_Option;
    --  Parse a regular option. A regular option is of the form "--option val",
    --  or "--option=val", or "-O val", or "-Oval". If option is not passed,
@@ -507,6 +541,9 @@ package GNATCOLL.Opt_Parse is
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
    end Parse_Enum_Option;
    --  Parse a regular option whose type is an enum type. See ``Parse_Option``
    --  for the format. This is an helper around ``Parse_Option`` that will
@@ -585,6 +622,8 @@ package GNATCOLL.Opt_Parse is
       --  lists are allowed, if an explicit empty list has a different
       --  meaning than an implicit empty list.
 
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
    end Parse_Option_List;
    --  Parse an option list. A regular option is of the form
    --  "--option val, val2, val3", or "-O val val2 val3".
@@ -602,7 +641,7 @@ private
    type Argument_Parser_Data;
    type Argument_Parser_Data_Access is access all Argument_Parser_Data;
 
-   type Parser_Type is abstract tagged record
+   type Subparser_Type is abstract tagged record
       Name : XString;
       --  Name of the parser
 
@@ -615,6 +654,10 @@ private
       Opt : Boolean := True;
       --  Whether this parser is optional or not
 
+      Disallow_Msg : XString := Null_XString;
+      --  Error message to return if the parser is disallowed. This also serves
+      --  as a flag: if the message is null, then the parser is allowed.
+
       Parser : Argument_Parser_Data_Access;
    end record;
 
@@ -626,7 +669,7 @@ private
    --  Special value for Parser_Return when there was an error
 
    function Parse_Args
-     (Self   : in out Parser_Type;
+     (Self   : in out Subparser_Type;
       Args   : XString_Array;
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return
@@ -635,7 +678,7 @@ private
    --  that must be overloaded by implementations.
 
    function Parse
-     (Self   : in out Parser_Type'Class;
+     (Self   : in out Subparser_Type'Class;
       Args   : XString_Array;
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return;
@@ -643,25 +686,25 @@ private
    --  around `Parse_Args` that is called by Arguments_Parser.
 
    function Usage
-     (Self : Parser_Type) return String is abstract;
+     (Self : Subparser_Type) return String is abstract;
    --  Return a usage string for this parser. Abstract method that must be
    --  overloaded.
 
    function Help_Name
-     (Self : Parser_Type) return String
+     (Self : Subparser_Type) return String
    is
      (To_String (Self.Name));
    --  Return the help name for this parser.
 
    function Does_Accumulate
-     (Self : Parser_Type) return Boolean is (False);
+     (Self : Subparser_Type) return Boolean is (False);
    --  Whether this parser accumulates results or not. If it does, then it is
    --  valid to call Parse on it several time, which will add to results.
 
-   type Parser_Access is access all Parser_Type'Class;
+   type Subparser is access all Subparser_Type'Class;
 
    package Parsers_Vectors
-   is new Ada.Containers.Vectors (Positive, Parser_Access);
+   is new Ada.Containers.Vectors (Positive, Subparser);
 
    subtype Parser_Vector is Parsers_Vectors.Vector;
 
@@ -675,7 +718,7 @@ private
       All_Parsers                           : Parser_Vector;
       Default_Result                        : Parsed_Arguments
         := No_Parsed_Arguments;
-      Help_Flag                             : Parser_Access := null;
+      Help_Flag                             : Subparser := null;
 
       Mutex : aliased Mutual_Exclusion;
       --  Mutex used to make Get_Result thread safe
@@ -703,11 +746,11 @@ private
    type Parser_Result_Access is access all Parser_Result'Class;
 
    function Get_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Parser_Result_Access;
 
    function Has_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Boolean;
 
    type Parser_Result_Array
