@@ -490,12 +490,20 @@ package body GNATCOLL.Opt_Parse is
       end Handle_Failure;
 
       function Internal return Boolean is
+         use type Parsed_Arguments_Shared_Ptrs.Element_Access;
       begin
-         Result.Ref.Set
-           (Parsed_Arguments_Type'
-              (Raw_Args => new XString_Array'(Cmd_Line_Args),
-               Results  => new Parser_Result_Array
-                 (1 .. Self.Data.All_Parsers.Last_Index)));
+         --  If we're not in incremental mode, then reset the results.
+         if not
+           (Self.Data.Incremental
+            and then Result.Ref.Unchecked_Get /= null)
+         then
+            Result.Ref.Set
+              (Parsed_Arguments_Type'
+                 (Raw_Args => new XString_Array'(Cmd_Line_Args),
+                  Results  =>
+                    new Parser_Result_Array
+                      (1 .. Self.Data.All_Parsers.Last_Index)));
+         end if;
 
          while Current_Arg <= Cmd_Line_Args'Last loop
 
@@ -529,7 +537,8 @@ package body GNATCOLL.Opt_Parse is
                begin
                   declare
                      P_Return : constant Parser_Return :=
-                       Pos_Parser.Parse (Cmd_Line_Args, Current_Arg, Result);
+                       Pos_Parser.Parse
+                         (Cmd_Line_Args, Current_Arg, Result);
                   begin
                      if P_Return /= Error_Return then
                         Current_Arg := Positive (P_Return);
@@ -539,8 +548,8 @@ package body GNATCOLL.Opt_Parse is
                exception
                   when E : Opt_Parse_Error =>
                      Handle_Failure
-                       ("for parser " & (+Pos_Parser.Name) & " - "
-                        & Ada.Exceptions.Exception_Message (E));
+                       ("for parser " & (+Pos_Parser.Name) & " - " &
+                        Ada.Exceptions.Exception_Message (E));
                      return False;
                end;
             end loop;
@@ -550,7 +559,8 @@ package body GNATCOLL.Opt_Parse is
             --  we encounter an unknown argument.
             if Unknown_Args = null then
                Handle_Failure
-                 ("Unrecognized argument " & (+Cmd_Line_Args (Current_Arg)));
+                 ("Unrecognized argument " &
+                  (+Cmd_Line_Args (Current_Arg)));
                return False;
             else
                Unknown_Args.Append (Cmd_Line_Args (Current_Arg));
@@ -561,7 +571,8 @@ package body GNATCOLL.Opt_Parse is
          end loop;
 
          for Parser of Self.Data.All_Parsers loop
-            if not Parser.Opt and then not Parser.Has_Result (Result) then
+            if not Parser.Opt and then not Parser.Has_Result (Result)
+            then
                Handle_Failure ("Missing value for " & (+Parser.Name));
                return False;
             end if;
@@ -579,13 +590,6 @@ package body GNATCOLL.Opt_Parse is
       end Internal;
 
    begin
-      --  Reset the default result if we're using it
-      if Arguments = No_Arguments
-         and then Self.Data.Default_Result /= No_Parsed_Arguments
-      then
-         Self.Data.Default_Result := No_Parsed_Arguments;
-      end if;
-
       return Ret : constant Boolean := Internal do
          --  Print help if parsing has failed
          if not Ret then
@@ -605,7 +609,9 @@ package body GNATCOLL.Opt_Parse is
       Result : in out Parsed_Arguments) return Parser_Return
    is
    begin
-      if Self.Has_Result (Result) and then not Self.Does_Accumulate then
+      if Self.Has_Result (Result) and then not
+        (Self.Does_Accumulate or else Self.Parser.Incremental)
+      then
          return Error_Return;
       end if;
 
@@ -1215,13 +1221,12 @@ package body GNATCOLL.Opt_Parse is
          Result : in out Parsed_Arguments) return Parser_Return
       is
          Res  : Parser_Result_Access
-         renames Result.Ref.Get.Results (Self.Position);
+         renames Result.Ref.Unchecked_Get.Results (Self.Position);
 
          Tmp : Internal_Result_Access := null;
 
          Converted_Arg : Arg_Type;
          Arg_Count     : Natural := 0;
-
       begin
          if Accumulate then
             declare
@@ -1288,9 +1293,11 @@ package body GNATCOLL.Opt_Parse is
    ----------------------------
 
    function Create_Argument_Parser
-     (Help              : String;
-      Command_Name      : String := "";
-      Help_Column_Limit : Col_Type := 80) return Argument_Parser
+     (Help               : String;
+      Command_Name       : String := "";
+      Help_Column_Limit  : Col_Type := 80;
+      Incremental        : Boolean := False;
+      Generate_Help_Flag : Boolean := True) return Argument_Parser
    is
       XCommand_Name : constant XString :=
         +(if Command_Name = ""
@@ -1302,19 +1309,26 @@ package body GNATCOLL.Opt_Parse is
    begin
       return Parser : Argument_Parser do
          Parser.Data :=
-           new Argument_Parser_Data'(+Help, XCommand_Name, others => <>);
-         Parser.Data.Help_Flag := new Help_Flag_Parser'
-           (Name     => +"help",
-            Help     => +"Show this help message",
-            Position => <>,
-            Opt      => True,
-            Parser   => Parser.Data,
-            Short    => +"-h",
-            Long     => +"--help");
-         Parser.Data.Opts_Parsers.Append (Parser.Data.Help_Flag);
-         Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
-         Parser.Data.Help_Flag.Position := Parser.Data.All_Parsers.Last_Index;
-         Parser.Data.Help_Column_Limit := Help_Column_Limit;
+           new Argument_Parser_Data'
+             (+Help, XCommand_Name,
+              Incremental => Incremental,
+              others => <>);
+
+         if Generate_Help_Flag then
+            Parser.Data.Help_Flag := new Help_Flag_Parser'
+              (Name     => +"help",
+               Help     => +"Show this help message",
+               Position => <>,
+               Opt      => True,
+               Parser   => Parser.Data,
+               Short    => +"-h",
+               Long     => +"--help");
+            Parser.Data.Opts_Parsers.Append (Parser.Data.Help_Flag);
+            Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
+            Parser.Data.Help_Flag.Position
+              := Parser.Data.All_Parsers.Last_Index;
+            Parser.Data.Help_Column_Limit := Help_Column_Limit;
+         end if;
       end return;
    end Create_Argument_Parser;
 
@@ -1326,6 +1340,15 @@ package body GNATCOLL.Opt_Parse is
    begin
       return Self.Data.Last_Error.To_String;
    end Last_Error;
+
+   -----------
+   -- Reset --
+   -----------
+
+   procedure Reset (Self : Argument_Parser) is
+   begin
+      Self.Data.Default_Result := No_Parsed_Arguments;
+   end Reset;
 
    ----------
    -- Help --
