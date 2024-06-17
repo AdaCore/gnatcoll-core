@@ -317,10 +317,28 @@ package GNATCOLL.Opt_Parse is
    --  Exception raised when trying to get the value of a disabled argument
    --  parser that is not a list and provides no default value.
 
-   --------------------------------
-   --  Specific argument parsers --
-   --------------------------------
+   -----------------------------------
+   --  Specific argument subparsers --
+   -----------------------------------
 
+   --  Subparser are created by instantiating generic packages. This allows
+   --  having precise type signatures for parser's result. Every subparser's
+   --  generic package will have at least a signature like:
+   --
+   --  .. code-block:: ada
+   --
+   --     generic
+   --        Parser  : in out Argument_Parser;
+   --        Name    : String;
+   --        Help    : String;
+   --        Enabled : Boolean := True;
+   --     package <...> is
+   --       function Get (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Type;
+   --       --  Get the result for this parser
+   --
+   --       function This return Subparser;
+   --       --  Return the subparser instance created by this package instantiation.
+   --     end <...>;
    generic
       Parser : in out Argument_Parser;
       --  Argument_Parser owning this argument.
