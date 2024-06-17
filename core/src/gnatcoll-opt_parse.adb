@@ -606,9 +606,9 @@ package body GNATCOLL.Opt_Parse is
 
    begin
       return Ret : constant Boolean := Internal do
-         --  Print help if parsing has failed
-         if not Ret then
-            Put_Line (Help (Self));
+         if not Ret and then Self.Data.Print_Help_On_Error then
+            --  Print help if parsing has failed
+            Put_Line (Standard_Error, Help (Self));
          end if;
       end return;
    end Parse_Impl;
@@ -1355,7 +1355,8 @@ package body GNATCOLL.Opt_Parse is
       Help_Column_Limit    : Col_Type := 80;
       Incremental          : Boolean := False;
       Generate_Help_Flag   : Boolean := True;
-      Custom_Error_Handler : Error_Handler_Ref := Null_Ref)
+      Custom_Error_Handler : Error_Handler_Ref := Null_Ref;
+      Print_Help_On_Error  : Boolean := True)
    return Argument_Parser
    is
       XCommand_Name : constant XString :=
@@ -1373,6 +1374,7 @@ package body GNATCOLL.Opt_Parse is
               XCommand_Name,
               Incremental           => Incremental,
               Custom_Error_Handler  => Custom_Error_Handler,
+              Print_Help_On_Error   => Print_Help_On_Error,
               others                => <>);
 
          if Generate_Help_Flag then

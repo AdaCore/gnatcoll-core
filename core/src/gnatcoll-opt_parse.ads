@@ -209,7 +209,8 @@ package GNATCOLL.Opt_Parse is
       Help_Column_Limit    : Col_Type := 80;
       Incremental          : Boolean := False;
       Generate_Help_Flag   : Boolean := True;
-      Custom_Error_Handler : Error_Handler_Ref := Null_Ref)
+      Custom_Error_Handler : Error_Handler_Ref := Null_Ref;
+      Print_Help_On_Error  : Boolean := True)
    return Argument_Parser;
    --  Create an argument parser with the provided help string.
    --
@@ -733,6 +734,8 @@ private
         := Error_Handler_References.Null_Ref;
       --  Callback to call in case of error/warning. If null, errors and
       --  warnings will be emitted on stderr.
+
+      Print_Help_On_Error : Boolean := True;
    end record;
 
    type Parser_Result is abstract tagged record
