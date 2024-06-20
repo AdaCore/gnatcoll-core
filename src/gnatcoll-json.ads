@@ -52,11 +52,14 @@ with Ada.Finalization;
 with Ada.Strings.Unbounded;
 with GNATCOLL.Strings;
 with GNATCOLL.Buffer;
+with Ada.Strings.UTF_Encoding;
 private with Ada.Containers.Vectors;
 private with Ada.Containers.Ordered_Maps;
 private with GNATCOLL.Atomic;
 
 package GNATCOLL.JSON is
+
+   package UTF8 renames Ada.Strings.UTF_Encoding;
 
    -----------------
    -- JSON Parser --
@@ -292,6 +295,10 @@ package GNATCOLL.JSON is
    function Read (Strm : String) return Read_Result;
    --  Parse the JSON document in Strm and return it. If there is a parsing
    --  error, return the corresponding error information.
+
+   function Read (Data : in out GNATCOLL.Buffer.Reader) return Read_Result;
+   function Read_File (Path : UTF8.UTF_8_String) return Read_Result;
+   --  Likewise for streams and files
 
    function Write (Item : JSON_Value; Compact : Boolean := True) return String;
    function Write (Item : JSON_Value; Compact : Boolean := True)
@@ -591,12 +598,17 @@ private
        EXPECT_DOC_END);
 
    type JSON_Parser_States is array (Integer range <>) of JSON_Parser_State;
+   type JSON_Parser_States_Access is access all JSON_Parser_States;
 
    type JSON_Parser is new Ada.Finalization.Limited_Controlled with record
-      State         : JSON_Parser_States (1 .. 512) :=
-         (others => EXPECT_VALUE);
-      State_Current : Integer := 1;
+      --  Implementation note: Ada.Containers.Vector could be used here
+      --  instead of a manually managed access to an array. Nevertheless
+      --  this impacts significatively the performance of the parser.
+      State         : JSON_Parser_States_Access := null;
+      State_Current : Integer := 0;
    end record;
+   pragma Finalize_Storage_Only (JSON_Parser);
+   overriding procedure Finalize (Self : in out JSON_Parser);
 
    --  JSON_Value
    type JSON_Array_Internal;
