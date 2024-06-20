@@ -1,0 +1,5 @@
+abstract project GNATCOLL_Projects_Constants is
+   GNATCOLL_VERSION_DEFAULT     := "0.0";
+   GNATCOLL_BUILD_MODE_DEFAULT  := "PROD";
+   GNATCOLL_OS_DEFAULT          := "unix";
+end GNATCOLL_Projects_Constants;
