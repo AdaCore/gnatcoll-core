@@ -52,11 +52,14 @@ with Ada.Finalization;
 with Ada.Strings.Unbounded;
 with GNATCOLL.Strings;
 with GNATCOLL.Buffer;
+with Ada.Strings.UTF_Encoding;
 private with Ada.Containers.Vectors;
 private with Ada.Containers.Ordered_Maps;
 private with GNATCOLL.Atomic;
 
 package GNATCOLL.JSON is
+
+   package UTF8 renames Ada.Strings.UTF_Encoding;
 
    -----------------
    -- JSON Parser --
@@ -292,6 +295,10 @@ package GNATCOLL.JSON is
    function Read (Strm : String) return Read_Result;
    --  Parse the JSON document in Strm and return it. If there is a parsing
    --  error, return the corresponding error information.
+
+   function Read (Data : in out GNATCOLL.Buffer.Reader) return Read_Result;
+   function Read_File (Path : UTF8.UTF_8_String) return Read_Result;
+   --  Likewise for streams and files
 
    function Write (Item : JSON_Value; Compact : Boolean := True) return String;
    function Write (Item : JSON_Value; Compact : Boolean := True)

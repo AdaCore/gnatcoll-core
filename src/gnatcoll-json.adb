@@ -525,7 +525,14 @@ package body GNATCOLL.JSON is
 
    function Read (Strm : String) return Read_Result is
       use GNATCOLL.Buffer;
-      Buf    : Reader := Open_String (Strm);
+      Data : Reader := Open_String (Strm);
+   begin
+      return Read (Data => Data);
+   end Read;
+
+   function Read (Data : in out GNATCOLL.Buffer.Reader) return Read_Result
+   is
+      use GNATCOLL.Buffer;
       Parser : JSON_Parser;
       Event  : JSON_Parser_Event;
       Result : JSON_Value;
@@ -659,6 +666,18 @@ package body GNATCOLL.JSON is
                        (Ada.Exceptions.Exception_Message (E))));
          end;
    end Read;
+
+   ---------------
+   -- Read_File --
+   ---------------
+
+   function Read_File (Path : UTF8.UTF_8_String) return Read_Result
+   is
+      use GNATCOLL.Buffer;
+      Data : Reader := Open (Path);
+   begin
+      return Read (Data => Data);
+   end Read_File;
 
    -----------
    -- Write --
