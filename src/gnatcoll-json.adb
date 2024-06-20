@@ -40,6 +40,9 @@ package body GNATCOLL.JSON is
      new Ada.Unchecked_Deallocation (JSON_Object_Internal, JSON_Object_Access);
    procedure Free is
      new Ada.Unchecked_Deallocation (JSON_String_Internal, JSON_String_Access);
+   procedure Free is
+      new Ada.Unchecked_Deallocation
+         (JSON_Parser_States, JSON_Parser_States_Access);
 
    procedure Write
      (Item    : JSON_Value;
@@ -140,6 +143,25 @@ package body GNATCOLL.JSON is
       procedure Skip_Whitespaces with Inline_Always => True;
       procedure Parse_Number with Inline_Always => True;
       procedure Expect_Value with Inline_Always => True;
+      procedure Append_To_State (State : JSON_Parser_State)
+         with Inline_Always => True;
+
+      procedure Append_To_State (State : JSON_Parser_State)
+      is
+      begin
+         Self.State_Current := Self.State_Current +  1;
+         if Self.State_Current > Self.State.all'Last then
+            declare
+               New_State : constant JSON_Parser_States_Access :=
+                  new JSON_Parser_States (1 .. Self.State.all'Last * 2);
+            begin
+               New_State.all (1 .. Self.State.all'Last) := Self.State.all;
+               Free (Self.State);
+               Self.State := New_State;
+            end;
+         end if;
+         Self.State (Self.State_Current) := State;
+      end Append_To_State;
 
       procedure Skip_Whitespaces is
          Offset : Integer;
@@ -346,6 +368,12 @@ package body GNATCOLL.JSON is
 
       Scan_Next : Boolean := True;
    begin
+      if Self.State_Current = 0 then
+         Self.State := new JSON_Parser_States (1 .. 32);
+         Self.State (1) := EXPECT_VALUE;
+         Self.State_Current := 1;
+      end if;
+
       Offset := Window_Offset (Data);
       --  Release previous data from the buffer
       Release (Data);
@@ -436,19 +464,18 @@ package body GNATCOLL.JSON is
                end if;
             when others =>
                raise Invalid_JSON_Stream with
-                  "unknown state " & Self.State (Self.State_Current)'Img;
+                  "unknown state " &
+                  JSON_Parser_State'Image (Self.State (Self.State_Current));
          end case;
       end if;
 
       --  Handle value beginning of object or array
       if Result.Kind = OBJECT_START then
-         Self.State_Current := Self.State_Current + 1;
-         Self.State (Self.State_Current) := EXPECT_OBJECT_FIRST_KEY;
+         Append_To_State (EXPECT_OBJECT_FIRST_KEY);
       end if;
 
       if Result.Kind = ARRAY_START then
-         Self.State_Current := Self.State_Current + 1;
-         Self.State (Self.State_Current) := EXPECT_ARRAY_FIRST_VALUE;
+         Append_To_State (EXPECT_ARRAY_FIRST_VALUE);
       end if;
 
       return Result;
@@ -506,21 +533,33 @@ package body GNATCOLL.JSON is
       Tmp    : JSON_Value;
 
       Current_Key : String_Builder;
-      Expect_Key : array (1 .. 512) of Boolean := (others => False);
-      Cursors : array (1 .. 512) of JSON_Value;
-      Expect_Key_Last : Integer := 0;
+
+      type Read_State is record
+         Expect_Key : Boolean;
+         Cursor     : JSON_Value;
+      end record;
+
+      type Read_State_Array is array (Integer range <>) of Read_State;
+      type Read_State_Array_Access is access Read_State_Array;
+
+      procedure Free is
+         new Ada.Unchecked_Deallocation
+            (Read_State_Array, Read_State_Array_Access);
+
+      Read_States : Read_State_Array_Access := new Read_State_Array (1 .. 32);
+      Read_States_Last : Integer := 0;
    begin
 
       loop
-         Event := Parse_Next (Parser, Buf);
+         Event := Parse_Next (Parser, Data);
          exit when Event.Kind = DOC_END;
 
          if Event.Kind /= OBJECT_END and then
-            Expect_Key_Last > 0 and then
-            Expect_Key (Expect_Key_Last)
+            Read_States_Last > 0 and then
+            Read_States (Read_States_Last).Expect_Key
          then
-            Set (Current_Key, Token (Buf, Event.First, Event.Last));
-            Event := Parse_Next (Parser, Buf);
+            Set (Current_Key, Token (Data, Event.First, Event.Last));
+            Event := Parse_Next (Parser, Data);
          end if;
 
          case Event.Kind is
@@ -531,7 +570,7 @@ package body GNATCOLL.JSON is
             when STRING_VALUE =>
                declare
                   Str : constant String :=
-                     Token (Buf, Event.First, Event.Last);
+                     Token (Data, Event.First, Event.Last);
                begin
                   Tmp := Create
                      (Utility.Un_Escape_String (Str, Str'First, Str'Last));
@@ -539,10 +578,10 @@ package body GNATCOLL.JSON is
             when INTEGER_VALUE =>
                Tmp := Create
                   (Long_Long_Integer'Value
-                     (Token (Buf, Event.First, Event.Last)));
+                     (Token (Data, Event.First, Event.Last)));
             when NUMBER_VALUE =>
                Tmp := Create
-                  (Long_Float'Value (Token (Buf, Event.First, Event.Last)));
+                  (Long_Float'Value (Token (Data, Event.First, Event.Last)));
             when TRUE_VALUE =>
                Tmp := Create (True);
             when FALSE_VALUE =>
@@ -554,20 +593,20 @@ package body GNATCOLL.JSON is
          end case;
 
          if Event.Kind = OBJECT_END then
-            Expect_Key_Last := Expect_Key_Last - 1;
-            if Expect_Key_Last > 0 then
-               Cursor := Cursors (Expect_Key_Last);
+            Read_States_Last := Read_States_Last - 1;
+            if Read_States_Last > 0 then
+               Cursor := Read_States (Read_States_Last).Cursor;
             end if;
 
          elsif Event.Kind = ARRAY_END then
-            Expect_Key_Last := Expect_Key_Last - 1;
-            if Expect_Key_Last > 0 then
-               Cursor := Cursors (Expect_Key_Last);
+            Read_States_Last := Read_States_Last - 1;
+            if Read_States_Last > 0 then
+               Cursor := Read_States (Read_States_Last).Cursor;
             end if;
 
          else
-            if Expect_Key_Last > 0 then
-               if Expect_Key (Expect_Key_Last) then
+            if Read_States_Last > 0 then
+               if Read_States (Read_States_Last).Expect_Key then
                   declare
                      Str : constant String := As_String (Current_Key);
                   begin
@@ -583,28 +622,36 @@ package body GNATCOLL.JSON is
                Result := Tmp;
             end if;
 
-            if Event.Kind = OBJECT_START then
-               Expect_Key_Last := Expect_Key_Last + 1;
-               Cursors (Expect_Key_Last) := Tmp;
-               Expect_Key (Expect_Key_Last) := True;
-               Cursor := Tmp;
-            elsif Event.Kind = ARRAY_START then
-               Expect_Key_Last := Expect_Key_Last + 1;
-               Cursors (Expect_Key_Last) := Tmp;
-               Expect_Key (Expect_Key_Last) := False;
+            if Event.Kind = OBJECT_START or else Event.Kind = ARRAY_START then
+               Read_States_Last := Read_States_Last + 1;
+               if Read_States_Last > Read_States'Last then
+                  declare
+                     Tmp : constant Read_State_Array_Access :=
+                        new Read_State_Array (1 .. Read_States'Last * 2);
+                  begin
+                     Tmp.all (1 .. Read_States.all'Last) := Read_States.all;
+                     Free (Read_States);
+                     Read_States := Tmp;
+                  end;
+               end if;
+
+               Read_States (Read_States_Last) :=
+                  (Event.Kind = OBJECT_START, Tmp);
                Cursor := Tmp;
             end if;
          end if;
 
       end loop;
 
+      Free (Read_States);
       return (Success => True, Value => Result);
    exception
       when E : Invalid_JSON_Stream =>
+         Free (Read_States);
          declare
             Line, Column : Integer;
          begin
-            Buf.Current_Text_Position (Line, Column);
+            Data.Current_Text_Position (Line, Column);
 
             return (Success => False,
                     Error => (Line, Column,
@@ -910,6 +957,13 @@ package body GNATCOLL.JSON is
    --------------
    -- Finalize --
    --------------
+
+   overriding procedure Finalize (Self : in out JSON_Parser) is
+   begin
+      if Self.State /= null then
+         Free (Self.State);
+      end if;
+   end Finalize;
 
    overriding procedure Finalize (Obj : in out JSON_Value) is
    begin

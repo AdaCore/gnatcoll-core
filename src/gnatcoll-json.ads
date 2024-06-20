@@ -591,12 +591,17 @@ private
        EXPECT_DOC_END);
 
    type JSON_Parser_States is array (Integer range <>) of JSON_Parser_State;
+   type JSON_Parser_States_Access is access all JSON_Parser_States;
 
    type JSON_Parser is new Ada.Finalization.Limited_Controlled with record
-      State         : JSON_Parser_States (1 .. 512) :=
-         (others => EXPECT_VALUE);
-      State_Current : Integer := 1;
+      --  Implementation note: Ada.Containers.Vector could be used here
+      --  instead of a manually managed access to an array. Nevertheless
+      --  this impacts significatively the performance of the parser.
+      State         : JSON_Parser_States_Access := null;
+      State_Current : Integer := 0;
    end record;
+   pragma Finalize_Storage_Only (JSON_Parser);
+   overriding procedure Finalize (Self : in out JSON_Parser);
 
    --  JSON_Value
    type JSON_Array_Internal;

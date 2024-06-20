@@ -1,0 +1,2 @@
+description: Test JSON files with very deep structures
+data: ["*.json"]
