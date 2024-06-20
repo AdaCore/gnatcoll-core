@@ -25,7 +25,6 @@
 # Makefile targets
 # ----------------
 #
-# Setup:                   make [VAR=VALUE] setup (see below)
 # Build:                   make
 # Install:                 make install
 
@@ -40,45 +39,24 @@
 #   TARGET        : target triplet for cross-compilation
 #   INTEGRATED    : installs the project as part of the compiler installation;
 #                   this adds NORMALIZED_TARGET subdir to prefix
-#   PROJECT       : gnatcoll, gnatcoll_projects or gnatcoll_core
 # Project specific:
 #
-#   GNATCOLL_MMAP     : whether MMAP is supported (yes/no)
-#                       default is "yes"; has no effect on Windows
-#   GNATCOLL_MADVISE  : whether MADVISE is supported (yes/no)
-#                       default is "yes"; has no effect on Windows
 #   GNATCOLL_PROJECTS : whether GNATCOLL projects package is included (yes/no)
 #                       default is "yes";
 
 # helper programs
-CAT := cat
-ECHO  := echo
 WHICH := which
 SED := sed
-
-PROJECT=gnatcoll
 
 # check for out-of-tree build
 SOURCE_DIR := $(dir $(MAKEFILE_LIST))
 
 # make -f with absolute path to current directory Makefile is in-tree build
 ifeq ($(SOURCE_DIR), $(shell pwd)/)
-	SOURCE_DIR := ./
+	SOURCE_DIR := .
 endif
 
-ifeq ($(SOURCE_DIR),./)
-  RBD=
-  GNATCOLL_GPR=gnatcoll.gpr
-  GNATCOLL_CORE_GPR=gnatcoll_core.gpr
-  GNATCOLL_PROJECTS_GPR=gnatcoll_projects.gpr
-  MAKEPREFIX=
-else
-  RBD=--relocate-build-tree
-  GNATCOLL_GPR=$(SOURCE_DIR)/gnatcoll.gpr
-  GNATCOLL_CORE_GPR=$(SOURCE_DIR)/gnatcoll_core.gpr
-  GNATCOLL_PROJECTS_GPR=$(SOURCE_DIR)/gnatcoll_projects.gpr
-  MAKEPREFIX=$(SOURCE_DIR)/
-endif
+GNATCOLL_GPR=$(SOURCE_DIR)/gnatcoll.gpr
 
 TARGET := $(shell gcc -dumpmachine)
 NORMALIZED_TARGET := $(subst normalized_target:,,$(wordlist 6,6,$(shell gprconfig  --config=ada --target=$(TARGET) --mi-show-compilers)))
@@ -86,202 +64,65 @@ ifeq ($(NORMALIZED_TARGET),)
   $(error No toolchain found for target "$(TARGET)")
 endif
 
-GNATCOLL_OS := $(if $(findstring darwin,$(NORMALIZED_TARGET)),osx,$(if $(findstring windows,$(NORMALIZED_TARGET)),windows,unix))
-
 prefix := $(dir $(shell $(WHICH) gnatls))..
-GNATCOLL_VERSION := $(shell $(CAT) $(SOURCE_DIR)/version_information)
-GNATCOLL_MMAP := yes
-GNATCOLL_MADVISE := yes
-GNATCOLL_PROJECTS := yes
 
+GNATCOLL_PROJECTS := yes
 BUILD         = PROD
 PROCESSORS    = 0
-BUILD_DIR     =
 ENABLE_SHARED = yes
 INTEGRATED    = no
 GNATCOV       =
 
-# Select the right implementation for blake3
-ifeq ($(NORMALIZED_TARGET), x86_64-linux)
-    GNATCOLL_BLAKE3_ARCH := x86_64-linux
-else
-    ifeq ($(NORMALIZED_TARGET), x86_64-windows)
-        GNATCOLL_BLAKE3_ARCH := x86_64-windows
-    else
-	ifeq ($(NORMALIZED_TARGET), aarch64-linux)
-            GNATCOLL_BLAKE3_ARCH := aarch64-linux
-        else
-            GNATCOLL_BLAKE3_ARCH := generic
-        endif
-    endif
-endif
-
-# Select the right implementation for xxhash
-ifeq ($(NORMALIZED_TARGET), x86_64-linux)
-    GNATCOLL_XXHASH_ARCH := x86_64
-else
-    ifeq ($(NORMALIZED_TARGET), x86_64-windows)
-        GNATCOLL_XXHASH_ARCH := x86_64
-    else
-        GNATCOLL_XXHASH_ARCH := generic
-    endif
-endif
-
 all: build
-
-# Load current setup if any
--include makefile.setup
 
 GTARGET=--target=$(NORMALIZED_TARGET)
 
-ifeq ($(ENABLE_SHARED), yes)
-   LIBRARY_TYPES=static relocatable static-pic
-else
-   LIBRARY_TYPES=static
-endif
-
 ifeq ($(GNATCOV), yes)
-   LIBRARY_TYPES=static
-   GNATCOV_RTS=gnatcovrts
-   GNATCOV_BUILD_OPTS=--src-subdirs=gnatcov-instr --implicit-with=gnatcov_rts
-   GNATCOV_PROJECT_PATH=GPR_PROJECT_PATH=$(CURDIR)/gnatcov_rts/share/gpr:$(GPR_PROJECT_PATH)
+   GNATCOV_BUILD_OPTS=--gnatcov
 else
-   GNATCOV_RTS=
    GNATCOV_BUILD_OPTS=
-   GNATCOV_PROJECT_PATH=
 endif
 
 ifeq ($(INTEGRATED), yes)
    integrated_install=/$(NORMALIZED_TARGET)
 endif
 
+BUILD_ARGS=--jobs=$(PROCESSORS) \
+ --build=$(BUILD) \
+ --target=$(NORMALIZED_TARGET) \
+ --prefix=local-install \
+ --install \
+ --enable-shared=$(ENABLE_SHARED)
 
-
-GPR_VARS=-XGNATCOLL_MMAP=$(GNATCOLL_MMAP) \
-	 -XGNATCOLL_MADVISE=$(GNATCOLL_MADVISE) \
-	 -XGNATCOLL_BLAKE3_ARCH=$(GNATCOLL_BLAKE3_ARCH) \
-	 -XGNATCOLL_XXHASH_ARCH=$(GNATCOLL_XXHASH_ARCH) \
-	 -XGNATCOLL_PROJECTS=$(GNATCOLL_PROJECTS) \
-	 -XGNATCOLL_VERSION=$(GNATCOLL_VERSION) \
-	 -XGNATCOLL_OS=$(GNATCOLL_OS) \
-	 -XBUILD=$(BUILD)
-
-# Used to pass extra options to GPRBUILD, like -d for instance
-GPRBUILD_OPTIONS=
-
-BUILDER=$(GNATCOV_PROJECT_PATH) gprbuild -p -m $(GTARGET) $(RBD) \
-        -j$(PROCESSORS) $(GPR_VARS) \
-	$(GPRBUILD_OPTIONS) $(GNATCOV_BUILD_OPTS)
-INSTALLER=gprinstall -p -f $(GTARGET) $(GPR_VARS) \
-	$(RBD) --prefix=$(prefix)$(integrated_install)
-CLEANER=gprclean -q $(RBD) $(GTARGET)
-UNINSTALLER=$(INSTALLER) -p -f --uninstall
-
-#########
-# build #
-#########
-
-build: $(LIBRARY_TYPES:%=build-%)
-
-build-%: $(GNATCOV_RTS)
-
-# Gnatcoll projects related packages need libgpr. As conditional
-# with does not exist in GPR, `with "gpr"` at the beginning of
-# gnatcoll.gpr needs to be commented or uncommented depending on
-# the user choice.
-
+build:
+	rm -rf local-install
+	mkdir -p local-install/share/gpr
+	
 ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(SED) -e 's/^--  with "gnatcoll_projects"/with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
+	$(SED) -e 's/^--  with "gnatcoll_projects"/with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > local-install/share/gpr/gnatcoll.gpr
 else
-	$(SED) -e 's/^with "gnatcoll_projects"/--  with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > tmp ; mv tmp $(GNATCOLL_GPR)
+	$(SED) -e 's/^with "gnatcoll_projects"/--  with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > local-install/share/gpr/gnatcoll.gpr
 endif
 
-ifeq ($(GNATCOV), yes)
-	$(GNATCOV_PROJECT_PATH) gnatcov instrument -P $(GNATCOLL_CORE_GPR) $(GPR_VARS) $(RBD) \
-		--no-subprojects --level=stmt+decision
-endif
-	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		$(GPR_VARS) $(GNATCOLL_CORE_GPR) -v
+	$(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
+	$(SOURCE_DIR)/core/gnatcoll_core.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
+
 ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(BUILDER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		$(GPR_VARS) $(GNATCOLL_PROJECTS_GPR) -v
+	$(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
 endif
 
-###################
-# Instrumentation #
-###################
-
-gnatcovrts:
-	gnatcov setup --prefix=gnatcov_rts
-
-###########
-# Install #
-###########
-
-uninstall:
-ifneq (,$(wildcard $(prefix)$(integrated_install)/share/gpr/manifests/gnatcoll_core))
-	$(UNINSTALLER) $(GNATCOLL_CORE_GPR)  --install-name=gnatcoll_core --sources-subdir=include/gnatcoll_core
-endif
-ifeq ($(GNATCOLL_PROJECTS), yes)
-ifneq (,$(wildcard $(prefix)$(integrated_install)/share/gpr/manifests/gnatcoll_projects))
-	$(UNINSTALLER) $(GNATCOLL_PROJECTS_GPR) --install-name=gnatcoll_projects --sources-subdir=include/gnatcoll_projects
-endif
-endif
-
-
-
-
-install: uninstall $(LIBRARY_TYPES:%=install-%)
-
-install-%:
-	$(INSTALLER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		--build-name=$* $(GPR_VARS) \
-		 --sources-subdir=include/gnatcoll_core \
-		--build-var=LIBRARY_TYPE --build-var=GNATCOLL_BUILD \
-		--build-var=GNATCOLL_CORE_BUILD $(GNATCOLL_CORE_GPR)
-ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(INSTALLER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		--build-name=$* $(GPR_VARS) \
-		 --sources-subdir=include/gnatcoll_projects \
-		--build-var=LIBRARY_TYPE --build-var=GNATCOLL_BUILD \
-		--build-var=GNATCOLL_CORE_BUILD $(GNATCOLL_PROJECTS_GPR)
-endif
-	cp $(GNATCOLL_GPR) $(prefix)$(integrated_install)/share/gpr
+install:
+	@echo "Installing gnatcoll into $(prefix)"
+	rsync -av ./local-install/ $(prefix)$(integrated_install)  
 
 ###########
 # Cleanup #
 ###########
 
-clean: $(LIBRARY_TYPES:%=clean-%)
-
-clean-%:
-ifeq ($(GNATCOLL_PROJECTS), yes)
-	-$(CLEANER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		$(GPR_VARS) $(GNATCOLL_PROJECTS_GPR)
-endif
-	-$(CLEANER) -XLIBRARY_TYPE=$* -XXMLADA_BUILD=$* -XGPR_BUILD=$* \
-		$(GPR_VARS) $(GNATCOLL_CORE_GPR)
-
-
-#########
-# setup #
-#########
-
-.SILENT: setup
-
-setup:
-	$(ECHO) "prefix=$(prefix)" > makefile.setup
-	$(ECHO) "ENABLE_SHARED=$(ENABLE_SHARED)" >> makefile.setup
-	$(ECHO) "INTEGRATED=$(INTEGRATED)" >> makefile.setup
-	$(ECHO) "BUILD=$(BUILD)" >> makefile.setup
-	$(ECHO) "PROCESSORS=$(PROCESSORS)" >> makefile.setup
-	$(ECHO) "TARGET=$(TARGET)" >> makefile.setup
-	$(ECHO) "SOURCE_DIR=$(SOURCE_DIR)" >> makefile.setup
-	$(ECHO) "GNATCOLL_OS=$(GNATCOLL_OS)" >> makefile.setup
-	$(ECHO) "GNATCOLL_VERSION=$(GNATCOLL_VERSION)" >> makefile.setup
-	$(ECHO) "GNATCOLL_MMAP=$(GNATCOLL_MMAP)" >> makefile.setup
-	$(ECHO) "GNATCOLL_MADVISE=$(GNATCOLL_MADVISE)" >> makefile.setup
-	$(ECHO) "GNATCOLL_PROJECTS=$(GNATCOLL_PROJECTS)" >> makefile.setup
+clean:
+	$(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py clean --add-gpr-path=local-install/share/gpr
+	$(SOURCE_DIR)/core/gnatcoll_core.gpr.py clean --add-gpr-path=local-install/share/gpr
+	$(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py clean --add-gpr-path=local-install/share/gpr
 
 # Let gprbuild handle parallelisation. In general, we don't support parallel
 # runs in this Makefile, as concurrent gprinstall processes may crash.
