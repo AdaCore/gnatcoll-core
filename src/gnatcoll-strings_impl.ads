@@ -1046,7 +1046,10 @@ package GNATCOLL.Strings_Impl is
       with Unchecked_Union;
 
       type XString is new Ada.Finalization.Controlled with record
-         Data   : String_Data := (Is_Big => False, Small => <>);
+         Data   : String_Data := (Is_Big => False,
+                                  Small => (Is_Big => False,
+                                            Size => 0,
+                                            others => <>));
       end record;
       overriding procedure Adjust (Self : in out XString);
       overriding procedure Finalize (Self : in out XString);
