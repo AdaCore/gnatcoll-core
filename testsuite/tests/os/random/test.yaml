@@ -1,0 +1,5 @@
+title: GNATCOLL.Random tests
+control:
+    - [SKIP,
+       "env.target.os.name == 'windows' and env.target.machine == 'wine'",
+       "Wine does not provides all the Windows cryptographic primitives"]
