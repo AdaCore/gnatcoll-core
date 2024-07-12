@@ -1,0 +1,9 @@
+abstract project GNATCOLL_Core_Constants is
+   GNATCOLL_VERSION_DEFAULT     := "0.0";
+   GNATCOLL_MMAP_DEFAULT        := "yes";
+   GNATCOLL_MADVISE_DEFAULT     := "yes";
+   GNATCOLL_BLAKE3_ARCH_DEFAULT := "generic";
+   GNATCOLL_XXHASH_ARCH_DEFAULT := "generic";
+   GNATCOLL_BUILD_MODE_DEFAULT  := "PROD";
+   GNATCOLL_OS_DEFAULT          := "unix";
+end GNATCOLL_Core_Constants;

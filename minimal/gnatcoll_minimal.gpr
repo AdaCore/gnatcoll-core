@@ -20,26 +20,29 @@
 -- <http://www.gnu.org/licenses/>.                                          --
 --                                                                          --
 ------------------------------------------------------------------------------
+with "config/gnatcoll_minimal_constants.gpr";
 
-with "gpr";
-with "gnatcoll_core";
+library project GNATCOLL_Minimal is
 
-library project GNATCOLL_Projects is
-
-   Version := External ("GNATCOLL_VERSION", "0.0");
-   Name    := "gnatcoll_projects";
+   Version := External ("GNATCOLL_VERSION",
+      GNATCOLL_Minimal_Constants.GNATCOLL_VERSION_DEFAULT);
+   Name    := "gnatcoll_minimal";
 
    type Build_Type is ("DEBUG", "PROD");
    Build : Build_Type :=
-      External ("GNATCOLL_BUILD_MODE", External ("BUILD", "DEBUG"));
+      External ("GNATCOLL_BUILD_MODE",
+         External ("BUILD",
+            GNATCOLL_Minimal_Constants.GNATCOLL_BUILD_MODE_DEFAULT));
 
    type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type := External ("LIBRARY_TYPE", "static");
 
    type OS_Kind is ("windows", "unix", "osx");
-   OS : OS_Kind := External ("GNATCOLL_OS", "unix");
+   OS : OS_Kind := External
+      ("GNATCOLL_OS", GNATCOLL_Minimal_Constants.GNATCOLL_OS_DEFAULT);
 
-   for Source_Dirs use ("src/projects");
+   for Languages use ("Ada", "C");
+   for Source_Dirs use ("src");
 
    for Library_Kind use Library_Type;
 
@@ -55,22 +58,31 @@ library project GNATCOLL_Projects is
       when "windows" | "osx" =>
          --  On MacOS and Windows all object are relocatable by default
          --  thus the same object directory can be used
-         for Object_Dir use Object_Root & "obj/gnatcoll_projects/all";
+         for Object_Dir use Object_Root & "obj/gnatcoll_minimal/all";
       when "unix" =>
          --  On Unix static-pic and relocatable shared the same objects
          case Library_Type is
             when "relocatable" | "static-pic" =>
-               for Object_Dir use Object_Root & "obj/gnatcoll_projects/pic";
+               for Object_Dir use Object_Root & "obj/gnatcoll_minimal/pic";
             when "static" =>
-               for Object_Dir use Object_Root & "obj/gnatcoll_projects/static";
+               for Object_Dir use Object_Root & "obj/gnatcoll_minimal/static";
          end case;
    end case;
 
    for Library_Dir
-      use Object_Root & "lib/gnatcoll_projects/" & Project'Library_Kind;
+      use Object_Root & "lib/gnatcoll_core/" & Project'Library_Kind;
+
    for Library_Name    use Name;
 
-   for Languages use ("Ada");
+
+   Extra_Switches := ();
+   Extra_Libs := ();
+   case OS is
+      when "windows" =>
+         Extra_Libs := ("-lpsapi", "-lntdll");   --  For gnatcoll.memory
+      when others =>
+         null;
+   end case;
 
    So_Ext := "";
    case OS is
@@ -86,6 +98,8 @@ library project GNATCOLL_Projects is
 
    case Library_Type is
       when "relocatable" =>
+         for Library_Options use Extra_Libs;
+
          --  Put user options in front, for options like --as-needed.
          for Leading_Library_Options use External_As_List ("LDFLAGS", " ");
 
@@ -110,7 +124,12 @@ library project GNATCOLL_Projects is
       --  Give user flags the last word.
       for Switches ("Ada") use Compiler'Switches ("Ada")
         & External_As_List ("ADAFLAGS", " ");
+      for Switches ("C") use Compiler'Switches ("C")
+        & External_As_List ("CFLAGS", " ")
+        & External_As_List ("CPPFLAGS", " ");
 
+      for Switches ("gnatcoll_support.c") use
+        Extra_Switches & Compiler'Switches ("C");
    end Compiler;
 
    package Binder is
@@ -125,7 +144,7 @@ library project GNATCOLL_Projects is
    package Builder is
       case Build is
          when "DEBUG" =>
-            for Global_Configuration_Pragmas use "gnat_debug.adc";
+            for Global_Configuration_Pragmas use "src/gnat_debug.adc";
          when "PROD" =>
             null;
       end case;
@@ -135,4 +154,13 @@ library project GNATCOLL_Projects is
       for VCS_Kind use "Git";
    end Ide;
 
-end GNATCOLL_Projects;
+   package Linker is
+      case Library_Type is
+         when "relocatable" =>
+            null;
+         when "static" | "static-pic" =>
+            for Linker_Options use Extra_Libs;
+      end case;
+   end Linker;
+
+end GNATCOLL_Minimal;
