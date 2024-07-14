@@ -39,7 +39,6 @@
 #   TARGET        : target triplet for cross-compilation
 #   INTEGRATED    : installs the project as part of the compiler installation;
 #                   this adds NORMALIZED_TARGET subdir to prefix
-#   PYTHON        : force Python executable to run Python scripts
 # Project specific:
 #
 #   GNATCOLL_PROJECTS : whether GNATCOLL projects package is included (yes/no)
@@ -48,7 +47,6 @@
 # helper programs
 WHICH := which
 SED := sed
-PYTHON :=
 
 # check for out-of-tree build
 SOURCE_DIR := $(dir $(MAKEFILE_LIST))
@@ -106,11 +104,11 @@ else
 	$(SED) -e 's/^with "gnatcoll_projects"/--  with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > local-install/share/gpr/gnatcoll.gpr
 endif
 
-	$(PYTHON) $(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
-	$(PYTHON) $(SOURCE_DIR)/core/gnatcoll_core.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
+	$(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
+	$(SOURCE_DIR)/core/gnatcoll_core.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
 
 ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(PYTHON) $(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
+	$(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
 endif
 
 install:
@@ -122,9 +120,9 @@ install:
 ###########
 
 clean:
-	$(PYTHON) $(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py clean --add-gpr-path=local-install/share/gpr
-	$(PYTHON) $(SOURCE_DIR)/core/gnatcoll_core.gpr.py clean --add-gpr-path=local-install/share/gpr
-	$(PYTHON) $(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py clean --add-gpr-path=local-install/share/gpr
+	$(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py clean --add-gpr-path=local-install/share/gpr
+	$(SOURCE_DIR)/core/gnatcoll_core.gpr.py clean --add-gpr-path=local-install/share/gpr
+	$(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py clean --add-gpr-path=local-install/share/gpr
 
 # Let gprbuild handle parallelisation. In general, we don't support parallel
 # runs in this Makefile, as concurrent gprinstall processes may crash.
