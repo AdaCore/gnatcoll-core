@@ -142,6 +142,20 @@ def gprbuild(
     if driver.env.gnatcov:
         from drivers.gnatcov import COVERAGE_LEVEL
 
+        # As gnatcoll project is taken from source dir, ensure important
+        # project variables are passed to select right implementations. This
+        # should stay in sync with the Makefile logic
+        gnatcoll_config_vars = []
+        if driver.env.target.platform in (
+            "x86_64-linux",
+            "x86_64-windows64",
+            "aarch64-linux",
+        ):
+            platform = driver.env.target.platform.replace("windows64", "windows")
+            gnatcoll_config_vars.append(f"-XGNATCOLL_BLAKE3_ARCH={platform}")
+        if driver.env.target.platform in ("x86_64-linux", "x86_64-windows64"):
+            gnatcoll_config_vars.append(f"-XGNATCOLL_XXHASH_ARCH=x86_64")
+
         gnatcov_cmd = (
             [
                 "gnatcov",
@@ -150,17 +164,15 @@ def gprbuild(
                 COVERAGE_LEVEL,
                 "--relocate-build-tree",
                 "--dump-trigger=atexit",
+                "--projects",
+                "gnatcoll_core",
                 "--externally-built-projects",
-                "--restricted-to-languages=Ada",
-                "--full-slugs",
-                "--no-subprojects",
-                "--projects", "gnatcoll_core",
-                "--projects", "gnatcoll_minimal",
-                "--projects", "gnatcoll_projects",
                 "-XEXTERNALLY_BUILT=true",
+                "--no-subprojects",
                 "-P",
                 project_file,
             ]
+            + gnatcoll_config_vars
             + scenario_cmd
         )
 
@@ -182,7 +194,7 @@ def gprbuild(
             "--implicit-with=gnatcov_rts",
             "-XLIBRARY_TYPE=static",
             "-XEXTERNALLY_BUILT=true",
-        ]
+        ] + gnatcoll_config_vars
 
     if driver.env.is_cross:
         gprbuild_cmd.append(

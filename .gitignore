@@ -1,6 +1,7 @@
-__pycache__
+makefile.setup
 
 gnat/
+src/sqlite/amalgamation/sqlite3_for_gps
 
 docs/_build
 
@@ -33,7 +34,3 @@ testsuite/gnatcov
 testsuite/out
 
 examples/library/obj
-
-gnatcoll_core.json
-gnatcoll_minimal.json
-gnatcoll_projects.json
