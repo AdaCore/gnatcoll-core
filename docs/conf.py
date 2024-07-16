@@ -56,7 +56,7 @@ copyright = get_copyright()
 
 def get_version():
     """Extract the version from configure.in"""
-    with open("../version_information") as f:
+    with open("../core/VERSION") as f:
         return f.readline().strip()
 
 
