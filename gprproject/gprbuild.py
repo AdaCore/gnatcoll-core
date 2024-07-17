@@ -24,6 +24,7 @@ class GPRTool:
         variants_var: str | None = None,
         variants_values: list[str] | None = None,
         gnatcov: bool = False,
+        symcc: bool = False,
         prefix: str | None = None,
         gpr_paths: list[str] | None = None,
         add_prefix_to_gpr_paths: bool = False,
@@ -36,6 +37,8 @@ class GPRTool:
         :param integrated: whether installation prefix should be platform specific
         :param variables: scenario variables for the project
         :param jobs: level of parallelism for gpr tools that support it
+        :param gnatcov: if True add gnatcov instrumentation
+        :param symcc: if True add symcc instrumentation
         """
         project_full_path = os.path.abspath(project_file)
         self.project_file = os.path.basename(project_full_path)
@@ -80,6 +83,7 @@ class GPRTool:
             self.variants_values = ["_"]
 
         self.gnatcov = gnatcov
+        self.symcc = symcc
         self.gpr_paths: list[str] = []
         if self.gpr_paths:
             self.gpr_paths = list(gpr_paths)
@@ -143,6 +147,12 @@ class GPRTool:
             cmd.append(f"-P{os.path.join(self.source_dir, self.project_file)}")
         else:
             cmd.append(f"-P{self.project_file}")
+
+        # Handle symcc instrumentation
+        if self.symcc:
+            cmd.append("--RTS=symcc")
+            if cmd_name == "gprbuild":
+                cmd += ["-cargs", "-fpass-plugin=libsymcc.so", "-gargs"]
 
         # Pass jobs
         if cmd_name == "gprbuild":
@@ -225,6 +235,7 @@ class GPRTool:
             "variants_var": self.variants_var,
             "variants_values": self.variants_values if self.variants_var else None,
             "gnatcov": self.gnatcov,
+            "symcc": self.symcc,
             "prefix": self.prefix,
             "gpr_paths": self.gpr_paths,
         }
@@ -252,6 +263,7 @@ class GPRTool:
             variants_var=data["variants_var"],
             variants_values=data["variants_values"],
             gnatcov=data["gnatcov"],
+            symcc=data["symcc"],
             prefix=data["prefix"],
             gpr_paths=data["gpr_paths"],
         )

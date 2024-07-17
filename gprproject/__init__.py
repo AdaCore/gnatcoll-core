@@ -53,12 +53,20 @@ class BuilderApp:
             default=False,
             action="store_true",
         )
-        self.build_cmd.add_argument(
+        instr_group = self.build_cmd.add_mutually_exclusive_group()
+        instr_group.add_argument(
             "--gnatcov",
             default=False,
             action="store_true",
             help="build project with gnatcov instrumentation",
         )
+        instr_group.add_argument(
+            "--symcc",
+            default=False,
+            action="store_true",
+            help="build project with symcc intrumentation (works only with LLVM)",
+        )
+
         self.build_cmd.add_argument(
             "--configure-only",
             default=False,
@@ -150,6 +158,7 @@ class BuilderApp:
             integrated=args.integrated,
             jobs=args.jobs,
             gnatcov=args.gnatcov,
+            symcc=args.symcc,
             prefix=args.prefix,
             gpr_paths=args.add_gpr_path,
             add_prefix_to_gpr_paths=args.prefix is not None,
