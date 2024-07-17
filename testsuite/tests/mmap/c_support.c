@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 
 /* We don't use standard lseek implementation on Windows otherwise
  * creating very large file will be inefficient as mingw lseek will
