@@ -5,3 +5,4 @@ data:
     - "simple.gpr"
 control:
     - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]
+    - [SKIP, "env.llvm", "GNATCOLL.Projects unsupported (see eng/toolchain/gnatcoll-core#66)"]

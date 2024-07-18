@@ -54,11 +54,17 @@ class MyTestsuite(Testsuite):
             " If both are specified, only --recompile is used.",
             default=False,
             action="store_true")
+        parser.add_argument(
+            '--llvm',
+            help="assume that an LLVM-based toolchain is used.",
+            default=False,
+            action="store_true")
 
     def set_up(self):
         self.env.gnatcov = self.main.args.gnatcov
         self.env.valgrind = self.main.args.valgrind
         self.env.source_root = self.main.args.source_root
+        self.env.llvm = self.main.args.llvm
 
         # Reject incompatible options
         incompatible = [name for name in ('gnatcov', 'valgrind')
