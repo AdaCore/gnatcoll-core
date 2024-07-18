@@ -1062,7 +1062,8 @@ package GNATCOLL.Strings_Impl is
 
       Null_XString : constant XString :=
          (Ada.Finalization.Controlled with
-          Data => (Is_Big => False, Small => <>));
+          Data => (Is_Big => False,
+                   Small => (Is_Big => False, Size => 0, others => <>)));
 
    end Strings;
 
