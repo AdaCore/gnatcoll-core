@@ -333,11 +333,14 @@ package GNATCOLL.Opt_Parse is
    --        Help    : String;
    --        Enabled : Boolean := True;
    --     package <...> is
-   --       function Get (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Type;
+   --       function Get
+   --         (Args : Parsed_Arguments := No_Parsed_Arguments)
+   --       return Result_Type;
    --       --  Get the result for this parser
    --
    --       function This return Subparser;
-   --       --  Return the subparser instance created by this package instantiation.
+   --       --  Return the subparser instance created by this package
+   --       --  instantiation.
    --     end <...>;
    generic
       Parser : in out Argument_Parser;
