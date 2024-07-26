@@ -61,6 +61,8 @@ package GNATCOLL.OS.FSUtil is
 
    subtype SHA1_Digest is GNAT.SHA1.Message_Digest;
 
+   Invalid_SHA1 : constant SHA1_Digest := (others => ' ');
+
    function SHA1
       (Path        : UTF8.UTF_8_String;
        Buffer_Size : Positive := FS.Default_Buffer_Size)

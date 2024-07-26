@@ -45,7 +45,7 @@ package body GNATCOLL.File_Indexes is
       return FSUtil.SHA1_Digest
    is
       State : Entry_State;
-      Digest : FSUtil.SHA1_Digest;
+      Digest : FSUtil.SHA1_Digest := FSUtil.Invalid_SHA1;
    begin
       Hash (Self => Self, Path => Path, State => State, Digest => Digest);
       return Digest;
@@ -78,8 +78,8 @@ package body GNATCOLL.File_Indexes is
          (Path, Resolve_Links => True);
 
       Prev_Cursor    : Cursor := Find (Self.DB, Normalized_Path);
-      Prev_Hash      : FSUtil.SHA1_Digest;
-      New_Hash       : FSUtil.SHA1_Digest;
+      Prev_Hash      : FSUtil.SHA1_Digest := FSUtil.Invalid_SHA1;
+      New_Hash       : FSUtil.SHA1_Digest := FSUtil.Invalid_SHA1;
       Trust_New_Hash : Boolean := True;
    begin
 
