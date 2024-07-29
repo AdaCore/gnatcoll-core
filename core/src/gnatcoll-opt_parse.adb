@@ -1,25 +1,11 @@
-------------------------------------------------------------------------------
---                             G N A T C O L L                              --
---                                                                          --
---                     Copyright (C) 2009-2022, AdaCore                     --
---                                                                          --
--- This library is free software;  you can redistribute it and/or modify it --
--- under terms of the  GNU General Public License  as published by the Free --
--- Software  Foundation;  either version 3,  or (at your  option) any later --
--- version. This library is distributed in the hope that it will be useful, --
--- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
--- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
---                                                                          --
--- As a special exception under Section 7 of GPL version 3, you are granted --
--- additional permissions described in the GCC Runtime Library Exception,   --
--- version 3.1, as published by the Free Software Foundation.               --
---                                                                          --
--- You should have received a copy of the GNU General Public License and    --
--- a copy of the GCC Runtime Library Exception along with this program;     --
--- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
--- <http://www.gnu.org/licenses/>.                                          --
---                                                                          --
-------------------------------------------------------------------------------
+--  Copyright (C) 2024, AdaCore
+--
+--  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
+--
+--  The unit provides functions to generate random data using the OS CSPRNG
+--  This means that this functions are suitable for cryptographic contexts
+--  The downside is that that they around one order of magnitud slower than
+--  implementation provided in the default Ada runtime.
 
 with Ada.Command_Line;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
