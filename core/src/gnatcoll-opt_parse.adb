@@ -1,25 +1,11 @@
-------------------------------------------------------------------------------
---                             G N A T C O L L                              --
---                                                                          --
---                     Copyright (C) 2009-2022, AdaCore                     --
---                                                                          --
--- This library is free software;  you can redistribute it and/or modify it --
--- under terms of the  GNU General Public License  as published by the Free --
--- Software  Foundation;  either version 3,  or (at your  option) any later --
--- version. This library is distributed in the hope that it will be useful, --
--- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
--- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
---                                                                          --
--- As a special exception under Section 7 of GPL version 3, you are granted --
--- additional permissions described in the GCC Runtime Library Exception,   --
--- version 3.1, as published by the Free Software Foundation.               --
---                                                                          --
--- You should have received a copy of the GNU General Public License and    --
--- a copy of the GCC Runtime Library Exception along with this program;     --
--- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
--- <http://www.gnu.org/licenses/>.                                          --
---                                                                          --
-------------------------------------------------------------------------------
+--  Copyright (C) 2024, AdaCore
+--
+--  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
+--
+--  The unit provides functions to generate random data using the OS CSPRNG
+--  This means that this functions are suitable for cryptographic contexts
+--  The downside is that that they around one order of magnitud slower than
+--  implementation provided in the default Ada runtime.
 
 with Ada.Command_Line;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
@@ -56,6 +42,14 @@ package body GNATCOLL.Opt_Parse is
       pragma Assert
          (Long'Length > 0 or else Short'Length > 0,
           "You should have either a long or a short flag");
+
+      pragma Assert
+        (Short'Length = 0 or else Short (2)  in 'a' .. 'z' | 'A' .. 'Z',
+         "Short flag should start with an alphabetic character");
+
+      pragma Assert
+        (Long'Length = 0 or else Long (3)  in 'a' .. 'z' | 'A' .. 'Z',
+         "Long flag should start with an alphabetic character");
    end Flag_Invariants;
    --  This package is an helper package, helping check some invariants at
    --  runtime. The neat thing about using `pragma Assert` is that in a wide
@@ -153,7 +147,7 @@ package body GNATCOLL.Opt_Parse is
    -- Flag_Parser --
    -----------------
 
-   type Flag_Parser is new Parser_Type with record
+   type Flag_Parser is new Subparser_Type with record
       Short, Long : XString;
    end record;
 
@@ -369,7 +363,7 @@ package body GNATCOLL.Opt_Parse is
    ----------------
 
    function Get_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Parser_Result_Access
    is
       --  Due to controlled objects finalization, the following code is not
@@ -400,7 +394,7 @@ package body GNATCOLL.Opt_Parse is
    ----------------
 
    function Has_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Boolean is
    begin
       return Self.Get_Result (Args) /= null;
@@ -483,10 +477,17 @@ package body GNATCOLL.Opt_Parse is
       --------------------
 
       procedure Handle_Failure (Error_Msg : String) is
+         use Error_Handler_References;
       begin
          Self.Data.Last_Error := +Error_Msg;
-         Put_Line
-           (Standard_Error, "Argument parsing failed: " & Error_Msg);
+
+         if Self.Data.Custom_Error_Handler /= Null_Ref then
+            Self.Data.Custom_Error_Handler.Unchecked_Get.Error (Error_Msg);
+         else
+            Put_Line
+              (Standard_Error, "Argument parsing failed: " & Error_Msg);
+         end if;
+
       end Handle_Failure;
 
       function Internal return Boolean is
@@ -591,9 +592,9 @@ package body GNATCOLL.Opt_Parse is
 
    begin
       return Ret : constant Boolean := Internal do
-         --  Print help if parsing has failed
-         if not Ret then
-            Put_Line (Help (Self));
+         if not Ret and then Self.Data.Print_Help_On_Error then
+            --  Print help if parsing has failed
+            Put_Line (Standard_Error, Help (Self));
          end if;
       end return;
    end Parse_Impl;
@@ -603,11 +604,12 @@ package body GNATCOLL.Opt_Parse is
    -----------
 
    function Parse
-     (Self   : in out Parser_Type'Class;
+     (Self   : in out Subparser_Type'Class;
       Args   : XString_Array;
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return
    is
+      Ret : Parser_Return;
    begin
       if Self.Has_Result (Result) and then not
         (Self.Does_Accumulate or else Self.Parser.Incremental)
@@ -615,7 +617,14 @@ package body GNATCOLL.Opt_Parse is
          return Error_Return;
       end if;
 
-      return Self.Parse_Args (Args, Pos, Result);
+      Ret := Self.Parse_Args (Args, Pos, Result);
+
+      if Ret /= Error_Return and then Self.Disallow_Msg /= Null_XString then
+         raise Opt_Parse_Error with To_String (Self.Disallow_Msg);
+      end if;
+
+      return Ret;
+
    end Parse;
 
    -------------------------------
@@ -625,7 +634,7 @@ package body GNATCOLL.Opt_Parse is
    package body Parse_Positional_Arg_List is
       type Result_Array_Access is access all Result_Array;
 
-      type Positional_Arg_List_Parser is new Parser_Type with record
+      type Positional_Arg_List_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -649,13 +658,15 @@ package body GNATCOLL.Opt_Parse is
 
       Self_Val : aliased Positional_Arg_List_Parser :=
         Positional_Arg_List_Parser'
-          (Name     => +Name,
-           Help     => +Help,
-           Parser   => Parser.Data,
-           Position => <>,
-           Opt      => Allow_Empty);
+          (Name    => +Name,
+           Help    => +Help,
+           Parser  => Parser.Data,
+           Opt     => Allow_Empty,
+           others  => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       ---------
       -- Get --
@@ -739,7 +750,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Positional_Arg is
 
-      type Positional_Arg_Parser is new Parser_Type with record
+      type Positional_Arg_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -762,13 +773,15 @@ package body GNATCOLL.Opt_Parse is
       overriding procedure Release (Self : in out Internal_Result) is null;
 
       Self_Val : aliased Positional_Arg_Parser :=
-        (Name     => +Name,
-         Help     => +Help,
-         Parser   => Parser.Data,
-         Position => <>,
-         Opt      => False);
+        (Name   => +Name,
+         Help   => +Help,
+         Parser => Parser.Data,
+         Opt    => False,
+         others => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       ---------
       -- Get --
@@ -858,14 +871,16 @@ package body GNATCOLL.Opt_Parse is
       Self_Val : aliased Flag_Parser := Flag_Parser'
         (Name     => +(if Name /= "" then Name
                        else Long (3 .. Long'Last)),
-         Help     => +Help,
-         Long     => +Long,
-         Short    => +Short,
-         Parser   => Parser.Data,
-         Opt      => True,
-         Position => <>);
+         Help   => +Help,
+         Long   => +Long,
+         Short  => +Short,
+         Parser => Parser.Data,
+         Opt    => True,
+         others => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       ---------
       -- Get --
@@ -905,7 +920,7 @@ package body GNATCOLL.Opt_Parse is
       package I is new Flag_Invariants (Short, Long, Name);
       pragma Unreferenced (I);
 
-      type Option_Parser is new Parser_Type with record
+      type Option_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -931,15 +946,16 @@ package body GNATCOLL.Opt_Parse is
 
       Self_Val : aliased Option_Parser :=
         Option_Parser'
-          (Name     => +(if Name /= "" then Name
-                         else Long (3 .. Long'Last)),
-           Help     => +Help,
-           Parser   => Parser.Data,
-           Opt      => True,
-           Position => <>);
+          (Name   => +(if Name /= "" then Name
+                       else Long (3 .. Long'Last)),
+           Help   => +Help,
+           Parser => Parser.Data,
+           Opt    => True,
+           others => <>);
 
-      Self : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self : constant Subparser := Self_Val'Unchecked_Access;
 
+      function This return Subparser is (Self);
       -----------
       -- Usage --
       -----------
@@ -1092,6 +1108,7 @@ package body GNATCOLL.Opt_Parse is
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type
       renames Internal_Option.Get;
 
+      function This return Subparser renames Internal_Option.This;
    end Parse_Enum_Option;
 
    -----------------------
@@ -1106,7 +1123,7 @@ package body GNATCOLL.Opt_Parse is
       package Result_Vectors
       is new Ada.Containers.Vectors (Positive, Arg_Type);
 
-      type Option_List_Parser is new Parser_Type with record
+      type Option_List_Parser is new Subparser_Type with record
          null;
       end record;
 
@@ -1139,9 +1156,11 @@ package body GNATCOLL.Opt_Parse is
          Help   => +Help,
          Parser => Parser.Data,
          Opt    => True,
-         Position => <>);
+         others => <>);
 
-      Self     : constant Parser_Access := Self_Val'Unchecked_Access;
+      Self     : constant Subparser := Self_Val'Unchecked_Access;
+
+      function This return Subparser is (Self);
 
       -----------
       -- Usage --
@@ -1189,8 +1208,9 @@ package body GNATCOLL.Opt_Parse is
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array is
       begin
          if not Enabled then
-            return (1 .. 0 => <>);
+            return No_Results;
          end if;
+
          declare
             R : constant Parser_Result_Access := Self.Get_Result (Args);
          begin
@@ -1209,6 +1229,17 @@ package body GNATCOLL.Opt_Parse is
             end if;
          end;
       end Get;
+
+      ------------
+      -- Is_Set --
+      ------------
+
+      function Is_Set
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean
+      is
+      begin
+         return Self.Get_Result (Args) /= null;
+      end Is_Set;
 
       ----------------
       -- Parse_Args --
@@ -1257,12 +1288,24 @@ package body GNATCOLL.Opt_Parse is
          end if;
 
          for I in Pos + 1 .. Args'Last loop
-            exit when Args (I).Starts_With ("-");
+            exit when List_Stop_Predicate (Args (I));
             Arg_Count := Arg_Count + 1;
          end loop;
 
          if Arg_Count = 0 then
-            return Error_Return;
+            if Allow_Empty then
+
+               Tmp := new Internal_Result'
+                 (Start_Pos => Pos,
+                  End_Pos   => Pos,
+                  Results   => Result_Vectors.Empty_Vector);
+
+               Res := Tmp.all'Unchecked_Access;
+
+               return Pos + 1;
+            else
+               return Error_Return;
+            end if;
          end if;
 
          Tmp := new Internal_Result'
@@ -1293,11 +1336,14 @@ package body GNATCOLL.Opt_Parse is
    ----------------------------
 
    function Create_Argument_Parser
-     (Help               : String;
-      Command_Name       : String := "";
-      Help_Column_Limit  : Col_Type := 80;
-      Incremental        : Boolean := False;
-      Generate_Help_Flag : Boolean := True) return Argument_Parser
+     (Help                 : String;
+      Command_Name         : String := "";
+      Help_Column_Limit    : Col_Type := 80;
+      Incremental          : Boolean := False;
+      Generate_Help_Flag   : Boolean := True;
+      Custom_Error_Handler : Error_Handler_Ref := Null_Ref;
+      Print_Help_On_Error  : Boolean := True)
+   return Argument_Parser
    is
       XCommand_Name : constant XString :=
         +(if Command_Name = ""
@@ -1310,19 +1356,22 @@ package body GNATCOLL.Opt_Parse is
       return Parser : Argument_Parser do
          Parser.Data :=
            new Argument_Parser_Data'
-             (+Help, XCommand_Name,
-              Incremental => Incremental,
-              others => <>);
+             (+Help,
+              XCommand_Name,
+              Incremental           => Incremental,
+              Custom_Error_Handler  => Custom_Error_Handler,
+              Print_Help_On_Error   => Print_Help_On_Error,
+              others                => <>);
 
          if Generate_Help_Flag then
             Parser.Data.Help_Flag := new Help_Flag_Parser'
-              (Name     => +"help",
-               Help     => +"Show this help message",
-               Position => <>,
-               Opt      => True,
-               Parser   => Parser.Data,
-               Short    => +"-h",
-               Long     => +"--help");
+              (Name   => +"help",
+               Help   => +"Show this help message",
+               Opt    => True,
+               Parser => Parser.Data,
+               Short  => +"-h",
+               Long   => +"--help",
+               others => <>);
             Parser.Data.Opts_Parsers.Append (Parser.Data.Help_Flag);
             Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
             Parser.Data.Help_Flag.Position
@@ -1508,10 +1557,48 @@ package body GNATCOLL.Opt_Parse is
         (Argument_Parser_Data, Argument_Parser_Data_Access);
 
       procedure Free is new Ada.Unchecked_Deallocation
-        (Parser_Type'Class, Parser_Access);
+        (Subparser_Type'Class, Subparser);
    begin
       Free (Self.Data.Help_Flag);
       Free (Self.Data);
    end Finalize;
+
+   ------------
+   -- Create --
+   ------------
+
+   function Create (Handler : Error_Handler'Class) return Error_Handler_Ref is
+      Ret : Error_Handler_Ref;
+   begin
+      Ret.Set (Handler);
+      return Ret;
+   end Create;
+
+   -------------
+   -- Release --
+   -------------
+
+   procedure Release_Wrapper (Handler : in out Error_Handler'Class) is
+   begin
+      Handler.Release;
+   end Release_Wrapper;
+
+   --------------
+   -- Disallow --
+   --------------
+
+   procedure Disallow (Self : Subparser; Message : String) is
+   begin
+      Self.Disallow_Msg := To_XString (Message);
+   end Disallow;
+
+   -----------
+   -- Allow --
+   -----------
+
+   procedure Allow (Self : Subparser) is
+   begin
+      Self.Disallow_Msg := Null_XString;
+   end Allow;
 
 end GNATCOLL.Opt_Parse;

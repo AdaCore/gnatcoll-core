@@ -1,25 +1,11 @@
-------------------------------------------------------------------------------
---                             G N A T C O L L                              --
---                                                                          --
---                     Copyright (C) 2009-2022, AdaCore                     --
---                                                                          --
--- This library is free software;  you can redistribute it and/or modify it --
--- under terms of the  GNU General Public License  as published by the Free --
--- Software  Foundation;  either version 3,  or (at your  option) any later --
--- version. This library is distributed in the hope that it will be useful, --
--- but WITHOUT ANY WARRANTY;  without even the implied warranty of MERCHAN- --
--- TABILITY or FITNESS FOR A PARTICULAR PURPOSE.                            --
---                                                                          --
--- As a special exception under Section 7 of GPL version 3, you are granted --
--- additional permissions described in the GCC Runtime Library Exception,   --
--- version 3.1, as published by the Free Software Foundation.               --
---                                                                          --
--- You should have received a copy of the GNU General Public License and    --
--- a copy of the GCC Runtime Library Exception along with this program;     --
--- see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see    --
--- <http://www.gnu.org/licenses/>.                                          --
---                                                                          --
-------------------------------------------------------------------------------
+--  Copyright (C) 2024, AdaCore
+--
+--  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
+--
+--  The unit provides functions to generate random data using the OS CSPRNG
+--  This means that this functions are suitable for cryptographic contexts
+--  The downside is that that they around one order of magnitud slower than
+--  implementation provided in the default Ada runtime.
 
 with Ada.Finalization;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
@@ -35,7 +21,7 @@ with System.Aux_DEC; use System.Aux_DEC;
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 with Ada.Containers.Vectors;
-private with GNATCOLL.Refcount;
+with GNATCOLL.Refcount;
 private with GNATCOLL.Locks;
 
 package GNATCOLL.Opt_Parse is
@@ -152,16 +138,66 @@ package GNATCOLL.Opt_Parse is
    subtype XString_Vector is XString_Vectors.Vector;
    --  Vector of XStrings. Used to fill unknown args in calls to ``Parse``.
 
+   -----------------
+   -- Parser type --
+   -----------------
+
+   type Subparser is private;
+   --  This represents a subparser inside an argument parser.
+   --
+   --  You generally don't have to use this type directly, since you'll declare
+   --  subparsers by instantiating generic packages, and get results via the
+   --  generic ``Get`` procedures.
+   --
+   --  Having access to parsers allow you to do some introspection which can be
+   --  useful in some cases.
+
+   procedure Allow (Self : Subparser);
+   --  Allow the parser
+
+   procedure Disallow (Self : Subparser; Message : String);
+   --  Disallow the parser. If the corresponding argument is successfully
+   --  parsed, an error will be raised with the corresponding message.
+
+   --------------------
+   -- Error handlers --
+   --------------------
+
+   --  Machinery to allow the user to specify custom error handling mechanisms
+   --  if an error should occur during argument processing in Opt_Parse
+
+   type Error_Handler is abstract tagged null record;
+   procedure Error (Self : in out Error_Handler; Msg : String) is abstract;
+   procedure Warning (Self : in out Error_Handler; Msg : String) is abstract;
+   procedure Release (Self : in out Error_Handler) is null;
+
+   procedure Release_Wrapper (Handler : in out Error_Handler'Class);
+   --  Wrapper around Error_Handler.Release
+
+   package Error_Handler_References is new GNATCOLL.Refcount.Shared_Pointers
+     (Error_Handler'Class,
+      Release => Release_Wrapper,
+      Atomic_Counters => True);
+
+   subtype Error_Handler_Ref is Error_Handler_References.Ref;
+
+   Null_Ref : Error_Handler_Ref renames Error_Handler_References.Null_Ref;
+
+   function Create (Handler : Error_Handler'Class) return Error_Handler_Ref;
+
    -------------------------------
    -- General parser primitives --
    -------------------------------
 
    function Create_Argument_Parser
-     (Help               : String;
-      Command_Name       : String := "";
-      Help_Column_Limit  : Col_Type := 80;
-      Incremental        : Boolean := False;
-      Generate_Help_Flag : Boolean := True) return Argument_Parser;
+     (Help                 : String;
+      Command_Name         : String := "";
+      Help_Column_Limit    : Col_Type := 80;
+      Incremental          : Boolean := False;
+      Generate_Help_Flag   : Boolean := True;
+      Custom_Error_Handler : Error_Handler_Ref := Null_Ref;
+      Print_Help_On_Error  : Boolean := True)
+   return Argument_Parser;
    --  Create an argument parser with the provided help string.
    --
    --  ``Command_Name`` refers to the name of your command/executable. This
@@ -180,6 +216,9 @@ package GNATCOLL.Opt_Parse is
    --
    --  ``Generate_Help_Flag`` will condition the generation of the ``--help``
    --  flag. Some tools might wish to deactivate it to handle it manually.
+   --
+   --  ``Error_Handler`` is the handler that will be used in case of error
+   --  or warning, to process the associated error message.
 
    function Help (Self : Argument_Parser) return String;
    --  Return the help for this parser as a String.
@@ -248,6 +287,11 @@ package GNATCOLL.Opt_Parse is
 
    function Convert (Arg : String) return Integer;
 
+   function List_Stop_Predicate (S : XString) return Boolean
+   is (S.Starts_With ("-"));
+   --  Default ``List_Stop_Predicate`` for ``Parse_Option_List``. Will stop
+   --  when the next argument starts with '-'.
+
    Opt_Parse_Error : exception;
    --  Exception signaling an error in the parser. This is the error that you
    --  will get in the rare cases where you do something invalid with a Parser
@@ -259,10 +303,31 @@ package GNATCOLL.Opt_Parse is
    --  Exception raised when trying to get the value of a disabled argument
    --  parser that is not a list and provides no default value.
 
-   --------------------------------
-   --  Specific argument parsers --
-   --------------------------------
+   -----------------------------------
+   --  Specific argument subparsers --
+   -----------------------------------
 
+   --  Subparser are created by instantiating generic packages. This allows
+   --  having precise type signatures for parser's result. Every subparser's
+   --  generic package will have at least a signature like:
+   --
+   --  .. code-block:: ada
+   --
+   --     generic
+   --        Parser  : in out Argument_Parser;
+   --        Name    : String;
+   --        Help    : String;
+   --        Enabled : Boolean := True;
+   --     package <...> is
+   --       function Get
+   --         (Args : Parsed_Arguments := No_Parsed_Arguments)
+   --       return Result_Type;
+   --       --  Get the result for this parser
+   --
+   --       function This return Subparser;
+   --       --  Return the subparser instance created by this package
+   --       --  instantiation.
+   --     end <...>;
    generic
       Parser : in out Argument_Parser;
       --  Argument_Parser owning this argument.
@@ -296,6 +361,9 @@ package GNATCOLL.Opt_Parse is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array;
 
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
+
    end Parse_Positional_Arg_List;
    --  Parse a list of positional arguments. This parser can only be the last
    --  positional parser, since it will parse every remaining argument on the
@@ -326,6 +394,10 @@ package GNATCOLL.Opt_Parse is
    package Parse_Positional_Arg is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
+
    end Parse_Positional_Arg;
    --  Parse a positional argument. A positional argument is any argument. If
    --  the conversion fails, then it will make the whole argument parser fail.
@@ -366,6 +438,9 @@ package GNATCOLL.Opt_Parse is
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
 
    end Parse_Flag;
    --  Parse a Flag option. A flag takes no other argument, and its result is a
@@ -421,6 +496,9 @@ package GNATCOLL.Opt_Parse is
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
    end Parse_Option;
    --  Parse a regular option. A regular option is of the form "--option val",
    --  or "--option=val", or "-O val", or "-Oval". If option is not passed,
@@ -471,6 +549,9 @@ package GNATCOLL.Opt_Parse is
 
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Arg_Type;
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
    end Parse_Enum_Option;
    --  Parse a regular option whose type is an enum type. See ``Parse_Option``
    --  for the format. This is an helper around ``Parse_Option`` that will
@@ -522,6 +603,15 @@ package GNATCOLL.Opt_Parse is
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
 
+      Allow_Empty : Boolean := False;
+      --  Whether empty lists are allowed or not.
+
+      with function List_Stop_Predicate (S : XString) return Boolean is <>;
+      --  Predicate used to detect that we should stop parsing. Customizing
+      --  that allows to implement "section-like" behavior.
+      --  By default, it will stop on the first argument that starts with a '-'
+      --  character.
+
    package Parse_Option_List is
       type Result_Array is array (Positive range <>) of Arg_Type;
 
@@ -534,6 +624,14 @@ package GNATCOLL.Opt_Parse is
       function Get
         (Args : Parsed_Arguments := No_Parsed_Arguments) return Result_Array;
 
+      function Is_Set
+        (Args : Parsed_Arguments := No_Parsed_Arguments) return Boolean;
+      --  Whether this list has been explicitly set. Useful if explicit empty
+      --  lists are allowed, if an explicit empty list has a different
+      --  meaning than an implicit empty list.
+
+      function This return Subparser;
+      --  Return the subparser instantiated by this package
    end Parse_Option_List;
    --  Parse an option list. A regular option is of the form
    --  "--option val, val2, val3", or "-O val val2 val3".
@@ -551,7 +649,7 @@ private
    type Argument_Parser_Data;
    type Argument_Parser_Data_Access is access all Argument_Parser_Data;
 
-   type Parser_Type is abstract tagged record
+   type Subparser_Type is abstract tagged record
       Name : XString;
       --  Name of the parser
 
@@ -564,6 +662,10 @@ private
       Opt : Boolean := True;
       --  Whether this parser is optional or not
 
+      Disallow_Msg : XString := Null_XString;
+      --  Error message to return if the parser is disallowed. This also serves
+      --  as a flag: if the message is null, then the parser is allowed.
+
       Parser : Argument_Parser_Data_Access;
    end record;
 
@@ -575,7 +677,7 @@ private
    --  Special value for Parser_Return when there was an error
 
    function Parse_Args
-     (Self   : in out Parser_Type;
+     (Self   : in out Subparser_Type;
       Args   : XString_Array;
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return
@@ -584,7 +686,7 @@ private
    --  that must be overloaded by implementations.
 
    function Parse
-     (Self   : in out Parser_Type'Class;
+     (Self   : in out Subparser_Type'Class;
       Args   : XString_Array;
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return;
@@ -592,25 +694,25 @@ private
    --  around `Parse_Args` that is called by Arguments_Parser.
 
    function Usage
-     (Self : Parser_Type) return String is abstract;
+     (Self : Subparser_Type) return String is abstract;
    --  Return a usage string for this parser. Abstract method that must be
    --  overloaded.
 
    function Help_Name
-     (Self : Parser_Type) return String
+     (Self : Subparser_Type) return String
    is
      (To_String (Self.Name));
    --  Return the help name for this parser.
 
    function Does_Accumulate
-     (Self : Parser_Type) return Boolean is (False);
+     (Self : Subparser_Type) return Boolean is (False);
    --  Whether this parser accumulates results or not. If it does, then it is
    --  valid to call Parse on it several time, which will add to results.
 
-   type Parser_Access is access all Parser_Type'Class;
+   type Subparser is access all Subparser_Type'Class;
 
    package Parsers_Vectors
-   is new Ada.Containers.Vectors (Positive, Parser_Access);
+   is new Ada.Containers.Vectors (Positive, Subparser);
 
    subtype Parser_Vector is Parsers_Vectors.Vector;
 
@@ -624,7 +726,7 @@ private
       All_Parsers                           : Parser_Vector;
       Default_Result                        : Parsed_Arguments
         := No_Parsed_Arguments;
-      Help_Flag                             : Parser_Access := null;
+      Help_Flag                             : Subparser := null;
 
       Mutex : aliased Mutual_Exclusion;
       --  Mutex used to make Get_Result thread safe
@@ -634,6 +736,13 @@ private
       Incremental : Boolean := False;
       --  Whether this parse is in incremental or normal mode. See the
       --  documentation in `Create_Argument_Parser`.
+
+      Custom_Error_Handler : Error_Handler_Ref
+        := Error_Handler_References.Null_Ref;
+      --  Callback to call in case of error/warning. If null, errors and
+      --  warnings will be emitted on stderr.
+
+      Print_Help_On_Error : Boolean := True;
    end record;
 
    type Parser_Result is abstract tagged record
@@ -647,11 +756,11 @@ private
    type Parser_Result_Access is access all Parser_Result'Class;
 
    function Get_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Parser_Result_Access;
 
    function Has_Result
-     (Self : Parser_Type'Class;
+     (Self : Subparser_Type'Class;
       Args : Parsed_Arguments) return Boolean;
 
    type Parser_Result_Array

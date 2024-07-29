@@ -1,0 +1,3 @@
+driver: build_run_assert_and_diff
+description:
+    Check that help is printed on parsing failure
