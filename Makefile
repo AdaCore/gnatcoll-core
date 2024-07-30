@@ -80,9 +80,13 @@ all: build
 GTARGET=--target=$(NORMALIZED_TARGET)
 
 ifeq ($(GNATCOV), yes)
-   GNATCOV_BUILD_OPTS=--gnatcov
+   INSTR_BUILD_OPTS=--gnatcov
 else
-   GNATCOV_BUILD_OPTS=
+   ifeq ($(SYMCC), yes)
+      INSTR_BUILD_OPTS=--symcc
+   else
+      INSTR_BUILD_OPTS=
+   endif
 endif
 
 ifeq ($(INTEGRATED), yes)
@@ -106,11 +110,11 @@ else
 	$(SED) -e 's/^with "gnatcoll_projects"/--  with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > local-install/share/gpr/gnatcoll.gpr
 endif
 
-	$(PYTHON) $(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
-	$(PYTHON) $(SOURCE_DIR)/core/gnatcoll_core.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
+	$(PYTHON) $(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py build $(INSTR_BUILD_OPTS) $(BUILD_ARGS)
+	$(PYTHON) $(SOURCE_DIR)/core/gnatcoll_core.gpr.py build $(INSTR_BUILD_OPTS) $(BUILD_ARGS)
 
 ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(PYTHON) $(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py build $(GNATCOV_BUILD_OPTS) $(BUILD_ARGS)
+	$(PYTHON) $(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py build $(INSTR_BUILD_OPTS) $(BUILD_ARGS)
 endif
 
 install:
