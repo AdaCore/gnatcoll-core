@@ -1,0 +1,3 @@
+description:
+    Test that the Allow_Collated_Short_Form option for option parsers works
+    correctly
