@@ -20,9 +20,10 @@ with GNATCOLL.VFS;
 package body GNATCOLL.Opt_Parse is
 
    generic
-      Short : String;
-      Long  : String;
-      Name  : String;
+      Short            : String;
+      Long             : String;
+      Name             : String;
+      Legacy_Long_Form : Boolean := False;
    package Flag_Invariants is
       pragma Assertion_Policy (Assert => Check);
       --  We always want to check those assertions
@@ -32,8 +33,14 @@ package body GNATCOLL.Opt_Parse is
          "Short flag should start with a dash");
 
       pragma Assert
-        (Long'Length = 0 or else Long (1 .. 2) = "--",
+         (Legacy_Long_Form
+          or else (Long'Length = 0 or else Long (1 .. 2) = "--"),
          "Long flag should start with two dashes");
+
+      pragma Assert
+         ((not Legacy_Long_Form)
+          or else (Long'Length = 0 or else Long (1 .. 1) = "-"),
+         "Legacy long flag should start with one dash");
 
       pragma Assert
         (Long'Length > 0 or else Name'Length > 0,
@@ -870,7 +877,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Flag is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       Self_Val : aliased Flag_Parser := Flag_Parser'
@@ -922,7 +929,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Option is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       type Option_Parser is new Subparser_Type with record
@@ -1060,7 +1067,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Enum_Option is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       function Convert (Arg : String) return Arg_Type;
@@ -1123,7 +1130,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Option_List is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       package Result_Vectors
