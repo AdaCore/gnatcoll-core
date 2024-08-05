@@ -430,6 +430,12 @@ package GNATCOLL.Opt_Parse is
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
 
+      Legacy_Long_Form : Boolean := False;
+      --  If true, relax the rule about long flags starting with two dashes,
+      --  and allow long names starting with only one dash.
+      --
+      --  .. warning:: This is only for legacy tools. Use of this flag in new
+      --     tools is strictly discouraged!
    package Parse_Flag is
 
       ----------------------
@@ -488,6 +494,17 @@ package GNATCOLL.Opt_Parse is
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
 
+      Allow_Collated_Short_Form : Boolean := True;
+      --  Whether to allow the collated short form -Ovalue. Deactivating this
+      --  form can help workaround ambiguities if you have legacy-style long
+      --  options with one dash, such as ``-rules`` in GNATcheck.
+
+      Legacy_Long_Form : Boolean := False;
+      --  If true, relax the rule about long flags starting with two dashes,
+      --  and allow long names starting with only one dash.
+      --
+      --  .. warning:: This is only for legacy tools. Use of this flag in new
+      --     tools is strictly discouraged!
    package Parse_Option is
 
       ----------------------
@@ -542,6 +559,12 @@ package GNATCOLL.Opt_Parse is
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
 
+      Legacy_Long_Form : Boolean := False;
+      --  If true, relax the rule about long flags starting with two dashes,
+      --  and allow long names starting with only one dash.
+      --
+      --  .. warning:: This is only for legacy tools. Use of this flag in new
+      --     tools is strictly discouraged!
    package Parse_Enum_Option is
       pragma Compile_Time_Error
         (Arg_Type'Type_Class /= Type_Class_Enumeration,
@@ -612,6 +635,17 @@ package GNATCOLL.Opt_Parse is
       --  By default, it will stop on the first argument that starts with a '-'
       --  character.
 
+      Allow_Collated_Short_Form : Boolean := True;
+      --  Whether to allow the collated short form -Ovalue. Deactivating this
+      --  form can help workaround ambiguities if you have legacy-style long
+      --  options with one dash, such as ``-rules`` in GNATcheck.
+
+      Legacy_Long_Form : Boolean := False;
+      --  If true, relax the rule about long flags starting with two dashes,
+      --  and allow long names starting with only one dash.
+      --
+      --  .. warning:: This is only for legacy tools. Use of this flag in new
+      --     tools is strictly discouraged!
    package Parse_Option_List is
       type Result_Array is array (Positive range <>) of Arg_Type;
 

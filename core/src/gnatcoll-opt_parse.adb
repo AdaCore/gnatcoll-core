@@ -20,9 +20,10 @@ with GNATCOLL.VFS;
 package body GNATCOLL.Opt_Parse is
 
    generic
-      Short : String;
-      Long  : String;
-      Name  : String;
+      Short            : String;
+      Long             : String;
+      Name             : String;
+      Legacy_Long_Form : Boolean := False;
    package Flag_Invariants is
       pragma Assertion_Policy (Assert => Check);
       --  We always want to check those assertions
@@ -32,8 +33,14 @@ package body GNATCOLL.Opt_Parse is
          "Short flag should start with a dash");
 
       pragma Assert
-        (Long'Length = 0 or else Long (1 .. 2) = "--",
+         (Legacy_Long_Form
+          or else (Long'Length = 0 or else Long (1 .. 2) = "--"),
          "Long flag should start with two dashes");
+
+      pragma Assert
+         ((not Legacy_Long_Form)
+          or else (Long'Length = 0 or else Long (1 .. 1) = "-"),
+         "Legacy long flag should start with one dash");
 
       pragma Assert
         (Long'Length > 0 or else Name'Length > 0,
@@ -68,10 +75,11 @@ package body GNATCOLL.Opt_Parse is
    --  create an array from the application's command line arguments.
 
    function Parse_One_Option
-     (Short, Long : String;
-      Args        : XString_Array;
-      Pos         : Positive;
-      New_Pos     : out Parser_Return) return XString;
+     (Short, Long               : String;
+      Args                      : XString_Array;
+      Pos                       : Positive;
+      New_Pos                   : out Parser_Return;
+      Allow_Collated_Short_Form : Boolean := True) return XString;
    --  Parse one flag option, with the given ``Short`` & ``Long``
    --  specifications, from the ``Args`` array, starting at ``Pos``.
    --  Put the new position in ``New_Pos``. Return the option's raw value
@@ -79,6 +87,10 @@ package body GNATCOLL.Opt_Parse is
    --  For short arguments, this handles both ``-a B`` and ``-aB`` forms.
    --  For long arguments, this handles both ``--long B`` and ``--long=B``
    --  forms.
+   --
+   --  If ``Allow_Collated_Short_Form`` is False, then the `-aB` form above
+   --  is not accepted. This can be useful in combination with legacy style
+   --  long form which starts with only one dash, to avoid conflicts.
 
    ------------------
    -- Text wrapper --
@@ -865,7 +877,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Flag is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       Self_Val : aliased Flag_Parser := Flag_Parser'
@@ -917,7 +929,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Option is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       type Option_Parser is new Subparser_Type with record
@@ -1026,7 +1038,8 @@ package body GNATCOLL.Opt_Parse is
       is
          New_Pos : Parser_Return;
          Raw     : constant XString :=
-           Parse_One_Option (Short, Long, Args, Pos, New_Pos);
+           Parse_One_Option
+             (Short, Long, Args, Pos, New_Pos, Allow_Collated_Short_Form);
       begin
 
          if New_Pos /= Error_Return then
@@ -1054,7 +1067,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Enum_Option is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       function Convert (Arg : String) return Arg_Type;
@@ -1117,7 +1130,7 @@ package body GNATCOLL.Opt_Parse is
 
    package body Parse_Option_List is
 
-      package I is new Flag_Invariants (Short, Long, Name);
+      package I is new Flag_Invariants (Short, Long, Name, Legacy_Long_Form);
       pragma Unreferenced (I);
 
       package Result_Vectors
@@ -1263,7 +1276,9 @@ package body GNATCOLL.Opt_Parse is
             declare
                New_Pos : Parser_Return;
                Raw     : constant XString :=
-                 Parse_One_Option (Short, Long, Args, Pos, New_Pos);
+                 Parse_One_Option
+                   (Short, Long, Args, Pos, New_Pos,
+                    Allow_Collated_Short_Form);
             begin
                if New_Pos /= Error_Return then
                   if Res = null then
@@ -1502,24 +1517,36 @@ package body GNATCOLL.Opt_Parse is
    ----------------------
 
    function Parse_One_Option
-     (Short, Long : String;
-      Args        : XString_Array;
-      Pos         : Positive;
-      New_Pos     : out Parser_Return) return XString
+     (Short, Long               : String;
+      Args                      : XString_Array;
+      Pos                       : Positive;
+      New_Pos                   : out Parser_Return;
+      Allow_Collated_Short_Form : Boolean := True) return XString
    is
    begin
       if Args (Pos) = Long or Args (Pos) = Short then
+         --  Case 1: `-a b` or `--arg b`
+
          if Pos + 1 > Args'Last then
             raise Opt_Parse_Error with "Incomplete option";
          end if;
          New_Pos := Pos + 2;
          return Args (Pos + 1);
+
       elsif Long /= "" and then Args (Pos).Starts_With (Long & "=") then
+         --  Case 2: `--arg=b`
+
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Long'Last + 2, Args (Pos).Length);
-      elsif Short /= "" and then Args (Pos).Starts_With (Short) then
+
+      elsif Allow_Collated_Short_Form
+         and then Short /= "" and then Args (Pos).Starts_With (Short)
+      then
+         --  Case 3: `-ab`
+
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Short'Last + 1, Args (Pos).Length);
+
       else
          New_Pos := Error_Return;
          return +"";
