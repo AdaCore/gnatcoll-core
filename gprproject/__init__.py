@@ -78,12 +78,12 @@ class BuilderApp:
             ),
         )
         self.build_cmd.add_argument(
-            "--disable-constant-updates",
+            "--enable-constant-updates",
             default=False,
             action="store_true",
             help=(
-                "Do not update constants in GPR file and use only -XVAR=VALUE"
-                " to pass configuration to gpr tools"
+                "Update constants in GPR files in order to pass conviently the"
+                " result of the configuration to tools such as IDE and Alire."
             ),
         )
         self.build_cmd.set_defaults(command=self.build)
@@ -165,7 +165,7 @@ class BuilderApp:
         )
         self.adjust_config(gpr, args)
 
-        if not args.disable_constant_updates:
+        if args.enable_constant_updates:
             self.adjust_project_constants(gpr)
         gpr.save()
 

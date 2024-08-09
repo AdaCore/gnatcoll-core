@@ -55,13 +55,10 @@ the results is:
 
 ```sh
 $ ./gnatcoll_core.gpr.py build --help
-usage: gnatcoll_core.gpr.py build [-h] [--gpr-opts ...]
-                                  [--add-gpr-path ADD_GPR_PATH] [--jobs JOBS]
-                                  [--target TARGET] [--prefix PREFIX]
-                                  [--integrated] [--install] [--gnatcov]
-                                  [--configure-only] [--disable-constant-updates]
-                                  [--build {DEBUG,PROD}]
-                                  [--enable-shared {yes,no}]
+usage: gnatcoll_core.gpr.py build [-h] [--gpr-opts ...] [--add-gpr-path ADD_GPR_PATH] [--jobs JOBS]
+                                  [--target TARGET] [--prefix PREFIX] [--integrated] [--install]
+                                  [--gnatcov | --symcc] [--configure-only] [--enable-constant-updates]
+                                  [--build {DEBUG,PROD}] [--enable-shared {yes,no}]
 
 options:
   -h, --help            show this help message and exit
@@ -74,12 +71,12 @@ options:
   --integrated          installation in platform specific subdir
   --install             proceed with install automatically after the build
   --gnatcov             build project with gnatcov instrumentation
-  --configure-only      only perform configuration (i.e: update of project
-                        constants and creation of json file). Can be used to
-                        integrate with Alire
-  --disable-constant-updates
-                        Do not update constants in GPR file and use only
-                        -XVAR=VALUE to pass configuration to gpr tools
+  --symcc               build project with symcc intrumentation (works only with LLVM)
+  --configure-only      only perform configuration (i.e: update of project constants and creation of
+                        json file). Can be used to integrate with Alire
+  --enable-constant-updates
+                        Update constants in GPR files in order to pass conviently the result of the
+                        configuration to tools such as IDE and Alire.
 
 project specific options:
   --build {DEBUG,PROD}
@@ -137,15 +134,13 @@ abstract project GNATCOLL_Minimal_Constants is
 end GNATCOLL_Minimal_Constants;
 ```
 
-This update can be skipped by passing `--disable-constant-updates`.
-In that case the Python script will pass only -XVAR=VALUE options to
-the GPR tools to pass the selected configuration.
+This update can be enabled by passing `--enable-constant-updates`.
 
 Having a project with the updated defaults ease work with:
 
-* `Alire`: You can use `build --configure-only` command to as a pre-build
-  step in the `Alire` configuration to generate the right values for the
-  scenario variables
+* `Alire`: You can use `build --configure-only --enable-constant-update`
+  command to as a pre-build step in the `Alire` configuration to generate
+  the right values for the scenario variables
 * `IDE`: When opening the project the right value is automatically selected
   for all the scenario variables
 
