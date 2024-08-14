@@ -583,9 +583,23 @@ package body GNATCOLL.JSON is
                      (Utility.Un_Escape_String (Str, Str'First, Str'Last));
                end;
             when INTEGER_VALUE =>
-               Tmp := Create
-                  (Long_Long_Integer'Value
-                     (Token (Data, Event.First, Event.Last)));
+               --  Constraint_Error in Ada might occur for distinct reasons.
+               --  try to limit the scope of the Constraint_Error exception
+               --  handler to errors caused by an int too big to fit into a
+               --  Long_Long_Integer.
+               declare
+                  Int_Value : Long_Long_Integer;
+               begin
+                  begin
+                     Int_Value := Long_Long_Integer'Value
+                        (Token (Data, Event.First, Event.Last));
+                  exception
+                     when Constraint_Error =>
+                        raise Invalid_JSON_Stream
+                        with "integer number not in Long_Long_Integer range";
+                  end;
+                  Tmp := Create (Int_Value);
+               end;
             when NUMBER_VALUE =>
                Tmp := Create
                   (Long_Float'Value (Token (Data, Event.First, Event.Last)));

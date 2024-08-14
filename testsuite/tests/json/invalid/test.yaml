@@ -192,3 +192,4 @@ data_files:
     "n_structure_whitespace_formfeed.json": "n structure whitespace formfeed"
     "n_multiple_tokens.json": "concatenated tokens"
     "n_incomplete_null_token.json": "incomplete null token"
+    "n_number_int_too_large_adacore.json": "integer number too large"
