@@ -104,7 +104,7 @@ package body GNATCOLL.Buffer is
    procedure Finalize (Self : in out Reader) is
       use Mmap;
    begin
-      if Self.Auto_Close_FD then
+      if Self.Auto_Close_FD and then Self.FD /= FS.Invalid_FD then
          FS.Close (Self.FD);
       end if;
 
