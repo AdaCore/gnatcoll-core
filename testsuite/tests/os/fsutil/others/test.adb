@@ -1,3 +1,4 @@
+with GNATCOLL.OS;        use GNATCOLL.OS;
 with GNATCOLL.OS.FSUtil; use GNATCOLL.OS.FSUtil;
 with GNATCOLL.OS.FS;     use GNATCOLL.OS.FS;
 with GNATCOLL.OS.Stat;   use GNATCOLL.OS.Stat;
@@ -22,6 +23,23 @@ begin
         (SHA256_Str,
          "93827371a7c9502512672999a530fb55999b054d4a05af3c2c02290bdded0d4c",
          "Check sha256");
+   end;
+
+   --  The Invalid_Path_File exception shall be raised when the file to be
+   --  hashed does not exist.
+
+   begin
+      declare
+         SHA1_Str : constant String := String (SHA1 ("./does-not-exist"));
+         pragma Unreferenced (SHA1_Str);
+      begin
+         A.Assert (False);
+      end;
+   exception
+      when OS_Error =>
+         A.Assert (True);
+      when others =>
+         A.Assert (False);
    end;
 
    --  Check file copying

@@ -53,7 +53,8 @@ package GNATCOLL.OS.FSUtil is
        Buffer_Size : Positive := FS.Default_Buffer_Size)
       return Result_Type;
    --  Generic function to iterate other a file content and compute some
-   --  metrics
+   --  metrics. The OS_Error exception is raised if the file cannot be
+   --  opened.
 
    --------------------
    -- Hash functions --
