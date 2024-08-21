@@ -423,5 +423,22 @@ begin
 
    A.Assert (G.Shortest_Path (N3, N1) = Empty_Node_Vector);
 
+   declare
+      Node : Node_Id;
+   begin
+      G.Clear;
+      N1 := G.Add_Node;
+      N2 := G.Add_Node (Predecessors => (1 => N1));
+      N3 := G.Add_Node (Predecessors => (1 => N2));
+
+      G.Start_Iterator (True);
+      A.Assert (G.Next (Node) and then Node = N1);
+      G.Complete_Visit (N1);
+      G.Add_Predecessor (N3, N1);
+      A.Assert (G.Next (Node) and then Node = N2);
+      G.Complete_Visit (N2);
+      A.Assert (G.Next (Node) and then Node = N3);
+   end;
+
    return A.Report;
 end Test;

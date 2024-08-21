@@ -102,6 +102,7 @@ package body GNATCOLL.Directed_Graph is
       Node        : Node_Id;
       Predecessor : Node_Id)
    is
+      Prev_Length : Ada.Containers.Count_Type;
    begin
       if not Self.Contains (Node) then
          raise DG_Error with "Non existing node";
@@ -115,8 +116,13 @@ package body GNATCOLL.Directed_Graph is
          raise DG_Error with "Predecessor cannot be the node itself";
       end if;
 
+      Prev_Length := Self.Predecessors (Integer (Node)).Length;
       Self.Internal_Add_Predecessor (Node, Predecessor);
-      Self.Is_Cache_Valid := False;
+
+      if Self.Predecessors (Integer (Node)).Length > Prev_Length then
+         Self.Is_Cache_Valid := False;
+         Self.Update_List.Append (Node);
+      end if;
    end Add_Predecessor;
 
    ----------------------
@@ -128,6 +134,7 @@ package body GNATCOLL.Directed_Graph is
       Node         : Node_Id;
       Predecessors : Node_Set := Empty_Node_Set)
    is
+      Prev_Length : Ada.Containers.Count_Type;
    begin
       if not Self.Contains (Node) then
          raise DG_Error with "Non existing node";
@@ -141,11 +148,17 @@ package body GNATCOLL.Directed_Graph is
          raise DG_Error with "Predecessor cannot be the node itself";
       end if;
 
+      Prev_Length := Self.Predecessors (Integer (Node)).Length;
+
       for Pred of Predecessors loop
          Self.Internal_Add_Predecessor (Node, Pred);
       end loop;
 
-      Self.Is_Cache_Valid := False;
+      if Self.Predecessors (Integer (Node)).Length > Prev_Length then
+         Self.Is_Cache_Valid := False;
+         Self.Update_List.Append (Node);
+      end if;
+
    end Add_Predecessors;
 
    --------------------
@@ -350,13 +363,17 @@ package body GNATCOLL.Directed_Graph is
       --  Check if new nodes were added
 
       if Self.Graph_Next_Free_Node < Graph.Next_Free_Node then
+
          for N in Self.Graph_Next_Free_Node .. Graph.Next_Free_Node - 1 loop
+
+            --  Add the new node the list of non visited nodes
             Self.Non_Visited.Include (N);
+
             declare
                Visited_Pred : Integer := 0;
             begin
                --  Update the number of visited predecessors for the new nodes
-
+               --  by checking whether any of the predecessors has been visited
                for Pred of Graph.Predecessors (Integer (N)) loop
                   if not Self.Non_Visited.Contains (Pred) and then
                      not Self.Visiting.Contains (Pred)
@@ -365,11 +382,41 @@ package body GNATCOLL.Directed_Graph is
                   end if;
                end loop;
 
+               --  Extend the visited predecessor array with the information of
+               --  the new node
                Self.Visited_Predecessors.Append (Visited_Pred);
             end;
          end loop;
 
+         --  Keep track that the new node have been taken into account.
          Self.Graph_Next_Free_Node := Graph.Next_Free_Node;
+      end if;
+
+      --  Check if new predecessors were added on existing nodes
+      if Self.Graph_Update_List_Last < Graph.Update_List.Length then
+         for Idx in Self.Graph_Update_List_Last + 1 .. Graph.Update_List.Length
+         loop
+            declare
+               N : constant Node_Id := Graph.Update_List (Integer (Idx));
+               Visited_Pred : Integer := 0;
+            begin
+               --  Update the number of visited predecessors for the updated
+               --  nodes by checking whether any of the predecessors has been
+               --  visited
+               for Pred of Graph.Predecessors (Integer (N)) loop
+                  if not Self.Non_Visited.Contains (Pred) and then
+                     not Self.Visiting.Contains (Pred)
+                  then
+                     Visited_Pred := Visited_Pred + 1;
+                  end if;
+               end loop;
+
+               Self.Visited_Predecessors (Integer (N)) := Visited_Pred;
+            end;
+         end loop;
+
+         --  Update marker
+         Self.Graph_Update_List_Last := Graph.Update_List.Length;
       end if;
 
       --  If all nodes have been visited it means that we have reached the

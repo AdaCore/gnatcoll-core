@@ -267,6 +267,9 @@ private
       --  Used to detect addition of new nodes in the Graph linked to the
       --  iterator.
 
+      Graph_Update_List_Last : Ada.Containers.Count_Type := 0;
+      --  Used to detect addition of predecessors in existing nodes
+
       Enable_Visiting_State : Boolean := False;
       --  Indicate if there is an intermediate state "Visiting" between the
       --  "Non_Visited" and "Visited" ones.
@@ -299,6 +302,10 @@ private
 
       Iterator       : DAG_Iterator;
       --  Internal iterator
+
+      Update_List : Node_Vectors.Vector;
+      --  Keep track of add_predecessor operations. Needed in order to track
+      --  changes during iterations.
    end record;
 
 end GNATCOLL.Directed_Graph;
