@@ -61,7 +61,7 @@ default:
 
 .job_template:
   services:
-    - image:e3
+    - image:pe-base
     - cpu:4
   interruptible: true
 
@@ -71,7 +71,7 @@ default:
 
 build_doc:
   services:
-    - image:e3
+    - image:pe-base
     - cpu:2
   stage: build
   script:
