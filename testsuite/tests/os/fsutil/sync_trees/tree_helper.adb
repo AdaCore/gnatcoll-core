@@ -131,9 +131,10 @@ package body Tree_Helper is
          Outputs.Append (Message);
       end Handle_File;
 
-      S : constant String := Path (Open (Src));
-
+      Src_Handle : Dir_Handle := Open (Src);
+      S          : constant String := Path (Src_Handle);
    begin
+      Close (Src_Handle);
 
       --  Remove the src directory name from absolute source path, to obtain
       --  the absolute path common to source and destination directories.
@@ -245,8 +246,11 @@ package body Tree_Helper is
          end if;
       end Handle_File;
 
-      S : constant String := Path (Open (Src));
+      Src_Handle : Dir_Handle := Open (Src);
+      S          : constant String := Path (Src_Handle);
    begin
+
+      Close (Src_Handle);
 
       IO.Put_Line ("Content checking");
       IO.Put_Line ("================");
