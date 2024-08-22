@@ -74,17 +74,30 @@ package body GNATCOLL.OS.FSUtil is
       Context : State_Type;
       N       : Integer;
       Buffer  : String_Access;
+
+      use all type FS.File_Descriptor;
    begin
       Set_Initial_State (Context);
       FD := FS.Open (Path => Path, Advise_Sequential => True);
 
+      if FD = FS.Invalid_FD then
+         raise OS_Error with "Failed to open " & String (Path);
+      end if;
+
       Buffer := new String (1 .. Buffer_Size);
 
-      loop
-         N := FS.Read (FD, Buffer.all);
-         exit when N = 0;
-         Update (Context, Buffer (1 .. N));
-      end loop;
+      begin
+         loop
+            N := FS.Read (FD, Buffer.all);
+            exit when N = 0;
+            Update (Context, Buffer (1 .. N));
+         end loop;
+      exception
+         when others =>
+            FS.Close (FD);
+            Free (Buffer);
+            raise;
+      end;
 
       FS.Close (FD);
       Free (Buffer);
