@@ -213,6 +213,15 @@ build_and_test_x86_64_linux_llvm:
     TEST_DIR: gnatcoll-core_gnat-llvm_test
     FATAL_ERRORS: false
 
+build_and_test_x86_64_linux_valgrind:
+  extends: .build_and_test_x86_64_linux_template
+  allow_failure: true
+  variables:
+    BUILD_ARGS: ""
+    TEST_ARGS: -Qvalgrind
+    TEST_DIR: gnatcoll-core_valgrind_test
+    FATAL_ERRORS: false # TODO: set to True once all the leaks have been fixed
+
 build_and_test_coverage:
   extends: .job_template
   stage: build
