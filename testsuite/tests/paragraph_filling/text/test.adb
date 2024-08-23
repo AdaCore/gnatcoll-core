@@ -35,10 +35,10 @@ function Test return Integer is
 
    subtype Acc is GNAT.Strings.String_Access;
 
-   S_In : constant Acc := Read_File (Create_From_Base ("in.txt"));
-   S_Gr : constant Acc := Read_File (Create_From_Base ("greedy.txt"));
-   S_Pr : constant Acc := Read_File (Create_From_Base ("pretty.txt"));
-   S_Kn : constant Acc := Read_File (Create_From_Base ("knuth.txt"));
+   S_In : Acc := Read_File (Create_From_Base ("in.txt"));
+   S_Gr : Acc := Read_File (Create_From_Base ("greedy.txt"));
+   S_Pr : Acc := Read_File (Create_From_Base ("pretty.txt"));
+   S_Kn : Acc := Read_File (Create_From_Base ("knuth.txt"));
 
 begin
 
@@ -57,6 +57,11 @@ begin
    --  Test Knuth option
    A.Assert (S_Kn.all, ASU.To_String (Knuth_Fill (S_In.all, 60)),
              "Knuth fill");
+
+   GNAT.Strings.Free (S_In);
+   GNAT.Strings.Free (S_Gr);
+   GNAT.Strings.Free (S_Pr);
+   GNAT.Strings.Free (S_Kn);
 
    return A.Report;
 end Test;
