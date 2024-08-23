@@ -72,7 +72,17 @@ function Test return Integer is
       Write (W, "first word ");
       Close (W);
       W := Write_File (F, Append => True);
-      Write (W, Interfaces.C.Strings.New_String ("second word"));
+
+      declare
+         use Interfaces.C.Strings;
+
+         C_String : chars_ptr :=
+           Interfaces.C.Strings.New_String ("second word");
+      begin
+         Write (W, C_String);
+         Free (C_String);
+      end;
+
       Close (W);
 
       --  Check whether the file exists
