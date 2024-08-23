@@ -664,6 +664,7 @@ package body GNATCOLL.JSON is
 
       end loop;
 
+      Deallocate (Current_Key);
       Free (Read_States);
       return (Success => True, Value => Result);
    exception

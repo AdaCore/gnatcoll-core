@@ -363,6 +363,19 @@ package body GNATCOLL.OS.Dir is
       Deallocate_Stack (Stack);
    exception
       when others =>
+         if Is_Opened (Cur_Dir) then
+            Close (Cur_Dir);
+         end if;
+
+         declare
+            Stacked_Dir : Dir_Handle;
+         begin
+            while not Is_Empty (Stack) loop
+               Stacked_Dir := Pop (Stack);
+               Close (Stacked_Dir);
+            end loop;
+         end;
+
          Deallocate_Stack (Stack);
 
          if Propagate_Exceptions then
