@@ -22,11 +22,12 @@
 ------------------------------------------------------------------------------
 
 with GNATCOLL.Promises; use GNATCOLL.Promises;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 package Test_Promises_Support is
 
    Baseline : Integer := 0;
-   Message : access String;
+   Message : Unbounded_String;
    --  Values that Assert routines should verify
 
    package Int_Promises is new Promises (Integer);

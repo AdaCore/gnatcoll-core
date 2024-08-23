@@ -80,7 +80,7 @@ package body Test_Promises_Support is
       pragma Unreferenced (Self);
    begin
       Put_Line ("Display_String.Failed because " & Reason);
-      A.Assert (Reason, Message.all, "expected reason");
+      A.Assert (Reason, To_String (Message), "expected reason");
    end On_Error;
 
    overriding procedure On_Next

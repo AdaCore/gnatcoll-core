@@ -24,6 +24,7 @@
 with Ada.Text_IO;            use Ada.Text_IO;
 with GNATCOLL.Promises;      use GNATCOLL.Promises;
 with Test_Promises_Support;  use Test_Promises_Support;
+with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
 
 with Test_Assert;
 
@@ -64,7 +65,7 @@ begin
                 and new Convert_Float
                 and new Display_String);
    Put_Line ("Failing...");
-   Message := new String'("Explicit failure");
+   Message := To_Unbounded_String ("Explicit failure");
    P.Set_Error ("Explicit failure");
    A.Assert (A.Assert_Count, 7, "expected number of asserts #2");
 
@@ -74,7 +75,8 @@ begin
                 and new Fail_On_Float
                 and (new Display_String & new Display_String));
    Baseline := 3;
-   Message := new String'("explicit");
+
+   Message := To_Unbounded_String ("explicit");
    P.Set_Value (3);
    A.Assert (A.Assert_Count, 11, "expected number of asserts #3");
 
