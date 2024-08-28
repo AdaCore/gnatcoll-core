@@ -29,6 +29,10 @@
 
 #endif
 
+#elif defined(__vxworks)
+#include "vxWorks.h"
+#include <sys/time.h>
+
 #else
 #error "Cannot define getPeakRSS( ) or getCurrentRSS( ) for an unknown OS."
 #endif
