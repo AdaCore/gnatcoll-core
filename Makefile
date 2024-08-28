@@ -69,6 +69,7 @@ endif
 prefix := $(dir $(shell $(WHICH) gnatls))..
 
 GNATCOLL_PROJECTS := yes
+GNATCOLL_MINIMAL_ONLY := no
 BUILD         = PROD
 PROCESSORS    = 0
 ENABLE_SHARED = yes
@@ -111,7 +112,10 @@ else
 endif
 
 	$(PYTHON) $(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py build $(INSTR_BUILD_OPTS) $(BUILD_ARGS)
+
+ifeq ($(GNATCOLL_MINIMAL_ONLY), no)
 	$(PYTHON) $(SOURCE_DIR)/core/gnatcoll_core.gpr.py build $(INSTR_BUILD_OPTS) $(BUILD_ARGS)
+endif
 
 ifeq ($(GNATCOLL_PROJECTS), yes)
 	$(PYTHON) $(SOURCE_DIR)/projects/gnatcoll_projects.gpr.py build $(INSTR_BUILD_OPTS) $(BUILD_ARGS)
