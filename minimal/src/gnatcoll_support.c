@@ -30,6 +30,13 @@
 #include <windows.h>
 #endif
 
+#if defined (__vxworks)
+/* S_IREAD is not defined on VxWorks */
+#ifndef S_IREAD
+#define S_IREAD  (S_IRUSR | S_IRGRP | S_IROTH)
+#endif
+#endif
+
 #ifdef HAVE_SYSLOG
 #include <syslog.h>
 void
