@@ -1,4 +1,4 @@
 title: GNATCOLL.Utils.Executable_Path
 control:
   - [XFAIL, "env.is_cross and env.build.os.name == 'linux'",
-     "eng/toolchain/gnatcoll-core#52 is solved"]
+     "until eng/toolchain/gnatcoll-core#52 is solved"]
