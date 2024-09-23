@@ -6,11 +6,11 @@
 
 Memory management is often a difficulty in defining an API. Should we let
 the user be responsible for freeing the types when they are no longer needed,
-or can we do it automatically on his behalf ?
+or can we do it automatically on his behalf?
 
 The latter approach is somewhat more costly in terms of efficiency (since
 we need extra house keeping to know when the type is no longer needed), but
-provides an easier to use API.
+it provides an easier to use API.
 
 Typically, such an approach is implemented using reference counting: all
 references to an object increment a counter. When a reference disappears,
@@ -71,7 +71,7 @@ it can get tricky: when there is a cycle between two reference counted objects
 (one includes a reference to the other, and the other a reference to the
 first), their counter can never become 0, and thus they are never freed.
 
-There are, however, common design patterns where this can severly interfer:
+There are, however, common design patterns where this can severly interfere:
 imagine you want to have a `Map`, associating a name with a reference
 counted object. Typically, the map would be a cache of some sort. While the
 object exists, it should be referenced in the map. So we would like the Map
