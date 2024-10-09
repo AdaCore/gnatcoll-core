@@ -1,4 +1,5 @@
 with GNATCOLL.OS.FSUtil;    use GNATCOLL.OS.FSUtil;
+with GNATCOLL.Hash.Blake3;  use GNATCOLL.Hash.Blake3;
 with GNATCOLL.OS.FS;        use GNATCOLL.OS.FS;
 with GNATCOLL.File_Indexes; use GNATCOLL.File_Indexes;
 with GNATCOLL.OS.Stat;
@@ -12,7 +13,7 @@ function Test return Integer is
    FD : File_Descriptor;
    File_Index : GNATCOLL.File_Indexes.File_Index;
    State : Entry_State;
-   Digest : SHA1_Digest;
+   Digest : Blake3_Digest;
    Total_Size : Integer := 0;
    File_1_Length : Integer;
 
@@ -28,9 +29,12 @@ begin
    Close (FD);
 
    Hash (File_Index, "file_1", State, Digest);
-   Assert (Digest, "d50b4407ded5f724d783dae8df84b78f7aa2b058");
    Assert
-     (Hash (File_Index, "file_1"), "d50b4407ded5f724d783dae8df84b78f7aa2b058");
+      (Digest,
+       "ae85d337fcdd96a5e59c2729862d9698c014d60a71f9d970094c30526e779270");
+   Assert
+     (Hash (File_Index, "file_1"),
+      "ae85d337fcdd96a5e59c2729862d9698c014d60a71f9d970094c30526e779270");
    Assert (Entry_State'Pos (State), Entry_State'Pos (NEW_FILE));
 
    File_1_Length := Integer (St.Length (St.Stat ("file_1")));
@@ -44,7 +48,9 @@ begin
    Close (FD);
 
    Hash (File_Index, "file_2", State, Digest);
-   Assert (Digest, "456e1639ca781486249d61e64bae7a852a3ef4ed");
+   Assert
+      (Digest,
+       "9702b5fec0d266e8ae1d22303572c2bb078fcfc727dcd70831eb81c863704e73");
    Assert (Entry_State'Pos (State), Entry_State'Pos (NEW_FILE));
 
    Total_Size := Total_Size + Integer (St.Length (St.Stat ("file_2")));
@@ -55,7 +61,9 @@ begin
    --  File 1
 
    Hash (File_Index, "file_1", State, Digest);
-   Assert (Digest, "d50b4407ded5f724d783dae8df84b78f7aa2b058");
+   Assert
+      (Digest,
+       "ae85d337fcdd96a5e59c2729862d9698c014d60a71f9d970094c30526e779270");
    Assert (Entry_State'Pos (State), Entry_State'Pos (UNCHANGED_FILE));
 
    FD := Open ("file_1", Mode => Append_Mode);
@@ -63,7 +71,9 @@ begin
    Close (FD);
 
    Hash (File_Index, "file_1", State, Digest);
-   Assert (Digest, "50989c91ed821899ed777887daa0d3512fa18e3c");
+   Assert
+      (Digest,
+       "7a5bc31122404d1c8bb158ac7d14927423752f5a0eefd4093097c13bb222aa07");
    Assert (Entry_State'Pos (State), Entry_State'Pos (UPDATED_FILE));
 
    Total_Size := Total_Size - File_1_Length;
@@ -72,7 +82,9 @@ begin
    Assert (Integer (Indexed_Content_Size (File_Index)), Total_Size);
 
    Hash (File_Index, "file_1", State, Digest);
-   Assert (Digest, "50989c91ed821899ed777887daa0d3512fa18e3c");
+   Assert
+      (Digest,
+       "7a5bc31122404d1c8bb158ac7d14927423752f5a0eefd4093097c13bb222aa07");
    Assert (Entry_State'Pos (State), Entry_State'Pos (UNCHANGED_FILE));
 
    Assert (Remove_File ("file_1"));

@@ -21,20 +21,20 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  Provide an implementation for an efficient cache of file SHA1 checksums.
+--  Provide an implementation for an efficient cache of file checksums.
 
 with Ada.Containers.Indefinite_Hashed_Maps;
 with Ada.Calendar;
 with Ada.Strings.Hash;
 with Ada.Strings.UTF_Encoding;
-with GNATCOLL.OS.FSUtil;
+with GNATCOLL.Hash.Blake3;
 with GNATCOLL.OS.Stat;
 
 package GNATCOLL.File_Indexes is
 
    package UTF8 renames Ada.Strings.UTF_Encoding;
    package Stat renames GNATCOLL.OS.Stat;
-   package FSUtil renames GNATCOLL.OS.FSUtil;
+   package Blake3 renames GNATCOLL.Hash.Blake3;
 
    type File_Index is private;
    --  A database tracking SHA1 of a set of files. The caching mechanism
@@ -62,7 +62,8 @@ package GNATCOLL.File_Indexes is
        Path   : UTF8.UTF_8_String;
        Attrs  : Stat.File_Attributes;
        State  : out Entry_State;
-       Digest : out FSUtil.SHA1_Digest);
+       Digest : out Blake3.Blake3_Digest)
+   with Inline => True;
    --  Get the hash digest for the file located at Path and with file
    --  attributes Attrs (obtained with a call to GNATCOLL.OS.Stat). See
    --  Entry_State documentation for the meaning of State.
@@ -75,12 +76,12 @@ package GNATCOLL.File_Indexes is
       (Self   : in out File_Index;
        Path   : UTF8.UTF_8_String;
        State  : out Entry_State;
-       Digest : out FSUtil.SHA1_Digest);
+       Digest : out Blake3.Blake3_Digest);
    --  Same as previous function except that a call to Stat is done
    --  automatically to get file attributes.
 
    function Hash (Self : in out File_Index; Path : UTF8.UTF_8_String)
-      return FSUtil.SHA1_Digest;
+      return Blake3.Blake3_Digest;
    --  Same as previous function without State as output.
 
    --  procedure Save_Index (Self : File_Index; Filename : UTF8.UTF_8_String);
@@ -96,7 +97,7 @@ private
 
    type Index_Element is record
       Attrs        : Stat.File_Attributes;
-      Hash_Digest  : FSUtil.SHA1_Digest;
+      Hash_Digest  : Blake3.Blake3_Digest;
       Trust_Hash   : Boolean;
       Save_On_Disk : Boolean;
    end record;
