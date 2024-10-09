@@ -145,7 +145,9 @@ Here is a short example of a configuration file. It activates all handles
 by default, and defines four handles: two of them are directed to the
 default stream (standard error), the third one to a file on the disk,
 and the last one to the system logger syslog (if your system supports it,
-otherwise to the default stream, ie standard error)::
+otherwise to the default stream, ie standard error):
+
+.. code-block::
 
   +
   >&2
@@ -261,7 +263,10 @@ configure `GNATCOLL.TRACES` to use special streams for those.
 `Trace (Me, E)` will therefore not used `Me` itself as the log handle,
 but will create (on the fly, the first time) a new handle with the same
 base name and and `.EXCEPTIONS` suffix. Therefore, you could put the
-following in your configuration file::
+following in your configuration file:
+
+.. code:: bash
+   :force:
 
    # Redirect all exceptions to stdout
    *.EXCEPTIONS=yes >& stdout

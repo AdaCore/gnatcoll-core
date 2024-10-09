@@ -7,27 +7,9 @@ GNATColl Core Components
 
    intro
    building
-   scripting
-   traces
-   strings
-   memory
-   mmap
-   boyer_moore
-   filling
-   templates
-   email
-   ravenscar
-   storage_pools
-   vfs
-   tribooleans
-   geometry
-   projects
-   refcount
-   config
-   pools
-   json
-   terminals
-   promises
+   minimal/index
+   core/index
+   projects/index
 
 Indices and tables
 ==================
