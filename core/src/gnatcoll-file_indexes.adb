@@ -25,13 +25,6 @@ with GNAT.OS_Lib;
 
 package body GNATCOLL.File_Indexes is
 
-   procedure Internal_Hash
-      (Self            : in out File_Index;
-       Normalized_Path : UTF8.UTF_8_String;
-       Attrs           : Stat.File_Attributes;
-       State           : out Entry_State;
-       Digest          : out Blake3.Blake3_Digest);
-
    -----------------
    -- Clear_Cache --
    -----------------
@@ -49,10 +42,10 @@ package body GNATCOLL.File_Indexes is
    function Hash
       (Self  : in out File_Index;
        Path  : UTF8.UTF_8_String)
-      return Blake3.Blake3_Digest
+      return FSUtil.SHA1_Digest
    is
       State : Entry_State;
-      Digest : Blake3.Blake3_Digest;
+      Digest : FSUtil.SHA1_Digest := FSUtil.Invalid_SHA1;
    begin
       Hash (Self => Self, Path => Path, State => State, Digest => Digest);
       return Digest;
@@ -62,13 +55,12 @@ package body GNATCOLL.File_Indexes is
       (Self   : in out File_Index;
        Path   : UTF8.UTF_8_String;
        State  : out Entry_State;
-       Digest : out Blake3.Blake3_Digest)
+       Digest : out FSUtil.SHA1_Digest)
    is
       Normalized_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
-         (Path, Resolve_Links => False);
+         (Path, Resolve_Links => True);
    begin
-      Internal_Hash
-         (Self, Normalized_Path, Stat.Stat (Normalized_Path), State, Digest);
+      Hash (Self, Normalized_Path, Stat.Stat (Normalized_Path), State, Digest);
    end Hash;
 
    procedure Hash
@@ -76,35 +68,18 @@ package body GNATCOLL.File_Indexes is
        Path       : UTF8.UTF_8_String;
        Attrs      : Stat.File_Attributes;
        State      : out Entry_State;
-       Digest     : out Blake3.Blake3_Digest)
-   is
-   begin
-      Internal_Hash
-         (Self,
-          GNAT.OS_Lib.Normalize_Pathname (Path, Resolve_Links => False),
-          Attrs,
-          State,
-          Digest);
-   end Hash;
-
-   -------------------
-   -- Internal_Hash --
-   -------------------
-
-   procedure Internal_Hash
-      (Self            : in out File_Index;
-       Normalized_Path : UTF8.UTF_8_String;
-       Attrs           : Stat.File_Attributes;
-       State           : out Entry_State;
-       Digest          : out Blake3.Blake3_Digest)
+       Digest     : out FSUtil.SHA1_Digest)
    is
       use File_Maps;
       use type Stat.File_Attributes;
       use type Ada.Calendar.Time;
 
+      Normalized_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
+         (Path, Resolve_Links => True);
+
       Prev_Cursor    : Cursor := Find (Self.DB, Normalized_Path);
-      Prev_Hash      : Blake3.Blake3_Digest;
-      New_Hash       : Blake3.Blake3_Digest;
+      Prev_Hash      : FSUtil.SHA1_Digest := FSUtil.Invalid_SHA1;
+      New_Hash       : FSUtil.SHA1_Digest := FSUtil.Invalid_SHA1;
       Trust_New_Hash : Boolean := True;
    begin
 
@@ -145,7 +120,7 @@ package body GNATCOLL.File_Indexes is
 
       begin
          --  Compute the new hash
-         New_Hash := Blake3.Blake3_File_Hash (Path => Normalized_Path);
+         New_Hash := FSUtil.SHA1 (Path => Normalized_Path);
       exception
          when others =>
             State := UNHASHABLE_FILE;
@@ -177,7 +152,7 @@ package body GNATCOLL.File_Indexes is
       end if;
 
       Digest := New_Hash;
-   end Internal_Hash;
+   end Hash;
 
    --------------------------
    -- Indexed_Content_Size --
