@@ -7,9 +7,8 @@ GNATColl Core Components
 
    intro
    building
-   minimal/index
-   core/index
-   projects/index
+   user_index
+   ref_index
 
 Indices and tables
 ==================
