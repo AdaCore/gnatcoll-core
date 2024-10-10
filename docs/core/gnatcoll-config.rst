@@ -18,7 +18,9 @@ the one used by a lot of Windows applications (the :file:`.ini` file format).
 `GNATCOLL.Config` is independent from the actual format you are using,
 and you can add your own parsers compatible with the `GNATCOLL.Config`
 API. Out of the box, support is provided for :file:`.ini` files, so let's
-detail this very simply format::
+detail this very simply format:
+
+.. code:: ini
 
   # A single-line comment
   [Section1]

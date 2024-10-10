@@ -77,6 +77,12 @@ build_doc:
   script:
     - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
     - anod build --latest gnatcoll-core-doc
+    - mv $ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gnatcoll-core-doc/install doc-build
+  artifacts:
+    when:
+      always
+    paths:
+      - doc-build
 
 build-windows:
   services:

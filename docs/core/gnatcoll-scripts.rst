@@ -32,7 +32,9 @@ even distributed with future versions of your application.
 The module in GNATColl helps you implement the third solution. It was
 used extensively in the GPS programming environment for its python interface.
 
-|Tip| Each of the scripting language is optional
+.. tip::
+
+   Each of the scripting language is optional
 
 This module can be compiled with any of these languages as an optional
 dependency (except for the shell language, which is always built-in, but is
@@ -45,8 +47,10 @@ language.
 .. index:: test driver
 .. index:: testing your application
 
-|Tip| Use a scripting language to provide an automatic testing framework for
-your application.
+.. tip:: 
+
+   Use a scripting language to provide an automatic testing framework for
+   your application.
 
 The GPS environment uses python command for its *automatic test suite*,
 including graphical tests such as pressing on a button, selecting a
@@ -268,9 +272,11 @@ compiles), although of course it does nothing. But since the rest of the
 code is independent of python, this is totally transparent for your
 application.
 
-|Tip| GNATColl comes with some examples, which you can use
-as a reference when building your own application.
-See the :file:`<prefix>/share/examples/gnatcoll` directory.
+.. Tip::
+
+   GNATColl comes with some examples, which you can use as a reference
+   when building your own application. See the
+   :file:`<prefix>/share/examples/gnatcoll` directory.
 
 Interfacing your application with the scripting module is a multistep
 process:
@@ -353,10 +359,12 @@ available to users. This must be done before any function is exported,
 since only functions exported after a language has been loaded will be
 made available in that language.
 
-|Note| If for instance python support was build into GNATColl, and
-if you decide not to make it available to users, your application will
-still be linked with :file:`libpython`. It is therefore recommended although
-not mandatory to only build those languages that you will use.
+.. Note::
+
+   If for instance python support was build into GNATColl, and if you
+   decide not to make it available to users, your application will still
+   be linked with :file:`libpython`. It is therefore recommended although
+   not mandatory to only build those languages that you will use.
 
 This is done through a simple call to one or more subprograms. The following
 example registers both the shell and python languages::
@@ -422,8 +430,10 @@ GNATColl solved this problem by using an abstract class
 consoles. This API is used throughout `GNATCOLL.Scripts` whenever input or
 output has to be performed.
 
-|Tip| The :file:`examples/` directory in the GNATColl package
-shows how to implement a console in text mode and in graphical mode.
+.. tip::
+
+   The :file:`examples/` directory in the GNATColl package shows how to
+   implement a console in text mode and in graphical mode.
 
 If you want to provide feedback or interact with users, you will need to
 provide an actual implementation for these `Virtual_Console`, specific

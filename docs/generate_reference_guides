@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+import os
+import re
+import shutil
+import sys
+
+SOURCE_DIRS = {
+    "minimal": ["../minimal/src"],
+    "core": ["../core/src", "../core/src/os"],
+    "projects": ["../projects/src"],
+}
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+REF_GUIDES_DIR = os.path.join(ROOT_DIR, "refs")
+SOURCE_REGEXP = re.compile(
+    "|".join(
+        [
+            "(?:package|function|procedure) (?P<entity_name>[^ ]+)",
+            "(?P<output>generic|end )",
+            "(?P<no_output>private$)",
+            "(?P<skip_src>private package)",
+        ]
+    )
+)
+
+if __name__ == "__main__":
+    if os.path.isdir(REF_GUIDES_DIR):
+        shutil.rmtree(REF_GUIDES_DIR)
+    os.mkdir(REF_GUIDES_DIR)
+
+    for project in ("minimal", "core", "projects"):
+        print(f"Generate reference docs for gnatcoll {project}")
+        os.mkdir(os.path.join(REF_GUIDES_DIR, project))
+
+        for source_dir in SOURCE_DIRS[project]:
+            for src in os.listdir(source_dir):
+                # Consider only specifications
+                if not src.endswith(".ads"):
+                    continue
+
+                base = os.path.basename(src)[:-4]
+
+                # Detect package variants
+                if "__" in base:
+                    variant = base.split("__", 1)[1]
+                else:
+                    variant = ""
+
+                # Parse the source file and extract the public API
+                with open(os.path.join(source_dir, src)) as fd:
+                    content = fd.read().splitlines()
+
+                entity_name = None
+                skip_src = False
+
+                with open(f"refs/{project}/{os.path.basename(src)}", "w") as fd:
+                    output_line = False
+                    for line in content:
+                        m = re.match(SOURCE_REGEXP, line)
+                        if m is not None:
+                            if m.group("entity_name") is not None:
+                                output_line = True
+                                entity_name = m.group("entity_name")
+                            elif m.group("no_output"):
+                                output_line = False
+                            elif m.group("output"):
+                                output_line = True
+                            elif m.group("skip_src"):
+                                skip_src = True
+                                break
+                        if output_line:
+                            fd.write(line + "\n")
+
+                if skip_src:
+                    print(f"  Skip reference doc {base}")
+                    continue
+
+                print(f"  Generate reference doc for {base}")
+
+                if entity_name is None:
+                    print("Error while parsing Ada sources")
+                    sys.exit(1)
+
+                # Generate a ReST file that includes the generated Ada extract
+                with open(f"refs/{project}/ref-{base}-A.rst", "w") as fd:
+                    title = entity_name
+                    if variant:
+                        title += f" ({variant})"
+
+                    fd.write(f"{title}\n")
+                    fd.write(len(title) * "=" + "\n\n")
+                    fd.write(f".. literalinclude:: {os.path.basename(src)}\n")
+                    fd.write("     :language: ada\n")
+                    fd.write("\n")

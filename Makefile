@@ -125,6 +125,13 @@ install:
 	@echo "Installing gnatcoll into $(prefix)"
 	rsync -av ./local-install/ $(prefix)$(integrated_install)  
 
+# Documentation
+doc:
+	(python3 -m venv doc-env && \
+	 export PATH=`pwd`/doc-env/bin:$$PATH && \
+	 pip install sphinx sphinx_rtd_theme && \
+	 cd docs && make html)
+
 ###########
 # Cleanup #
 ###########
