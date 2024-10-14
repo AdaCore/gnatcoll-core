@@ -1,5 +1,6 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNAT.Source_Info;
+with GNATCOLL.Buffer;  use GNATCOLL.Buffer;
 with GNATCOLL.JSON;    use GNATCOLL.JSON;
 with GNATCOLL.Strings; use GNATCOLL.Strings;
 
@@ -189,6 +190,25 @@ begin
 
    Check_Error (Read ("{"), "1:1: string expected");
    Check_Error (Read (To_Unbounded_String ("{")), "1:1: string expected");
+
+   declare
+      Parser : JSON_Parser;
+      Buff   : Reader := Open_String ("{""key"": ""\u0041\u0042""}");
+      Event  : JSON_Parser_Event;
+   begin
+      Event := Parser.Parse_Next (Buff);
+      A.Assert (Event.Kind = OBJECT_START);
+      Event := Parser.Parse_Next (Buff);
+      A.Assert (Event.Kind = STRING_VALUE);
+      A.Assert (Decode_As_String (Event, Buff) = "key");
+      Event := Parser.Parse_Next (Buff);
+      A.Assert (Event.Kind = STRING_VALUE);
+      A.Assert (Decode_As_String (Event, Buff) = "AB");
+      Event := Parser.Parse_Next (Buff);
+      A.Assert (Event.Kind = OBJECT_END);
+      Event := Parser.Parse_Next (Buff);
+      A.Assert (Event.Kind = DOC_END);
+   end;
 
    -----------------------------
    -- Creation of JSON values --
