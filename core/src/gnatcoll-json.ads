@@ -121,6 +121,11 @@ package GNATCOLL.JSON is
       return JSON_Parser_Event;
    --  Fetch the next JSON parser event.
 
+   function Decode_As_String
+     (Event : JSON_Parser_Event;
+      Data  : GNATCOLL.Buffer.Reader) return String;
+   --  Decode a STRING_VALUE as a string.
+
    type JSON_Value_Type is
      (JSON_Null_Type,
       --  Null value: all such JSON values are equivalent

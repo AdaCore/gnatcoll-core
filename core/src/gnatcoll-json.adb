@@ -482,6 +482,26 @@ package body GNATCOLL.JSON is
 
    end Parse_Next;
 
+   ----------------------
+   -- Decode_As_String --
+   ----------------------
+
+   function Decode_As_String
+     (Event : JSON_Parser_Event;
+      Data  : GNATCOLL.Buffer.Reader) return String
+   is
+      Str : String renames
+              Data.Token (Event.First, Event.Last);
+   begin
+      if Event.Kind /= STRING_VALUE then
+         raise Invalid_JSON_Stream with
+           "expected a STRING_VALUE, event is " & Event.Kind'Image;
+      end if;
+
+      return Strings.To_String
+        (Utility.Un_Escape_String (Str, Str'First, Str'Last));
+   end Decode_As_String;
+
    ----------
    -- Read --
    ----------
