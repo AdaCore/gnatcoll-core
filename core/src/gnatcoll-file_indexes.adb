@@ -102,9 +102,10 @@ package body GNATCOLL.File_Indexes is
       use type Stat.File_Attributes;
       use type Ada.Calendar.Time;
 
+      No_Digest      : constant File_Index_Digest := (others => ' ');
       Prev_Cursor    : Cursor := Find (Self.DB, Normalized_Path);
-      Prev_Hash      : File_Index_Digest;
-      New_Hash       : File_Index_Digest;
+      Prev_Hash      : File_Index_Digest := No_Digest;
+      New_Hash       : File_Index_Digest := No_Digest;
       Trust_New_Hash : Boolean := True;
    begin
 
@@ -128,7 +129,8 @@ package body GNATCOLL.File_Indexes is
 
             if not Stat.Exists (Attrs) then
                Delete (Self.DB, Prev_Cursor);
-               State := REMOVED_FILE;
+               State  := REMOVED_FILE;
+               Digest := No_Digest;
                return;
             end if;
 
@@ -149,9 +151,11 @@ package body GNATCOLL.File_Indexes is
             (Blake3.Blake3_File_Hash (Path => Normalized_Path));
       exception
          when others =>
-            State := UNHASHABLE_FILE;
+            State  := UNHASHABLE_FILE;
+            Digest := No_Digest;
             return;
       end;
+
       --  Some file system do not have a better resolution than 1s for
       --  modification time. If at the time of the query the file has been
       --  modified less than 1s ago, there is a possible race condition in

@@ -61,6 +61,10 @@ package body GNATCOLL.Hash.Blake3 is
       FS.Close (FD);
       Free (Buffer);
       return Context.Hash_Digest;
+   exception
+      when others =>
+         Free (Buffer);
+         raise;
    end Blake3_File_Hash;
 
    -----------------
