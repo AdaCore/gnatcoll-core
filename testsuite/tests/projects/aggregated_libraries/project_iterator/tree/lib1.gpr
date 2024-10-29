@@ -1,0 +1,7 @@
+library project Lib1 is
+
+    for Object_Dir use "obj_lib1";
+    for Library_Dir use "lib1";
+    for Library_Name use "lib1";
+
+end Lib1;
