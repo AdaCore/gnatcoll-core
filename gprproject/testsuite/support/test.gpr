@@ -1,0 +1,21 @@
+--  Default project use for tests
+--  Note that the testsuite may add some with statemenets at the
+--  beginning of that file.
+
+project Test is
+   Test_Sources := External_As_List ("TEST_SOURCES", ",");
+   for Source_Dirs use (".") & Test_Sources;
+   for Main use ("test.adb");
+   for Languages use ("Ada", "C");
+   for Object_Dir use "obj";
+
+   package Compiler is
+      --  Building test programs in debug mode makes it easier to work with
+      --  tests.
+      for Switches ("Ada") use
+        ("-g", "-O2", "-gnatn", "-gnata", "-gnatyg", "-gnateE",
+         "-gnatwaCJe", "-fstack-check", "-gnatw.P");
+      for Switches ("C") use ("-g", "-Wunreachable-code");
+      for Switches ("s-memory.adb") use ("-gnatg") & Compiler'Switches ("Ada");
+   end Compiler;
+end Test;
