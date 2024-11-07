@@ -1,5 +1,6 @@
 from __future__ import annotations
 from subprocess import run
+from shutil import copytree
 from .os import which, add_search_path
 import json
 import os
@@ -119,7 +120,6 @@ class GPRTool:
                         [which("gnatcov"), "setup", f"--prefix={gnatcov_prefix}"]
                     )
                     # assert status == 0, "gnatcov runtime compilation failure"
-
             if cmd_name in ("gprbuild", "gprinstall"):
                 cmd += ["--src-subdirs=gnatcov-instr", "--implicit-with=gnatcov_rts"]
 
@@ -176,6 +176,15 @@ class GPRTool:
                 f"--prefix={final_prefix}",
                 f"--sources-subdir=include/{self.project_name}",
             ]
+            if self.gnatcov:
+                # In gnatcov mode, by default copy the gnatcov runtime in the same
+                # location as the final library to ensure that it is visible whenever
+                # the lib is through GPR_PROJECT_PATH.
+                copytree(
+                    os.path.join(self.object_dir, "gnatcov_rts"),
+                    final_prefix,
+                    dirs_exist_ok=True,
+                )
 
         status = 0
         for variants_value in self.variants_values:
