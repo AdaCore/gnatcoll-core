@@ -1,7 +1,7 @@
 from __future__ import annotations
 from subprocess import run
 from shutil import copytree
-from .os import which, add_search_path
+from .os import which, add_search_path, which_project
 import json
 import os
 import re
@@ -123,9 +123,12 @@ class GPRTool:
             if cmd_name in ("gprbuild", "gprinstall"):
                 cmd += ["--src-subdirs=gnatcov-instr", "--implicit-with=gnatcov_rts"]
 
-            add_search_path(
-                "GPR_PROJECT_PATH", os.path.join(gnatcov_prefix, "share", "gpr")
-            )
+            # When building and installing several project instrumented with gnatcov
+            # we may have already the project available
+            if not which_project("gnatcov_rts.gpr"):
+                add_search_path(
+                    "GPR_PROJECT_PATH", os.path.join(gnatcov_prefix, "share", "gpr")
+                )
 
             if args[0] == "gprbuild":
                 status = self.run(
