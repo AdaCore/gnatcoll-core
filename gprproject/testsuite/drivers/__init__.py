@@ -20,7 +20,7 @@ DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
 def gprbuild(
     driver,
-    project_file,
+    project_file=None,
     cwd=None,
     scenario=None,
     gpr_project_path: list[str] | None = None,
@@ -45,6 +45,27 @@ def gprbuild(
     """
     if scenario is None:
         scenario = {}
+    if project_file is None:
+        # Locate the project
+        project_file = os.path.join(driver.test_env["test_dir"], "test.gpr")
+        if not os.path.isfile(project_file):
+            project_file = driver.env.default_project_file
+            if driver.env.default_withed_projects:
+                with open(project_file, "r") as fd:
+                    gpr_project = fd.read()
+
+                project_file = os.path.join(driver.test_env["working_dir"], "test.gpr")
+                mkdir(driver.test_env["working_dir"])
+                with open(project_file, "w") as fd:
+                    for project in driver.env.default_withed_projects:
+                        fd.write(f'with "{project}";\n')
+                    fd.write(gpr_project)
+
+        scenario = {
+            "TEST_SOURCES": ",".join(
+                driver.env.default_source_dirs + [driver.test_env["test_dir"]]
+            )
+        }
 
     scenario_cmd = []
     for k, v in scenario.items():

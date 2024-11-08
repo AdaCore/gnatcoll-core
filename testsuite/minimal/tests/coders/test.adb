@@ -26,7 +26,7 @@
 with Ada.Streams;             use Ada.Streams;
 with GNATCOLL.Coders.Streams; use GNATCOLL.Coders;
 with GNATCOLL.Coders.Base64;
-with Tb64;
+with TB64;
 with Test_Streams;
 with Test_Assert;
 
@@ -139,7 +139,7 @@ begin
       end loop;
    end loop Main_Loop;
 
-   Tb64;
+   TB64;
 
    return A.Report;
 end Test;

@@ -11,6 +11,36 @@ class GPRError(Exception):
     pass
 
 
+def get_compiler_info(target: str | None) -> dict[str, str]:
+    """Retrieve information as returned by gprconfig for the curent Ada compiler.
+
+    :param: target
+    :return: a dict with all the information returned by gprconfig --mi-show-compilers
+        command
+    """
+    gprconfig_exe = which("gprconfig")
+    if not gprconfig_exe:
+        raise GPRError("no gprconfig found")
+    gprconfig_cmd = [gprconfig_exe, "--config=ada", "--mi-show-compilers"]
+    if target:
+        gprconfig_cmd.append(f"--target={target}")
+
+    process = run(gprconfig_cmd, capture_output=True)
+    if process.returncode != 0:
+        raise GPRError(f"error while trying to capture output of '{cmd}'")
+    try:
+        gprconfig_output = process.stdout.decode("utf-8").strip()
+    except Exception:
+        raise GPRError(f"utf-8 output expected")
+
+    result = {}
+    for line in gprconfig_output.splitlines():
+        if line.startswith("*  1 "):
+            key, value = line.replace("*  1 ", "", 1).strip().split(":", 1)
+            result[key] = value
+    return result
+
+
 class GPRTool:
     """Manage gpr tools invocation and configuration."""
 
@@ -122,9 +152,6 @@ class GPRTool:
                     # assert status == 0, "gnatcov runtime compilation failure"
             if cmd_name in ("gprbuild", "gprinstall"):
                 cmd += ["--src-subdirs=gnatcov-instr", "--implicit-with=gnatcov_rts"]
-
-            # When building and installing several project instrumented with gnatcov
-            # we may have already the project available
             if not which_project("gnatcov_rts.gpr"):
                 add_search_path(
                     "GPR_PROJECT_PATH", os.path.join(gnatcov_prefix, "share", "gpr")

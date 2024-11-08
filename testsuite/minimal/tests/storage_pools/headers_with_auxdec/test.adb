@@ -18,6 +18,7 @@ function Test return Integer is
       Refcount : Natural := 0;
    end record;
    type Header_Access is access all Header;
+   pragma No_Strict_Aliasing (Header_Access);
 
    package Pools is new Header_Pools (Header, Header_Access);
 

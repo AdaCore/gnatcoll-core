@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+from __future__ import annotations
+import sys
+import os
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(os.path.dirname(ROOT_DIR)))
+
+from gprproject.testsuite import LibTestsuite
+
+class GNATCOLLMinimalTestsuite(LibTestsuite):
+    @property
+    def default_withed_projects(self) -> list[str]:
+        return ["gnatcoll_minimal"]
+
+if __name__ == '__main__':
+    GNATCOLLMinimalTestsuite.main(os.path.dirname(__file__))

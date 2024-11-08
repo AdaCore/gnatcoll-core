@@ -3,6 +3,7 @@ from e3.fs import rm, mkdir
 from e3.testsuite import Testsuite
 from .drivers.basic import BasicTestDriver
 from .drivers.gnatcov import produce_report
+from ..gprbuild import get_compiler_info
 import os
 import sys
 
@@ -78,6 +79,11 @@ class LibTestsuite(Testsuite):
         self.env.default_withed_projects = self.default_withed_projects
         self.env.default_source_dirs = self.default_source_dirs
 
+        # Get some compiler info
+        compiler_info = get_compiler_info(target=self.env.target.platform)
+        self.env.llvm = "LLVM" in compiler_info.get("name", "GNAT")
+        self.env.gcc = compiler_info.get("name", "GNAT") == "GNAT"
+
     def tear_down(self) -> None:
         if self.env.gnatcov_dir:
             produce_report(self, self.output_dir, self.env.source_root)
@@ -85,5 +91,6 @@ class LibTestsuite(Testsuite):
 
     @classmethod
     def main(cls, testsuite_root_dir: str) -> None:
+        os.environ["PYTHON_EXEC_PATH"] = os.path.abspath(sys.executable)
         testsuite = cls(testsuite_root_dir)
         sys.exit(testsuite.testsuite_main())

@@ -25,7 +25,6 @@
 
 with Ada.Streams;            use Ada.Streams;
 with Ada.Strings.Unbounded;  use Ada.Strings.Unbounded;
-with Ada.Text_IO;            use Ada.Text_IO;
 with GNATCOLL.Coders.Base64; use GNATCOLL.Coders;
 with GNATCOLL.Email.Utils;   use GNATCOLL.Email.Utils;
 with Test_Assert;
@@ -60,8 +59,7 @@ begin
       if Printable then
          Sample (1 .. J) := Coded (1 .. J);
       else
-         Sample (J) := Stream_Element
-           (Stream_Element'Mod (Integer'(Random (Gen))));
+         Sample (J) := Stream_Element'Mod (Integer'(Random (Gen)));
       end if;
 
       Encoder.Initialize
