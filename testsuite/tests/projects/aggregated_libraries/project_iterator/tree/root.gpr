@@ -1,0 +1,5 @@
+with "./agg.gpr";
+
+project Root is
+
+end Root;

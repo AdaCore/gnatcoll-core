@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2022, AdaCore                     --
+--                     Copyright (C) 2002-2024, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -1161,10 +1161,11 @@ package GNATCOLL.Projects is
    --  projects.
 
    function Start
-     (Root_Project       : Project_Type;
-      Recursive          : Boolean := True;
-      Direct_Only        : Boolean := False;
-      Include_Extended   : Boolean := True) return Project_Iterator;
+     (Root_Project                : Project_Type;
+      Recursive                   : Boolean := True;
+      Direct_Only                 : Boolean := False;
+      Include_Extended            : Boolean := True;
+      Include_Aggregate_Libraries : Boolean := False) return Project_Iterator;
    pragma Precondition (Root_Project /= No_Project);
    --  Initialize the iterator to start at Root_Project.
    --  It will process Root_Project and all its subprojects, recursively, but
@@ -1187,6 +1188,9 @@ package GNATCOLL.Projects is
    --  Projects mentioned in a Project_Files attribute (aggregate project
    --  or library aggregate project) will also be returned (and their own
    --  dependencies recursively, if needed).
+
+   --  If Include_Aggregate_Libraries is True, library aggregate projects
+   --  are always returned.
    --
    --  Start should not be called before the view has been fully recomputed.
 
