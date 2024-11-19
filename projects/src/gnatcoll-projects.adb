@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2022, AdaCore                     --
+--                     Copyright (C) 2002-2024, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -4353,10 +4353,11 @@ package body GNATCOLL.Projects is
    -----------
 
    function Start
-     (Root_Project       : Project_Type;
-      Recursive          : Boolean := True;
-      Direct_Only        : Boolean := False;
-      Include_Extended   : Boolean := True) return Project_Iterator
+     (Root_Project                : Project_Type;
+      Recursive                   : Boolean := True;
+      Direct_Only                 : Boolean := False;
+      Include_Extended            : Boolean := True;
+      Include_Aggregate_Libraries : Boolean := False) return Project_Iterator
    is
       Iter       : Project_Iterator;
 
@@ -4429,9 +4430,20 @@ package body GNATCOLL.Projects is
             then
                Project_Paths.Include (P.Project_Path.Display_Full_Name);
 
-               if Is_Aggregate_Project (P) and then not Direct_Only then
-                  --  aggregate library
-                  Add_Project (P);
+               if Is_Aggregate_Project (P) then
+
+               --  ??? Direct_Only should not impact aggregates as it only
+               --- concerns imports.
+
+                  if not Direct_Only then
+                     Add_Project (P);
+                  end if;
+
+                  if Is_Aggregate_Library (P)
+                    and then Include_Aggregate_Libraries
+                  then
+                     Iter.Project_List.Append (P);
+                  end if;
                else
                   Iter.Project_List.Append (P);
                end if;
