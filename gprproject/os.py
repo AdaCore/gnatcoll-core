@@ -19,6 +19,27 @@ def add_search_path(name: str, path: str) -> None:
     else:
         os.environ[name] = path
 
+def which_project(project: str) -> None | str:
+    """Locate a project on GPR_PROJECT_PATH.
+
+    :param project: the project basename (should end with .gpr) or path
+    :return: absolute path to project if found or None otherwise
+    """
+
+    fpath, _ = os.path.split(project)
+    if fpath:
+        if os.path.isfile(project):
+            return os.path.abspath(project)
+    else:
+        # Check for all directories listed in $PATH
+        paths = os.environ.get("GPR_PROJECT_PATH")
+
+        for pathdir in paths.split(os.pathsep):
+            project_file = os.path.join(pathdir, project)
+            if os.path.isfile(project_file):
+                return os.path.abspath(project_file)
+    # Not found.
+    return None
 
 def which(prog: str, paths: str | None = None, default: Any = "") -> Any:
     """Locate executable.

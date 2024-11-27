@@ -37,3 +37,8 @@ examples/library/obj
 gnatcoll_core.json
 gnatcoll_minimal.json
 gnatcoll_projects.json
+
+/testsuite/tests
+
+!/testsuite/projects/tests/library_files_c++/*gli
+!/testsuite/projects/tests/C_Library_Files/my_obj/*.gli

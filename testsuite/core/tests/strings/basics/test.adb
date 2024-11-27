@@ -1,13 +1,11 @@
-with Ada.Command_Line;          use Ada.Command_Line;
 with GNATCOLL.Asserts;
-with GNATCOLL.Strings;
 with GNATCOLL.Strings_Impl;
+with GNATCOLL.Strings;
 with Ada.Characters.Handling;      use Ada.Characters.Handling;
 with Ada.Wide_Characters.Handling; use Ada.Wide_Characters.Handling;
 with Ada.Strings.Unbounded;        use Ada.Strings.Unbounded;
 with Ada.Text_IO;                  use Ada.Text_IO;
 with GNAT.Source_Info;
-with GNAT.Strings;              use GNAT.Strings;
 with Memory;
 
 pragma Warnings (Off);
@@ -40,9 +38,8 @@ function Test return Integer is
 
    package Asserts is new GNATCOLL.Asserts.Asserts (Report);
 
-   package Equals_Boolean is new Asserts.Equals (Boolean, Boolean'Image);
    package Equals_Integer is new Asserts.Equals (Integer, Integer'Image);
-   use Equals_Boolean, Equals_Integer;
+   use Equals_Integer;
 
    function Image (S : String) return String is ("--" & S & "--");
    function Image (S : Wide_String) return String;
@@ -114,10 +111,7 @@ function Test return Integer is
       package Equals1 is new Asserts.Equals
          (T      => Strings.Char_Type,
           Image  => Strings.Char_Type'Image);
-      package Equals2 is new Asserts.Equals
-         (T      => Strings.Char_String,
-          Image  => Image);
-      use Equals1, Equals2;
+      use Equals1;
 
       generic
           type Left_Type (<>) is private;
@@ -145,11 +139,6 @@ function Test return Integer is
          end if;
       end Assert_Generic;
 
-      procedure Assert is new Assert_Generic (XString, Char_String, "=", "=");
-      procedure Assert is
-         new Assert_Generic (Char_String, XString, "=", "=");
-      procedure Assert is new Assert_Generic (XString, XString, "=", "=");
-
       procedure Assert_Less is
          new Assert_Generic (XString, Char_String, "<", "<");
       procedure Assert_Less is
@@ -161,8 +150,6 @@ function Test return Integer is
          new Assert_Generic (XString, Char_String, "<=", "<=");
       procedure Assert_Less_Equal is
          new Assert_Generic (Char_String, XString, "<=", "<=");
-      procedure Assert_Less_Equal is
-         new Assert_Generic (XString, XString, "<=", "<=");
 
       procedure Assert_Greater is
          new Assert_Generic (XString, Char_String, ">", ">");
@@ -175,8 +162,6 @@ function Test return Integer is
          new Assert_Generic (XString, Char_String, ">=", ">=");
       procedure Assert_Greater_Equal is
          new Assert_Generic (Char_String, XString, ">=", ">=");
-      procedure Assert_Greater_Equal is
-         new Assert_Generic (XString, XString, ">=", ">=");
 
       Space   : constant Char_Type := Char_Type'Val (Character'Pos (' '));
       Spaces  : constant Char_String := Space & Space;
@@ -310,14 +295,14 @@ function Test return Integer is
             raise Program_Error;
          end if;
 
-         -- Test equality with Char_String
+         --  Test equality with Char_String
          declare
             XS : XString;
-            S : Char_String := Short;
+            S : constant Char_String := Short;
          begin
             XS.Set (Short);
-            A.Assert (To_String(XS) = S, Title);
-            A.Assert (To_XString(S) = XS, Title);
+            A.Assert (To_String (XS) = S, Title);
+            A.Assert (To_XString (S) = XS, Title);
             A.Assert (Compare (XS, S) = 0, Title);
          end;
 
@@ -340,9 +325,9 @@ function Test return Integer is
             A.Assert (Compare (S2.Slice (2, 3), S.Slice (2, 3)) = 0, Title);
             A.Assert (S2.Slice (2, 3) = S2.Slice (2, 3), Title);
             A.Assert (Compare (S2.Slice (2, 3), S2.Slice (2, 3)) = 0, Title);
-            -- Test inequality with substring
-            A.Assert (Compare(S2,S) = 1, Title);
-            A.Assert (Compare(S,S2) = -1, Title);
+            --  Test inequality with substring
+            A.Assert (Compare (S2, S) = 1, Title);
+            A.Assert (Compare (S, S2) = -1, Title);
 
             --  Check that we have the same behavior as with standard strings
             A.Assert (S.Slice (3, 2) = Null_XString, Title);
@@ -396,9 +381,10 @@ function Test return Integer is
             A.Assert (Compare (S, S) = 0, Title);
             A.Assert (Compare (S2, S2) = 0, Title);
 
-            S3.Set(Short(Short'First) &
-                   Char_Type'Val(Char_Type'Pos(Short(Short'First + 1)) + 1) &
-                   Short(Short'First + 2..Short'Last));
+            S3.Set (Short (Short'First) &
+                   Char_Type'Val
+                      (Char_Type'Pos (Short (Short'First + 1)) + 1) &
+                   Short (Short'First + 2 .. Short'Last));
             A.Assert (Compare (S3, S) = 1, Title);
 
          end;
@@ -503,7 +489,9 @@ function Test return Integer is
          Reset_Mem;
          S.Set (Base);
          declare
+            pragma Warnings (Off);
             R : Character_Reference := S.Reference (2);
+            pragma Warnings (On);
          begin
             S2 := S;
             R := First_Displayable;
@@ -678,13 +666,18 @@ function Test return Integer is
 
          S.Set (Long);
          S.Slice (3, 10);
-         A.Assert (S.Head (1) = Long (Long'First + 2 .. Long'First + 2), Title);
-         A.Assert (S.Head (2) = Long (Long'First + 2 .. Long'First + 3), Title);
+         A.Assert
+            (S.Head (1) = Long (Long'First + 2 .. Long'First + 2), Title);
+         A.Assert
+            (S.Head (2) = Long (Long'First + 2 .. Long'First + 3), Title);
          A.Assert (S.Head (1000) = Long (Long'First + 2 .. Long'First + 9),
                    Title);
-         A.Assert (S.Tail (1) = Long (Long'First + 9 .. Long'First + 9), Title);
-         A.Assert (S.Tail (2) = Long (Long'First + 8 .. Long'First + 9), Title);
-         A.Assert (S.Tail (1000) =Long (Long'First + 2 .. Long'First + 9), Title);
+         A.Assert
+            (S.Tail (1) = Long (Long'First + 9 .. Long'First + 9), Title);
+         A.Assert
+            (S.Tail (2) = Long (Long'First + 8 .. Long'First + 9), Title);
+         A.Assert
+            (S.Tail (1000) = Long (Long'First + 2 .. Long'First + 9), Title);
 
          --  A slice into itself
          S.Set (Long);
@@ -791,7 +784,7 @@ function Test return Integer is
       -- Test_Modify --
       -----------------
 
-      procedure Test_Modify(Base : Char_String) is
+      procedure Test_Modify (Base : Char_String) is
          S, S2 : XString;
       begin
          S.Set (Base);
@@ -985,7 +978,7 @@ function Test return Integer is
       ------------------
 
       procedure Test_Justify (Base : Char_String) is
-         S, S2 : XString;
+         S : XString;
       begin
          --  procedure Center
 
@@ -1342,7 +1335,7 @@ function Test return Integer is
       -----------------
 
       procedure Test_Search (Base : Char_String) is
-         S, S2 : XString;
+         S : XString;
       begin
          S.Set (Space
                 & Space
@@ -1398,7 +1391,7 @@ function Test return Integer is
          A.Assert (S.Is_Upper = True, Title);
          A.Assert (S.Is_Lower = False, Title);
 
-         S2 := To_Lower(S);
+         S2 := To_Lower (S);
          A.Assert (S2.Is_Upper = False, Title);
          A.Assert (S2.Is_Lower = True, Title);
 
@@ -1408,13 +1401,13 @@ function Test return Integer is
 
          S.Capitalize;
          A.Assert ((Slice (S, 1, 1).Is_Upper and
-                    Slice (S, 2, S.Length).Is_Lower) = True,
+                    Slice (S, 2, S.Length).Is_Lower),
                    Title);
          A.Assert ((Slice (S, 1, 1).Is_Lower or
                     Slice (S, 2, S.Length).Is_Upper) = False,
                    Title);
 
-         S2 := To_Upper(S);
+         S2 := To_Upper (S);
          A.Assert (S2.Is_Upper = True, Title);
          A.Assert (S2.Is_Lower = False, Title);
 
@@ -1426,7 +1419,7 @@ function Test return Integer is
          A.Assert (S.Is_Upper = (Long'Length < 100), Title);
          A.Assert (S.Is_Lower = False, Title);
 
-         S2 := To_Lower(S);
+         S2 := To_Lower (S);
          A.Assert (S2.Is_Upper = False, Title);
          A.Assert (S2.Is_Lower = True, Title);
 
@@ -1434,17 +1427,17 @@ function Test return Integer is
          A.Assert (S.Is_Upper = False, Title);
          A.Assert (S.Is_Lower = True, Title);
 
-         S2 := To_Upper(S);
-         A.Assert (S2.Is_Upper = True, Title);
+         S2 := To_Upper (S);
+         A.Assert (S2.Is_Upper, Title);
          A.Assert (S2.Is_Lower = False, Title);
 
          S.To_Upper;
-         A.Assert (S.Is_Upper = True, Title);
+         A.Assert (S.Is_Upper, Title);
          A.Assert (S.Is_Lower = False, Title);
 
          S.Capitalize;
          A.Assert ((Slice (S, 1, 1).Is_Upper and
-                    Slice (S, 2, S.Length).Is_Lower) = True,
+                    Slice (S, 2, S.Length).Is_Lower),
                    Title);
          A.Assert ((Slice (S, 1, 1).Is_Lower or
                     Slice (S, 2, S.Length).Is_Upper) = False,
@@ -1459,6 +1452,8 @@ function Test return Integer is
       procedure Test_Access is
          S : XString;
          Is_Long : Boolean;
+
+         procedure Callback (Data : Char_String);
 
          procedure Callback (Data : Char_String) is
          begin
@@ -1499,12 +1494,12 @@ function Test return Integer is
       end;
 
       declare
-         -- coverage of function '*' (Count : Natural;
+         --  coverage of function '*' (Count : Natural;
          --                           Right : Char_Type) return XString
-         -- and of function '*' (Count : Natural;
+         --  and of function '*' (Count : Natural;
          --                      Right : XString) return XString
-         S1 : XString := 4 * First_Displayable;
-         S2 : XString := 4 * S1;
+         S1 : constant XString := 4 * First_Displayable;
+         S2 : constant XString := 4 * S1;
       begin
          A.Assert (S1.Length = 4);
          A.Assert (S1 (1) = First_Displayable);
@@ -1556,10 +1551,10 @@ function Test return Integer is
    procedure Test_Wide is new Do_Test (Wide);
 
 begin
-   Test_No_COW("basic strings, no COW");
-   Test_COW("basic strings, with COW");
-   Test3("strings with size" & SSize_3'Last'Img);
-   Test_Wide("wide strings");
+   Test_No_COW ("basic strings, no COW");
+   Test_COW ("basic strings, with COW");
+   Test3 ("strings with size" & SSize_3'Last'Img);
+   Test_Wide ("wide strings");
 
    return A.Report;
 end Test;

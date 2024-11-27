@@ -1,6 +1,7 @@
 from __future__ import annotations
 from subprocess import run
-from .os import which, add_search_path
+from shutil import copytree
+from .os import which, add_search_path, which_project
 import json
 import os
 import re
@@ -8,6 +9,36 @@ import re
 
 class GPRError(Exception):
     pass
+
+
+def get_compiler_info(target: str | None) -> dict[str, str]:
+    """Retrieve information as returned by gprconfig for the curent Ada compiler.
+
+    :param: target
+    :return: a dict with all the information returned by gprconfig --mi-show-compilers
+        command
+    """
+    gprconfig_exe = which("gprconfig")
+    if not gprconfig_exe:
+        raise GPRError("no gprconfig found")
+    gprconfig_cmd = [gprconfig_exe, "--config=ada", "--mi-show-compilers"]
+    if target:
+        gprconfig_cmd.append(f"--target={target}")
+
+    process = run(gprconfig_cmd, capture_output=True)
+    if process.returncode != 0:
+        raise GPRError(f"error while trying to capture output of '{cmd}'")
+    try:
+        gprconfig_output = process.stdout.decode("utf-8").strip()
+    except Exception:
+        raise GPRError(f"utf-8 output expected")
+
+    result = {}
+    for line in gprconfig_output.splitlines():
+        if line.startswith("*  1 "):
+            key, value = line.replace("*  1 ", "", 1).strip().split(":", 1)
+            result[key] = value
+    return result
 
 
 class GPRTool:
@@ -119,13 +150,12 @@ class GPRTool:
                         [which("gnatcov"), "setup", f"--prefix={gnatcov_prefix}"]
                     )
                     # assert status == 0, "gnatcov runtime compilation failure"
-
             if cmd_name in ("gprbuild", "gprinstall"):
                 cmd += ["--src-subdirs=gnatcov-instr", "--implicit-with=gnatcov_rts"]
-
-            add_search_path(
-                "GPR_PROJECT_PATH", os.path.join(gnatcov_prefix, "share", "gpr")
-            )
+            if not which_project("gnatcov_rts.gpr"):
+                add_search_path(
+                    "GPR_PROJECT_PATH", os.path.join(gnatcov_prefix, "share", "gpr")
+                )
 
             if args[0] == "gprbuild":
                 status = self.run(
@@ -176,6 +206,15 @@ class GPRTool:
                 f"--prefix={final_prefix}",
                 f"--sources-subdir=include/{self.project_name}",
             ]
+            if self.gnatcov:
+                # In gnatcov mode, by default copy the gnatcov runtime in the same
+                # location as the final library to ensure that it is visible whenever
+                # the lib is through GPR_PROJECT_PATH.
+                copytree(
+                    os.path.join(self.object_dir, "gnatcov_rts"),
+                    final_prefix,
+                    dirs_exist_ok=True,
+                )
 
         status = 0
         for variants_value in self.variants_values:
