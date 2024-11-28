@@ -686,7 +686,13 @@ package body GNATCOLL.JSON is
 
       Deallocate (Current_Key);
       Free (Read_States);
-      return (Success => True, Value => Result);
+
+      declare
+         R_Result : constant Read_Result := (Success => True, Value => Result);
+      begin
+         return R_Result;
+      end;
+
    exception
       when E : Invalid_JSON_Stream =>
          Free (Read_States);
