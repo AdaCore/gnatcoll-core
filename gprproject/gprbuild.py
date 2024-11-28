@@ -205,6 +205,7 @@ class GPRTool:
                 "-f",
                 f"--prefix={final_prefix}",
                 f"--sources-subdir=include/{self.project_name}",
+                f"--install-name={self.project_name}",
             ]
             if self.gnatcov:
                 # In gnatcov mode, by default copy the gnatcov runtime in the same
