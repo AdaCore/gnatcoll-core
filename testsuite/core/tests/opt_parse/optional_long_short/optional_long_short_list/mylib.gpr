@@ -1,4 +1,4 @@
-with "gnatcoll";
+with "gnatcoll_core";
 
 library project Mylib is
    for Source_Dirs use ("src-mylib");
