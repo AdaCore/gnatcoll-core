@@ -1,4 +1,0 @@
-description: Check aggregated libraries project iteration.
-data:
-    - "tree"
-    - "test.adb"
