@@ -72,7 +72,8 @@ class BasicTestDriver(ClassicTestDriver):
             [os.path.join(self.test_env['working_dir'], test_exe)],
             slot=self.slot,
             copy_files_on_target=copy_files_on_target,
-            timeout=self.default_process_timeout)
+            timeout=self.default_process_timeout,
+            env=self.test_env.get('test_env'))
         self.output += process.out.decode('utf-8')
 
         # Store result output, so the python post test can access it if needed.
