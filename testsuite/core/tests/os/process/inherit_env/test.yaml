@@ -1,5 +1,8 @@
 title: GNATCOLL.OS.Process test inherit_env parameter
 data: ["test_data/*.py"]
-test_env: {"UNICODE_ENV": "©"}
+# This is mainly done to ensure the test does not crash when environment contains
+# some non ascii value. Note that currently we don't know how to read correctly
+# that value on System such as Windows.
+test_env: {"UNICODE_ENV": "º"}
 control:
   - [SKIP, "env.is_cross", "Test uses python which is not available on cross targets"]
