@@ -174,4 +174,14 @@ package GNATCOLL.OS.Win32.Process is
         Convention => Stdcall,
         External_Name => "NtQueryInformationProcess";
 
+   function GetEnvironmentStrings return System.Address
+   with Import => True,
+        Convention => Stdcall,
+        External_Name => "GetEnvironmentStringsW";
+
+   function FreeEnvironmentStrings (Env : System.Address) return Bool
+   with Import => True,
+        Convention => Stdcall,
+        External_Name => "FreeEnvironmentStringsW";
+
 end GNATCOLL.OS.Win32.Process;
