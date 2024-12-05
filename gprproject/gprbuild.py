@@ -27,7 +27,7 @@ def get_compiler_info(target: str | None) -> dict[str, str]:
 
     process = run(gprconfig_cmd, capture_output=True)
     if process.returncode != 0:
-        raise GPRError(f"error while trying to capture output of '{cmd}'")
+        raise GPRError(f"error while trying to capture output of '{gprconfig_cmd}'")
     try:
         gprconfig_output = process.stdout.decode("utf-8").strip()
     except Exception:
