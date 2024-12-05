@@ -25,6 +25,10 @@ with Ada.Strings.UTF_Encoding.Wide_Strings;
 with Ada.Wide_Characters.Handling;
 with Ada.Environment_Variables;
 with GNATCOLL.String_Builders;
+with GNATCOLL.OS.Win32.Process;
+pragma Warnings(Off);
+with System.Address_To_Access_Conversions;
+pragma Warning(On);
 
 package body GNATCOLL.OS.Process_Types is
 
@@ -33,9 +37,26 @@ package body GNATCOLL.OS.Process_Types is
    package Env_Vars renames Ada.Environment_Variables;
    package WCH renames Ada.Wide_Characters.Handling;
 
+   type EnvironW is array (1 .. Integer'Last) of Wide_Character;
+   pragma Suppress_Initialization(EnvironW);
+   type EnvironW_Access is access all EnvironW;
+   for EnvironW_Access'Storage_Size use 0;
+   --  This type is used to map the address returned by GetEnvironmentStrings
+   --  to a Wide_Character array. Initialization is suppressed as only a part
+   --  of the declared object will be used.
+   --  The 0 storage size ensure we cannot call "new"
+
+   package EnvironW_Ops is new System.Address_To_Access_Conversions(EnvironW);
+   use EnvironW_Ops;
+   --  Provides To_Pointer to convert an Address to an EnvironW_Access.
+
    Minimal_Env : Environ;
 
    procedure Add_Minimal_Env (Env : in out Environ);
+
+   ---------------------
+   -- Add_Minimal_Env --
+   ---------------------
 
    procedure Add_Minimal_Env (Env : in out Environ) is
    begin
@@ -91,14 +112,55 @@ package body GNATCOLL.OS.Process_Types is
    ------------
 
    procedure Import (Env : in out Environ) is
-      procedure Import_Var (Name, Value : String);
+      use GNATCOLL.OS.Win32.Process;
+      use GNATCOLL.OS.Win32;
 
-      procedure Import_Var (Name, Value : String) is
-      begin
-         Set_Variable (Env, Name, Value);
-      end Import_Var;
+      --  Fetch the current process environment
+      Env_Addr : System.Address := GetEnvironmentStrings;
+      Env_Ptr  : EnvironW_Access := EnvironW_Access(To_Pointer (Env_Addr));
+
+      Free_Result : BOOL;
+
+      --  Start of a variable definition
+      Start    : Integer := 0;
+
+      --  Current position in the environ block
+      Idx      : Integer := 1;
+
+      WNUL     : constant Wide_Character := Wide_Character'Val (0);
+      use all type System.Address;
    begin
-      Env_Vars.Iterate (Import_Var'Unrestricted_Access);
+      --  Start by resetting the environment
+      Env.Inherited := False;
+      WSLB.Deallocate (Env.Env);
+
+      --  Note that the environment may contain invalid UTF-16 strings. We
+      --  should just ignore that and pass the value to our structure.
+      loop
+         if Env_Ptr (Idx) /= WNUL then
+            if Start = 0 then
+               Start := Idx;
+            end if;
+         else
+            --  A NUL character marks the end of a variable definition
+            if Start /= 0 then
+               WSLB.Append (Env.Env, Wide_String (Env_Ptr (Start .. Idx - 1)));
+               Start := 0;
+            end if;
+
+            --  If a NUL character follows the end of a variable definition,
+            --  the end of the environment block has been reached.
+            exit when Env_Ptr (Idx + 1) = WNUL;
+         end if;
+
+         Idx := Idx + 1;
+      end loop;
+
+      Free_Result :=
+         GNATCOLL.OS.Win32.Process.FreeEnvironmentStrings (Env_Addr);
+      if Free_Result = BOOL_FALSE then
+         raise OS_Error with "error while deallocating environment block";
+      end if;
    end Import;
 
    -------------
