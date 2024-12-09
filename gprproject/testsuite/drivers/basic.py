@@ -100,6 +100,7 @@ class BasicTestDriver(ClassicTestDriver):
             slot=self.slot,
             copy_files_on_target=copy_files_on_target,
             timeout=self.default_process_timeout,
+            env=self.test_env.get('test_env')
         )
         self.output += process.out.decode("utf-8")
 

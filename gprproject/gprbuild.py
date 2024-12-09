@@ -27,7 +27,7 @@ def get_compiler_info(target: str | None) -> dict[str, str]:
 
     process = run(gprconfig_cmd, capture_output=True)
     if process.returncode != 0:
-        raise GPRError(f"error while trying to capture output of '{cmd}'")
+        raise GPRError(f"error while trying to capture output of '{gprconfig_cmd}'")
     try:
         gprconfig_output = process.stdout.decode("utf-8").strip()
     except Exception:
@@ -97,7 +97,7 @@ class GPRTool:
         if prefix:
             self.prefix = os.path.abspath(prefix)
         else:
-            self.prefix = re.findall(r" 1 path:(.*)", gprconfig_output)[0]
+            self.prefix = re.findall(r" 1 path:(.*)", gprconfig_output)[0].strip()
             if self.prefix.endswith(os.sep):
                 self.prefix = os.path.dirname(os.path.dirname(self.prefix))
             else:

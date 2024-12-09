@@ -76,6 +76,7 @@ package body GNATCOLL.OS.Process_Types is
          Set_Variable (Env, Name, Value);
       end Import_Var;
    begin
+      Deallocate (Env);
       Env_Vars.Iterate (Import_Var'Unrestricted_Access);
    end Import;
 

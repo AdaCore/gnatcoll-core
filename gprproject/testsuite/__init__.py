@@ -80,7 +80,7 @@ class LibTestsuite(Testsuite):
         self.env.default_source_dirs = self.default_source_dirs
 
         # Get some compiler info
-        compiler_info = get_compiler_info(target=self.env.target.platform)
+        compiler_info = get_compiler_info(target=self.env.target.triplet)
         self.env.llvm = "LLVM" in compiler_info.get("name", "GNAT")
         self.env.gcc = compiler_info.get("name", "GNAT") == "GNAT"
 

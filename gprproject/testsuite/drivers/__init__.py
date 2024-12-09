@@ -160,6 +160,12 @@ def bin_check_call(
     if test_name is None:
         test_name = driver.test_name
 
+    # Compute final environment
+    final_env = None
+    if env is not None:
+        final_env = os.environ.copy()
+        final_env.update(env)
+
     if driver.env.is_cross:
         if driver.env.target.os.name == "windows":
             os.environ["WINEDEBUG"] = "-all"
@@ -172,7 +178,7 @@ def bin_check_call(
             subp = subprocess.Popen(
                 cmd,
                 cwd=cwd,
-                env=env,
+                env=final_env,
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -218,7 +224,7 @@ def bin_check_call(
         subp = subprocess.Popen(
             cmd,
             cwd=cwd,
-            env=env,
+            env=final_env,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -233,7 +239,7 @@ def bin_check_call(
             "status": process.status,
             "cmd": cmd,
             "timeout": timeout,
-            "env": env,
+            "env": final_env,
             "cwd": cwd,
         }
     )
