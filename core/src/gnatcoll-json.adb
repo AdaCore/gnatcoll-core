@@ -687,11 +687,7 @@ package body GNATCOLL.JSON is
       Deallocate (Current_Key);
       Free (Read_States);
 
-      declare
-         R_Result : constant Read_Result := (Success => True, Value => Result);
-      begin
-         return R_Result;
-      end;
+      return R_Result : constant Read_Result := (Success => True, Value => Result);
 
    exception
       when E : Invalid_JSON_Stream =>
@@ -701,7 +697,7 @@ package body GNATCOLL.JSON is
          begin
             Data.Current_Text_Position (Line, Column);
 
-            return (Success => False,
+            return R_Result : constant Read_Result:= (Success => False,
                     Error => (Line, Column,
                     To_Unbounded_String
                        (Ada.Exceptions.Exception_Message (E))));
