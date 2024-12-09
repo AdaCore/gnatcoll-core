@@ -97,18 +97,18 @@ endif
 BUILD_ARGS=--jobs=$(PROCESSORS) \
  --build=$(BUILD) \
  --target=$(NORMALIZED_TARGET) \
- --prefix=local-install \
+ --prefix=gnatcoll-core-install \
  --install \
  --enable-shared=$(ENABLE_SHARED)
 
 build:
-	rm -rf local-install
-	mkdir -p local-install/share/gpr
-	
+	rm -rf gnatcoll-core-install
+	mkdir -p gnatcoll-core-install/share/gpr
+
 ifeq ($(GNATCOLL_PROJECTS), yes)
-	$(SED) -e 's/^--  with "gnatcoll_projects"/with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > local-install/share/gpr/gnatcoll.gpr
+	$(SED) -e 's/^--  with "gnatcoll_projects"/with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > gnatcoll-core-install/share/gpr/gnatcoll.gpr
 else
-	$(SED) -e 's/^with "gnatcoll_projects"/--  with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > local-install/share/gpr/gnatcoll.gpr
+	$(SED) -e 's/^with "gnatcoll_projects"/--  with "gnatcoll_projects"/g' $(GNATCOLL_GPR) > gnatcoll-core-install/share/gpr/gnatcoll.gpr
 endif
 
 	$(PYTHON) $(SOURCE_DIR)/minimal/gnatcoll_minimal.gpr.py build $(INSTR_BUILD_OPTS) $(BUILD_ARGS)
@@ -123,7 +123,7 @@ endif
 
 install:
 	@echo "Installing gnatcoll into $(prefix)"
-	rsync -av ./local-install/ $(prefix)$(integrated_install)  
+	rsync -av ./gnatcoll-core-install/ $(prefix)$(integrated_install)
 
 # Documentation
 doc:
@@ -137,7 +137,7 @@ doc:
 ###########
 
 clean:
-	rm -rf local-install
+	rm -rf gnatcoll-core-install
 
 # Let gprbuild handle parallelisation. In general, we don't support parallel
 # runs in this Makefile, as concurrent gprinstall processes may crash.
