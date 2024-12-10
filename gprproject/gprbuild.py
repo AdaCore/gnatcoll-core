@@ -91,13 +91,13 @@ class GPRTool:
         if self.original_target:
             gprconfig_cmd.append(f"--target={self.original_target}")
         gprconfig_output = self.capture(gprconfig_cmd)
-        self.target = re.findall(r" 1 normalized_target:(\S*)", gprconfig_output)[0]
+        self.target = re.findall(r"\*\s+\d+ normalized_target:(\S*)", gprconfig_output)[0]
 
         # Compute default prefix
         if prefix:
             self.prefix = os.path.abspath(prefix)
         else:
-            self.prefix = re.findall(r" 1 path:(.*)", gprconfig_output)[0].strip()
+            self.prefix = re.findall(r"\*\s+\d+ path:(.*)", gprconfig_output)[0].strip()
             if self.prefix.endswith(os.sep):
                 self.prefix = os.path.dirname(os.path.dirname(self.prefix))
             else:
