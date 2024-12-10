@@ -205,15 +205,6 @@ class GPRTool:
                 "-f",
                 f"--prefix={final_prefix}",
                 f"--sources-subdir=include/{self.project_name}",
-                # This is required to ensure that we can force reinstallation
-                # on top of an existing installation (incremental build
-                # support.
-                f"--install-name={self.project_name}",
-                # --install-name change default value for lib subdir. Not
-                # passing it would create an additional subdir with the project
-                # name (i.e: lib/NAME/NAME.{relocatable|static}/libNAME.so
-                # instead of lib/NAME.{relocatable|static}/libNAME.so
-                "--lib-subdir=lib",
             ]
             if self.gnatcov:
                 # In gnatcov mode, by default copy the gnatcov runtime in the same
