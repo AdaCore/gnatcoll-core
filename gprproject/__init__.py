@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from .gprbuild import GPRTool
 from subprocess import CalledProcessError
 import argparse

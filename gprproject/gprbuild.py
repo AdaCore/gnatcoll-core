@@ -116,7 +116,7 @@ class GPRTool:
         self.gnatcov = gnatcov
         self.symcc = symcc
         self.gpr_paths: list[str] = []
-        if self.gpr_paths:
+        if gpr_paths:
             self.gpr_paths = list(gpr_paths)
         else:
             self.gpr_paths = []
