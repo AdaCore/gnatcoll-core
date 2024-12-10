@@ -162,6 +162,7 @@ class BuilderApp:
             prefix=args.prefix,
             gpr_paths=args.add_gpr_path,
             add_prefix_to_gpr_paths=args.prefix is not None,
+            gpr_opts=args.gpr_opts,
         )
         self.adjust_config(gpr, args)
 

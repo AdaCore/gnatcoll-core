@@ -59,6 +59,7 @@ class GPRTool:
         prefix: str | None = None,
         gpr_paths: list[str] | None = None,
         add_prefix_to_gpr_paths: bool = False,
+        gpr_opts: list[str] | None = None,
     ) -> None:
         """Instantiate gpr tools instance.
 
@@ -70,6 +71,7 @@ class GPRTool:
         :param jobs: level of parallelism for gpr tools that support it
         :param gnatcov: if True add gnatcov instrumentation
         :param symcc: if True add symcc instrumentation
+        :param gpr_opts: arguments passed to gprbuild
         """
         project_full_path = os.path.abspath(project_file)
         self.project_file = os.path.basename(project_full_path)
@@ -82,6 +84,11 @@ class GPRTool:
             self.variables = {k: v for k, v in variables.items()}
         else:
             self.variables = {}
+
+        if gpr_opts:
+            self.gpr_opts = gpr_opts
+        else:
+            self.gpr_opts = None
 
         # Compute the canonical target
         self.original_target = target
@@ -194,6 +201,10 @@ class GPRTool:
         for key, value in self.variables.items():
             cmd.append(f"-X{key}={value}")
 
+        if self.gpr_opts is not None:
+            for option in self.gpr_opts:
+               cmd.append(option)
+
         if cmd_name == "gprinstall":
             if self.integrated:
                 final_prefix = os.path.join(self.prefix, self.target)
@@ -277,6 +288,7 @@ class GPRTool:
             "symcc": self.symcc,
             "prefix": self.prefix,
             "gpr_paths": self.gpr_paths,
+            "gpr_opts": self.gpr_opts,
         }
         with open(json_file, "w") as fd:
             json.dump(data, fd, indent=2)
@@ -305,6 +317,7 @@ class GPRTool:
             symcc=data["symcc"],
             prefix=data["prefix"],
             gpr_paths=data["gpr_paths"],
+            gpr_opts=data["gpr_opts"],
         )
 
 
