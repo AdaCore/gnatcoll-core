@@ -217,6 +217,23 @@ class GPRTool:
                 )
 
         status = 0
+        if cmd_name == "gprinstall":
+            # Try to uninstall a project before calling installation.
+            manifest_file = os.path.join(
+                final_prefix, "share", "gpr", "manifests", self.project_name
+            )
+            if os.path.isfile(manifest_file):
+                # We have a manifest file for the project. Perform uninstallation
+                uninstall_cmd = [cmd[0], "--uninstall", f"-P{manifest_file}"]
+                print(uninstall_cmd)
+                status = run(uninstall_cmd, **kwargs).returncode
+                if status != 0:
+                    return status
+
+        if "--uninstall" in cmd:
+            # This was a explicit call to uninstall command. Nothing more to do
+            return status
+
         for variants_value in self.variants_values:
             final_cmd = list(cmd)
             if self.variants_var:
