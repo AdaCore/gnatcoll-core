@@ -97,7 +97,7 @@ class GPRTool:
         if prefix:
             self.prefix = os.path.abspath(prefix)
         else:
-            self.prefix = re.findall(r" 1 path:(.*)", gprconfig_output)[0].strip()
+            self.prefix = re.findall(r"\*\s+\d+ path:(.*)", gprconfig_output)[0].strip()
             if self.prefix.endswith(os.sep):
                 self.prefix = os.path.dirname(os.path.dirname(self.prefix))
             else:
