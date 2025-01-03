@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2001-2022, AdaCore                     --
+--                     Copyright (C) 2001-2025, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -57,18 +57,8 @@ package body GNATCOLL.Traces is
    --  Maximum number of active iterators
 
    On_Exception : On_Exception_Mode := Propagate;
-   --  The behavior that should be adopted when something unexpected prevent
+   --  The behavior that should be adopted when something unexpected prevents
    --  the log stream to be written.
-
-   --  Note: rev 1.5 of this file has a (disabled) support for symbolic
-   --  tracebacks.
-
-   --  ??? We could display the stack pointer with
-   --  procedure Print_Sp is
-   --     start : aliased Integer;
-   --  begin
-   --     Put_Line (System.Address_Image (Start'Address));
-   --  end;
 
    A_Zero : aliased constant String := "a" & ASCII.NUL;
    W_Zero : aliased constant String := "w" & ASCII.NUL;
@@ -223,7 +213,7 @@ package body GNATCOLL.Traces is
    --  or null if there is none. The case of Unit_Name_Upper_Case is
    --  not changed.
    --  Note: this subprogram doesn't do any locking, it is the
-   --  responsability of the called to make sure that not two tasks
+   --  responsibility of the called to make sure that not two tasks
    --  can access it at the same time.
 
    function Find_Wildcard_Handle
@@ -248,7 +238,7 @@ package body GNATCOLL.Traces is
 
    procedure Put_Absolute_Time (Msg : in out Msg_Strings.XString);
    --  Print the absolute time in Handle. No locking is done, this is the
-   --  responsability of the caller. No colors is modified either.
+   --  responsibility of the caller. No colors is modified either.
 
    function Config_File
      (Filename : Virtual_File;
@@ -264,7 +254,7 @@ package body GNATCOLL.Traces is
       (Handle           : not null Trace_Handle;
        Upper_Case       : String;
        Finalize         : Boolean := True);
-   --  add Handle to the internal list and set default fields
+   --  Add Handle to the internal list and set default fields
 
    function Create_Internal
      (Unit_Name : String;
@@ -286,7 +276,7 @@ package body GNATCOLL.Traces is
       Colors_Support : Boolean;
 
       File_Name      : GNAT.Strings.String_Access;
-      --  The absolute path of the file associated to this stream, if any.
+      --  The absolute path of the file associated to this stream, if any
    end record;
    overriding procedure Put
       (Stream     : in out File_Stream_Record;
@@ -309,12 +299,6 @@ package body GNATCOLL.Traces is
    procedure Lock (The_Lock : aliased in out Atomic_Counter) is
    begin
       while True loop
-         --  In this package, the lock is owned during the time it takes
-         --  to Put a string to a stream (async streams go even faster).
-         --  It doesn't seem worth adding a "delay" in this loop, though
-         --  the standard implementation would be to have a delay on a
-         --  random number, and increase the delay every time we have to
-         --  loop until a given maximum.
 
          while The_Lock /= 0 loop
             null;
@@ -527,7 +511,7 @@ package body GNATCOLL.Traces is
                   Buf_Size := size_t'Value (A (A'First + 12 .. A'Last));
                exception
                   when Constraint_Error =>
-                     --  Ignore not numeric buffer_size value and Buf_Size
+                     --  Ignore non-numeric buffer_size value and Buf_Size
                      --  remains default.
                      null;
                end;
@@ -1390,7 +1374,7 @@ package body GNATCOLL.Traces is
    begin
       if Handle /= null and then Handle.Stream /= null then
 
-         --  The counter is a modulo type
+         --  The counter is a modular type
          if Handle.Active then
             if Sync_Sub_And_Fetch
               (Handle.Stream.Indentation'Unchecked_Access, 1) = Minus_One
@@ -1671,22 +1655,20 @@ package body GNATCOLL.Traces is
       S       : Msg_Strings.Char_Array;
       L       : Natural;
    begin
-      --  fwrite is thread safe on Windows and POSIX systems,
-      --  we should not need locking.
 
       Str.Get_String (S, L);
 
-      --  The call to fwrite is C, so will not raise exceptions
-      Lock (Stream.Lock);
+      --  The call to fwrite is C, so will not raise exceptions.
+      --  It is moreover atomic on Windows and POSIX systems,
+      --  so we should not need locking.
       N := fwrite
          (buffer  => S.all'Address,
           size    => size_t (L),
           count   => 1,
           stream  => Stream.File);
-      Unlock (Stream.Lock);
 
       if N /= size_t (L) then
-         --   ??? Could not write to file, disk full ?
+         --  Could not write to file, disk may be full ?
          null;
       end if;
    end Put;
@@ -1800,10 +1782,10 @@ package body GNATCOLL.Traces is
           & "([^\s=:>+-]+)" & S           --  1 = name
           & "(?:=" & S & "(yes|no))?" & S --  2 = active?
           & "(:[^\s>]+)?" & S             --  3 = options
-          & "(?:>>?" & S & "(\S+))?" & S    --  4 = stream
+          & "(?:>>?" & S & "(\S+))?" & S  --  4 = stream
 
           & "|"
-          & "(>>?\S+)?" & S                 --  5 = default stream
+          & "(>>?\S+)?" & S               --  5 = default stream
 
           & "|"
           & "(\+)" & S                    --  6 = "+"
@@ -1832,7 +1814,7 @@ package body GNATCOLL.Traces is
          if M (0) = No_Match then
             if On_Exception = Propagate then
                raise Constraint_Error with
-                 "Line " & Count'Img & ": """ & Line & """ is not recognised.";
+                 "Line " & Count'Img & ": """ & Line & """ is not recognized.";
             end if;
 
          elsif M (Group_All) /= No_Match then
