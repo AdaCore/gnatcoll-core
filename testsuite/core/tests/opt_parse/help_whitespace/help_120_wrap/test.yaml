@@ -1,5 +1,6 @@
-driver: build_run_diff
 description: Check that a long help message can exceed the default 80 character limit when permitted
+run_args:
+    - ["--help"]
 control:
     - [SKIP, "env.is_cross", "Tests using test.sh currently not supported on cross targets, see T616-039"]
     - [XFAIL, "env.llvm", "partial linking not supported in lld eng/gpr/gpr-issues#428"]
