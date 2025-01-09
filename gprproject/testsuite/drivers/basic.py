@@ -94,15 +94,16 @@ class BasicTestDriver(ClassicTestDriver):
 
         # Run the test program
         test_exe = self.test_env.get("test_exe", "obj/test")
-        process = run_test_program(
-            self,
-            [os.path.join(self.test_env["working_dir"], test_exe)],
-            slot=self.slot,
-            copy_files_on_target=copy_files_on_target,
-            timeout=self.default_process_timeout,
-            env=self.test_env.get('test_env')
-        )
-        self.output += process.out.decode("utf-8")
+        for run_args in self.test_env.get("run_args", [[]]):
+            process = run_test_program(
+                self,
+                [os.path.join(self.test_env["working_dir"], test_exe)] + run_args,
+                slot=self.slot,
+                copy_files_on_target=copy_files_on_target,
+                timeout=self.default_process_timeout,
+                env=self.test_env.get('test_env')
+            )
+            self.output += process.out.decode("utf-8")
 
         # Store result output, so the python post test can access it if needed.
         result_file = open(
@@ -118,6 +119,7 @@ class BasicTestDriver(ClassicTestDriver):
                 [interpreter(), post_test_py],
                 cwd=self.test_env["working_dir"],
                 timeout=self.default_process_timeout,
+                input=f"|{self.output}"
             )
 
     def compute_failures(self):
