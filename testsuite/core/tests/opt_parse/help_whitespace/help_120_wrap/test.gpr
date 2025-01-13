@@ -1,7 +1,0 @@
-with "mylib";
-
-project Test is
-   for Object_Dir use "obj-test";
-   for Exec_Dir use ".";
-   for Main use ("test.adb");
-end Test;

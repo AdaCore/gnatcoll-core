@@ -1,4 +1,3 @@
-with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
 with GNATCOLL.Opt_Parse; use GNATCOLL.Opt_Parse;
@@ -15,8 +14,8 @@ package Mylib is
          Long        => "--char",
          Arg_Type    => Unbounded_String,
          Help        =>
-            "What charset to use when parsing files. "
-            & "Default is ""latin-1""",
+            "A long help message that exceeds the default 80"
+             & " character limit but does not exceed a 120 limit",
          Default_Val => To_Unbounded_String ("latin-1"));
 
    end Args;

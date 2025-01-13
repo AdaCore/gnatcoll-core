@@ -7,6 +7,6 @@ package body Mylib is
         ((1 => GNATCOLL.Strings.To_XString ("--help")));
    begin
       null;
-   end;
+   end Run;
 
 end Mylib;

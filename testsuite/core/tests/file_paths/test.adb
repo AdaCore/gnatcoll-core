@@ -5,7 +5,7 @@ with GNATCOLL.VFS;     use GNATCOLL.VFS;
 
 with GNATCOLL.File_Paths; use GNATCOLL.File_Paths;
 
-procedure Test is
+function Test return Integer is
 
    CWD : constant Virtual_File := Get_Current_Dir;
 
@@ -101,4 +101,5 @@ begin
    Check ("dir2", '|', CWD_Last);
 
    Put_Line ("Done.");
+   return 0;
 end Test;
