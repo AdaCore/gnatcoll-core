@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+import sys
+
+EXPECTED_OUTPUT = """
 "", ':', IF_EMPTY
 =================
 
@@ -49,3 +53,11 @@ abs("dir1/foo"): abs("dir1/foo")
 abs("dir1/foo"): abs("dir1/foo")
 
 Done.
+"""
+
+if __name__ == "__main__":
+    # It would be better to use directly assertions in the test itself
+    content = sys.stdin.read().replace("\r", "").strip()
+    assert content == EXPECTED_OUTPUT.strip()
+    print("<=== TEST PASSED ===>")
+    sys.exit(0)
