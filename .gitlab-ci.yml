@@ -84,27 +84,25 @@ build_doc:
     paths:
       - doc-build
 
-build-windows:
+build_and_test_windows:
   services:
-    - image:e3-wine
-    - cpu:4
+    - image:e3-windows-2022
+    - platform:x86_64-windows-2022
+    - cpu:2
+    - mem:8
+    - disk:100
   stage: build
   script:
-    - anod install --latest gnat --target=x86_64-windows64
-    - anod install --latest gcc
-    - export GNAT_DIR=$ANOD_DEFAULT_SANDBOX_DIR/x86_64-windows64-linux64/gnat/install
-    - export PATH=$GNAT_DIR/bin:$ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gcc/install/bin:$PATH
-    - export GPR_PROJECT_PATH=$GNAT_DIR/x86_64-w64-mingw32/share/gpr
-    # Temporary fix until stable gprbuild is bumped and ranlib correctly run on windows cross
-    - ranlib $GNAT_DIR/lib/gpr/static/gpr/libgpr.a $GNAT_DIR/lib/gpr/static-pic/gpr/libgpr.a $GNAT_DIR/x86_64-w64-mingw32/lib/xmlada/*/*.a
-    - cd $CI_PROJECT_DIR && make TARGET=x86_64-w64-mingw32 && make install prefix=install TARGET=x86_64-w64-mingw32 || exit 1
-    - export GPR_PROJECT_PATH=$CI_PROJECT_DIR/install/share/gpr:$GPR_PROJECT_PATH
-    - cd $CI_PROJECT_DIR/testsuite && ./run-tests --target=x86_64-windows64,,wine || true
+    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+    - anod build --latest gnatcoll-core
+    - anod test --latest gnatcoll-core -Qexternal
+    - working_dir=$(anod info test gnatcoll-core --show working_dir -Qexternal)
+    - results_dir=$working_dir/results/new
     - e3-testsuite-report
         --failure-exit-code 1
         --xunit-output $CI_PROJECT_DIR/test.xml
         --xunit-name gnatcoll-core
-        $CI_PROJECT_DIR/testsuite/out/new/ || FAILED=true
+        $results_dir || FAILED=true
 
     # We previously prevented the pipeline from halting if a test failed, to make
     # sure all tests were run. If a test failed now we exit with a non-zero code
