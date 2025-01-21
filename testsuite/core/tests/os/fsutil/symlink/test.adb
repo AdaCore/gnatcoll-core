@@ -266,9 +266,11 @@ begin
          Link_Name   : String := "link") return Boolean
       is
 
-         Top_Dir_Path : constant String := Dir.Path (Dir.Open ("."));
+         Working_Dir  : Dir.Dir_Handle := Dir.Open (".");
+         Top_Dir_Path : constant String := Dir.Path (Working_Dir);
          FA           : Stat.File_Attributes;
       begin
+         Dir.Close (Working_Dir);
          if not Create_Symbolic_Link (Link_Name, Target_Name) then
             IO.Put_Line ("Failed to create the symbolic link");
             return False;
