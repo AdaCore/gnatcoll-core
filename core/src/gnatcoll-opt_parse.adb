@@ -1111,16 +1111,16 @@ package body GNATCOLL.Opt_Parse is
            Parse_One_Option
              (Short, Long, Args, Pos, New_Pos, Allow_Collated_Short_Form);
       begin
-
          if New_Pos /= Error_Return then
             declare
-               Res : constant Internal_Result_Access :=
+               Res     : constant Arg_Type := Convert (+Raw);
+               Int_Res : constant Internal_Result_Access :=
                  new Internal_Result'(Start_Pos => Pos,
-                                      End_Pos   => Pos,
-                                      Result    => Convert (+Raw));
+                                      End_Pos  => Pos,
+                                      Result   => Res);
             begin
                Result.Ref.Get.Results (Self.Position) :=
-                  Res.all'Unchecked_Access;
+                  Int_Res.all'Unchecked_Access;
             end;
          end if;
 
