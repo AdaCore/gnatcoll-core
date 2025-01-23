@@ -7,6 +7,7 @@
 --  The downside is that that they around one order of magnitud slower than
 --  implementation provided in the default Ada runtime.
 
+with Ada.Tags; use Ada.Tags;
 with Ada.Command_Line;
 with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Exceptions;
@@ -179,10 +180,18 @@ package body GNATCOLL.Opt_Parse is
       Pos    : Positive;
       Result : in out Parsed_Arguments) return Parser_Return;
 
+   overriding procedure Init_JSON_Help (Self : Flag_Parser; Val : JSON_Value);
+
+   overriding function JSON_Kind (Self : Flag_Parser) return String
+   is ("flag");
+
    overriding procedure Release (Self : in out Flag_Parser_Result) is null;
 
    type Help_Flag_Parser is new Flag_Parser with null record;
    --  Specific subtype of Flag_Parser to designate the help flag parser.
+
+   type JSON_Help_Flag_Parser is new Flag_Parser with null record;
+   --  Specific subtype of Flag_Parser to designate the JSON help flag parser.
 
    -----------
    -- Usage --
@@ -529,8 +538,14 @@ package body GNATCOLL.Opt_Parse is
                      if P_Return /= Error_Return then
                         Current_Arg := Positive (P_Return);
 
+                        --  If the subparser that successfully parsed is the
+                        --  --help parser then, print help and exit.
                         if Opt_Parser.all in Help_Flag_Parser'Class then
                            Put_Line (Self.Help);
+                           raise Exit_Parsing;
+                        elsif Opt_Parser.all in JSON_Help_Flag_Parser'Class
+                        then
+                           Put_Line (Self.JSON_Help.Write (Compact => False));
                            raise Exit_Parsing;
                         end if;
 
@@ -611,6 +626,31 @@ package body GNATCOLL.Opt_Parse is
       end return;
    end Parse_Impl;
 
+   ---------------
+   -- JSON_Help --
+   ---------------
+
+   function JSON_Help
+     (Self : Subparser_Type) return JSON_Value
+   is
+      Ret : constant JSON_Value := Create_Object;
+   begin
+      Ret.Set_Field ("name", +Self.Name);
+      Ret.Set_Field ("help", +Self.Help);
+      Ret.Set_Field ("kind", Subparser_Type'Class (Self).JSON_Kind);
+      Subparser_Type'Class (Self).Init_JSON_Help (Ret);
+      return Ret;
+   end JSON_Help;
+
+   --------------------
+   -- Init_JSON_Help --
+   --------------------
+
+   procedure Init_JSON_Help (Self : Subparser_Type; Val : JSON_Value) is
+   begin
+      null;
+   end Init_JSON_Help;
+
    -----------
    -- Parse --
    -----------
@@ -659,6 +699,10 @@ package body GNATCOLL.Opt_Parse is
       overriding function Usage
         (Self : Positional_Arg_List_Parser) return String
       is (Name & " [" & Name & " ...]");
+
+      overriding function JSON_Kind
+        (Self : Positional_Arg_List_Parser) return String
+      is ("positional_list");
 
       type Internal_Result is new Parser_Result with record
          Results : Result_Array_Access;
@@ -776,6 +820,10 @@ package body GNATCOLL.Opt_Parse is
         (Self : Positional_Arg_Parser) return String
       is (Name);
 
+      overriding function JSON_Kind
+        (Self : Positional_Arg_Parser) return String
+      is ("positional_arg");
+
       type Internal_Result is new Parser_Result with record
          Result : Arg_Type;
       end record;
@@ -842,6 +890,22 @@ package body GNATCOLL.Opt_Parse is
          Self.Position := Parser.Data.All_Parsers.Last_Index;
       end if;
    end Parse_Positional_Arg;
+
+   --------------------
+   -- Init_JSON_Help --
+   --------------------
+
+   overriding procedure Init_JSON_Help (Self : Flag_Parser; Val : JSON_Value)
+   is
+   begin
+      if Self.Short /= "" then
+         Val.Set_Field ("short_flag", +Self.Short);
+      end if;
+
+      if Self.Long /= "" then
+         Val.Set_Field ("long_flag", +Self.Long);
+      end if;
+   end Init_JSON_Help;
 
    ----------------
    -- Parse_Args --
@@ -942,11 +1006,17 @@ package body GNATCOLL.Opt_Parse is
       overriding function Help_Name
         (Dummy : Option_Parser) return String;
 
+      overriding procedure Init_JSON_Help
+        (Self : Option_Parser; Val : JSON_Value);
+
       overriding function Parse_Args
         (Self   : in out Option_Parser;
          Args   : XString_Array;
          Pos    : Positive;
          Result : in out Parsed_Arguments) return Parser_Return;
+
+      overriding function JSON_Kind (Self : Option_Parser) return String
+      is ("option");
 
       type Internal_Result is new Parser_Result with record
          Result : Arg_Type;
@@ -1057,6 +1127,22 @@ package body GNATCOLL.Opt_Parse is
          return New_Pos;
       end Parse_Args;
 
+      --------------------
+      -- Init_JSON_Help --
+      --------------------
+
+      overriding procedure Init_JSON_Help
+        (Self : Option_Parser; Val : JSON_Value) is
+      begin
+         if Short /= "" then
+            Val.Set_Field ("short_flag", Short);
+         end if;
+
+         if Long /= "" then
+            Val.Set_Field ("long_flag", Long);
+         end if;
+      end Init_JSON_Help;
+
    begin
       if Enabled then
          Parser.Data.Opts_Parsers.Append (Self);
@@ -1154,6 +1240,10 @@ package body GNATCOLL.Opt_Parse is
 
       overriding function Does_Accumulate
         (Self : Option_List_Parser) return Boolean is (Accumulate);
+
+      overriding function JSON_Kind
+        (Self : Option_List_Parser) return String
+      is ("list_option" & (if Accumulate then "_accumulate" else ""));
 
       type Internal_Result is new Parser_Result with record
          Results : Result_Vectors.Vector;
@@ -1391,6 +1481,19 @@ package body GNATCOLL.Opt_Parse is
             Parser.Data.All_Parsers.Append (Parser.Data.Help_Flag);
             Parser.Data.Help_Flag.Position
               := Parser.Data.All_Parsers.Last_Index;
+
+            Parser.Data.JSON_Help_Flag := new JSON_Help_Flag_Parser'
+              (Name   => +"JSON help",
+               Help   => +"Output the help for this command as JSON, and exit",
+               Opt    => True,
+               Parser => Parser.Data,
+               Long   => +"--json-help",
+               others => <>);
+            Parser.Data.Opts_Parsers.Append (Parser.Data.JSON_Help_Flag);
+            Parser.Data.All_Parsers.Append (Parser.Data.JSON_Help_Flag);
+            Parser.Data.JSON_Help_Flag.Position
+              := Parser.Data.All_Parsers.Last_Index;
+
             Parser.Data.Help_Column_Limit := Help_Column_Limit;
          end if;
       end return;
@@ -1413,6 +1516,31 @@ package body GNATCOLL.Opt_Parse is
    begin
       Self.Data.Default_Result := No_Parsed_Arguments;
    end Reset;
+
+   ---------------
+   -- JSON_Help --
+   ---------------
+
+   function JSON_Help (Self : Argument_Parser) return JSON_Value is
+      Ret : constant JSON_Value := Create_Object;
+      Positional_Parsers : JSON_Array := Empty_Array;
+      Optional_Parsers : JSON_Array := Empty_Array;
+   begin
+      Ret.Set_Field ("help", +Self.Data.Help);
+
+      for Parser of Self.Data.Positional_Args_Parsers loop
+         Append (Positional_Parsers, Parser.JSON_Help);
+      end loop;
+
+      for Parser of Self.Data.Opts_Parsers loop
+         Append (Optional_Parsers, Parser.JSON_Help);
+      end loop;
+
+      Ret.Set_Field ("positional_parsers", Positional_Parsers);
+      Ret.Set_Field ("optional_parsers", Optional_Parsers);
+
+      return Ret;
+   end JSON_Help;
 
    ----------
    -- Help --
@@ -1587,6 +1715,7 @@ package body GNATCOLL.Opt_Parse is
         (Subparser_Type'Class, Subparser);
    begin
       Free (Self.Data.Help_Flag);
+      Free (Self.Data.JSON_Help_Flag);
       Free (Self.Data);
    end Finalize;
 

@@ -1,0 +1,3 @@
+driver: build_run_assert_and_diff
+description:
+    Test --json-help option
