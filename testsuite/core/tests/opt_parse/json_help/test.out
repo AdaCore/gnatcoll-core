@@ -1,0 +1,58 @@
+{
+  "help": "Test program",
+  "optional_parsers": [
+    {
+      "help": "Show this help message",
+      "kind": "flag",
+      "long_flag": "--help",
+      "name": "help",
+      "short_flag": "-h"
+    },
+    {
+      "help": "Output the help for this command as JSON, and exit",
+      "kind": "flag",
+      "long_flag": "--json-help",
+      "name": "JSON help"
+    },
+    {
+      "help": "Whether the tool should be quiet or not",
+      "kind": "flag",
+      "long_flag": "--quiet",
+      "name": "quiet",
+      "short_flag": "-q"
+    },
+    {
+      "help": "What charset to use for the analysis context. Default is \"latin-1\"",
+      "kind": "option",
+      "long_flag": "--charset",
+      "name": "charset",
+      "short_flag": "-C"
+    },
+    {
+      "help": "Number of jobs",
+      "kind": "option",
+      "long_flag": "--jobs",
+      "name": "jobs",
+      "short_flag": "-j"
+    },
+    {
+      "help": "Scenario variables",
+      "kind": "list_option_accumulate",
+      "name": "SCENARIO-VARIABLE"
+    },
+    {
+      "help": "Enum option. Possible alternatives: foo, bar, baz. Default: foo",
+      "kind": "option",
+      "long_flag": "--enum-opt",
+      "name": "enum-opt",
+      "short_flag": "-E"
+    }
+  ],
+  "positional_parsers": [
+    {
+      "help": "The files to parse",
+      "kind": "positional_list",
+      "name": "files"
+    }
+  ]
+}

@@ -22,6 +22,7 @@ with GNATCOLL.Strings; use GNATCOLL.Strings;
 
 with Ada.Containers.Vectors;
 with GNATCOLL.Refcount;
+with GNATCOLL.JSON; use GNATCOLL.JSON;
 private with GNATCOLL.Locks;
 
 package GNATCOLL.Opt_Parse is
@@ -222,6 +223,29 @@ package GNATCOLL.Opt_Parse is
 
    function Help (Self : Argument_Parser) return String;
    --  Return the help for this parser as a String.
+
+   function JSON_Help (Self : Argument_Parser) return JSON_Value;
+   --  Return the help for this parser as JSON.
+   --
+   --  The format of the emitted json will be::
+   --
+   --     { "help": "global help string",
+   --       "optional_parsers": [list of optional subparsers],
+   --       "positional_parsers": [list of positional subparsers] }
+   --
+   --  The format of invididual subparsers will be::
+   --
+   --     { "name": subparser name,
+   --       "kind": subparser kind: one of "flag", "option", "list_option",
+   --               "list_option_accumulate", "positional_arg",
+   --               "positional_list"
+   --       "help": subparser help,
+   --
+   --       for flag parsers:
+   --
+   --       "short_flag": short flag string
+   --       "long_flag": long flag string
+   --     }
 
    function Last_Error (Self : Argument_Parser) return String;
    --  Return the last error produced by this parser if there is one, the empty
@@ -719,6 +743,14 @@ private
    --  Return the result of parsing arguments for this parser. Abstract method
    --  that must be overloaded by implementations.
 
+   function Usage
+     (Self : Subparser_Type) return String is abstract;
+   --  Return a usage string for this parser. Abstract method that must be
+   --  overloaded.
+
+   function JSON_Kind (Self : Subparser_Type) return String is abstract;
+   --  Return the kind of the parser, for JSON introspection purposes.
+
    function Parse
      (Self   : in out Subparser_Type'Class;
       Args   : XString_Array;
@@ -727,10 +759,15 @@ private
    --  Return the result of parsing arguments for this parser. Function wrapper
    --  around `Parse_Args` that is called by Arguments_Parser.
 
-   function Usage
-     (Self : Subparser_Type) return String is abstract;
-   --  Return a usage string for this parser. Abstract method that must be
-   --  overloaded.
+   function JSON_Help
+     (Self : Subparser_Type) return JSON_Value;
+   --  Return a JSON object representing the help for this subparser. This
+   --  procedure is not to be overriden, fields should be added by overriding
+   --  the ``Init_JSON_Help`` procedure.
+
+   procedure Init_JSON_Help (Self : Subparser_Type; Val : JSON_Value);
+   --  This procedure can be overriden to add fields to ``Val``, which will be
+   --  the JSON representation returned by ``JSON_Help``.
 
    function Help_Name
      (Self : Subparser_Type) return String
@@ -760,7 +797,10 @@ private
       All_Parsers                           : Parser_Vector;
       Default_Result                        : Parsed_Arguments
         := No_Parsed_Arguments;
+
       Help_Flag                             : Subparser := null;
+      JSON_Help_Flag                        : Subparser := null;
+      --  Subparsers for Help/JSON Help flags
 
       Mutex : aliased Mutual_Exclusion;
       --  Mutex used to make Get_Result thread safe
