@@ -1,11 +1,6 @@
 --  Copyright (C) 2024, AdaCore
 --
 --  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
---
---  The unit provides functions to generate random data using the OS CSPRNG
---  This means that this functions are suitable for cryptographic contexts
---  The downside is that that they around one order of magnitud slower than
---  implementation provided in the default Ada runtime.
 
 with Ada.Finalization;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
@@ -868,5 +863,52 @@ private
    end record;
 
    overriding procedure Finalize (Self : in out Argument_Parser);
+
+   generic
+      Short            : String;
+      Long             : String;
+      Name             : String;
+      Legacy_Long_Form : Boolean := False;
+   package Flag_Invariants is
+      pragma Assertion_Policy (Assert => Check);
+      --  We always want to check those assertions
+
+      pragma Assert
+        (Short'Length = 0 or else Short (1) = '-',
+         "Short flag should start with a dash");
+
+      pragma Assert
+         (Legacy_Long_Form
+          or else (Long'Length = 0 or else Long (1 .. 2) = "--"),
+         "Long flag should start with two dashes");
+
+      pragma Assert
+         ((not Legacy_Long_Form)
+          or else (Long'Length = 0 or else Long (1 .. 1) = "-"),
+         "Legacy long flag should start with one dash");
+
+      pragma Assert
+        (Long'Length > 0 or else Name'Length > 0,
+         "Name should be non empty if there is no long flag");
+
+      pragma Assert
+         (Long'Length > 0 or else Short'Length > 0,
+          "You should have either a long or a short flag");
+
+      pragma Assert
+        (Short'Length = 0 or else Short (2)  in 'a' .. 'z' | 'A' .. 'Z',
+         "Short flag should start with an alphabetic character");
+
+      pragma Assert
+        (Long'Length = 0 or else Long (3)  in 'a' .. 'z' | 'A' .. 'Z',
+         "Long flag should start with an alphabetic character");
+   end Flag_Invariants;
+   --  This package is an helper package, helping check some invariants at
+   --  runtime. The neat thing about using `pragma Assert` is that in a wide
+   --  variety of use cases, GNAT is actually able to warn you about violating
+   --  those invariants at compile time.
+
+   function "+" (Self : String) return XString renames To_XString;
+   function "+" (Self : XString) return String renames To_String;
 
 end GNATCOLL.Opt_Parse;
