@@ -1,0 +1,72 @@
+--  Copyright (C) 2025, AdaCore
+--
+--  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
+
+with GNATCOLL.Opt_Parse; use GNATCOLL.Opt_Parse;
+with GNATCOLL.Opt_Parse.Misc_Parsers; use GNATCOLL.Opt_Parse.Misc_Parsers;
+with GNATCOLL.Strings;   use GNATCOLL.Strings;
+
+with Test_Assert;
+
+function Test return Integer is
+
+   pragma Extensions_Allowed (On);
+
+   package A renames Test_Assert;
+
+   function "+"
+     (Self : String) return XString renames To_XString;
+
+   package Arg is
+      Parser : Argument_Parser := Create_Argument_Parser
+        (Help => "Test");
+
+      package The_Flag is new Parse_Indexed_Option
+        (Parser   => Parser,
+         Flag     => "--flag",
+         Arg_Type => Integer,
+         Help     => "The flag");
+   end Arg;
+
+begin
+
+   --  Basic accumulative workflow: the flag can be passed several times with
+   --  different indices, which will accumulate in the map.
+   if Arg.Parser.Parse ((+"--flag:foo", +"219", +"--flag:bar", +"220")) then
+      A.Assert (Arg.The_Flag.Get.Element ("foo") = 219, "Wrong num");
+      A.Assert (Arg.The_Flag.Get.Element ("bar") = 220, "Wrong num");
+   else
+      A.Assert (False, "Parsing failed, should have succeeded");
+   end if;
+
+   Arg.Parser.Reset;
+
+   --  Basic workflow with --flag:index=value format
+   if Arg.Parser.Parse ((+"--flag:foo=219", +"--flag:bar=220")) then
+      A.Assert (Arg.The_Flag.Get.Element ("foo") = 219, "Wrong num");
+      A.Assert (Arg.The_Flag.Get.Element ("bar") = 220, "Wrong num");
+   else
+      A.Assert (False, "Parsing failed, should have succeeded");
+   end if;
+
+   --  Invalid flag: Should result in a parsing error
+   if Arg.Parser.Parse ((+"--flag:", +"123")) then
+      A.Assert (False);
+   end if;
+
+   --  Invalid flag: Should result in a parsing error
+   if Arg.Parser.Parse ((+"--flag", +"123")) then
+      A.Assert (Arg.The_Flag.Get.Element ("") = 123, "Wrong num");
+   end if;
+
+   --  Flag value passed twice: should result in error
+   A.Assert
+     (not Arg.Parser.Parse ((+"--flag:foo", +"123", +"--flag:foo", +"456")));
+
+   --  Incomplete option
+   A.Assert
+     (not Arg.Parser.Parse ((1 => +"--flag:foo")));
+
+   return A.Report;
+
+end Test;
