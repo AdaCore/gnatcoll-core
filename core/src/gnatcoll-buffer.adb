@@ -17,10 +17,12 @@ package body GNATCOLL.Buffer is
    -----------
 
    function Check (Self : in out Reader'Class; Str : String) return Boolean is
-      CC : Character;
+      CC        : Character;
+      Tmp_Index : Integer := Self.Current;
    begin
       for J in Str'Range loop
          if not Next (Self, CC) or else Str (J) /= CC then
+            Self.Current := Tmp_Index;
             return False;
          end if;
       end loop;
@@ -147,7 +149,7 @@ package body GNATCOLL.Buffer is
       begin
          if Self.First = 0 or else Hold = 0 then
 
-            --  If no character is hold just fill the buffer
+            --  If no character is held just fill the buffer
             Read_Bytes := FS.Read (Self.FD, Self.Buffer_Str.all);
             if Read_Bytes = 0 then
                Self.EOF := True;
@@ -164,7 +166,7 @@ package body GNATCOLL.Buffer is
             return True;
 
          else
-            --  Some character are hold.
+            --  Some character are held.
             if Hold > Self.Buffer_Str'Length / 2 then
                --  Remaining size in the buffer is insufficient for a read
                --  operation. Reallocate the buffer and duplicate its size
