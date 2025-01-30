@@ -158,5 +158,7 @@ begin
          end if;
       end;
    end loop;
+
+   Close (Data_Dir);
    return A.Report;
 end Test;
