@@ -85,7 +85,7 @@ begin
                (Path (Handle, Result), Follow_Symlinks => True);
          else
             --  On Windows the system call used to iterate on a directory also
-            --  return stat data and thus we can avoid a costly cost to stat.
+            --  returns stat data and thus we can avoid a costly call to stat.
             Result.Info := Stat.New_File_Attributes
                (Exists        => True,
                 Writable      => True,
