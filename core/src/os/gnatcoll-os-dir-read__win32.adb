@@ -33,7 +33,6 @@ function Read
     Follow_Symlinks : Boolean := True)
    return Dir_Entry
 is
-   pragma Unreferenced (Follow_Symlinks);
    Dir_Info   : aliased FILE_DIRECTORY_INFORMATION;
    Result     : Dir_Entry;
    Status     : NTSTATUS;
@@ -57,9 +56,12 @@ begin
           RestartScan          => BOOL_FALSE);
 
       if Is_Success (Status) then
+         --  Compute name of the entry as UTF-8 string
          Result.Name_Last := To_UTF8
             (Dir_Info.FileName (1 .. Integer (Dir_Info.FileNameLength / 2)),
              Result.Name_Buffer);
+
+         --  Ignore . and .. entries
          if Result.Name_Buffer (1 .. Result.Name_Last) = "." or else
             Result.Name_Buffer (1 .. Result.Name_Last) = ".."
          then
@@ -69,19 +71,35 @@ begin
          end if;
 
          Is_Dir := (DIRECTORY and Dir_Info.FileAttributes) > 0;
+
+         --  TODO: Should be adjusted to check if the reparse point type is
+         --  really a symlink. Even if the logic is not perfect this does
+         --  not impact the returned result.
          Is_Symlink := (REPARSE_POINT and Dir_Info.FileAttributes) > 0;
-         Result.Info := Stat.New_File_Attributes
-            (Exists        => True,
-             Writable      => True,
-             Readable      => True,
-             Executable    => True,
-             Symbolic_Link => Is_Symlink,
-             Regular       => not (Is_Symlink or Is_Dir),
-             Directory     => Is_Dir,
-             Stamp         => Ada.Calendar.Conversions.To_Ada_Time
-                (Interfaces.C.long
-                   ((Dir_Info.LastWriteTime / 10000000) - Win32_Epoch_Offset)),
-             Length        => Long_Long_Integer (Dir_Info.EndOfFile));
+
+         if Is_Symlink and Follow_Symlinks then
+            --  Entries returned by the system never follow symlinks. If the
+            --  result is a symlink and that we should follow them then call
+            --  stat explicitely to set Result.Info
+            Result.Info := Stat.Stat
+               (Path (Handle, Result), Follow_Symlinks => True);
+         else
+            --  On Windows the system call used to iterate on a directory also
+            --  returns stat data and thus we can avoid a costly call to stat.
+            Result.Info := Stat.New_File_Attributes
+               (Exists        => True,
+                Writable      => True,
+                Readable      => True,
+                Executable    => True,
+                Symbolic_Link => Is_Symlink,
+                Regular       => not (Is_Symlink or Is_Dir),
+                Directory     => Is_Dir,
+                Stamp         => Ada.Calendar.Conversions.To_Ada_Time
+                   (Interfaces.C.long
+                      ((Dir_Info.LastWriteTime / 10000000) -
+                       Win32_Epoch_Offset)),
+                Length        => Long_Long_Integer (Dir_Info.EndOfFile));
+         end if;
       else
          Result.Name_Last := 0;
          Ignore_Entry := False;
