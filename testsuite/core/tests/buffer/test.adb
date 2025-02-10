@@ -137,6 +137,26 @@ begin
       FS.Close (FD);
    end;
 
+   Ada.Text_IO.Put_Line ("Check index behavior (file descriptor, release)");
+   declare
+      FD : constant FS.File_Descriptor := FS.Open ("./buffer.txt");
+      R : Reader := Open (FD);
+      C : Character;
+   begin
+      if R.Next (C) then
+         A.Assert ("" & R.Current_Char, "0", "expect character '0'");
+         A.Assert (Integer (R.Current_Position), 0, "expect position 0");
+         A.Assert (R.Check ("1") = True, "Buffer next char is '1'");
+         A.Assert ("" & R.Current_Char, "1", "expect character '1'");
+         A.Assert (Integer (R.Current_Position), 1, "expect position 1");
+         A.Assert (R.Check ("1") = False, "Buffer next char is not '1'");
+         A.Assert ("" & R.Current_Char, "1", "expect character '1'");
+         A.Assert (Integer (R.Current_Position), 1, "expect position 1");
+      end if;
+      R.Release;
+      FS.Close (FD);
+   end;
+
    return A.Report;
 
 end Test;
