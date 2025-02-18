@@ -578,7 +578,7 @@ package GNATCOLL.VFS is
    --  You must close it, otherwise the file will not actually be written in
    --  some cases. If Append is True then writing will be done at the end of
    --  the file if the file exists otherwise the file is created.
-   --  Return Invalid_File is the file couldn't be open for writing
+   --  Return Invalid_File if the file couldn't be open for writing
    --
    --  For safety, the actual writes will occur in a temporary file unless
    --  Append is true, which will be renamed when calling Close. This ensures
