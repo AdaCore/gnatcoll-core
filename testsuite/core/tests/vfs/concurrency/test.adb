@@ -1,7 +1,8 @@
 ------------------------------------------------------------------------------
+--                                                                          --
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2008-2017, AdaCore                     --
+--                     Copyright (C) 2025, AdaCore                          --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -21,51 +22,46 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Ada.Unchecked_Deallocation;
+with GNATCOLL.VFS; use GNATCOLL.VFS;
 
-package body GNATCOLL.IO is
+with Test_Assert;
 
-   procedure Unchecked_Free is new Ada.Unchecked_Deallocation
-     (File_Record'Class, File_Access);
+function Test return Integer is
 
-   ---------
-   -- Ref --
-   ---------
+   package A renames Test_Assert;
 
-   procedure Ref (File : File_Access) is
+   Cur_Dir : constant Virtual_File := Get_Current_Dir;
+   File    : Virtual_File;
+
+begin
+   File := Create_From_Dir (Dir => Cur_Dir, Base_Name => "foo.txt");
+
+   declare
+      task type T;
+
+      task body T is
+      begin
+         --  Starts multiple of ajustments and finalization simultaneously
+         --  on all threads to check for race conditions.
+         for Iter in 1 .. 1000000 loop
+            pragma Warnings (Off);
+            declare
+               F : constant Virtual_File := File;
+               --  Copying the file increments the virtual file reference
+               --  counter (in the Adjust subprogram).
+            begin
+               null;
+            end;
+            pragma Warnings (On);
+         end loop;
+      end T;
+
+      Tasks : array (1 .. 32) of T;
    begin
-      GNATCOLL.Atomic.Increment (File.Ref_Count);
-   end Ref;
+      null;
+   end;
 
-   -----------
-   -- Unref --
-   -----------
+   A.Assert (True);
+   return A.Report;
 
-   procedure Unref (File : in out File_Access) is
-   begin
-      if File.Ref_Count > 0 then
-         GNATCOLL.Atomic.Decrement (File.Ref_Count);
-
-         if File.Ref_Count = 0 then
-            Destroy (File.all);
-            Unchecked_Free (File);
-         end if;
-      end if;
-   end Unref;
-
-   -------------
-   -- Destroy --
-   -------------
-
-   procedure Destroy (File : in out File_Record) is
-   begin
-      Free (File.Full);
-
-      if File.Normalized_And_Resolved /= File.Normalized then
-         Free (File.Normalized_And_Resolved);
-      end if;
-
-      Free (File.Normalized);
-   end Destroy;
-
-end GNATCOLL.IO;
+end Test;
