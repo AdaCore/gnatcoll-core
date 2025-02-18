@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2009-2018, AdaCore                     --
+--                     Copyright (C) 2009-2025, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,6 +26,7 @@ with Ada.Strings.Unbounded;
 
 with GNAT.OS_Lib;
 with GNAT.Strings;
+with GNATCOLL.Atomic;    use GNATCOLL.Atomic;
 with GNATCOLL.Strings;   use GNATCOLL.Strings;
 with GNATCOLL.VFS_Types; use GNATCOLL.VFS_Types;
 
@@ -43,7 +44,7 @@ private package GNATCOLL.IO is
    --  that can be pretty time consuming, and that are performed pretty often.
 
    type File_Record is abstract tagged record
-      Ref_Count  : Natural := 0;
+      Ref_Count  : aliased GNATCOLL.Atomic.Atomic_Counter := 0;
       Full       : FS_String_Access;
       --  The file's full path
 
