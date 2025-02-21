@@ -659,7 +659,7 @@ package body GNATCOLL.Email.Utils is
                --  A comment. Ignored in general, but if we do not have a
                --  real name, it is likely to be contained in this
                --  comment, which is what some old mailers used to do:
-               --     report@gnat.com (Report)
+               --     support@gnat.com (Support)
 
                Index := From;
                Skip_Comment (Str (From .. Str'Last), Index);
