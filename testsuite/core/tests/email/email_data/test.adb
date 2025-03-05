@@ -22,13 +22,14 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;
+with Ada.IO_Exceptions;
+with GNATCOLL.Email;
+with GNATCOLL.Email.Parser;
 with Test_Assert;
 
 with GNATCOLL.Email.Mailboxes;
 with GNATCOLL.Email.Utils;
-use  GNATCOLL.Email,
-     GNATCOLL.Email.Mailboxes,
-     GNATCOLL.Email.Utils;
+use GNATCOLL.Email, GNATCOLL.Email.Mailboxes, GNATCOLL.Email.Utils;
 with GNATCOLL.VFS; use GNATCOLL.VFS;
 
 function Test return Integer is
@@ -36,16 +37,16 @@ function Test return Integer is
    package Cal renames Ada.Calendar;
    package A renames Test_Assert;
 
-   Count : Natural  := 0;
+   Count : Natural := 0;
 
    procedure Parse_File (Filename : String);
    --  Parse file as mailbox
 
    procedure Parse_File (Filename : String) is
-      Box    : Mbox;
-      Msg    : Message;
-      Addr   : Address_Set.Set;
-      T      : Cal.Time;
+      Box  : Mbox;
+      Msg  : Message;
+      Addr : Address_Set.Set;
+      T    : Cal.Time;
       pragma Unreferenced (Addr, T);
    begin
       Open (Box, Filename => Create (+Filename));
@@ -56,7 +57,7 @@ function Test return Integer is
             Get_Message (Curs, Box, Msg);
             if Msg /= Null_Message then
                Addr := Get_Recipients (Msg);
-               T    := Date_From_Envelope (Msg);
+               T := Date_From_Envelope (Msg);
             end if;
             Next (Curs, Box);
             Count := Count + 1;
@@ -68,6 +69,29 @@ begin
 
    Parse_File ("tea_party.mbx");
    A.Assert (Count, 95, "expected number of messages");
+
+   declare
+      Msg  : Message;
+      File : constant GNATCOLL.VFS.Virtual_File :=
+        GNATCOLL.VFS.Create ("tea_party.mbx");
+   begin
+      GNATCOLL.Email.Parser.Full_Parse_From_File (File, Msg);
+      A.Assert (Msg.Get_Message_Id = "200207292200.3301@wonder.land");
+   end;
+
+   declare
+      Msg  : Message;
+      File : constant GNATCOLL.VFS.Virtual_File :=
+        GNATCOLL.VFS.Create ("missing_file.mbx");
+   begin
+      GNATCOLL.Email.Parser.Full_Parse_From_File (File, Msg);
+      A.Assert (False);
+   exception
+      when Ada.IO_Exceptions.Name_Error =>
+         A.Assert
+           (True, "no_name exception raised when missing file is encountered");
+   end;
+
    return A.Report;
 
 end Test;
