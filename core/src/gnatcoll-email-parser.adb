@@ -25,6 +25,7 @@ pragma Warnings (Off, "*internal GNAT unit*");
 with Ada.Strings.Unbounded.Aux;
 pragma Warnings (On, "*internal GNAT unit*");
 
+with Ada.IO_Exceptions;
 with GNAT.Case_Util;             use GNAT.Case_Util;
 with GNATCOLL.VFS;               use GNATCOLL.VFS;
 with GNAT.Strings;               use GNAT.Strings;
@@ -348,6 +349,11 @@ package body GNATCOLL.Email.Parser is
       Str  : GNAT.Strings.String_Access;
    begin
       Str := Read_File (Filename);
+
+      if Str = null then
+         raise Ada.IO_Exceptions.Name_Error;
+      end if;
+
       Full_Parse (Str.all,
                   Msg, Store_Headers,
                   Store_Payload, Parse_Payload, Filter);
