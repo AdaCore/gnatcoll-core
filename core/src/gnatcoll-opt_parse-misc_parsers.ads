@@ -1,8 +1,9 @@
---  Copyright (C) 2024, AdaCore
+--  Copyright (C) 2025, AdaCore
 --
 --  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
 
 with Ada.Containers.Indefinite_Hashed_Maps;
+with Ada.Containers.Indefinite_Vectors;
 with Ada.Strings.Hash;
 
 package GNATCOLL.Opt_Parse.Misc_Parsers is
@@ -43,10 +44,16 @@ package GNATCOLL.Opt_Parse.Misc_Parsers is
       --  Name of the parser. Must be provided if Long is not provided.
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
-   package Parse_Indexed_Option is
+   package Parse_Indexed_Option_List is
 
+      package Result_Vector is new Ada.Containers.Indefinite_Vectors
+        (Natural, Arg_Type);
       package Result_Maps is new Ada.Containers.Indefinite_Hashed_Maps
-        (String, Arg_Type, Hash => Ada.Strings.Hash, Equivalent_Keys => "=");
+        (String,
+         Result_Vector.Vector,
+         Hash            => Ada.Strings.Hash,
+         Equivalent_Keys => "=",
+         "="             => Result_Vector."=");
 
       type Result_Map_Access is access all Result_Maps.Map;
 
@@ -61,12 +68,16 @@ package GNATCOLL.Opt_Parse.Misc_Parsers is
       function This return Subparser;
       --  Return the subparser instantiated by this package
 
-   end Parse_Indexed_Option;
+   end Parse_Indexed_Option_List;
    --  Parse an indexed option. An indexed option is like a regular option + an
    --  index in the name. This allows to have a key-value association map
-   --  mapping indices to values. For example, given the following command
-   --  line:
+   --  mapping indices to values. Values are automatically stored as lists,
+   --  and if you pass several values for a given key, the values are
+   --  concatenated. For example, given the following command line:
    --
-   --  --foo:bar 12 --foo:baz 15 --foo:bux 18
+   --  --foo:bar 12 --foo:baz 15 --foo:baz 42
+   --
+   --  Will associate the value "12" with the key "bar", and the values
+   --  "15" and "42" with the key "baz".
 
 end GNATCOLL.Opt_Parse.Misc_Parsers;

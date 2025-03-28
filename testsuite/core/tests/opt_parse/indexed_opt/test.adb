@@ -21,7 +21,7 @@ function Test return Integer is
       Parser : Argument_Parser := Create_Argument_Parser
         (Help => "Test");
 
-      package The_Flag is new Parse_Indexed_Option
+      package The_Flag is new Parse_Indexed_Option_List
         (Parser   => Parser,
          Flag     => "--flag",
          Arg_Type => Integer,
@@ -33,8 +33,10 @@ begin
    --  Basic accumulative workflow: the flag can be passed several times with
    --  different indices, which will accumulate in the map.
    if Arg.Parser.Parse ((+"--flag:foo", +"219", +"--flag:bar", +"220")) then
-      A.Assert (Arg.The_Flag.Get.Element ("foo") = 219, "Wrong num");
-      A.Assert (Arg.The_Flag.Get.Element ("bar") = 220, "Wrong num");
+      A.Assert (Arg.The_Flag.Get.Element ("foo").Contains (219),
+         "foo should have contained 219");
+      A.Assert (Arg.The_Flag.Get.Element ("bar").Contains (220),
+         "bar should have contained 220");
    else
       A.Assert (False, "Parsing failed, should have succeeded");
    end if;
@@ -43,8 +45,10 @@ begin
 
    --  Basic workflow with --flag:index=value format
    if Arg.Parser.Parse ((+"--flag:foo=219", +"--flag:bar=220")) then
-      A.Assert (Arg.The_Flag.Get.Element ("foo") = 219, "Wrong num");
-      A.Assert (Arg.The_Flag.Get.Element ("bar") = 220, "Wrong num");
+      A.Assert (Arg.The_Flag.Get.Element ("foo").Contains (219),
+         "foo should have contained 219");
+      A.Assert (Arg.The_Flag.Get.Element ("bar").Contains (220),
+         "bar should have contained 220");
    else
       A.Assert (False, "Parsing failed, should have succeeded");
    end if;
@@ -56,12 +60,17 @@ begin
 
    --  Invalid flag: Should result in a parsing error
    if Arg.Parser.Parse ((+"--flag", +"123")) then
-      A.Assert (Arg.The_Flag.Get.Element ("") = 123, "Wrong num");
+      A.Assert (Arg.The_Flag.Get.Element ("").Contains (123), "Wrong num");
    end if;
 
-   --  Flag value passed twice: should result in error
-   A.Assert
-     (not Arg.Parser.Parse ((+"--flag:foo", +"123", +"--flag:foo", +"456")));
+   --  Flag value passed twice
+   if Arg.Parser.Parse
+      ((+"--flag:foo", +"123", +"--flag:foo", +"456", +"--flag:bar", +"789"))
+   then
+      A.Assert (Arg.The_Flag.Get.Element ("foo").Contains (123));
+      A.Assert (Arg.The_Flag.Get.Element ("foo").Contains (456));
+      A.Assert (not Arg.The_Flag.Get.Element ("foo").Contains (789));
+   end if;
 
    --  Incomplete option
    A.Assert

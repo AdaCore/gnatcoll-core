@@ -1,4 +1,4 @@
---  Copyright (C) 2024, AdaCore
+--  Copyright (C) 2025, AdaCore
 --
 --  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
 
@@ -14,7 +14,7 @@ package body GNATCOLL.Opt_Parse.Misc_Parsers is
 
    pragma Extensions_Allowed (On);
 
-   package body Parse_Indexed_Option is
+   package body Parse_Indexed_Option_List is
 
       Indexed_Component_Matcher : constant Pattern_Matcher :=
         Compile (Flag & "(?::(\w+))?(=.+)?$");
@@ -194,17 +194,22 @@ package body GNATCOLL.Opt_Parse.Misc_Parsers is
             end if;
 
             declare
-               Dummy_Cursor : Result_Maps.Cursor;
-               Inserted     : Boolean;
+               Cursor  : Result_Maps.Cursor;
+               Vec     : Result_Vector.Vector;
+               Ignored : Boolean;
+               use Result_Maps;
             begin
-               Internal_Result (Res.all).Result.Insert
-                 (+Index, Convert (+Raw), Dummy_Cursor, Inserted);
-
-               if not Inserted then
-                  raise Opt_Parse_Error with "Duplicate key in indexed option";
+               Cursor := Internal_Result (Res.all).Result.Find (+Index);
+               if Cursor = No_Element then
+                  Vec.Append (Convert (+Raw));
+                  Internal_Result (Res.all).Result.Insert (+Index, Vec);
+               else
+                  Vec := Cursor.Element;
+                  Vec.Append (Convert (+Raw));
+                  Internal_Result (Res.all).Result.Replace_Element
+                    (Cursor, Vec);
                end if;
             end;
-
          end if;
 
          return New_Pos;
@@ -228,5 +233,5 @@ package body GNATCOLL.Opt_Parse.Misc_Parsers is
          Parser.Data.All_Parsers.Append (Self);
          Self.Position := Parser.Data.All_Parsers.Last_Index;
       end if;
-   end Parse_Indexed_Option;
+   end Parse_Indexed_Option_List;
 end GNATCOLL.Opt_Parse.Misc_Parsers;
