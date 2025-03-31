@@ -3483,15 +3483,18 @@ package body GNATCOLL.Projects is
          Count := Count + 1;
          Elem2 := Array_Elements (Elem2).Next;
       end loop;
-
       declare
          Result : String_List (1 .. Count);
       begin
          Count := Result'First;
 
          while Elem /= No_Array_Element loop
-            Result (Count) := new String'
-              (Get_String (Array_Elements (Elem).Index));
+            if Array_Elements (Elem).Index = All_Other_Names then
+               Result (Count) := new String'(Others_Index_Name);
+            else
+               Result (Count) := new String'
+                 (Get_String (Array_Elements (Elem).Index));
+            end if;
             Count := Count + 1;
             Elem := Array_Elements (Elem).Next;
          end loop;

@@ -1,0 +1,4 @@
+description: >
+  Check that the special attribute index 'others' has its dedicated string name
+data:
+- "tree.gpr"
