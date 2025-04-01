@@ -204,7 +204,7 @@ package body GNATCOLL.Opt_Parse.Misc_Parsers is
                   Vec.Append (Convert (+Raw));
                   Internal_Result (Res.all).Result.Insert (+Index, Vec);
                else
-                  Vec := Cursor.Element;
+                  Vec := Element (Cursor);
                   Vec.Append (Convert (+Raw));
                   Internal_Result (Res.all).Result.Replace_Element
                     (Cursor, Vec);
