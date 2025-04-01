@@ -1,0 +1,6 @@
+{
+    "projectFile": "core/gnatcoll_core.gpr",
+    "onTypeFormatting": {
+        "indentOnly": false
+    }
+}
