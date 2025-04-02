@@ -17,7 +17,7 @@ package body GNATCOLL.Opt_Parse.Misc_Parsers is
    package body Parse_Indexed_Option_List is
 
       Indexed_Component_Matcher : constant Pattern_Matcher :=
-        Compile (Flag & "(?::(\w+))?(=.+)?$");
+        Compile (Flag & "(?::([^=]+))?(=.+)?$");
 
       package I is new Flag_Invariants
         ("", Flag, Name, Legacy_Long_Form => True);
