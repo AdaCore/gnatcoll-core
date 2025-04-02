@@ -72,6 +72,14 @@ begin
       A.Assert (not Arg.The_Flag.Get.Element ("foo").Contains (789));
    end if;
 
+   --  Check the regexp supports "+" in the keys
+   if Arg.Parser.Parse ((+"--flag:c++=1", +"--flag:cxx=2")) then
+      A.Assert (Arg.The_Flag.Get.Element ("c++").Contains (1));
+      A.Assert (Arg.The_Flag.Get.Element ("cxx").Contains (2));
+   else
+      A.Assert (False, "Parsing failed, should have succeeded");
+   end if;
+
    --  Incomplete option
    A.Assert
      (not Arg.Parser.Parse ((1 => +"--flag:foo")));
