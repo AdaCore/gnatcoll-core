@@ -2,3 +2,5 @@ description: >
   Check that the special attribute index 'others' has its dedicated string name
 data:
 - "tree.gpr"
+control:
+- [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]
