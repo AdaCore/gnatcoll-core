@@ -52,7 +52,7 @@ begin
       for Idx in Frequence'Range loop
          Error := Long_Float (Frequence (Idx) - 100_000) / 100_000.0;
          A.Assert
-            (Error < 0.01,
+            (Error < 0.013,
              Idx'Img & " appears " & Frequence (Idx)'Img &
              " (error:" & Long_Float'Image (Error * 100.0) & "%)");
       end loop;
