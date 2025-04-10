@@ -1,4 +1,8 @@
-driver: build_run_diff
 description: Check behavior of DEBUG configuration variants
+data: [".gnatdebug_*"]
+run_args:
+    - [".gnatdebug_location"]
+    - [".gnatdebug_enclosing_entity"]
+    - [".gnatdebug_colors"]
 control:
     - [SKIP, "env.is_cross", "Tests using test.sh currently not supported on cross targets, see T616-039"]

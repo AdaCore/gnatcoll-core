@@ -1,3 +1,2 @@
-driver: build_and_run
 control:
     - [XFAIL, "env.llvm", "partial linking not supported in lld eng/gpr/gpr-issues#428"]

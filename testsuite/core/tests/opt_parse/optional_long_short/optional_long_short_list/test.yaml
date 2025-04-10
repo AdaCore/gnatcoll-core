@@ -1,5 +1,7 @@
-driver: build_run_diff
 description: Check that custom usage text can be provided for Opt_Parse Options
+run_args:
+    - ["-F1", "file1 file11 file111", "-F2", "file2 file22 file222", "--files3", "file3 file33 file333"]
+    - ["--help"]
 control:
     - [SKIP, "env.is_cross", "Tests using test.sh currently not supported on cross targets, see T616-039"]
     - [XFAIL, "env.llvm", "partial linking not supported in lld eng/gpr/gpr-issues#428"]

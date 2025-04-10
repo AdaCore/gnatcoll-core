@@ -1,7 +1,7 @@
 with GNATCOLL.Traces; use GNATCOLL.Traces;
 with Ada.Command_Line;
 
-procedure Test is
+function Test return Integer is
 
    Log : constant Logger := Create ("PKG");
 
@@ -37,4 +37,5 @@ begin
          Message_If_Success => "[Test success msg]",
          Raise_Exception    => False
       );
+   return 0;
 end Test;

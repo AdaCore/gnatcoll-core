@@ -1,6 +1,8 @@
 with Mylib;
+with Test_Assert;
 
-procedure Test is
+function Test return Integer is
 begin
    Mylib.Run;
+   return Test_Assert.Report;
 end Test;
