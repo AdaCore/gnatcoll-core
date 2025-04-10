@@ -1,4 +1,3 @@
-with GNATCOLL.Strings;
 with Text_IO;
 
 package body Mylib is
