@@ -1528,6 +1528,10 @@ package GNATCOLL.Projects is
    type Attribute_Pkg_List (<>) is private;
    --  The name of attributes, and their type.
 
+   Others_Index_Name : constant String := "__others__";
+   --  Name of the special index "others" (distinct from "others," which could
+   --  be used to define a language named "others").
+
    function Attribute_Project
      (Project   : Project_Type;
       Attribute : Attribute_Pkg_String;
