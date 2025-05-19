@@ -204,7 +204,7 @@ package GNATCOLL.Opt_Parse is
    --
    --  ``Incremental`` activates the incremental mode. In this mode, you can
    --  call ``Parse`` several times on your parser, with a given set of
-   --  ``Parsed_Arguments``, without those results being resetted every time.
+   --  ``Parsed_Arguments``, without those results being reset every time.
    --  Instead, results will be accumulated. The consequence is also that a
    --  given argument can be passed several times without triggering an
    --  error in ``Parse``. This is useful in the context of GNAT's tools,
