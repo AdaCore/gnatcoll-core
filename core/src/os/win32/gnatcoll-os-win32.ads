@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                     Copyright (C) 2022-2023, AdaCore                     --
+--                     Copyright (C) 2022-2025, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -116,6 +116,8 @@ package GNATCOLL.OS.Win32 is
    with Import        => True,
         Convention    => Stdcall,
         External_Name => "GetLastError";
+
+   ERROR_SHARING_VIOLATION : constant DWORD := 16#0000_0020#;
 
    Win32_Epoch_Offset : constant LARGE_INTEGER := 11644473600;
    --  Difference between Win32 epoch offset and linux epoch in seconds

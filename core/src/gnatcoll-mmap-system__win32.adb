@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2018, AdaCore                     --
+--                     Copyright (C) 2007-2025, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -22,11 +22,11 @@
 ------------------------------------------------------------------------------
 
 with Ada.IO_Exceptions;
+with GNAT.Strings; use GNAT.Strings;
 with System; use System;
 
-with GNAT.Strings; use GNAT.Strings;
-
 with GNATCOLL.IO.Native; use GNATCOLL.IO.Native;
+with GNATCOLL.OS.Win32;
 
 package body GNATCOLL.Mmap.System is
 
@@ -50,6 +50,8 @@ package body GNATCOLL.Mmap.System is
       Use_Mmap_If_Available : Boolean;
       Write                 : Boolean) return System_File
    is
+      use type GNATCOLL.OS.Win32.DWORD;
+
       dwDesiredAccess, dwShareMode : DWORD;
       PageFlags                    : DWORD;
 
@@ -75,6 +77,29 @@ package body GNATCOLL.Mmap.System is
       File_Handle := CreateFile
         (W_Filename'Address, dwDesiredAccess, dwShareMode,
          null, OPEN_EXISTING, Win.FILE_ATTRIBUTE_NORMAL, 0);
+
+      --  When a file can't be opened for read-only due to a sharing mode
+      --  violation, attempt to open the file with read/write sharing mode.
+
+      if File_Handle = Win.INVALID_HANDLE_VALUE
+        and then dwShareMode /= 0
+        and then GNATCOLL.OS.Win32.GetLastError
+                 = GNATCOLL.OS.Win32.ERROR_SHARING_VIOLATION
+      then
+         dwShareMode := Win.FILE_SHARE_READ + Win.FILE_SHARE_WRITE;
+
+         --  Try to open the file in another sharing mode
+
+         File_Handle :=
+           CreateFile
+             (lpFileName            => W_Filename'Address,
+              dwDesiredAccess       => dwDesiredAccess,
+              dwShareMode           => dwShareMode,
+              lpSecurityAttributes  => null,
+              dwCreationDisposition => OPEN_EXISTING,
+              dwFlagsAndAttributes  => Win.FILE_ATTRIBUTE_NORMAL,
+              hTemplateFile         => 0);
+      end if;
 
       if File_Handle = Win.INVALID_HANDLE_VALUE then
          raise Ada.IO_Exceptions.Name_Error
