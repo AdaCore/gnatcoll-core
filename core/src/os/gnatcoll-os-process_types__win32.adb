@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                              G N A T C O L L                             --
 --                                                                          --
---                   Copyright (C) 2021-2022, AdaCore                       --
+--                   Copyright (C) 2021-2025, AdaCore                       --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -26,9 +26,9 @@ with Ada.Wide_Characters.Handling;
 with Ada.Environment_Variables;
 with GNATCOLL.String_Builders;
 with GNATCOLL.OS.Win32.Process;
-pragma Warnings(Off);
+pragma Warnings (Off);
 with System.Address_To_Access_Conversions;
-pragma Warning(On);
+pragma Warning (On);
 
 package body GNATCOLL.OS.Process_Types is
 
@@ -38,7 +38,7 @@ package body GNATCOLL.OS.Process_Types is
    package WCH renames Ada.Wide_Characters.Handling;
 
    type EnvironW is array (1 .. Integer'Last) of Wide_Character;
-   pragma Suppress_Initialization(EnvironW);
+   pragma Suppress_Initialization (EnvironW);
    type EnvironW_Access is access all EnvironW;
    for EnvironW_Access'Storage_Size use 0;
    --  This type is used to map the address returned by GetEnvironmentStrings
@@ -46,7 +46,7 @@ package body GNATCOLL.OS.Process_Types is
    --  of the declared object will be used.
    --  The 0 storage size ensure we cannot call "new"
 
-   package EnvironW_Ops is new System.Address_To_Access_Conversions(EnvironW);
+   package EnvironW_Ops is new System.Address_To_Access_Conversions (EnvironW);
    use EnvironW_Ops;
    --  Provides To_Pointer to convert an Address to an EnvironW_Access.
 
@@ -117,7 +117,7 @@ package body GNATCOLL.OS.Process_Types is
 
       --  Fetch the current process environment
       Env_Addr : System.Address := GetEnvironmentStrings;
-      Env_Ptr  : EnvironW_Access := EnvironW_Access(To_Pointer (Env_Addr));
+      Env_Ptr  : EnvironW_Access := EnvironW_Access (To_Pointer (Env_Addr));
 
       Free_Result : BOOL;
 
