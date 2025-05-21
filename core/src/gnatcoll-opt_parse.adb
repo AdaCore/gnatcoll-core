@@ -547,10 +547,17 @@ package body GNATCOLL.Opt_Parse is
          end loop;
 
          for Parser of Self.Data.All_Parsers loop
+            --  Check that all mandatory parameters have been provided
             if not Parser.Opt and then not Parser.Has_Result (Result)
             then
                Handle_Failure ("Missing value for " & (+Parser.Name));
                return False;
+
+            elsif Parser.Has_Result (Result) then
+               --  Reset the ``Already_Parsed_In_Current_Pass`` flag
+               Parser.Get_Result
+                 (Result).Already_Parsed_In_Current_Pass := False;
+
             end if;
          end loop;
 
@@ -611,20 +618,25 @@ package body GNATCOLL.Opt_Parse is
    is
       Ret : Parser_Return;
    begin
-      if Self.Has_Result (Result) and then not
-        (Self.Does_Accumulate or else Self.Parser.Incremental)
+      if Self.Has_Result (Result) and then
+        not Self.Does_Accumulate and then
+        (not Self.Parser.Incremental or else
+           Self.Get_Result (Result).Already_Parsed_In_Current_Pass)
       then
          return Error_Return;
       end if;
 
       Ret := Self.Parse_Args (Args, Pos, Result);
 
-      if Ret /= Error_Return and then Self.Disallow_Msg /= Null_XString then
-         raise Opt_Parse_Error with To_String (Self.Disallow_Msg);
+      if Ret /= Error_Return then
+         if Self.Disallow_Msg /= Null_XString then
+            raise Opt_Parse_Error with To_String (Self.Disallow_Msg);
+         end if;
+         Result.Ref.Get.Results
+           (Self.Position).Already_Parsed_In_Current_Pass := True;
       end if;
 
       return Ret;
-
    end Parse;
 
    -------------------------------
@@ -722,7 +734,8 @@ package body GNATCOLL.Opt_Parse is
                Res : constant Internal_Result_Access := new Internal_Result'
                  (Start_Pos => Pos,
                   End_Pos   => Last,
-                  Results   => new Result_Array'(R));
+                  Results   => new Result_Array'(R),
+                  others    => <>);
             begin
                Result.Ref.Get.Results (Self.Position) :=
                   Res.all'Unchecked_Access;
@@ -822,7 +835,8 @@ package body GNATCOLL.Opt_Parse is
             Int_Res : constant Internal_Result_Access := new Internal_Result'
               (Start_Pos => Pos,
                End_Pos   => Pos,
-               Result    => Res);
+               Result    => Res,
+               others    => <>);
          begin
             Result.Ref.Get.Results (Self.Position) :=
                Int_Res.all'Unchecked_Access;
@@ -872,7 +886,8 @@ package body GNATCOLL.Opt_Parse is
             Res : constant Parser_Result_Access := new Flag_Parser_Result'
               (Start_Pos => Pos,
                End_Pos   => Pos,
-               Result    =>  True);
+               Result    =>  True,
+               others    => <>);
          begin
             Result.Ref.Get.Results (Self.Position) := Res;
          end;
@@ -1064,8 +1079,9 @@ package body GNATCOLL.Opt_Parse is
                Res     : constant Arg_Type := Convert (+Raw);
                Int_Res : constant Internal_Result_Access :=
                  new Internal_Result'(Start_Pos => Pos,
-                                      End_Pos  => Pos,
-                                      Result   => Res);
+                                      End_Pos   => Pos,
+                                      Result    => Res,
+                                      others    => <>);
             begin
                Result.Ref.Get.Results (Self.Position) :=
                   Int_Res.all'Unchecked_Access;
@@ -1324,7 +1340,8 @@ package body GNATCOLL.Opt_Parse is
                        new Internal_Result'
                          (Start_Pos => Pos,
                           End_Pos   => Pos,
-                          Results   => Result_Vectors.Empty_Vector);
+                          Results   => Result_Vectors.Empty_Vector,
+                          others    => <>);
 
                      Res := Tmp.all'Unchecked_Access;
                   end if;
@@ -1351,7 +1368,8 @@ package body GNATCOLL.Opt_Parse is
                Tmp := new Internal_Result'
                  (Start_Pos => Pos,
                   End_Pos   => Pos,
-                  Results   => Result_Vectors.Empty_Vector);
+                  Results   => Result_Vectors.Empty_Vector,
+                  others    => <>);
 
                Res := Tmp.all'Unchecked_Access;
 
@@ -1364,7 +1382,8 @@ package body GNATCOLL.Opt_Parse is
          Tmp := new Internal_Result'
            (Start_Pos => Pos,
             End_Pos   => Pos + Arg_Count,
-            Results   => Result_Vectors.Empty_Vector);
+            Results   => Result_Vectors.Empty_Vector,
+            others    => <>);
 
          Res := Tmp.all'Unchecked_Access;
 

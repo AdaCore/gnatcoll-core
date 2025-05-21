@@ -65,9 +65,8 @@ function Test return Integer is
    pragma Extensions_Allowed (On);
 begin
 
-   if Arg.Parser.Parse
-     ((+"-v", +"12", +"--number", +"219", +"-v",
-       +"15", +"-q", +"-q"))
+   if Arg.Parser.Parse ((+"-v", +"12", +"--number", +"219", +"-q")) and then
+     Arg.Parser.Parse ((+"-v", +"15", +"-q"))
    then
       A.Assert (Arg.Numbers.Get = (1 => 219), "Wrong num array");
       A.Assert (Arg.Val.Get = 15, "Wrong value");
@@ -86,7 +85,7 @@ begin
       A.Assert (False, "Argument parsing failed");
    end if;
 
-   --  After this call, the parser's defaut results should be reset
+   --  After this call, the parser's default results should be reset
    Arg.Parser.Reset;
    if Arg.Parser.Parse
      ((+"-n", +"25", +"-n", +"28"))
@@ -94,8 +93,16 @@ begin
       A.Assert (Arg.Numbers.Get = (25, 28),
                 "Wrong num array: " & Arg.Numbers.Get'Image);
       A.Assert (Arg.Val.Get = 0, "Wrong value");
+      A.Assert (not Arg.Quiet.Get, "Wrong value");
    else
       A.Assert (False, "Argument parsing failed");
+   end if;
+
+   --  Try parsing the same option multuple times in the same arg array
+   if Arg.Parser.Parse ((+"-v", +"10", +"-v", +"12")) then
+      A.Assert (False, "Argument parsing should have failed");
+   else
+      A.Assert (Arg.Val.Get = 10, "Parsing of the second '-v' should fail");
    end if;
 
    return A.Report;

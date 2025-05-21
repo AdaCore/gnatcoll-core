@@ -816,6 +816,11 @@ private
 
    type Parser_Result is abstract tagged record
       Start_Pos, End_Pos : Positive;
+      Already_Parsed_In_Current_Pass : Boolean := False;
+      --  Internal flag used to represents the fact that a value has already
+      --  been parsed for the associated option in the current parsing pass.
+      --  This flag is reset to ``False`` at the end of the ``Parse_Impl``
+      --  function.
    end record;
 
    procedure Release (Result : in out Parser_Result) is abstract;
