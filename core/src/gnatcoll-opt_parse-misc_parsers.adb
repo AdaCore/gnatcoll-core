@@ -189,7 +189,8 @@ package body GNATCOLL.Opt_Parse.Misc_Parsers is
                Unsafe_Res := new Internal_Result'
                  (Start_Pos => Pos,
                   End_Pos   => Pos,
-                  Result    => new Result_Maps.Map);
+                  Result    => new Result_Maps.Map,
+                  others => <>);
                Res := Unsafe_Res.all'Unchecked_Access;
             end if;
 

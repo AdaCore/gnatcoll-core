@@ -204,7 +204,7 @@ package GNATCOLL.Opt_Parse is
    --
    --  ``Incremental`` activates the incremental mode. In this mode, you can
    --  call ``Parse`` several times on your parser, with a given set of
-   --  ``Parsed_Arguments``, without those results being resetted every time.
+   --  ``Parsed_Arguments``, without those results being reset every time.
    --  Instead, results will be accumulated. The consequence is also that a
    --  given argument can be passed several times without triggering an
    --  error in ``Parse``. This is useful in the context of GNAT's tools,
@@ -816,6 +816,11 @@ private
 
    type Parser_Result is abstract tagged record
       Start_Pos, End_Pos : Positive;
+      Already_Parsed_In_Current_Pass : Boolean := False;
+      --  Internal flag used to represents the fact that a value has already
+      --  been parsed for the associated option in the current parsing pass.
+      --  This flag is reset to ``False`` at the end of the ``Parse_Impl``
+      --  function.
    end record;
 
    procedure Release (Result : in out Parser_Result) is abstract;
