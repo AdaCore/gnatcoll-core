@@ -50,6 +50,8 @@ package GNATCOLL.OS.Win32 is
      .. +(2 ** (System.Parameters.long_bits - Integer'(1))) - 1;
 
    type LPBOOL is access all BOOL;
+   NULL_LPBOOL : constant LPBOOL := null;
+
    type WORD is mod 2 ** Short_Integer'Size;
    type DWORD is mod 2 ** LONG'Size;
    type ULONG is mod 2 ** LONG'Size;
