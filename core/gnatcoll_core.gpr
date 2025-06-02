@@ -31,11 +31,7 @@ library project GNATCOLL_Core is
    Name    := "gnatcoll_core";
    Version := External
       ("GNATCOLL_VERSION", GNATCOLL_Core_Constants.GNATCOLL_VERSION_DEFAULT);
-   Mmap     : Yes_No := External
-      ("GNATCOLL_MMAP", GNATCOLL_Core_Constants.GNATCOLL_MMAP_DEFAULT);
 
-   Madvise  : Yes_No := External
-      ("GNATCOLL_MADVISE", GNATCOLL_Core_Constants.GNATCOLL_MADVISE_DEFAULT);
    Blake3_Arch  := External
       ("GNATCOLL_BLAKE3_ARCH",
        GNATCOLL_Core_Constants.GNATCOLL_BLAKE3_ARCH_DEFAULT);
@@ -132,27 +128,11 @@ library project GNATCOLL_Core is
       use Object_Root & "lib/gnatcoll_core/" & Project'Library_Kind;
    for Library_Name    use Name;
 
-
-   Extra_Switches := ();
    Extra_Libs := ();
+
    case OS is
       when "windows" =>
-         Extra_Libs := ("-lpsapi", "-lntdll");   --  For gnatcoll.memory
-      when others =>
-         case Mmap is
-            when "yes" =>
-               Extra_Switches := Extra_Switches & ("-DHAVE_MMAP");
-               case Madvise is
-                  when "yes" =>
-                     Extra_Switches := Extra_Switches & ("-DHAVE_MADVISE");
-                  when "no" =>
-                     null;
-               end case;
-            when others =>
-               null;
-         end case;
-   end case;
-   case OS is
+         Extra_Libs := ("-lntdll");
       when "unix" =>
          Extra_Libs := Extra_Libs & ("-ldl"); --  For gnatcoll.plugins
       when others =>
@@ -203,9 +183,6 @@ library project GNATCOLL_Core is
         & Blake3_C_Flags
         & External_As_List ("CFLAGS", " ")
         & External_As_List ("CPPFLAGS", " ");
-
-      for Switches ("gnatcoll_support.c") use
-        Extra_Switches & Compiler'Switches ("C");
    end Compiler;
 
    package Binder is
