@@ -304,6 +304,39 @@ package GNATCOLL.OS.Win32.Files is
    CF_FILE_ATTRIBUTE_TEMPORARY   : constant CF_FILE_ATTRIBUTE := 16#0000_0100#;
    CF_FILE_FLAG_BACKUP_SEMANTICS : constant CF_FILE_ATTRIBUTE := 16#0200_0000#;
 
+   subtype COPY_F_COPY_FLAGS is DWORD;
+
+   COPY_F_ALLOW_DECRYPTED_DESTINATION : constant COPY_F_COPY_FLAGS :=
+     16#0000_0008#;
+   COPY_F_COPY_SYMLINK                : constant COPY_F_COPY_FLAGS :=
+     16#0000_0800#;
+   COPY_F_FAIL_IF_EXISTS              : constant COPY_F_COPY_FLAGS :=
+     16#0000_0001#;
+   COPY_F_NO_BUFFERING                : constant COPY_F_COPY_FLAGS :=
+     16#0000_1000#;
+   COPY_F_OPEN_SOURCE_FOR_WRITE       : constant COPY_F_COPY_FLAGS :=
+     16#0000_1004#;
+   COPY_F_RESTARTABLE                 : constant COPY_F_COPY_FLAGS :=
+     16#0000_0002#;
+   COPY_F_REQUEST_COMPRESSED_TRAFFIC  : constant COPY_F_COPY_FLAGS :=
+     16#1000_0000#;
+   COPY_F_NO_FLAG                     : constant COPY_F_COPY_FLAGS :=
+     16#0000_0000#;
+
+   type LPPROGRESS_ROUTINE is
+     access function
+       (TotalFileSize          : LARGE_INTEGER;
+        TotalBytesTransferred  : LARGE_INTEGER;
+        StreamSize             : LARGE_INTEGER;
+        StreamBytesTransferred : LARGE_INTEGER;
+        StreamNumber           : DWORD;
+        CallbackReason         : DWORD;
+        SourceFile             : HANDLE;
+        DestinationFile        : HANDLE;
+        Data                   : LPVOID := NULL_LPVOID) return DWORD;
+
+   NULL_LPPROGRESS_ROUTINE : constant LPPROGRESS_ROUTINE := null;
+
    function CreateFile
      (Filename            : OS.C_WString; DesiredAccess : ACCESS_MODE;
       ShareMode           : CF_SHARE_MODE;
@@ -323,9 +356,13 @@ package GNATCOLL.OS.Win32.Files is
         External_Name => "_wopen";
 
    function CopyFile
-     (Existing_File_Name : OS.C_WString; New_File_Name : OS.C_WString;
-      Fail_If_Exists     : BOOL) return BOOL with
-     Import => True, Convention => Stdcall, External_Name => "CopyFileW";
+     (Existing_File_Name : OS.C_WString;
+      New_File_Name      : OS.C_WString;
+      Progress_Routine   : LPPROGRESS_ROUTINE := NULL_LPPROGRESS_ROUTINE;
+      Data               : LPVOID := NULL_LPVOID;
+      Cancel             : LPBOOL := NULL_LPBOOL;
+      Copy_Flags         : COPY_F_COPY_FLAGS) return BOOL
+   with Import => True, Convention => Stdcall, External_Name => "CopyFileExW";
 
    function CreatePipe
       (ReadPipe       : out HANDLE;
