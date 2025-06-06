@@ -180,23 +180,20 @@ build_and_test_x86_linux:
   extends: .job_template
   stage: build
   script:
-    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
-    - anod build --latest gnatcoll-core $BUILD_ARGS
-    - anod test --latest gnatcoll-core $TEST_ARGS
-    - e3-testsuite-report
-        --failure-exit-code 1
-        --xunit-output $CI_PROJECT_DIR/test.xml
-        --xunit-name gnatcoll-core
-        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/$TEST_DIR/results/new/ || FAILED=true
+  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+  - anod build --latest gnatcoll-core $BUILD_ARGS
+  - anod test --latest gnatcoll-core $TEST_ARGS
+  - working_dir=$(anod info test gnatcoll-core --show working_dir $TEST_ARGS)
+  - results_dir=$working_dir/results/new
+  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $results_dir || FAILED=true
 
-    # We previously prevented the pipeline from halting if a test failed, to make
-    # sure all tests were run. If a test failed now we exit with a non-zero code
-    - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
+  # We previously prevented the pipeline from halting if a test failed, to make
+  # sure all tests were run. If a test failed now we exit with a non-zero code
+  - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
   artifacts:
-    when:
-      always
+    when: always
     paths:
-      - test.xml
+    - test.xml
     reports:
       junit: test.xml
 
@@ -205,26 +202,19 @@ build_and_test_x86_64_linux:
   variables:
     BUILD_ARGS: ""
     TEST_ARGS: -Qexternal
-    TEST_DIR: gnatcoll-core_external_test
-    FATAL_ERRORS: true
 
 build_and_test_x86_64_linux_llvm:
   extends: .build_and_test_x86_64_linux_template
-  allow_failure: true
   variables:
     BUILD_ARGS: -Qcompiler=gnat-llvm
     TEST_ARGS: -Qcompiler=gnat-llvm
-    TEST_DIR: gnatcoll-core_gnat-llvm_test
-    FATAL_ERRORS: false
 
 build_and_test_x86_64_linux_valgrind:
   extends: .build_and_test_x86_64_linux_template
-  allow_failure: true
+  allow_failure: true # To remove once all tests pass
   variables:
     BUILD_ARGS: ""
     TEST_ARGS: -Qvalgrind
-    TEST_DIR: gnatcoll-core_valgrind_test
-    FATAL_ERRORS: false # TODO: set to True once all the leaks have been fixed
 
 build_and_test_coverage:
   extends: .job_template
