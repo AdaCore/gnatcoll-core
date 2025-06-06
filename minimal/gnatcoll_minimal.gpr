@@ -26,13 +26,7 @@ library project GNATCOLL_Minimal is
 
    Version := External ("GNATCOLL_VERSION",
       GNATCOLL_Minimal_Constants.GNATCOLL_VERSION_DEFAULT);
-
-   type Yes_No is ("yes", "no");
    Name    := "gnatcoll_minimal";
-   Mmap     : Yes_No := External
-      ("GNATCOLL_MMAP", Gnatcoll_Minimal_Constants.GNATCOLL_MMAP_DEFAULT);
-   Madvise  : Yes_No := External
-      ("GNATCOLL_MADVISE", Gnatcoll_Minimal_Constants.GNATCOLL_MADVISE_DEFAULT);
 
    type Build_Type is ("DEBUG", "PROD");
    Build : Build_Type :=
@@ -83,23 +77,11 @@ library project GNATCOLL_Minimal is
 
    Extra_Switches := ();
    Extra_Libs := ();
-
    case OS is
       when "windows" =>
          Extra_Libs := ("-lpsapi", "-lntdll");   --  For gnatcoll.memory
       when others =>
-         case Mmap is
-            when "yes" =>
-               Extra_Switches := Extra_Switches & ("-DHAVE_MMAP");
-               case Madvise is
-                  when "yes" =>
-                     Extra_Switches := Extra_Switches & ("-DHAVE_MADVISE");
-                  when "no" =>
-                     null;
-               end case;
-            when others =>
-               null;
-         end case;
+         null;
    end case;
 
    So_Ext := "";
@@ -146,7 +128,7 @@ library project GNATCOLL_Minimal is
         & External_As_List ("CFLAGS", " ")
         & External_As_List ("CPPFLAGS", " ");
 
-      for Switches ("gnatcoll_support.c") use
+      for Switches ("gnatcoll_atomics.c") use
         Extra_Switches & Compiler'Switches ("C");
    end Compiler;
 
