@@ -30,13 +30,6 @@
 #include <windows.h>
 #endif
 
-#if defined (__vxworks)
-/* S_IREAD is not defined on VxWorks */
-#ifndef S_IREAD
-#define S_IREAD  (S_IRUSR | S_IRGRP | S_IROTH)
-#endif
-#endif
-
 #ifdef HAVE_SYSLOG
 #include <syslog.h>
 void
@@ -197,14 +190,4 @@ __gnatcoll_get_tmp_dir (void)
    * by user */
   result = strdup ("/tmp");
   return strdup (result);
-}
-
-/************************************************************************
- * Support for atomic operations
- ************************************************************************/
-
-bool gnatcoll_sync_bool_compare_and_swap_access
-  (void** ptr, void* oldval, void* newval)
-{
-   return __sync_bool_compare_and_swap(ptr, oldval, newval);
 }
