@@ -1009,4 +1009,48 @@ package body GNATCOLL.OS.FSUtil is
       Sync_Trees_Src_To_Dst;
    end Sync_Trees_Internal;
 
+   ------------------
+   --  Remove_Tree --
+   ------------------
+
+   function Remove_Tree (Path : UTF8.UTF_8_String) return Boolean
+   is
+      use GNATCOLL.OS.Dir;
+
+      --  When doing a recursive removal we never want to follow a symlinks
+      Path_Stat : constant File_Attributes :=
+         GNATCOLL.OS.Stat.Stat (Path => Path, Follow_Symlinks => False);
+
+      Success : Boolean := True;
+
+      procedure Rm_File (Dir : Dir_Handle; Element : Dir_Entry);
+
+      procedure Rm_File (Dir : Dir_Handle; Element : Dir_Entry)
+      is
+      begin
+         if not Remove_File (GNATCOLL.OS.Dir.Path (Dir, Element)) then
+            Success := False;
+         end if;
+      end Rm_File;
+
+      procedure Rm_Dir (Dir : Dir_Handle);
+      procedure Rm_Dir (Dir : Dir_Handle) is
+      begin
+         if not Remove_Directory (GNATCOLL.OS.Dir.Path (Dir)) then
+            Success := False;
+         end if;
+      end Rm_Dir;
+
+   begin
+      if Is_Directory (Path_Stat) then
+         --  Recursive removal
+         Walk (Path             => Path,
+               File_Handler     => Rm_File'Unrestricted_Access,
+               Exit_Dir_Handler => Rm_Dir'Unrestricted_Access);
+         return Success;
+      else
+         return Remove_File (Path);
+      end if;
+   end Remove_Tree;
+
 end GNATCOLL.OS.FSUtil;
