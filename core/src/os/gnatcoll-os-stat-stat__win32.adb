@@ -39,11 +39,14 @@ is
    Result    : File_Attributes;
    WinHandle : HANDLE := NULL_HANDLE;
    IO        : IO_STATUS_BLOCK;
-   pragma Unreferenced (Follow_Symlinks);
-
+   Open_Options : OPEN_OPTION := FILE_OPEN_FOR_BACKUP_INTENT;
 begin
    --  NtQueryAttributesFile requires an absolute path
    Initialize (Attr, GNAT.OS_Lib.Normalize_Pathname (Path));
+
+   if not Follow_Symlinks then
+      Open_Options := Open_Options or FILE_OPEN_REPARSE_POINT;
+   end if;
 
    Status := NtOpenFile
       (WinHandle,
@@ -51,7 +54,7 @@ begin
        FILE_READ_ATTRIBUTES,
        IO,
        SHARE_ALL,
-       FILE_OPEN_FOR_BACKUP_INTENT);
+       Open_Options);
    if not Is_Success (Status) then
       Result.Exists := False;
       return Result;
