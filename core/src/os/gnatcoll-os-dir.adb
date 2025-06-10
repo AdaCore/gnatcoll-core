@@ -301,7 +301,8 @@ package body GNATCOLL.OS.Dir is
        Max_Depth            : Positive          := 256;
        On_Error             : Process_Error     := Ignore;
        Follow_Symlinks      : Boolean           := False;
-       Propagate_Exceptions : Boolean           := False)
+       Propagate_Exceptions : Boolean           := False;
+       Exit_Dir_Handler     : Exit_Directory    := null)
    is
       Stack     : Dir_Handle_Stack := Allocate_Stack (Size => Max_Depth - 1);
       Cur_Dir   : Dir_Handle;
@@ -319,9 +320,14 @@ package body GNATCOLL.OS.Dir is
             --  exploration of the parent directory.
             Close (Cur_Dir);
 
+            if Exit_Dir_Handler /= null then
+               Exit_Dir_Handler (Dir => Cur_Dir);
+            end if;
+
             exit when Is_Empty (Stack);
 
             Cur_Dir := Pop (Stack);
+
          elsif Is_Directory (Cur_File) then
             --  Process the entry
             if Dir_Handler /= null then

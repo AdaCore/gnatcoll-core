@@ -117,6 +117,12 @@ package GNATCOLL.OS.Dir is
    --  True then the directory is also explored. If False then the directory
    --  is skipped.
 
+   type Exit_Directory is access
+      procedure (Dir : Dir_Handle);
+   --  Function called on each directory found by Walk once the directory has
+   --  been explored. Note that the Dir_Handle passed to Exit_Directory is
+   --  closed and thus only the path is relevant.
+
    type Walk_Error is (OPEN_DIR_ERROR, OTHER_ERROR);
 
    type Process_Error is access
@@ -136,14 +142,15 @@ package GNATCOLL.OS.Dir is
    Ignore         : constant Process_Error := null;
    Raise_OS_Error : constant Process_Error := Raise_Exception_On_Error'Access;
 
-      procedure Walk
+   procedure Walk
       (Path                 : UTF8.UTF_8_String;
        File_Handler         : Process_File;
        Dir_Handler          : Process_Directory := null;
        Max_Depth            : Positive          := 256;
        On_Error             : Process_Error     := Ignore;
        Follow_Symlinks      : Boolean           := False;
-       Propagate_Exceptions : Boolean           := False);
+       Propagate_Exceptions : Boolean           := False;
+       Exit_Dir_Handler     : Exit_Directory    := null);
    --  Explore recursively a directory Path. For each entry found, call
    --  Dir_Handler if the entry is a directory and File_Handler otherwise.
    --  if a call to Dir_Handler returns True then Walk explores that
