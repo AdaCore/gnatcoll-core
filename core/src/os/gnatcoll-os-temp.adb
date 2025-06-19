@@ -117,7 +117,11 @@ package body GNATCOLL.OS.Temp is
       if Self.Path /= null then
          if Self.Auto_Delete then
             if not GNATCOLL.OS.FSUtil.Remove_Tree (Self.Path.all) then
+               pragma Annotate
+                  (Xcov, Exempt_On,
+                   "Hard to simulate a rm failure on all systems");
                raise OS_Error with "cannot delete temporary directory";
+               pragma Annotate (Xcov, Exempt_Off);
             end if;
          end if;
          Free (Self.Path);
@@ -131,7 +135,11 @@ package body GNATCOLL.OS.Temp is
          FS.Close (Self.FD);
          if Self.Auto_Delete then
             if not GNATCOLL.OS.FSUtil.Remove_File (Self.Path.all) then
+               pragma Annotate
+                  (Xcov, Exempt_On,
+                   "Hard to simulate a rm failure on all systems");
                raise OS_Error with "cannot delete temporary file";
+               pragma Annotate (Xcov, Exempt_Off);
             end if;
          end if;
          Free (Self.Path);
@@ -209,10 +217,16 @@ package body GNATCOLL.OS.Temp is
             end if;
 
             --  Ensure number of attempts is limited
+            pragma Annotate
+               (Xcov, Exempt_On,
+                "No testing as next random path cannot be predicted");
+
             Attempts := Attempts + 1;
             if Attempts >= Max_Attempts then
                raise OS_Error with "cannot find a random path";
             end if;
+
+            pragma Annotate (Xcov, Exempt_Off);
          end;
       end loop;
    end Random_Path;
