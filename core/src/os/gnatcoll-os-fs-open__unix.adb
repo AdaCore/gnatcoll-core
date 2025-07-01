@@ -55,6 +55,10 @@ begin
          O_Mode := O_WRONLY or O_CREAT or O_CLOEXEC or O_TRUNC;
          Perm   := S_IRUSR or S_IWUSR or S_IRGRP or
             S_IWGRP or S_IROTH or S_IWOTH;
+      when Create_Mode =>
+         O_Mode := O_WRONLY or O_CREAT or O_CLOEXEC or O_TRUNC or O_EXCL;
+         Perm   := S_IRUSR or S_IWUSR or S_IRGRP or
+            S_IWGRP or S_IROTH or S_IWOTH;
       when Append_Mode =>
          O_Mode := O_WRONLY or O_CREAT or O_APPEND or O_CLOEXEC;
          Perm   := S_IRUSR or S_IWUSR or S_IRGRP or

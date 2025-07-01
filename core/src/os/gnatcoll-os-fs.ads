@@ -56,7 +56,16 @@ package GNATCOLL.OS.FS is
    --  On Windows and Linux using 64K as buffer size when reading files is
    --  usually the best value in term of performance.
 
-   type Open_Mode is (Read_Mode, Write_Mode, Append_Mode);
+   type Open_Mode is (Read_Mode, Write_Mode, Append_Mode, Create_Mode);
+   --  Open mode. It can be either:
+   --
+   --  - Read_Mode: read-only mode
+   --  - Write_Mode: write-only mode. If the file already exists the content
+   --    is reset.
+   --  - Append_Mode: write-only mode. If the file already exists, calls to
+   --    write operations will append data to the original content.
+   --  - Create_Mode: write-only mode. If the file already exists, the open
+   --    operation fails.
 
    function Open
       (Path : UTF8.UTF_8_String;

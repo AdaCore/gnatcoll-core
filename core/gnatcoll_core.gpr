@@ -304,6 +304,8 @@ library project GNATCOLL_Core is
               use "gnatcoll-os-fsutil-read_symbolic_link__unix.adb";
             for Implementation ("GNATCOLL.OS.Random")
               use "gnatcoll-os-random__unix.adb";
+            for Implementation ("GNATCOLL.OS.Temp.Init")
+              use "gnatcoll-os-temp-init__unix.adb";
          when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
@@ -365,6 +367,8 @@ library project GNATCOLL_Core is
               use "gnatcoll-os-fsutil-read_symbolic_link__win32.adb";
             for Implementation ("GNATCOLL.OS.Random")
               use "gnatcoll-os-random__win32.adb";
+            for Implementation ("GNATCOLL.OS.Temp.Init")
+              use "gnatcoll-os-temp-init__win32.adb";
       end case;
 
       case OS is

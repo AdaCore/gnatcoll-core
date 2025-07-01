@@ -58,6 +58,14 @@ begin
             or Win32.Files.O_BINARY
             or Win32.Files.O_TRUNC;
          O_Perm := Win32.Files.S_IWRITE;
+      when Create_Mode =>
+         O_Mode := Win32.Files.O_WRONLY
+            or Win32.Files.O_CREAT
+            or Win32.Files.O_NOINHERIT
+            or Win32.Files.O_BINARY
+            or Win32.Files.O_TRUNC
+            or Win32.Files.O_EXCL;
+         O_Perm := Win32.Files.S_IWRITE;
       when Append_Mode =>
          O_Mode := Win32.Files.O_WRONLY
             or Win32.Files.O_CREAT

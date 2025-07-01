@@ -168,4 +168,8 @@ package GNATCOLL.OS.FSUtil is
    --  copied to the destination one, and entities only present in destination
    --  directory are removed.
 
+   function Remove_Tree (Path : UTF8.UTF_8_String) return Boolean;
+   --  Delete recursively Path. Returns True if deletion is successfull,
+   --  False otherwise.
+
 end GNATCOLL.OS.FSUtil;
