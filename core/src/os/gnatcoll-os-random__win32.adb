@@ -1,5 +1,5 @@
 --
---  Copyright (C) 2024, AdaCore
+--  Copyright (C) 2024-2025, AdaCore
 --
 --  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
 --
@@ -19,7 +19,7 @@ package body GNATCOLL.OS.Random is
    --  Name of the system library containing the ProcessPrng symbols.
    --  We prepend Windows SystemRoot to that value to ensure that the system
    --  version of that DLL is always picked.
-  
+
    BCryptPrimitives : DLL.Plugin := DLL.No_Plugin;
    --  DLL handler that contains the ProcessPrng function
 

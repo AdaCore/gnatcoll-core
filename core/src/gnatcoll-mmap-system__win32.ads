@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2007-2018, AdaCore                     --
+--                     Copyright (C) 2007-2025, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -84,6 +84,7 @@ package GNATCOLL.Mmap.System is
       INVALID_HANDLE_VALUE  : constant HANDLE := -1;
       FILE_BEGIN            : constant := 0;
       FILE_SHARE_READ       : constant := 16#00000001#;
+      FILE_SHARE_WRITE      : constant := 16#00000002#;
       FILE_ATTRIBUTE_NORMAL : constant := 16#00000080#;
       FILE_MAP_COPY         : constant := 1;
       FILE_MAP_READ         : constant := 4;
