@@ -616,21 +616,34 @@ package body GNATCOLL.Opt_Parse is
       Result : in out Parsed_Arguments) return Parser_Return
    is
       Ret : Parser_Return;
+      Has_Previous_Result_In_The_Current_Pass : Boolean := False;
    begin
-      if Self.Has_Result (Result) and then
-        not Self.Does_Accumulate and then
-        (not Self.Parser.Incremental or else
-           Self.Get_Result (Result).Already_Parsed_In_Current_Pass)
-      then
-         return Error_Return;
+      if Self.Has_Result (Result) then
+         Has_Previous_Result_In_The_Current_Pass :=
+           Self.Get_Result (Result).Already_Parsed_In_Current_Pass;
+         if not Self.Does_Accumulate and then
+           not Self.Parser.Incremental
+         then
+            return Error_Return;
+         end if;
       end if;
 
       Ret := Self.Parse_Args (Args, Pos, Result);
 
+      --  If argument has been parsed then perform post-parsing tests
       if Ret /= Error_Return then
+         --  Check that the parser is not disabled
          if Self.Disallow_Msg /= Null_XString then
             raise Opt_Parse_Error with To_String (Self.Disallow_Msg);
          end if;
+
+         --  Check whether the parser had a previous result in the current pass
+         if not Self.Does_Accumulate and then
+           Has_Previous_Result_In_The_Current_Pass
+         then
+            raise Opt_Parse_Error with "switch is present multiple times";
+         end if;
+
          Result.Ref.Get.Results
            (Self.Position).Already_Parsed_In_Current_Pass := True;
       end if;
