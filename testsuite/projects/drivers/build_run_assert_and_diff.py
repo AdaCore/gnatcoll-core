@@ -3,7 +3,6 @@ import os
 from e3.fs import cp
 from e3.testsuite.driver.classic import TestAbortWithFailure
 from e3.testsuite.driver.diff import DiffTestDriver, OutputRefiner, Substitute
-from e3.testsuite.process import check_call
 from e3.sys import interpreter
 
 from gprproject.testsuite.drivers import gprbuild, run_test_program
@@ -103,12 +102,7 @@ class BuildRunAssertAndDiffDriver(DiffTestDriver):
 
         pre_test_py = os.path.join(self.test_env["test_dir"], "pre_test.py")
         if os.path.isfile(pre_test_py):
-            check_call(
-                self,
-                [interpreter(), pre_test_py],
-                cwd=self.test_env["working_dir"],
-                timeout=self.default_process_timeout,
-            )
+            self.shell([interpreter(), pre_test_py])
 
         # Copy the requested data files
         copy_files_on_target = []
@@ -154,9 +148,4 @@ class BuildRunAssertAndDiffDriver(DiffTestDriver):
 
         post_test_py = os.path.join(self.test_env["test_dir"], "post_test.py")
         if os.path.isfile(post_test_py):
-            check_call(
-                self,
-                [interpreter(), post_test_py],
-                cwd=self.test_env["working_dir"],
-                timeout=self.default_process_timeout,
-            )
+            self.shell([interpreter(), post_test_py])

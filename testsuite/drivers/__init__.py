@@ -12,7 +12,6 @@ from e3.testsuite.driver.classic import (
     ProcessResult,
     TestAbortWithFailure,
 )
-from e3.testsuite.process import check_call
 from e3.testsuite.result import Log, TestStatus
 
 # Root directory of respectively the testsuite and the gnatcoll
@@ -94,7 +93,7 @@ def gprbuild(
     :param gpr_project_path: if not None prepent this value to GPR_PROJECT_PATH
     :type gpr_project_path: None | str
     :param kwargs: additional keyword arguements are passed to
-        e3.testsuite.process.check_call function
+        e3.os.process.Run.
     :return: True on successful completion
     :rtype: bool
     """
@@ -164,8 +163,7 @@ def gprbuild(
             + scenario_cmd
         )
 
-        check_call(
-            driver,
+        p = Run(
             gnatcov_cmd,
             cwd=cwd,
             env=env,
@@ -173,6 +171,7 @@ def gprbuild(
             timeout=timeout,
             **kwargs,
         )
+        assert p.status == 0, "gnatcov instrument failed:\n %s" % p.out
         gprbuild_cmd += [
             "-margs",
             "-v",
@@ -189,8 +188,7 @@ def gprbuild(
             "--target={target}".format(target=driver.env.target.triplet)
         )
 
-    check_call(
-        driver,
+    p = Run(
         gprbuild_cmd,
         cwd=cwd,
         env=env,
@@ -198,6 +196,7 @@ def gprbuild(
         timeout=timeout,
         **kwargs,
     )
+    assert p.status == 0, "gprbuild failed:\n %s" % p.out
     # If we get there it means the build succeeded.
     return True
 
