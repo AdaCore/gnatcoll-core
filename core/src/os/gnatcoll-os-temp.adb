@@ -132,7 +132,9 @@ package body GNATCOLL.OS.Temp is
 
    begin
       if Self.Path /= null then
-         FS.Close (Self.FD);
+         if Self.Auto_Close then
+            FS.Close (Self.FD);
+         end if;
          if Self.Auto_Delete then
             if not GNATCOLL.OS.FSUtil.Remove_File (Self.Path.all) then
                pragma Annotate
@@ -301,6 +303,7 @@ package body GNATCOLL.OS.Temp is
        Suffix       : UTF8.UTF_8_String := "";
        Dir          : UTF8.UTF_8_String := "";
        Auto_Delete  : Boolean           := True;
+       Auto_Close   : Boolean           := True;
        Max_Attempts : Integer           := DEFAULT_MAX_ATTEMPTS)
       return Temp_File_Handle
    is
@@ -321,7 +324,8 @@ package body GNATCOLL.OS.Temp is
                return Result : Temp_File_Handle do
                   Result.Path := new UTF8.UTF_8_String'(Result_Path);
                   Result.FD := FD;
-                  Result.Auto_Delete := Auto_Delete;
+                  Result.Auto_Delete := (Auto_Close and then Auto_Delete);
+                  Result.Auto_Close  := Auto_Close;
                end return;
             end if;
 

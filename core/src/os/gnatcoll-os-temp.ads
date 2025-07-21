@@ -87,6 +87,7 @@ package GNATCOLL.OS.Temp is
        Suffix       : UTF8.UTF_8_String := "";
        Dir          : UTF8.UTF_8_String := "";
        Auto_Delete  : Boolean           := True;
+       Auto_Close   : Boolean           := True;
        Max_Attempts : Integer           := DEFAULT_MAX_ATTEMPTS)
       return Temp_File_Handle;
    --  Create and open a temporary file
@@ -94,6 +95,12 @@ package GNATCOLL.OS.Temp is
    --  Dir and Max_Attempts parameters.
    --  If Auto_Delete is True then the file is deleted when the
    --  Temp_File_Handle is automatically finalized.
+   --  If Auto_Close is True then the file descriptor is closed when the
+   --  Temp_File_Handle is automatically finalized. Otherwise the file
+   --  descriptor can still be used after the finalization.
+   --  If Auto_Close is False, Auto_Delete will also be set to false meaning
+   --  the file will not be deleted when the Temp_File_Handle is automatically
+   --  finalized.
 
    function Path (Temp_File : Temp_File_Handle) return UTF8.UTF_8_String;
    --  Retrieve the path associated with a Temp_File_Handle.
@@ -147,6 +154,7 @@ private
       FD          : FS.File_Descriptor := FS.Invalid_FD;
       Path        : Path_Access := null;
       Auto_Delete : Boolean := True;
+      Auto_Close  : Boolean := True;
    end record;
 
    procedure Finalize (Self : in out Temp_File_Handle);
