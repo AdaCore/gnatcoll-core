@@ -156,6 +156,25 @@ begin
 
    declare
       Temp_File_Path : UTF_8_String_Access;
+      Fd             : FS.File_Descriptor;
+   begin
+      declare
+         Temp_File : Temp_File_Handle := Create_Temp_File
+            (Dir => ".", Auto_Close => False);
+      begin
+         Temp_File_Path := new UTF8.UTF_8_String'(Path (Temp_File));
+         A.Assert (Stat.Is_File (Stat.Stat (Temp_File_Path.all)),
+                   "file expected");
+         Fd := File_Descriptor (Temp_File);
+      end;
+
+      A.Assert (Stat.Is_File (Stat.Stat (Temp_File_Path.all)),
+                "file should not have been deleted");
+      FS.Write (Fd, "Hello");
+   end;
+
+   declare
+      Temp_File_Path : UTF_8_String_Access;
    begin
       declare
          Temp_File : Temp_File_Handle := Create_Temp_File (Dir => ".");
