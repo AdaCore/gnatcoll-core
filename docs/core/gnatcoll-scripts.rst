@@ -4,164 +4,60 @@
 **Scripts**: Embedding script languages
 ***************************************
 
-In a lot of contexts, you want to give the possibility to users to extend
-your application. This can be done in several ways: define an Ada API from
-which they can build dynamically loadable modules, provide the whole source
-code to your application and let users recompile it, interface with a simpler
-scripting languages,...
+Often, you may want users to extend your application. There are several ways to
+achieve this: you can define an Ada API for users to build dynamically loadable
+modules, provide your application's source code for users to modify and
+recompile, or interface with a simple scripting language.
 
-Dynamically loadable modules can be loaded on demand, as their name indicate.
-However, they generally require a relatively complex environment to build,
-and are somewhat less portable. But when your users are familiar with Ada,
-they provide a programming environment in which they are comfortable.
-As usual, changing the module requires recompilation, re-installation,...
+Dynamically loadable modules can be loaded as needed, but they typically
+require a complex build environment and are less portable. They are ideal when
+your users are familiar with Ada, offering a comfortable programming
+environment. However, updating modules means recompiling and reinstalling.
 
-Providing the source code to your application is generally even more
-complex for users. This requires an even more complex setup, your application
-is generally too big for users to dive into, and modifications done by one
-users are hard to provide to other users, or will be lost when you
-distribute a new version of your application.
+Distributing your application's source code is even more complex for users. It
+demands a complicated setup, and your application may be too large for users to
+easily modify. Changes made by one user are difficult to share and may be lost
+when you release a new version.
 
-The third solution is to embed one or more scripting languages in your
-application, and export some functions to it. This often requires your users
-to learn a new language, but these languages are generally relatively simple,
-and since they are interpreted they are easier to learn in an interactive
-console. The resulting scripts can easily be redistributed to other users or
-even distributed with future versions of your application.
+A third approach is to embed one or more scripting languages in your application
+and expose certain functions to them. Users may need to learn a new language,
+but scripting languages are usually simple and interactive, making them easier
+to learn. Scripts can be easily shared among users or included in future
+releases of your application.
 
-The module in GNATColl helps you implement the third solution. It was
-used extensively in the GPS programming environment for its python interface.
+GNATColl helps you implement this third solution. It has been used extensively
+in the GNAT Studio programming environment for its Python interface.
 
 .. tip::
 
    Each of the scripting language is optional
 
-This module can be compiled with any of these languages as an optional
-dependency (except for the shell language, which is always built-in, but is
-extremely minimal, and doesn't have to be loaded at run time anyway).
-If the necessary libraries are found on the system, GNATColl will
-be build with support for the corresponding language, but your application
-can chose at run time whether or not to activate the support for a specific
-language.
+This module can be built with support for any of the available scripting
+languages as optional dependencies. Please note that the module itself does not
+include any scripting language by default.
 
 .. index:: test driver
 .. index:: testing your application
 
-.. tip:: 
+.. tip::
 
    Use a scripting language to provide an automatic testing framework for
    your application.
-
-The GPS environment uses python command for its *automatic test suite*,
-including graphical tests such as pressing on a button, selecting a
-menu,...
 
 .. _Supported_languages:
 
 Supported languages
 ===================
 
-The module provides built-in support for several scripting languages, and
-other languages can "easily" be added. Your application does not change
-when new languages are added, since the interface to export subprograms
-and classes to the scripting languages is language-neutral, and will
-automatically export to all known scripting languages.
+Your application does not need to be modified when new scripting languages are
+added, because the interface for exporting subprograms and classes is
+language-neutral and automatically makes them available to all supported
+scripting languages.
 
-The Core component provides support for the following language:
-
-*Shell*
-  This is a very simple-minded scripting language, which doesn't provide
-  flow-control instructions (:ref:`The_Shell_language`).
-
-Optional components add support for other languages, e.g. Python. Please
-refer to the corresponding component's documentation.
-
-
-.. _The_Shell_language:
-
-The Shell language
-------------------
-
-The shell language was initially developed in the context of the GPS
-programming environment, as a way to embed scripting commands in XML
-configuration files.
-
-In this language, you can execute any of the commands exported by the
-application, passing any number of arguments they need. Arguments to function
-calls can, but need not, be quoted. Quoting is only mandatory when they
-contain spaces, newline characters, or double-quotes ('"'). To quote an
-argument, surround it by double-quotes, and precede each double-quote it
-contains by a backslash character. Another way of quoting is similar to
-what python provides, which is to triple-quote the argument, i.e. surround it
-by '"""' on each side. In such a case, any special character (in particular
-other double-quotes or backslashes) lose their special meaning and are just
-taken as part of the argument. This is in particular useful when you do not
-know in advance the contents of the argument you are quoting::
-
-  Shell> function_name arg1 "arg 2" """arg 3"""
-  
-Commands are executed as if on a stack machine: the result of a command is
-pushed on the stack, and later commands can reference it using `%`
-following by a number. By default, the number of previous results that are
-kept is set to 9, and this can only be changed by modifying the source code
-for GNATColl. The return values are also modified by commands executed
-internally by your application, and that might have no visible output from
-the user's point of view. As a result, you should never assume you know
-what `%1`,... contain unless you just executed a command in the
-same script::
-
-  Shell> function_name arg1
-  Shell> function2_name %1
-
-In particular, the `%1` syntax is used when emulating object-oriented
-programming in the shell. A method of a class is just a particular function
-that contains a '.' in its name, and whose first implicit argument is the
-instance on which it applies. This instance is generally the result of
-calling a constructor in an earlier call. Assuming, for instance, that we
-have exported a class "Base" to the shell from our Ada core, we could use
-the following code::
-
-  Shell> Base arg1 arg2
-  Shell> Base.method %1 arg1 arg2
-  
-to create an instance and call one of its methods.
-Of course, the shell is not the best language for object-oriented programming,
-and better languages should be used instead.
-
-When an instance has associated properties (which you can export from Ada
-using `Set_Property`), you access the properties by prefixing its name
-with "@"::
-  
-  Shell> Base arg1 arg2   # Build new instance
-  Shell> @id %1           # Access its "id" field
-  Shell> @id %1 5         # Set its "id" field
-  
-
-Some commands are automatically added to the shell when this scripting
-language is added to the application. These are
-
-.. index:: Function load
-
-`Function load (file)`
-  Loads the content of `file` from the disk, and execute each of its lines as
-  a Shell command. This can for instance be used to load scripts when your
-  application is loaded
-
-.. index:: Function echo
-
-`Function echo (arg...)`
-  This function takes any number of argument, and prints them in the console
-  associated with the language. By default, when in an interactive console, the
-  output of commands is automatically printed to the console. But when you
-  execute a script through `load` above, you need to explicitly call
-  `echo` to make some output visible.
-
-.. index:: Function clear_cache
-
-`Function clear_cache`
-  This frees the memory used to store the output of previous commands. Calling
-  `%1` afterward will not make sense until further commands are executed.
-
+Support for Python scripting is available through the GNATCOLL bindings
+component. For more information, please consult that component's documentation.
+Since GNATCOLL Core does not include any scripting language itself, the
+documentation examples primarily use the Python scripting support.
 
 .. _Classes_exported_to_all_languages:
 
@@ -169,7 +65,7 @@ Classes exported to all languages
 ---------------------------------
 
 In addition to the functions exported by each specific scripting language,
-as described above, GNATColl exports the following to all the
+GNATColl exports the following to all the
 scripting languages. These are exported when your Ada code calls the
 Ada procedure `GNATCOLL.Scripts.Register_Standard_Classes`, which should
 done after you have loaded all the scripting languages.
@@ -370,15 +266,7 @@ This is done through a simple call to one or more subprograms. The following
 example registers both the shell and python languages::
 
   with GNATCOLL.Scripts.Python;
-  with GNATCOLL.Scripts.Shell;
-  Register_Shell_Scripting (Repo);
   Register_Python_Scripting (Repo, "MyModule");
-
-.. index:: Procedure Register_Shell_Scripting
-
-`Procedure Register_Shell_Scripting (Repo)`
-  This adds support for the shell language. Any class or function that is
-  now exported through GNATColl will be made available in the shell
 
 .. index:: Procedure Register_Python_Scripting
 
@@ -473,7 +361,7 @@ need to be overriden.
   language, so that when the user presses :kbd:`enter` they know which language
   must execute the command
 
-.. index:: Virtual_Console.Read 
+.. index:: Virtual_Console.Read
 
 `Virtual_Console.Read (Size, Whole_Line) : String`
   Read either several characters or whole lines from the console. This is
@@ -526,7 +414,7 @@ To make it possible for users to create their own consoles, you need to
 export a `Constructor_Method` (see below) for the `Console`
 class. In addition to your own processing, this constructor needs also to
 call::
-  
+
      declare
         Inst : constant Class_Instance := Nth_Arg (Data, 1);
      begin
@@ -629,7 +517,7 @@ of the role of each type:
     myconsole = Console ("title") # Create new console
     myconsole.mydata = "20060619"  # Any data, really
     myconsole = Console ("title2")  # Create another window
-    myconsole = Console ("title") # Must be same as first, 
+    myconsole = Console ("title") # Must be same as first,
     print myconsole.mydata  # so that this prints "20060619"
 
 .. index:: Class Instance_Property
@@ -672,10 +560,7 @@ of the role of each type:
 
 Although the exact way they are all these types are created is largely
 irrelevant to your specific application in general, it might be useful for you
-to override part of the types to provide more advanced features. For instance,
-GPS redefines its own Shell language, that has basically the same behavior as
-the Shell language described above but whose `Subprogram_Record` in fact
-execute internal GPS actions rather than any shell code.
+to override part of the types to provide more advanced features
 
 .. _Exporting_functions:
 
@@ -974,8 +859,8 @@ There are two ways to work around that limitation:
     ed2 = Editor.get ("file.adb")
     	=> Return existing instance
     ed == ed2
-    	=> True	
-    
+    	=> True
+
   .. highlight:: ada
 
   The corresponding Ada code would be something like::
@@ -1024,7 +909,7 @@ There are two ways to work around that limitation:
     	=> ed is of type MyClassImpl
     ed = MyClass ("file.adb")  # return same instance
     ed.do_something()
-    
+
 
   It is important to realize that in the call above, we are not calling
   the constructor of a class, but a function. At the Ada level, the function
@@ -1039,7 +924,7 @@ There are two ways to work around that limitation:
     MyClass "file.adb"
     	=>  <MyClassImpl_Instance_0x12345>
     MyClassImpl.do_something %1
-    
+
   and the new name of the class is visible in the method call.
 
 
