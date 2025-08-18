@@ -1646,10 +1646,16 @@ package body GNATCOLL.Opt_Parse is
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Long'Last + 2, Args (Pos).Length);
 
+      elsif Short /= "" and then Args (Pos).Starts_With (Short & "=") then
+         --  Case 3: `-a=b`
+
+         New_Pos := Pos + 1;
+         return Args (Pos).Slice (Short'Last + 2, Args (Pos).Length);
+
       elsif Allow_Collated_Short_Form
          and then Short /= "" and then Args (Pos).Starts_With (Short)
       then
-         --  Case 3: `-ab`
+         --  Case 4: `-ab`
 
          New_Pos := Pos + 1;
          return Args (Pos).Slice (Short'Last + 1, Args (Pos).Length);
