@@ -33,7 +33,7 @@ begin
 
    Result2 := Wait_For_Processes (Processes => (H1, H2), Timeout => 5.0);
    A.Assert (Result2 /= Invalid_Handle, "a process should be available");
-   A.Assert (Result1 /= Result2, "Resutl1 should be different from Result2");
+   A.Assert (Result1 /= Result2, "Result1 should be different from Result2");
    if Result2 /= Invalid_Handle then
       Status := Wait (Result2);
       A.Assert (Status, 42, "exit status should be 42");
@@ -69,6 +69,24 @@ begin
    A.Assert (Result3 = H3, "H3 expected");
    if Result3 = H3 then
       Status := Wait (Result3);
+      A.Assert (Status, 42, "exit status should be 42");
+   end if;
+
+   H1 := Start (Args);
+   H2 := Start (Args);
+
+   Result1 := Wait_For_Processes (Processes => (H1, H2));
+   A.Assert (Result1 /= Invalid_Handle, "a process should be available");
+   if Result1 /= Invalid_Handle then
+      Status := Wait (Result1);
+      A.Assert (Status, 42, "exit status should be 42");
+   end if;
+
+   Result2 := Wait_For_Processes (Processes => (H1, H2));
+   A.Assert (Result2 /= Invalid_Handle, "a process should be available");
+   A.Assert (Result1 /= Result2, "Result1 should be different from Result2");
+   if Result2 /= Invalid_Handle then
+      Status := Wait (Result2);
       A.Assert (Status, 42, "exit status should be 42");
    end if;
 
