@@ -22,6 +22,7 @@
 ------------------------------------------------------------------------------
 
 with Ada.Calendar;
+with GNAT.Calendar;
 with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
 with GNATCOLL.OS.FS;
 with GNAT.Task_Lock;
@@ -61,13 +62,13 @@ is
 
    function Wait_For_Sigchld
       (Fd      : FS.File_Descriptor;
-       Timeout : Sint_64)
+       Timeout : GNAT.Calendar.timeval := GNAT.Calendar.timeval'Null_Parameter)
       return Libc_Status
    with Import => True,
         Convention => C,
         External_Name => "__gnatcoll_wait_for_sigchld";
-   --  Wait during timeout (in microseconds) for a write on Fd. If Timeout is
-   --  < 0 then infinite is assumed.
+   --  Wait during timeout for a write on Fd. If Timeout is
+   --  set to Null_Parameter then infinite is assumed.
 
    function Get_First_Waitable_Process return Integer;
    --  Loop other the monitored processes and returned the first process in the
@@ -187,31 +188,29 @@ begin
 
    --  Start looping
    loop
-      declare
-         --  Remaining max waiting time in microseconds
-         Microsecond_Timeout : constant Sint_64 :=
-            (if Is_Infinite_Timeout
-             then -1
-             else Sint_64 ((End_Time - Cal.Clock) * 1_000_000));
-      begin
-         --  Exit when timeout is reached and Timeout is not infinite
-         --  (i.e < 0.0)
-         if Microsecond_Timeout < 0 and then not Is_Infinite_Timeout then
+      if Is_Infinite_Timeout then
+
+         --  Wait indefinitely
+         Status := Wait_For_Sigchld (Pipe_Read);
+      else
+         if End_Time - Cal.Clock < 0.0 then
+            --  Timeout expired
             exit;
          end if;
 
          --  Wait
-         Status := Wait_For_Sigchld (Pipe_Read, Microsecond_Timeout);
+         Status := Wait_For_Sigchld
+           (Pipe_Read, GNAT.Calendar.To_Timeval (End_Time - Cal.Clock));
+      end if;
 
-         if Status = Success then
-            --  A SIGCHLD has been received. Check if the process is in our
-            --  list.
-            Result := Get_First_Waitable_Process;
-            if Result /= WAIT_TIMEOUT then
-               exit;
-            end if;
+      if Status = Success then
+         --  A SIGCHLD has been received. Check if the process is in our
+         --  list.
+         Result := Get_First_Waitable_Process;
+         if Result /= WAIT_TIMEOUT then
+            exit;
          end if;
-      end;
+      end if;
    end loop;
 
    Finalize_SIGCHLD_Monitoring;
