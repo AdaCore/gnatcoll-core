@@ -87,8 +87,8 @@ int __gnatcoll_remove_monitoring_fd (int fd)
 int __gnatcoll_wait_for_sigchld (int fd, sint_64 timeout)
 {
    fd_set fd_list;
-   struct timeval tv;
-   struct timeval *effective_timeout;
+   struct timeval tv = {0, 0};
+   struct timeval *effective_timeout = NULL;
    int retval = 0;
    char buf[1];
 
@@ -103,7 +103,7 @@ int __gnatcoll_wait_for_sigchld (int fd, sint_64 timeout)
       effective_timeout = &tv;
    }
 
-   while (tv.tv_sec > 0 || tv.tv_usec > 0) {
+   while (tv.tv_sec > 0 || tv.tv_usec > 0 || effective_timeout == NULL) {
       retval = select(fd + 1, &fd_list, NULL, NULL, effective_timeout);
       if (retval > 0)
       {
