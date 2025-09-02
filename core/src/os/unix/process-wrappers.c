@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/time.h>
 #include <signal.h>
 
 typedef long long int sint_64;
@@ -83,34 +84,74 @@ int __gnatcoll_remove_monitoring_fd (int fd)
    return -1;
 }
 
+/* Subtract two struct timeval values: result = a - b */
+void
+subtract_timeval (struct timeval *result, const struct timeval *a,
+                  const struct timeval *b)
+{
+   result->tv_sec = a->tv_sec - b->tv_sec;
+   result->tv_usec = a->tv_usec - b->tv_usec;
+   if (result->tv_usec < 0)
+      {
+         result->tv_sec -= 1;
+         result->tv_usec += 1000000;
+      }
+}
+
+/* Add two struct timeval values: result = a + b */
+void
+add_timeval (struct timeval *result, const struct timeval *a,
+             const struct timeval *b)
+{
+   result->tv_sec = a->tv_sec + b->tv_sec;
+   result->tv_usec = a->tv_usec + b->tv_usec;
+   if (result->tv_usec >= 1000000)
+      {
+         result->tv_sec += result->tv_usec / 1000000;
+         result->tv_usec = result->tv_usec % 1000000;
+      }
+}
+
 /* wait for write operation on a given file descriptor. */
-int __gnatcoll_wait_for_sigchld (int fd, sint_64 timeout)
+int
+__gnatcoll_wait_for_sigchld (int fd, struct timeval *timeout)
 {
    fd_set fd_list;
-   struct timeval tv = {0, 0};
-   struct timeval *effective_timeout = NULL;
    int retval = 0;
    char buf[1];
+   struct timeval now = { 0, 0 };
+   struct timeval end_time = { 0, 0 };
+
+   if (timeout != NULL)
+      {
+         gettimeofday (&now, NULL);
+         add_timeval (&end_time, &now, timeout);
+      }
 
    FD_ZERO (&fd_list);
    FD_SET (fd, &fd_list);
 
-   if (timeout < 0) {
-      effective_timeout = NULL;
-   } else {
-      tv.tv_sec = timeout / 1000000;
-      tv.tv_usec = timeout % 1000000;
-      effective_timeout = &tv;
-   }
-
-   while (tv.tv_sec > 0 || tv.tv_usec > 0 || effective_timeout == NULL) {
-      retval = select(fd + 1, &fd_list, NULL, NULL, effective_timeout);
-      if (retval > 0)
+   while (timeout == NULL || timeout->tv_sec > 0
+          || (timeout->tv_sec == 0 && timeout->tv_usec > 0))
       {
-         read (fd, buf, 1);
-         return 0;
+         retval = select (fd + 1, &fd_list, NULL, NULL, timeout);
+         if (retval > 0)
+            {
+               read (fd, buf, 1);
+               return 0;
+            }
+
+         if (timeout != NULL)
+            {
+               gettimeofday (&now, NULL);
+
+               // The select function may or may not update the timeout value;
+               // this behavior is not portable. Therefore, we manually update
+               // the timeout after each iteration.
+
+               subtract_timeval (timeout, &end_time, &now);
+            }
       }
-   }
    return -1;
 }
 

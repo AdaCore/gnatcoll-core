@@ -90,5 +90,16 @@ begin
       A.Assert (Status, 42, "exit status should be 42");
    end if;
 
+   H1 := Start (Args);
+   H2 := Start (Args);
+
+   Result1 := Wait_For_Processes
+                (Processes => (H1, H2), Timeout => 3600.0 * 24.0);
+   A.Assert (Result1 /= Invalid_Handle, "a process should be available");
+   if Result1 /= Invalid_Handle then
+      Status := Wait (Result1);
+      A.Assert (Status, 42, "exit status should be 42");
+   end if;
+
    return A.Report;
 end Test;
