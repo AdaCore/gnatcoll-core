@@ -1,126 +1,191 @@
 workflow:
   rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-      when: always
+  - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    when: always
+  - if: $CI_PIPELINE_SOURCE == "schedule"
+    when: always
+  - if: $CI_PIPELINE_SOURCE == "web"
+    when: always
+  - when: never
 
 variables:
-   ANOD_DEFAULT_SANDBOX_DIR: /it/wave
-   HOST: x86_64-linux
+  ANOD_DEFAULT_SANDBOX_DIR: /it/wave
+  HOST: x86_64-linux
 
 stages:
-  - build
-  - test
+- build
 
-build:
+default:
+  before_script: |
+    echo "before script executing..."
+
+    #######################
+    ## colored execution ##
+    #######################
+
+    exec() {
+       # dark green + $ + command line + grey
+       echo -e "\e[0;32m\$ $@\e[0;37m"
+       $@
+       # save the result
+       res=$?
+       # back to normal output
+       echo -e -n "\e[0m"
+       # make sure we translate the exit code
+       return $res
+    }
+
+    # Enable generic CI for building with Anod
+
+    cmd="generic_anod_ci"
+
+    # generic anod ci requires --continuous-builder-mode when not run in a
+    # MR context
+    if [[ $CI_PIPELINE_SOURCE != "merge_request_event" ]]; then
+      cmd="$cmd --continuous-builder-mode"
+    fi
+
+    exec eval $cmd
+    echo "sourcing the generic CI environment"
+    . /tmp/ci_env.sh
+
+    # generic_anod_ci modifies the rebuild strategy of anod.
+    # Set it back to full, so we do not rebuild the packages depending
+    # on gnatcoll-core and contained in GNAT.
+    exec anod tune --full
+    exec anod vcs --list
+
+################
+# JOB TEMPLATE #
+################
+
+.job_template:
   services:
-    - image:sandbox
-    - cpu:8
-    - mem:16
+  - image:pe-base
+  - cpu:4
+  interruptible: true
+
+########
+# JOBS #
+########
+
+build_doc:
+  services:
+  - image:pe-base
+  - cpu:2
   stage: build
   script:
-    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
-    - anod build --latest gnatcoll-core-doc
-    - anod build --latest gnatcoll-core
-
-    - echo "packaging $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/install/" ;
-    - tar czf $CI_PROJECT_DIR/gnatcoll-core-current.tar.gz -C $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current/ install/ ;
-    - cd $CI_PROJECT_DIR
-    - ls -l *.tar.gz
-
+  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+  - anod build --latest gnatcoll-core-doc
+  - mv $ANOD_DEFAULT_SANDBOX_DIR/x86_64-linux/gnatcoll-core-doc/install doc-build
   artifacts:
+    when: always
     paths:
-      - gnatcoll-core-current.tar.gz
+    - doc-build
 
-test:
+build_and_test_windows:
   services:
-     - image:sandbox
-     - cpu:8
-     - mem:16
-  stage: test
-  allow_failure: true
+  - image:e3-windows-2022
+  - platform:x86_64-windows-2022
+  - cpu:2
+  - mem:8
+  - disk:100
+  stage: build
   script:
-    # unpack the packages
-    - cd $ANOD_DEFAULT_SANDBOX_DIR
-    - mkdir -p fingerprints
-    - mkdir -p $HOST/gnatcoll-core-current
-    - tar zxf $CI_PROJECT_DIR/gnatcoll-core-current.tar.gz -C $HOST/gnatcoll-core-current
-    - touch fingerprints/$HOST.gnatcoll-core-current.install.json.assume-unchanged
-    - touch fingerprints/$HOST.gnatcoll-core-current.download-bin.json.assume-unchanged
+  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+  - anod build --latest gnatcoll-core
+  - anod test --latest gnatcoll-core -Qexternal
+  - working_dir=$(anod info test gnatcoll-core --show working_dir -Qexternal)
+  - results_dir=$working_dir/results/new
+  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $results_dir || FAILED=true
 
-    - rm -f $CI_PROJECT_DIR/*.tar.gz
-
-    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
-
-    # -Qexternal is required to use the version built outside the compiler during
-    # the build stage.
-    - anod test --latest gnatcoll-core -Qexternal
-    - e3-testsuite-report
-        --failure-exit-code 1
-        --xunit-output $CI_PROJECT_DIR/test.xml
-        --xunit-name gnatcoll-core
-        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test/results/new/ || FAILED=true
-
-    # We previously prevented the pipeline from halting if a test failed, to make
-    # sure all tests were run. If a test failed now we exit with a non-zero code
-    - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
-  needs:
-    - job: build
+  # We previously prevented the pipeline from halting if a test failed, to make
+  # sure all tests were run. If a test failed now we exit with a non-zero code
+  - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
+  allow_failure: true
   artifacts:
-    when:
-      always
+    when: always
     paths:
-      - test.xml
+    - test.xml
     reports:
       junit: test.xml
 
-build_and_test_coverage:
-  services:
-    - image:sandbox
-    - cpu:8
-    - mem:16
+.build_and_test_x86_64_linux_template:
+  extends: .job_template
   stage: build
   script:
-    - anybadge -l Coverage -v "Under Construction" -f coverage.svg -c steelblue
-    - anybadge -l "Tests Passing" -v "Error" -f test-count.svg -c red
+  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+  - anod build --latest gnatcoll-core $BUILD_ARGS
+  - anod test --latest gnatcoll-core $TEST_ARGS
+  - working_dir=$(anod info test gnatcoll-core --show working_dir $TEST_ARGS)
+  - results_dir=$working_dir/results/new
+  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $results_dir || FAILED=true
 
-    - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
-    - anod build --latest gnatcoll-core -Qcoverage
-    - anod test  --latest gnatcoll-core -Qcoverage
-    # TODO: replace build space by something computed
-    - e3-testsuite-report
-        --failure-exit-code 1
-        --xunit-output $CI_PROJECT_DIR/test-coverage.xml
-        --xunit-name gnatcoll-core
-        $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core-current-test-cov/results/new/ || FAILED=true
+  # We previously prevented the pipeline from halting if a test failed, to make
+  # sure all tests were run. If a test failed now we exit with a non-zero code
+  - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
+  artifacts:
+    when: always
+    paths:
+    - test.xml
+    reports:
+      junit: test.xml
 
-    # Create test count badge
-    - cd $CI_PROJECT_DIR
-    - rm test-count.svg  # remove placeholder error badge
-    - create_xunit_badge --xunit_reports test-coverage.xml
+build_and_test_x86_64_linux:
+  extends: .build_and_test_x86_64_linux_template
+  variables:
+    BUILD_ARGS: ""
+    TEST_ARGS: -Qexternal
 
-    # Move coverage reports and log coverage summaries
-    - mkdir $CI_PROJECT_DIR/coverage
-    - mv /it/wave/x86_64-linux/gnatcoll-core-current-test-cov/results/new/coverage-xml $CI_PROJECT_DIR/coverage/xml
-    - mv /it/wave/x86_64-linux/gnatcoll-core-current-test-cov/results/new/coverage-dhtml $CI_PROJECT_DIR/coverage/dhtml
-    - mv /it/wave/x86_64-linux/gnatcoll-core-current-test-cov/results/new/coverage-cobertura $CI_PROJECT_DIR/coverage/cobertura
-    - echo_coverage_stats --coverage-file $CI_PROJECT_DIR/coverage/xml/index.xml
+build_and_test_x86_64_linux_valgrind:
+  extends: .build_and_test_x86_64_linux_template
+  allow_failure: true # To remove once all tests pass
+  variables:
+    BUILD_ARGS: ""
+    TEST_ARGS: -Qvalgrind
 
-    # We previously prevented the pipeline from halting if a test failed, to make
-    # sure all tests were run. If a test failed now we exit with a non-zero code
-    - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
+build_and_test_coverage:
+  extends: .job_template
+  stage: build
+  script:
+  - anybadge -l Coverage -v "Under Construction" -f coverage.svg -c steelblue
+  - anybadge -l "Tests Passing" -v "Error" -f test-count.svg -c red
+
+  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
+  - anod build --latest gnatcoll-core -Qcoverage
+  - anod test  --latest gnatcoll-core -Qcoverage
+
+  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test-coverage.xml --xunit-name gnatcoll-core $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core_coverage_test/results/new/ || FAILED=true
+
+  # Create test count badge
+  - cd $CI_PROJECT_DIR
+  - rm test-count.svg # remove placeholder error badge
+  - create_xunit_badge --xunit_reports test-coverage.xml
+
+  # Move coverage reports and log coverage summaries
+  - mkdir $CI_PROJECT_DIR/coverage
+  - mv $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core_coverage_test/results/new/coverage-xml $CI_PROJECT_DIR/coverage/xml
+  - mv $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core_coverage_test/results/new/coverage-dhtml $CI_PROJECT_DIR/coverage/dhtml
+  - mv $ANOD_DEFAULT_SANDBOX_DIR/$HOST/gnatcoll-core_coverage_test/results/new/coverage-cobertura $CI_PROJECT_DIR/coverage/cobertura
+  - echo_coverage_stats --coverage-file $CI_PROJECT_DIR/coverage/xml/index.xml
+
+  - publish-pages ./coverage/dhtml/ --job
+
+  # We previously prevented the pipeline from halting if a test failed, to make
+  # sure all tests were run. If a test failed now we exit with a non-zero code
+  - if [ ! -z ${FAILED+x} ]; then echo "There was at least one testcase failure" && exit 1; fi
   coverage: '/^Stmt Coverage:\s+(\d+\.\d+\%) \(\d+ \/ \d+\)$/'
   allow_failure: true
   artifacts:
-    when:
-      always
+    when: always
     paths:
-      - $PACKAGE
-      - test-coverage.xml
-      - coverage.svg
-      - test-count.svg
-      - coverage/xml
-      - coverage/dhtml
-      - coverage/cobertura
+    - $PACKAGE
+    - test-coverage.xml
+    - coverage.svg
+    - test-count.svg
+    - coverage/xml
+    - coverage/dhtml
+    - coverage/cobertura
     reports:
       junit: test-coverage.xml
       coverage_report:
