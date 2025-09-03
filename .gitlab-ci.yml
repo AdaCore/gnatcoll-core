@@ -110,49 +110,6 @@ build_and_test_windows:
     reports:
       junit: test.xml
 
-build_and_test_aarch64_linux:
-  services:
-  - image:e3-aarch64-linux
-  - cpu:4
-  - platform:aarch64-linux
-  stage: build
-  script:
-  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
-  - anod build --latest gnatcoll-core
-  - anod test --latest gnatcoll-core -Qexternal
-  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $ANOD_DEFAULT_SANDBOX_DIR/aarch64-linux/gnatcoll-core_external_test/results/new/ || FAILED=true
-
-  # We previously prevented the pipeline from halting if a test failed, to make
-  # sure all tests were run. If a test failed now we exit with a non-zero code
-  - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
-  allow_failure: true
-  artifacts:
-    when: always
-    paths:
-    - test.xml
-    reports:
-      junit: test.xml
-
-build_and_test_x86_linux:
-  extends: .job_template
-  stage: build
-  script:
-  - cp /it/e3/lib/python3.12/site-packages/e3/os/data/rlimit-x86_64-linux /it/e3/lib/python3.12/site-packages/e3/os/data/rlimit-x86-linux
-  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
-  - anod build --latest --build=x86-linux gnatcoll-core
-  - anod test --latest --build=x86-linux gnatcoll-core -Qexternal
-  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $ANOD_DEFAULT_SANDBOX_DIR/x86-linux/gnatcoll-core_external_test/results/new/ || FAILED=true
-
-  # We previously prevented the pipeline from halting if a test failed, to make
-  # sure all tests were run. If a test failed now we exit with a non-zero code
-  - if [ "$FAILED" = "true" ]; then echo "There was at least one testcase failure" && exit 1; fi
-  artifacts:
-    when: always
-    paths:
-    - test.xml
-    reports:
-      junit: test.xml
-
 .build_and_test_x86_64_linux_template:
   extends: .job_template
   stage: build
@@ -179,13 +136,6 @@ build_and_test_x86_64_linux:
   variables:
     BUILD_ARGS: ""
     TEST_ARGS: -Qexternal
-
-build_x86_64_linux_vx7r2_21.07:
-  extends: .job_template
-  stage: build
-  script:
-  - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
-  - anod build --latest gnatcoll-core --target=x86_64-vx7r2,21.07,,unknown
 
 build_and_test_x86_64_linux_valgrind:
   extends: .build_and_test_x86_64_linux_template
