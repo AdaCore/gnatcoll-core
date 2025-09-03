@@ -187,12 +187,6 @@ build_and_test_x86_64_linux:
     BUILD_ARGS: ""
     TEST_ARGS: -Qexternal
 
-build_and_test_x86_64_linux_llvm:
-  extends: .build_and_test_x86_64_linux_template
-  variables:
-    BUILD_ARGS: -Qcompiler=gnat-llvm
-    TEST_ARGS: -Qcompiler=gnat-llvm
-
 build_x86_64_linux_vx7r2_21.07:
   extends: .job_template
   stage: build
