@@ -77,21 +77,14 @@ package body GNATCOLL.OS.FS is
 
    function Read (FD : File_Descriptor; Buffer : in out String) return Integer
    is
-      function C_Read
-        (Fd     : File_Descriptor;
-         Buffer : System.Address;
-         Size   : size_t)
-         return int;
-      pragma Import (C, C_Read, "read");
-
-      Result : int;
+      Result : Integer;
    begin
-      Result := C_Read (FD, Buffer (Buffer'First)'Address, Buffer'Length);
+      Result := Unsafe_Read (FD, Buffer (Buffer'First)'Address, Buffer'Length);
       if Result < 0 then
          raise OS_Error with "read error";
       end if;
 
-      return Integer (Result);
+      return Result;
    end Read;
 
    function Read

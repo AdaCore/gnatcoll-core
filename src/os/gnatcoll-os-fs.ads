@@ -25,6 +25,7 @@
 
 with Ada.Strings.UTF_Encoding;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Interfaces.C;
 
 package GNATCOLL.OS.FS is
 
@@ -123,6 +124,16 @@ package GNATCOLL.OS.FS is
    procedure Write (FD : File_Descriptor; Buffer : String);
    --  Write Buffer content to FD. OS_Error is raised if write fails or is not
    --  complete.
+
+   function Unsafe_Read
+      (FD     : File_Descriptor;
+       Buffer : System.Address;
+       Size   : Interfaces.C.size_t)
+      return Integer;
+   pragma Import (C, Unsafe_Read, "read");
+   --  Read data from FD and put it in Buffer. The call is blocking and
+   --  end-of-file is reached when Unsafe_Read returns 0, otherwise the
+   --  returned value is the number of bytes read.
 
    generic
       type T is private;
