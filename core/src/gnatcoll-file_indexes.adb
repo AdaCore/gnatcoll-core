@@ -22,8 +22,18 @@
 ------------------------------------------------------------------------------
 
 with GNAT.OS_Lib;
+with GNATCOLL.JSON;
+with GNATCOLL.OS.FS;
+with Interfaces.C;
+with Ada.Calendar.Conversions;
+with Ada.Strings.Unbounded;
 
 package body GNATCOLL.File_Indexes is
+
+   package JSON renames GNATCOLL.JSON;
+   package FS renames GNATCOLL.OS.FS;
+
+   JSON_INDEX_MIMETYPE : constant String := "text/json+file-index-1.0";
 
    procedure Internal_Hash
       (Self            : in out File_Index;
@@ -193,5 +203,163 @@ package body GNATCOLL.File_Indexes is
    begin
       return Self.Total_Size;
    end Indexed_Content_Size;
+
+   ----------------
+   -- Save_Index --
+   ----------------
+
+   procedure Save_Index (Self : File_Index; Filename : UTF8.UTF_8_String)
+   is
+      use File_Maps;
+      Result     : constant JSON.JSON_Value := JSON.Create_Object;
+      JSON_DB    : constant JSON.JSON_Value := JSON.Create_Object;
+      Result_Str : Ada.Strings.Unbounded.Unbounded_String;
+      FD         : FS.File_Descriptor;
+
+      function Create (T : Ada.Calendar.Time) return JSON.JSON_Value;
+      --  Serialize a time T into an integer (UNIX time epoch)
+
+      function Create (T : Ada.Calendar.Time) return JSON.JSON_Value is
+      begin
+         return JSON.Create
+            (Long_Long_Integer
+               (Ada.Calendar.Conversions.To_Unix_Time (T)));
+      end Create;
+
+   begin
+      --  The mime field is only used by the Load_Index function and ensure
+      --  we don't try to load a file a a distinct format
+      Result.Set_Field ("mimetype", JSON_INDEX_MIMETYPE);
+
+      --  Dump global data
+      Result.Set_Field ("last_update_time", Create (Self.Last_Update_Time));
+      Result.Set_Field ("total_size", JSON.Create (Self.Total_Size));
+
+      --  Iterate over the database
+      declare
+         C : Cursor := First (Self.DB);
+      begin
+         while C /= No_Element loop
+            --  For each element the following data structure is created:
+            --
+            --  {
+            --    "trust": bool,
+            --    "hash": str,
+            --    "stat": [...]  # stat information
+            --  }
+            declare
+               El        : constant Index_Element := Element (C);
+               JSON_El   : constant JSON.JSON_Value := JSON.Create_Object;
+               Stat_Data : constant JSON.JSON_Value := JSON.Create
+                  (JSON.Empty_Array);
+            begin
+               JSON_El.Set_Field ("trust", El.Trust_Hash);
+               JSON_El.Set_Field ("hash", El.Hash_Digest);
+
+               Stat_Data.Append (JSON.Create (Stat.Exists (El.Attrs)));
+               Stat_Data.Append (JSON.Create (Stat.Is_Writable (El.Attrs)));
+               Stat_Data.Append (JSON.Create (Stat.Is_Readable (El.Attrs)));
+               Stat_Data.Append (JSON.Create (Stat.Is_Executable (El.Attrs)));
+               Stat_Data.Append
+                  (JSON.Create (Stat.Is_Symbolic_Link (El.Attrs)));
+               Stat_Data.Append (JSON.Create (Stat.Is_File (El.Attrs)));
+               Stat_Data.Append (JSON.Create (Stat.Is_Directory (El.Attrs)));
+               Stat_Data.Append (Create (Stat.Modification_Time (El.Attrs)));
+               Stat_Data.Append (JSON.Create (Stat.Length (El.Attrs)));
+               JSON_El.Set_Field ("stat", Stat_Data);
+
+               JSON_DB.Set_Field (Key (C), JSON_El);
+            end;
+            C := Next (C);
+         end loop;
+      end;
+      Result.Set_Field ("db", JSON_DB);
+
+      --  Write the final JSON
+      Result_Str := JSON.Write (Result, Compact => False);
+      FD := FS.Open (Filename, Mode => FS.Write_Mode);
+      FS.Write (FD, Result_Str);
+      FS.Close (FD);
+   end Save_Index;
+
+   ----------------
+   -- Load_Index --
+   ----------------
+
+   function Load_Index (Filename : UTF8.UTF_8_String) return File_Index
+   is
+      JSON_Result : JSON.Read_Result;
+      JSON_Data   : JSON.JSON_Value;
+      Result      : File_Index;
+
+      function Get (V : JSON.JSON_Value) return Ada.Calendar.Time;
+      --  Transform an integer back to an Ada Time.
+
+      procedure Process_Entry
+         (Name : JSON.UTF8_String; Value : JSON.JSON_Value);
+      --  Function called on each file entry
+
+      function Get (V : JSON.JSON_Value) return Ada.Calendar.Time
+      is
+         I : constant Long_Integer := JSON.Get (V);
+      begin
+         return Ada.Calendar.Conversions.To_Ada_Time (Interfaces.C.long (I));
+      end Get;
+
+      procedure Process_Entry
+         (Name : JSON.UTF8_String; Value : JSON.JSON_Value)
+      is
+         V : Index_Element;
+         JSON_Stat : JSON.JSON_Array := JSON.Get (Value, "stat");
+      begin
+         V.Trust_Hash := JSON.Get (Value, "trust");
+         V.Hash_Digest := JSON.Get (Value, "hash");
+         V.Attrs := Stat.New_File_Attributes
+            (Exists        => JSON.Get (JSON.Get (JSON_Stat, 1)),
+             Writable      => JSON.Get (JSON.Get (JSON_Stat, 2)),
+             Readable      => JSON.Get (JSON.Get (JSON_Stat, 3)),
+             Executable    => JSON.Get (JSON.Get (JSON_Stat, 4)),
+             Symbolic_Link => JSON.Get (JSON.Get (JSON_Stat, 5)),
+             Regular       => JSON.Get (JSON.Get (JSON_Stat, 6)),
+             Directory     => JSON.Get (JSON.Get (JSON_Stat, 7)),
+             Stamp         => Get (JSON.Get (JSON_Stat, 8)),
+             Length        => JSON.Get (JSON.Get (JSON_Stat, 9)));
+         Result.DB.Include (Name, V);
+      end Process_Entry;
+
+   begin
+      JSON_Result := JSON.Read_File (Filename);
+
+      if not JSON_Result.Success then
+         --  Silently ignore index errors
+         return Result;
+      end if;
+
+      JSON_Data := JSON_Result.Value;
+
+      if not JSON.Has_Field (JSON_Data, "mimetype") or else
+         not JSON.Has_Field (JSON_Data, "last_update_time") or else
+         not JSON.Has_Field (JSON_Data, "total_size")
+      then
+         return Result;
+      end if;
+
+      declare
+         Mimetype : constant String := JSON.Get (JSON_Data, "mimetype");
+      begin
+         if Mimetype /= JSON_INDEX_MIMETYPE then
+            return Result;
+         end if;
+
+         Result.Last_Update_Time :=
+            Get (JSON.Get (JSON_Data, "last_update_time"));
+         Result.Total_Size  :=
+            JSON.Get (JSON.Get (JSON_Data, "total_size"));
+
+         JSON.Map_JSON_Object
+            (JSON.Get (JSON_Data, "db"), Process_Entry'Unrestricted_Access);
+      end;
+      return Result;
+   end Load_Index;
 
 end GNATCOLL.File_Indexes;

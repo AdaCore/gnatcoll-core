@@ -88,11 +88,14 @@ package GNATCOLL.File_Indexes is
       return File_Index_Digest;
    --  Same as previous function without State as output.
 
-   --  procedure Save_Index (Self : File_Index; Filename : UTF8.UTF_8_String);
-   --  Dump a File_Index on disk
+   procedure Save_Index (Self : File_Index; Filename : UTF8.UTF_8_String);
+   --  Dump File_Index Self in file Filename
 
-   --  function Load_Index (Filename : UTF8.UTF_8_String) return File_Index;
-   --  Load a File_Index from disk
+   function Load_Index (Filename : UTF8.UTF_8_String) return File_Index;
+   --  Load a File_Index from file Filename
+   --
+   --  Note that in case of error the function does not raise an exception.
+   --  Instead an empty index is returned.
 
    procedure Clear_Cache (Self : in out File_Index);
    --  Clear the index content.
