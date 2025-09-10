@@ -21,7 +21,10 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces.C;     use Interfaces.C;
+with Interfaces.C; use Interfaces.C;
+pragma Warnings (Off);
+with Ada.Strings.Unbounded.Aux;
+pragma Warnings (On);
 with System;
 
 package body GNATCOLL.OS.FS is
@@ -207,6 +210,31 @@ package body GNATCOLL.OS.FS is
 
       return Integer (Result);
    end Write;
+
+   procedure Write_Unbounded (FD : File_Descriptor; Buffer : Unbounded_String)
+   is
+      use Ada.Strings.Unbounded.Aux;
+      function C_Write
+        (Fd     : File_Descriptor;
+         Buffer : System.Address;
+         Size   : size_t)
+         return int;
+      pragma Import (C, C_Write, "write");
+
+      Result : int;
+      S : Big_String_Access;
+      L : Natural;
+
+   begin
+      Get_String (Buffer, S, L);
+      if L > 0 then
+         Result := C_Write (FD, S.all (1)'Address, size_t (L));
+
+         if Result < int (L) then
+            raise OS_Error with "write interrupted or not enough disk space";
+         end if;
+      end if;
+   end Write_Unbounded;
 
    -----------------
    -- Write_Bytes --
