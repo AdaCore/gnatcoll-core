@@ -116,7 +116,6 @@ private
        Equivalent_Keys => "=");
 
    type File_Index is record
-      Last_Update_Time : Ada.Calendar.Time;
       Total_Size       : Long_Long_Integer := 0;
       DB               : File_Maps.Map;
    end record;

@@ -232,7 +232,6 @@ package body GNATCOLL.File_Indexes is
       Result.Set_Field ("mimetype", JSON_INDEX_MIMETYPE);
 
       --  Dump global data
-      Result.Set_Field ("last_update_time", Create (Self.Last_Update_Time));
       Result.Set_Field ("total_size", JSON.Create (Self.Total_Size));
 
       --  Iterate over the database
@@ -338,7 +337,6 @@ package body GNATCOLL.File_Indexes is
       JSON_Data := JSON_Result.Value;
 
       if not JSON.Has_Field (JSON_Data, "mimetype") or else
-         not JSON.Has_Field (JSON_Data, "last_update_time") or else
          not JSON.Has_Field (JSON_Data, "total_size")
       then
          return Result;
@@ -351,8 +349,6 @@ package body GNATCOLL.File_Indexes is
             return Result;
          end if;
 
-         Result.Last_Update_Time :=
-            Get (JSON.Get (JSON_Data, "last_update_time"));
          Result.Total_Size  :=
             JSON.Get (JSON.Get (JSON_Data, "total_size"));
 
