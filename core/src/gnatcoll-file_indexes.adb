@@ -278,7 +278,7 @@ package body GNATCOLL.File_Indexes is
       --  Write the final JSON
       Result_Str := JSON.Write (Result, Compact => False);
       FD := FS.Open (Filename, Mode => FS.Write_Mode);
-      FS.Write (FD, Result_Str);
+      FS.Write_Unbounded (FD, Result_Str);
       FS.Close (FD);
    end Save_Index;
 
