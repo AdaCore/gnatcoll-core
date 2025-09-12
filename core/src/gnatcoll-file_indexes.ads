@@ -24,7 +24,6 @@
 --  Provide an implementation for an efficient cache of file checksums.
 
 with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Calendar;
 with Ada.Strings.Hash;
 with Ada.Strings.UTF_Encoding;
 with GNATCOLL.Hash.Blake3;

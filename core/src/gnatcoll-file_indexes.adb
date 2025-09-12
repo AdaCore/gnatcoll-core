@@ -24,8 +24,7 @@
 with GNAT.OS_Lib;
 with GNATCOLL.JSON;
 with GNATCOLL.OS.FS;
-with Interfaces.C;
-with Ada.Calendar.Conversions;
+with Ada.Calendar;
 with Ada.Strings.Unbounded;
 
 package body GNATCOLL.File_Indexes is
@@ -216,16 +215,6 @@ package body GNATCOLL.File_Indexes is
       Result_Str : Ada.Strings.Unbounded.Unbounded_String;
       FD         : FS.File_Descriptor;
 
-      function Create (T : Ada.Calendar.Time) return JSON.JSON_Value;
-      --  Serialize a time T into an integer (UNIX time epoch)
-
-      function Create (T : Ada.Calendar.Time) return JSON.JSON_Value is
-      begin
-         return JSON.Create
-            (Long_Long_Integer
-               (Ada.Calendar.Conversions.To_Unix_Time (T)));
-      end Create;
-
    begin
       --  The mime field is only used by the Load_Index function and ensure
       --  we don't try to load a file a a distinct format
@@ -263,7 +252,8 @@ package body GNATCOLL.File_Indexes is
                   (JSON.Create (Stat.Is_Symbolic_Link (El.Attrs)));
                Stat_Data.Append (JSON.Create (Stat.Is_File (El.Attrs)));
                Stat_Data.Append (JSON.Create (Stat.Is_Directory (El.Attrs)));
-               Stat_Data.Append (Create (Stat.Modification_Time (El.Attrs)));
+               Stat_Data.Append
+                  (JSON.Create (Stat.Modification_Stamp (El.Attrs)));
                Stat_Data.Append (JSON.Create (Stat.Length (El.Attrs)));
                JSON_El.Set_Field ("stat", Stat_Data);
 
@@ -291,25 +281,15 @@ package body GNATCOLL.File_Indexes is
       JSON_Data   : JSON.JSON_Value;
       Result      : File_Index;
 
-      function Get (V : JSON.JSON_Value) return Ada.Calendar.Time;
-      --  Transform an integer back to an Ada Time.
-
       procedure Process_Entry
          (Name : JSON.UTF8_String; Value : JSON.JSON_Value);
       --  Function called on each file entry
-
-      function Get (V : JSON.JSON_Value) return Ada.Calendar.Time
-      is
-         I : constant Long_Integer := JSON.Get (V);
-      begin
-         return Ada.Calendar.Conversions.To_Ada_Time (Interfaces.C.long (I));
-      end Get;
 
       procedure Process_Entry
          (Name : JSON.UTF8_String; Value : JSON.JSON_Value)
       is
          V : Index_Element;
-         JSON_Stat : JSON.JSON_Array := JSON.Get (Value, "stat");
+         JSON_Stat : constant JSON.JSON_Array := JSON.Get (Value, "stat");
       begin
          V.Trust_Hash := JSON.Get (Value, "trust");
          V.Hash_Digest := JSON.Get (Value, "hash");
@@ -321,7 +301,7 @@ package body GNATCOLL.File_Indexes is
              Symbolic_Link => JSON.Get (JSON.Get (JSON_Stat, 5)),
              Regular       => JSON.Get (JSON.Get (JSON_Stat, 6)),
              Directory     => JSON.Get (JSON.Get (JSON_Stat, 7)),
-             Stamp         => Get (JSON.Get (JSON_Stat, 8)),
+             Stamp         => JSON.Get (JSON.Get (JSON_Stat, 8)),
              Length        => JSON.Get (JSON.Get (JSON_Stat, 9)));
          Result.DB.Include (Name, V);
       end Process_Entry;
