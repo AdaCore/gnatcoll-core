@@ -26,7 +26,6 @@ with GNAT.OS_Lib;
 with GNATCOLL.String_Builders;
 with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
 with GNATCOLL.OS.Libc.Stat; use GNATCOLL.OS.Libc.Stat;
-with Ada.Calendar.Conversions; use Ada.Calendar.Conversions;
 
 separate (GNATCOLL.OS.Stat)
 function Stat
@@ -44,7 +43,6 @@ is
    Result      : File_Attributes;
    Status      : Libc_Status;
    C_Path      : SB.String_Builder;
-   Nano        : constant := 1_000_000_000;
 begin
 
    if GNAT.OS_Lib.Is_Absolute_Path (Path) then
@@ -70,9 +68,7 @@ begin
       Result.Readable      := (Stat_Result.Mode and S_IRUSR) > 0;
       Result.Writable      := (Stat_Result.Mode and S_IWUSR) > 0;
       Result.Executable    := (Stat_Result.Mode and S_IXUSR) > 0;
-      Result.Stamp         := To_Ada_Time
-         (Interfaces.C.long (Stat_Result.Mtime / Nano)) +
-         Duration (Stat_Result.Mtime mod Nano) / Nano;
+      Result.Stamp         := Stat_Result.Mtime;
       Result.Length        := Long_Long_Integer (Stat_Result.Size);
    end if;
 

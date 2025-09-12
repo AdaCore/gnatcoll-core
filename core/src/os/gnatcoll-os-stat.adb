@@ -21,6 +21,9 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Calendar.Conversions; use Ada.Calendar.Conversions;
+with Interfaces.C;
+
 package body GNATCOLL.OS.Stat is
 
    function Stat
@@ -141,11 +144,22 @@ package body GNATCOLL.OS.Stat is
    -- Modification_Time --
    -----------------------
 
+   Nano : constant := 1_000_000_000;
+
    function Modification_Time (Self : File_Attributes) return Time
    is
    begin
-      return Self.Stamp;
+      return To_Ada_Time
+         (Interfaces.C.long (Self.Stamp / Nano)) +
+         Duration (Self.Stamp mod Nano) / Nano;
    end Modification_Time;
+
+   function Modification_Stamp
+      (Self : File_Attributes) return Long_Long_Integer
+   is
+   begin
+      return Self.Stamp;
+   end Modification_Stamp;
 
    -------------------------
    -- New_File_Attributes --
@@ -159,10 +173,11 @@ package body GNATCOLL.OS.Stat is
        Symbolic_Link : Boolean;
        Regular       : Boolean;
        Directory     : Boolean;
-       Stamp         : Time;
+       Stamp         : Long_Long_Integer;
        Length        : Long_Long_Integer)
       return File_Attributes
    is
+
    begin
       return (Exists        => Exists,
               Writable      => Writable,
