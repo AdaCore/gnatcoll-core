@@ -49,4 +49,13 @@ package body GNATCOLL.OS.Win32 is
    begin
       return Status >= 0;
    end Is_Success;
+
+   function To_Unix_Nanoseconds
+      (Win32_Time : LARGE_INTEGER) return Long_Long_Integer
+   is
+   begin
+      --  Adjust both unit 100ns -> ns and epoch.
+      return (Long_Long_Integer (Win32_Time) -
+          Long_Long_Integer (Win32_Epoch_Offset) * 1000 * 1000 * 10) * 100;
+   end To_Unix_Nanoseconds;
 end GNATCOLL.OS.Win32;

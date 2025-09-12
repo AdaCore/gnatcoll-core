@@ -122,4 +122,9 @@ package GNATCOLL.OS.Win32 is
    Win32_Epoch_Offset : constant LARGE_INTEGER := 11644473600;
    --  Difference between Win32 epoch offset and linux epoch in seconds
 
+   function To_Unix_Nanoseconds
+      (Win32_Time : LARGE_INTEGER) return Long_Long_Integer
+   with Inline => True;
+   --  Convert a win32 timestamp into a unix timestamp (adjust epoch)
+   --  in nanoseconds.
 end GNATCOLL.OS.Win32;
