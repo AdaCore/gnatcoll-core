@@ -134,6 +134,10 @@ package GNATCOLL.Opt_Parse is
    subtype XString_Vector is XString_Vectors.Vector;
    --  Vector of XStrings. Used to fill unknown args in calls to ``Parse``.
 
+   type Argument_Number is (Default_Arg_Number, Single_Arg, Multiple_Args);
+   --  Enumeration to specify the expected count of arguments for an option
+   --  list parser.
+
    -----------------
    -- Parser type --
    -----------------
@@ -620,12 +624,6 @@ package GNATCOLL.Opt_Parse is
       Help : String := "";
       --  Help string for the argument.
 
-      Accumulate : Boolean := False;
-      --  If True, then this argument can be passed several times and behaves
-      --  each time as a regular option, only with results accumulated in the
-      --  result list. If False, user needs to pass a list of values after the
-      --  flag name.
-
       type Arg_Type is private;
       --  Type of the option list.
 
@@ -644,6 +642,29 @@ package GNATCOLL.Opt_Parse is
       --  Name of the parser. Must be provided if Long is not provided.
       --  This is used to build up the --help text.
       --  Name will be used if both Name and Long are non-empty strings.
+
+      Accumulate : Boolean := False;
+      --  If True, then this argument can be passed several times in the same
+      --  option list.
+      --  If no ``Arg_Number`` is provided alongside this mode, then the parser
+      --  will default to the ``Single_Arg``.
+
+      Arg_Number : Argument_Number := Default_Arg_Number;
+      --  Specify the expected number of arguments in the list after the option
+      --  switch.
+      --
+      --  ``Default_Arg_Number`` process arguments according to the
+      --  ``Accumulate`` value. If it is ``True`` then this parser has the same
+      --  behavior as the one described for ``Single_Arg``. Otherwise, this
+      --  parser processes arguments like what is described for
+      --  ``Multiple_Args``.
+      --
+      --  ``Single_Arg`` process only one argument after the option switch,
+      --  making the parser behave like a standard ``Parse_Option`` parser.
+      --  This mode should be used with the ``Accumulate`` mode.
+      --
+      --  ``Multiple_Args`` (default) parses all arguments after the switch,
+      --  until the ``List_Stop_Predicate`` returns ``True``.
 
       Allow_Empty : Boolean := False;
       --  Whether empty lists are allowed or not.
@@ -689,11 +710,14 @@ package GNATCOLL.Opt_Parse is
    --  Parse an option list. A regular option is of the form
    --  "--option val, val2, val3", or "-O val val2 val3".
    --
-   --  Values cannot start with - or --.
+   --  By default, list elements are parsed until one starts with "-" or "--".
+   --  You can change this behavior through the ``List_Stop_Predicate`` formal.
    --
-   --  If Accumulate is True, mix between option and option list. Parses like
-   --  regular option, which you can parse several time, and put results in a
-   --  list.
+   --  If ``Accumulate`` is True, this option can be provided multiple times
+   --  and values are accumulated in the result.
+   --
+   --  The ``Arg_Number`` argument is used to specify how many elements are
+   --  expected to be parsed.
 
 private
 

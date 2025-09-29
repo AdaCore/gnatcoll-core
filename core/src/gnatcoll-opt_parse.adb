@@ -1330,81 +1330,79 @@ package body GNATCOLL.Opt_Parse is
          Pos    : Positive;
          Result : in out Parsed_Arguments) return Parser_Return
       is
+         Tmp  : Internal_Result_Access := null;
          Res  : Parser_Result_Access
          renames Result.Ref.Unchecked_Get.Results (Self.Position);
+         Real_Arg_Number : constant Argument_Number :=
+           (if Arg_Number = Default_Arg_Number
+            then (if Accumulate then Single_Arg else Multiple_Args)
+            else Arg_Number);
 
-         Tmp : Internal_Result_Access := null;
-
-         Converted_Arg : Arg_Type;
-         Arg_Count     : Natural := 0;
+         Arg_Vec   : XString_Vector;
+         New_Pos   : Parser_Return;
       begin
-         if Accumulate then
+         if Real_Arg_Number = Single_Arg then
+            --  If the parser expect only one argument, use the
+            --  "Parse_One_Option" to handle the parsing.
             declare
-               New_Pos : Parser_Return;
                Raw     : constant XString :=
                  Parse_One_Option
                    (Short, Long, Args, Pos, New_Pos,
                     Allow_Collated_Short_Form);
             begin
                if New_Pos /= Error_Return then
-                  if Res = null then
-                     Tmp :=
-                       new Internal_Result'
-                         (Start_Pos => Pos,
-                          End_Pos   => Pos,
-                          Results   => Result_Vectors.Empty_Vector,
-                          others    => <>);
-
-                     Res := Tmp.all'Unchecked_Access;
-                  end if;
-
-                  Internal_Result (Res.all).Results.Append (Convert (+Raw));
+                  Arg_Vec.Append (Raw);
                end if;
-
-               return New_Pos;
             end;
+
+         else
+            --  Otherwise, parse all arguments until the parsing stop function
+            --  is returning true.
+
+            --  Start by making sure the first element is the option switch
+            if Args (Pos) /= +Long and then Args (Pos) /= +Short then
+               return Error_Return;
+            end if;
+
+            --  Then parse the following arguments
+            for I in Pos + 1 .. Args'Last loop
+               exit when List_Stop_Predicate (Args (I));
+               Arg_Vec.Append (Args (I));
+            end loop;
+
+            --  Finally, set the new parsing position
+            New_Pos := Natural (Pos) + Natural (Arg_Vec.Length) + 1;
          end if;
 
-         if Args (Pos) /= +Long and then Args (Pos) /= +Short then
-            return Error_Return;
-         end if;
-
-         for I in Pos + 1 .. Args'Last loop
-            exit when List_Stop_Predicate (Args (I));
-            Arg_Count := Arg_Count + 1;
-         end loop;
-
-         if Arg_Count = 0 then
+         --  Start by checking if there is any result
+         if Arg_Vec.Is_Empty then
             if Allow_Empty then
-
-               Tmp := new Internal_Result'
-                 (Start_Pos => Pos,
-                  End_Pos   => Pos,
-                  Results   => Result_Vectors.Empty_Vector,
-                  others    => <>);
-
-               Res := Tmp.all'Unchecked_Access;
-
-               return Pos + 1;
+               New_Pos := Pos + 1;
             else
                return Error_Return;
             end if;
          end if;
 
-         Tmp := new Internal_Result'
-           (Start_Pos => Pos,
-            End_Pos   => Pos + Arg_Count,
-            Results   => Result_Vectors.Empty_Vector,
-            others    => <>);
+         --  Create the result array if required
+         if not Accumulate or else Res = null then
+            Tmp := new Internal_Result'
+              (Start_Pos => Pos,
+               End_Pos   => Positive
+                 (Natural (Pos) + Natural (Arg_Vec.Length)),
+               Results   => Result_Vectors.Empty_Vector,
+               others    => <>);
 
-         Res := Tmp.all'Unchecked_Access;
+            Res := Tmp.all'Unchecked_Access;
+         end if;
 
-         for I in 1 .. Arg_Count loop
-            Converted_Arg := Convert (+Args (Pos + I));
-            Internal_Result (Res.all).Results.Append (Converted_Arg);
+         --  Then place all arguments in the result
+         for Arg of Arg_Vec loop
+            Internal_Result
+              (Res.all).Results.Append (Convert (+Arg));
          end loop;
 
-         return Parser_Return (Pos + Arg_Count + 1);
+         --  Finally return the new parsing position
+         return New_Pos;
       end Parse_Args;
 
    begin
