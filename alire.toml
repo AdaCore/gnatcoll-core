@@ -15,6 +15,15 @@ tags = ["gnatcoll", "json", "email", "refcount", "projects", "gpr", "vfs"]
 [configuration]
 disabled = true
 
+[environment.'case(os)'.linux.LD_LIBRARY_PATH]
+append = "${CRATE_ROOT}/projects/lib/gnatcoll_projects/relocatable:${CRATE_ROOT}/core/lib/gnatcoll_core/relocatable:${CRATE_ROOT}/minimal/lib/gnatcoll_core/relocatable:${CRATE_ROOT}/lib/gnatcoll_projects/relocatable"
+
+[environment.'case(os)'.macos.DYLD_LIBRARY_PATH]
+append = "${CRATE_ROOT}/projects/lib/gnatcoll_projects/relocatable:${CRATE_ROOT}/core/lib/gnatcoll_core/relocatable:${CRATE_ROOT}/minimal/lib/gnatcoll_core/relocatable:${CRATE_ROOT}/lib/gnatcoll_projects/relocatable"
+
+[environment.'case(os)'.windows.PATH]
+append = "${CRATE_ROOT}/projects/lib/gnatcoll_projects/relocatable;${CRATE_ROOT}/core/lib/gnatcoll_core/relocatable;${CRATE_ROOT}/minimal/lib/gnatcoll_core/relocatable;${CRATE_ROOT}/lib/gnatcoll_projects/relocatable"
+
 [gpr-externals]
 GNATCOLL_ATOMICS = ["intrinsic", "mutex"]
 GNATCOLL_BUILD_MODE = ["DEBUG", "PROD"]
