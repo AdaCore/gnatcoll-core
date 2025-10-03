@@ -892,7 +892,9 @@ package body GNATCOLL.Opt_Parse is
       Result : in out Parsed_Arguments) return Parser_Return
    is
    begin
-      if Args (Pos) = Self.Long or else Args (Pos) = Self.Short then
+      if (Self.Long /= "" and then Args (Pos) = Self.Long)
+        or else (Self.Short /= "" and then Args (Pos) = Self.Short)
+      then
 
          declare
             Res : constant Parser_Result_Access := new Flag_Parser_Result'
@@ -1629,7 +1631,9 @@ package body GNATCOLL.Opt_Parse is
       Allow_Collated_Short_Form : Boolean := True) return XString
    is
    begin
-      if Args (Pos) = Long or Args (Pos) = Short then
+      if (Long /= "" and then Args (Pos) = Long)
+        or else (Short /= "" and then Args (Pos) = Short)
+      then
          --  Case 1: `-a b` or `--arg b`
 
          if Pos + 1 > Args'Last then
