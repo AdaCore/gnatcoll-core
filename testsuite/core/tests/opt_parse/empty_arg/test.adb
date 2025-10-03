@@ -84,6 +84,10 @@ begin
       A.Assert
         (not One_Flag_Args.Flag.Get,
          "Flag should be false because of parsing failure");
+      A.Assert
+        (One_Flag_Args.Parser.Last_Error,
+         "Unrecognized argument """"",
+         "Wrong error message");
    end if;
 
    --  Test a parser with only one option
@@ -111,6 +115,10 @@ begin
       A.Assert
         (One_Option_Args.Option.Get = +"default",
          "Option should be 'default' because of parsing failure");
+      A.Assert
+        (One_Option_Args.Parser.Last_Error,
+         "Unrecognized argument """"",
+         "Wrong error message");
    end if;
 
    return A.Report;

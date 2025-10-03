@@ -534,8 +534,8 @@ package body GNATCOLL.Opt_Parse is
             --  we encounter an unknown argument.
             if Unknown_Args = null then
                Handle_Failure
-                 ("Unrecognized argument " &
-                  (+Cmd_Line_Args (Current_Arg)));
+                 ("Unrecognized argument """ &
+                  (+Cmd_Line_Args (Current_Arg)) & """");
                return False;
             else
                Unknown_Args.Append (Cmd_Line_Args (Current_Arg));
