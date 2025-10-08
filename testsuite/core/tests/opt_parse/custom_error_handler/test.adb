@@ -123,7 +123,7 @@ begin
    else
       A.Assert
         (Handler.Last_Error.To_String,
-         "Unrecognized argument --what",
+         "Unrecognized argument ""--what""",
          "Wrong error message");
    end if;
 

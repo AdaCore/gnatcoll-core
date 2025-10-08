@@ -145,7 +145,7 @@ begin
    else
       A.Assert
         (Arg.Parser.Last_Error,
-         "Unrecognized argument --what",
+         "Unrecognized argument ""--what""",
          "Wrong error message");
    end if;
 

@@ -70,7 +70,7 @@ begin
       A.Assert (False, "Parsing should fail");
    else
       A.Assert (Arg.Parser.Last_Error,
-                "Unrecognized argument pouet",
+                "Unrecognized argument ""pouet""",
                 "Wrong error message");
    end if;
 
