@@ -131,40 +131,48 @@ package body GNATCOLL.File_Indexes is
       Prev_Cursor    : Cursor := Find (Self.DB, Normalized_Path);
       Prev_Hash      : File_Index_Digest := No_Digest;
       New_Hash       : File_Index_Digest := No_Digest;
+      Prev           : Index_Element;
       Trust_New_Hash : Boolean := True;
    begin
 
       if Prev_Cursor /= No_Element then
-         declare
-            Prev : constant Index_Element := Element (Prev_Cursor);
-         begin
-            if Prev.Trust_Hash and then Attrs = Prev.Attrs then
-               State := UNCHANGED_FILE;
-               Digest := Prev.Hash_Digest;
-               return;
+         Prev := Element (Prev_Cursor);
+
+         if Prev.Trust_Hash and then Attrs = Prev.Attrs then
+            State := UNCHANGED_FILE;
+            Digest := Prev.Hash_Digest;
+
+            --  Using a pre-existing element, so mark it as still in use so
+            --  requiring to be saved on disk.
+
+            if not Prev.Save_On_Disk then
+               Prev.Save_On_Disk := True;
+               Self.DB.Replace_Element (Prev_Cursor, Prev);
             end if;
 
-            --  Two possibilities:
-            --  - Hash is going to be recomputed
-            --  - File does not exist anymore
-            --  In both cases, previous file length must be removed
-            --  from the total length.
+            return;
+         end if;
 
-            Self.Total_Size := Self.Total_Size - Stat.Length (Prev.Attrs);
+         --  Two possibilities:
+         --  - Hash is going to be recomputed
+         --  - File does not exist anymore
+         --  In both cases, previous file length must be removed
+         --  from the total length.
 
-            if not Stat.Exists (Attrs) then
-               Delete (Self.DB, Prev_Cursor);
-               State  := REMOVED_FILE;
-               Digest := No_Digest;
-               return;
-            end if;
+         Self.Total_Size := Self.Total_Size - Stat.Length (Prev.Attrs);
 
-            --  default state is now UPDATED_FILE
-            State := UPDATED_FILE;
+         if not Stat.Exists (Attrs) then
+            Delete (Self.DB, Prev_Cursor);
+            State  := REMOVED_FILE;
+            Digest := No_Digest;
+            return;
+         end if;
 
-            --  Keep track of prev hash
-            Prev_Hash := Prev.Hash_Digest;
-         end;
+         --  default state is now UPDATED_FILE
+         State := UPDATED_FILE;
+
+         --  Keep track of prev hash
+         Prev_Hash := Prev.Hash_Digest;
       else
          --  This is a new file
          State := NEW_FILE;
@@ -186,11 +194,12 @@ package body GNATCOLL.File_Indexes is
       --  modified less than 1s ago, there is a possible race condition in
       --  which the file is modified again in the same second after we updated
       --  the File_Index DB. In those cases don't trust the hash (i.e: always
-      --  recompute it in the next query).
+      --  recompute it in the next query), unless the caller explicitly specify
+      --  that the value is to be trusted.
       Trust_New_Hash := Trust_Cache
         or else (Ada.Calendar.Clock - Stat.Modification_Time (Attrs)) > 1.0;
 
-      --  Compute Hash
+      --  Add the new entry
       Include
          (Self.DB,
           Normalized_Path,
@@ -257,24 +266,29 @@ package body GNATCOLL.File_Indexes is
                Stat_Data : constant JSON.JSON_Value := JSON.Create
                   (JSON.Empty_Array);
             begin
-               JSON_El.Set_Field ("trust", El.Trust_Hash);
-               JSON_El.Set_Field ("hash", El.Hash_Digest);
+               if El.Save_On_Disk then
+                  JSON_El.Set_Field ("trust", El.Trust_Hash);
+                  JSON_El.Set_Field ("hash", El.Hash_Digest);
 
-               Stat_Data.Append (JSON.Create (Stat.Exists (El.Attrs)));
-               Stat_Data.Append (JSON.Create (Stat.Is_Writable (El.Attrs)));
-               Stat_Data.Append (JSON.Create (Stat.Is_Readable (El.Attrs)));
-               Stat_Data.Append (JSON.Create (Stat.Is_Executable (El.Attrs)));
-               Stat_Data.Append
-                  (JSON.Create (Stat.Is_Symbolic_Link (El.Attrs)));
-               Stat_Data.Append (JSON.Create (Stat.Is_File (El.Attrs)));
-               Stat_Data.Append (JSON.Create (Stat.Is_Directory (El.Attrs)));
-               Stat_Data.Append
-                  (JSON.Create (Stat.Modification_Stamp (El.Attrs)));
-               Stat_Data.Append (JSON.Create (Stat.Length (El.Attrs)));
-               JSON_El.Set_Field ("stat", Stat_Data);
+                  Stat_Data.Append (JSON.Create (Stat.Exists (El.Attrs)));
+                  Stat_Data.Append (JSON.Create (Stat.Is_Writable (El.Attrs)));
+                  Stat_Data.Append (JSON.Create (Stat.Is_Readable (El.Attrs)));
+                  Stat_Data.Append
+                    (JSON.Create (Stat.Is_Executable (El.Attrs)));
+                  Stat_Data.Append
+                    (JSON.Create (Stat.Is_Symbolic_Link (El.Attrs)));
+                  Stat_Data.Append (JSON.Create (Stat.Is_File (El.Attrs)));
+                  Stat_Data.Append
+                    (JSON.Create (Stat.Is_Directory (El.Attrs)));
+                  Stat_Data.Append
+                    (JSON.Create (Stat.Modification_Stamp (El.Attrs)));
+                  Stat_Data.Append (JSON.Create (Stat.Length (El.Attrs)));
+                  JSON_El.Set_Field ("stat", Stat_Data);
 
-               JSON_DB.Set_Field (Key (C), JSON_El);
+                  JSON_DB.Set_Field (Key (C), JSON_El);
+               end if;
             end;
+
             C := Next (C);
          end loop;
       end;
