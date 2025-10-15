@@ -27,14 +27,17 @@ begin
    Write (FD, "Initial content file 1");
    Close (FD);
 
+   --  Add a delay to consider file_1's hash as trusted
+   delay 1.5;
+
    Hash (File_Index, "file_1", State, Digest);
    Assert
       (Digest,
        "ae85d337fcdd96a5e59c2729862d9698c014d60a71f9d970094c30526e779270");
+   Assert (Entry_State'Pos (State), Entry_State'Pos (NEW_FILE));
    Assert
      (Hash (File_Index, "file_1"),
       "ae85d337fcdd96a5e59c2729862d9698c014d60a71f9d970094c30526e779270");
-   Assert (Entry_State'Pos (State), Entry_State'Pos (NEW_FILE));
 
    File_1_Length := Integer (St.Length (St.Stat ("file_1")));
    Total_Size := File_1_Length;
@@ -69,7 +72,7 @@ begin
    Write (FD, " and new content");
    Close (FD);
 
-   Hash (File_Index, "file_1", State, Digest);
+   Hash (File_Index, "file_1", State, Digest, True);
    Assert
       (Digest,
        "7a5bc31122404d1c8bb158ac7d14927423752f5a0eefd4093097c13bb222aa07");
