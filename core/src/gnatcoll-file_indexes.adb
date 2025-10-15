@@ -35,11 +35,12 @@ package body GNATCOLL.File_Indexes is
    JSON_INDEX_MIMETYPE : constant String := "text/json+file-index-1.0";
 
    procedure Internal_Hash
-      (Self            : in out File_Index;
-       Normalized_Path : UTF8.UTF_8_String;
-       Attrs           : Stat.File_Attributes;
-       State           : out Entry_State;
-       Digest          : out File_Index_Digest);
+     (Self            : in out File_Index;
+      Normalized_Path : UTF8.UTF_8_String;
+      Attrs           : Stat.File_Attributes;
+      State           : out Entry_State;
+      Digest          : out File_Index_Digest;
+      Trust_Cache     : Boolean := False);
 
    -----------------
    -- Clear_Cache --
@@ -56,14 +57,20 @@ package body GNATCOLL.File_Indexes is
    ----------
 
    function Hash
-      (Self  : in out File_Index;
-       Path  : UTF8.UTF_8_String)
+     (Self        : in out File_Index;
+      Path        : UTF8.UTF_8_String;
+      Trust_Cache : Boolean := False)
       return File_Index_Digest
    is
       State : Entry_State;
       Digest : File_Index_Digest;
    begin
-      Hash (Self => Self, Path => Path, State => State, Digest => Digest);
+      Hash
+        (Self        => Self,
+         Path        => Path,
+         State       => State,
+         Digest      => Digest,
+         Trust_Cache => Trust_Cache);
       return Digest;
    end Hash;
 
@@ -71,21 +78,28 @@ package body GNATCOLL.File_Indexes is
       (Self   : in out File_Index;
        Path   : UTF8.UTF_8_String;
        State  : out Entry_State;
-       Digest : out File_Index_Digest)
+       Digest : out File_Index_Digest;
+       Trust_Cache : Boolean := False)
    is
       Normalized_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
          (Path, Resolve_Links => False);
    begin
       Internal_Hash
-         (Self, Normalized_Path, Stat.Stat (Normalized_Path), State, Digest);
+        (Self,
+         Normalized_Path,
+         Stat.Stat (Normalized_Path),
+         State,
+         Digest,
+         Trust_Cache);
    end Hash;
 
    procedure Hash
-      (Self       : in out File_Index;
-       Path       : UTF8.UTF_8_String;
-       Attrs      : Stat.File_Attributes;
-       State      : out Entry_State;
-       Digest     : out File_Index_Digest)
+     (Self        : in out File_Index;
+      Path        : UTF8.UTF_8_String;
+      Attrs       : Stat.File_Attributes;
+      State       : out Entry_State;
+      Digest      : out File_Index_Digest;
+      Trust_Cache : Boolean := False)
    is
    begin
       Internal_Hash
@@ -93,7 +107,8 @@ package body GNATCOLL.File_Indexes is
           GNAT.OS_Lib.Normalize_Pathname (Path, Resolve_Links => False),
           Attrs,
           State,
-          Digest);
+          Digest,
+          Trust_Cache);
    end Hash;
 
    -------------------
@@ -101,11 +116,12 @@ package body GNATCOLL.File_Indexes is
    -------------------
 
    procedure Internal_Hash
-      (Self            : in out File_Index;
-       Normalized_Path : UTF8.UTF_8_String;
-       Attrs           : Stat.File_Attributes;
-       State           : out Entry_State;
-       Digest          : out File_Index_Digest)
+     (Self            : in out File_Index;
+      Normalized_Path : UTF8.UTF_8_String;
+      Attrs           : Stat.File_Attributes;
+      State           : out Entry_State;
+      Digest          : out File_Index_Digest;
+      Trust_Cache     : Boolean := False)
    is
       use File_Maps;
       use type Stat.File_Attributes;
@@ -171,8 +187,8 @@ package body GNATCOLL.File_Indexes is
       --  which the file is modified again in the same second after we updated
       --  the File_Index DB. In those cases don't trust the hash (i.e: always
       --  recompute it in the next query).
-      Trust_New_Hash :=
-         (Ada.Calendar.Clock - Stat.Modification_Time (Attrs)) > 1.0;
+      Trust_New_Hash := Trust_Cache
+        or else (Ada.Calendar.Clock - Stat.Modification_Time (Attrs)) > 1.0;
 
       --  Compute Hash
       Include
@@ -291,18 +307,20 @@ package body GNATCOLL.File_Indexes is
          V : Index_Element;
          JSON_Stat : constant JSON.JSON_Array := JSON.Get (Value, "stat");
       begin
-         V.Trust_Hash := JSON.Get (Value, "trust");
-         V.Hash_Digest := JSON.Get (Value, "hash");
-         V.Attrs := Stat.New_File_Attributes
-            (Exists        => JSON.Get (JSON.Get (JSON_Stat, 1)),
-             Writable      => JSON.Get (JSON.Get (JSON_Stat, 2)),
-             Readable      => JSON.Get (JSON.Get (JSON_Stat, 3)),
-             Executable    => JSON.Get (JSON.Get (JSON_Stat, 4)),
-             Symbolic_Link => JSON.Get (JSON.Get (JSON_Stat, 5)),
-             Regular       => JSON.Get (JSON.Get (JSON_Stat, 6)),
-             Directory     => JSON.Get (JSON.Get (JSON_Stat, 7)),
-             Stamp         => JSON.Get (JSON.Get (JSON_Stat, 8)),
-             Length        => JSON.Get (JSON.Get (JSON_Stat, 9)));
+         V :=
+           (Attrs        => Stat.New_File_Attributes
+              (Exists        => JSON.Get (JSON.Get (JSON_Stat, 1)),
+               Writable      => JSON.Get (JSON.Get (JSON_Stat, 2)),
+               Readable      => JSON.Get (JSON.Get (JSON_Stat, 3)),
+               Executable    => JSON.Get (JSON.Get (JSON_Stat, 4)),
+               Symbolic_Link => JSON.Get (JSON.Get (JSON_Stat, 5)),
+               Regular       => JSON.Get (JSON.Get (JSON_Stat, 6)),
+               Directory     => JSON.Get (JSON.Get (JSON_Stat, 7)),
+               Stamp         => JSON.Get (JSON.Get (JSON_Stat, 8)),
+               Length        => JSON.Get (JSON.Get (JSON_Stat, 9))),
+            Hash_Digest  => JSON.Get (Value, "hash"),
+            Trust_Hash   => JSON.Get (Value, "trust"),
+            Save_On_Disk => False);
          Result.DB.Include (Name, V);
       end Process_Entry;
 
