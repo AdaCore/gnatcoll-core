@@ -241,8 +241,8 @@ package body GNATCOLL.File_Indexes is
       FD         : FS.File_Descriptor;
 
    begin
-      --  The mime field is only used by the Load_Index function and ensure
-      --  we don't try to load a file a a distinct format
+      --  The mime field is only used by the Load_Index function and ensures
+      --  we don't try to load a file a distinct format
       Result.Set_Field ("mimetype", JSON_INDEX_MIMETYPE);
 
       --  Dump global data
