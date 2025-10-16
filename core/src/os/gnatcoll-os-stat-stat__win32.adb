@@ -72,10 +72,7 @@ begin
          (REPARSE_POINT and Info.BasicInformation.FileAttributes) > 0;
       Result.Regular :=
          not (Result.Directory or Result.Symbolic_Link);
-      Result.Stamp := Ada.Calendar.Conversions.To_Ada_Time
-         (Interfaces.C.long
-            ((Info.BasicInformation.LastWriteTime / 10000000)
-            - Win32_Epoch_Offset));
+      Result.Stamp := To_Unix_Nanoseconds (Info.BasicInformation.LastWriteTime);
       Result.Length := Info.StandardInformation.EndOfFile;
       Result.Executable := True;
       Result.Readable   := True;

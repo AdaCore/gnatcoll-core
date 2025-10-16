@@ -142,6 +142,9 @@ package GNATCOLL.OS.FS is
    --  Write Buffer content to FD. OS_Error is raised if write fails or is not
    --  complete.
 
+   procedure Write_Unbounded (FD : File_Descriptor; Buffer : Unbounded_String);
+   --  Likewise for Unbounded string
+
    function Unsafe_Read
       (FD     : File_Descriptor;
        Buffer : System.Address;

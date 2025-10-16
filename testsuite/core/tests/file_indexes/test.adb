@@ -27,14 +27,17 @@ begin
    Write (FD, "Initial content file 1");
    Close (FD);
 
+   --  Add a delay to consider file_1's hash as trusted
+   delay 1.5;
+
    Hash (File_Index, "file_1", State, Digest);
    Assert
       (Digest,
        "ae85d337fcdd96a5e59c2729862d9698c014d60a71f9d970094c30526e779270");
+   Assert (Entry_State'Pos (State), Entry_State'Pos (NEW_FILE));
    Assert
      (Hash (File_Index, "file_1"),
       "ae85d337fcdd96a5e59c2729862d9698c014d60a71f9d970094c30526e779270");
-   Assert (Entry_State'Pos (State), Entry_State'Pos (NEW_FILE));
 
    File_1_Length := Integer (St.Length (St.Stat ("file_1")));
    Total_Size := File_1_Length;
@@ -69,11 +72,22 @@ begin
    Write (FD, " and new content");
    Close (FD);
 
-   Hash (File_Index, "file_1", State, Digest);
+   Hash (File_Index, "file_1", State, Digest, True);
    Assert
       (Digest,
        "7a5bc31122404d1c8bb158ac7d14927423752f5a0eefd4093097c13bb222aa07");
    Assert (Entry_State'Pos (State), Entry_State'Pos (UPDATED_FILE));
+
+   --  Save the index and reload it. Ensure that the hash and status stays the
+   --  same.
+   Save_Index (File_Index, "db.json");
+   File_Index := Load_Index ("db.json");
+
+   Hash (File_Index, "file_1", State, Digest);
+   Assert
+      (Digest,
+       "7a5bc31122404d1c8bb158ac7d14927423752f5a0eefd4093097c13bb222aa07");
+   Assert (Entry_State'Pos (State), Entry_State'Pos (UNCHANGED_FILE));
 
    Total_Size := Total_Size - File_1_Length;
    File_1_Length := Integer (St.Length (St.Stat ("file_1")));
@@ -109,6 +123,35 @@ begin
    Assert (Entry_State'Pos (State), Entry_State'Pos (UNHASHABLE_FILE));
 
    Assert (Remove_Directory ("dir_1"));
+
+   --  Try to load invalid indexes
+   --  First a non existing file
+   File_Index := Load_Index ("non-existing-db.json");
+   Assert (Integer (Indexed_Content_Size (File_Index)), 0);
+
+   --  Then a non valid JSON file
+   FD := Open ("invalid-db.json", Mode => Write_Mode);
+   Write (FD, "{{");
+   Close (FD);
+   File_Index := Load_Index ("invalid-db.json");
+   Assert (Integer (Indexed_Content_Size (File_Index)), 0);
+
+   --  A JSON file that does not have the expected mimetype header
+   FD := Open ("invalid-db.json", Mode => Write_Mode);
+   Write (FD, "{}");
+   Close (FD);
+   File_Index := Load_Index ("invalid-db.json");
+   Assert (Integer (Indexed_Content_Size (File_Index)), 0);
+
+   --  A JSON file with the wrong mimetype
+   FD := Open ("invalid-db.json", Mode => Write_Mode);
+   Write
+      (FD,
+       "{""mimetype"": ""test/json""," &
+       """last_update_time"": 1, ""total_size"": 1}");
+   Close (FD);
+   File_Index := Load_Index ("invalid-db.json");
+   Assert (Integer (Indexed_Content_Size (File_Index)), 0);
 
    return Report;
 end Test;
