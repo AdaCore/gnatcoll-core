@@ -70,7 +70,7 @@ Here is a complete program demonstrating the use of this API::
       --  Create a JSON value from scratch
       My_Obj : JSON_Value := Create_Object;
    begin
-      My_Obj.Set_Field ("field1", Create (1));
+      My_Obj.Set_Field ("field1", Create (Integer'(1)));
       My_Obj.Set_Field ("name", "theName");
 
       --  Now serialize it. The call below will display:
@@ -82,7 +82,7 @@ The above uses the Ada 2005 "dot notation" to call primitive operations
 (``.Set_Field``, ``.Write``), but naturally the more traditional "prefix
 notation" is also available::
 
-   Set_Field (My_Obj, "field1", Create (1));
+   Set_Field (My_Obj, "field1", Create (Integer'(1)));
 
 It is also possible to create JSON arrays. These are not tagged types, so the
 prefix notation has to be used. Here is a further example that sets another
@@ -93,7 +93,7 @@ field in the object we had before (``My_Obj``)::
       My_Arr : JSON_Array := Empty_Array;
    begin
       --  Fill it
-      Append (My_Arr, Create (1));
+      Append (My_Arr, Create (Integer'(1)));
       Append (My_Arr, Create ("aString"));
 
       --  Create a field in My_Obj to hold this array
