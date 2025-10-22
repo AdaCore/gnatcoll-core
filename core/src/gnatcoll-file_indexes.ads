@@ -24,7 +24,6 @@
 --  Provide an implementation for an efficient cache of file checksums.
 
 with Ada.Containers.Indefinite_Hashed_Maps;
-with Ada.Calendar;
 with Ada.Strings.Hash;
 with Ada.Strings.UTF_Encoding;
 with GNATCOLL.Hash.Blake3;
@@ -62,11 +61,12 @@ package GNATCOLL.File_Indexes is
    --  Return the total number of bytes that have been indexed
 
    procedure Hash
-      (Self   : in out File_Index;
-       Path   : UTF8.UTF_8_String;
-       Attrs  : Stat.File_Attributes;
-       State  : out Entry_State;
-       Digest : out File_Index_Digest)
+     (Self        : in out File_Index;
+      Path        : UTF8.UTF_8_String;
+      Attrs       : Stat.File_Attributes;
+      State       : out Entry_State;
+      Digest      : out File_Index_Digest;
+      Trust_Cache : Boolean := False)
    with Inline => True;
    --  Get the hash digest for the file located at Path and with file
    --  attributes Attrs (obtained with a call to GNATCOLL.OS.Stat). See
@@ -75,24 +75,36 @@ package GNATCOLL.File_Indexes is
    --  iterating on a directory using GNATCOLL.OS.Dir. Indeed the Dir_Entry
    --  already contains the stat information for the given and thus this avoid
    --  calling stat a second time (specially efficient on Windows platform).
+   --  If Trust_Cache is not set, then checksums savec in the index are
+   --  considered not trustworthy until 1 second elapsed since its modification
+   --  time, to prevent potential race conditions. Set it to true to mark it
+   --  trustworthy.
 
    procedure Hash
-      (Self   : in out File_Index;
-       Path   : UTF8.UTF_8_String;
-       State  : out Entry_State;
-       Digest : out File_Index_Digest);
+     (Self        : in out File_Index;
+      Path        : UTF8.UTF_8_String;
+      State       : out Entry_State;
+      Digest      : out File_Index_Digest;
+      Trust_Cache : Boolean := False);
    --  Same as previous function except that a call to Stat is done
    --  automatically to get file attributes.
 
-   function Hash (Self : in out File_Index; Path : UTF8.UTF_8_String)
+   function Hash
+     (Self        : in out File_Index;
+      Path        : UTF8.UTF_8_String;
+      Trust_Cache : Boolean := False)
       return File_Index_Digest;
    --  Same as previous function without State as output.
+   --  If Trust
 
-   --  procedure Save_Index (Self : File_Index; Filename : UTF8.UTF_8_String);
-   --  Dump a File_Index on disk
+   procedure Save_Index (Self : File_Index; Filename : UTF8.UTF_8_String);
+   --  Dump File_Index Self in file Filename
 
-   --  function Load_Index (Filename : UTF8.UTF_8_String) return File_Index;
-   --  Load a File_Index from disk
+   function Load_Index (Filename : UTF8.UTF_8_String) return File_Index;
+   --  Load a File_Index from file Filename
+   --
+   --  Note that in case of error the function does not raise an exception.
+   --  Instead an empty index is returned.
 
    procedure Clear_Cache (Self : in out File_Index);
    --  Clear the index content.
@@ -113,7 +125,6 @@ private
        Equivalent_Keys => "=");
 
    type File_Index is record
-      Last_Update_Time : Ada.Calendar.Time;
       Total_Size       : Long_Long_Integer := 0;
       DB               : File_Maps.Map;
    end record;

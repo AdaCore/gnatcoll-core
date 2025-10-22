@@ -94,10 +94,7 @@ begin
                 Symbolic_Link => Is_Symlink,
                 Regular       => not (Is_Symlink or Is_Dir),
                 Directory     => Is_Dir,
-                Stamp         => Ada.Calendar.Conversions.To_Ada_Time
-                   (Interfaces.C.long
-                      ((Dir_Info.LastWriteTime / 10000000) -
-                       Win32_Epoch_Offset)),
+                Stamp         => To_Unix_Nanoseconds (Dir_Info.LastWriteTime),
                 Length        => Long_Long_Integer (Dir_Info.EndOfFile));
          end if;
       else

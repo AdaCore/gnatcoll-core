@@ -26,7 +26,6 @@ with GNAT.OS_Lib;
 with GNATCOLL.String_Builders;
 with GNATCOLL.OS.Libc; use GNATCOLL.OS.Libc;
 with GNATCOLL.OS.Libc.Stat; use GNATCOLL.OS.Libc.Stat;
-with Ada.Calendar.Conversions; use Ada.Calendar.Conversions;
 
 separate (GNATCOLL.OS.Stat)
 function Fstat (FD : FS.File_Descriptor) return File_Attributes
@@ -37,7 +36,6 @@ is
    Stat_Result : Stat_Info;
    Result      : File_Attributes;
    Status      : Libc_Status;
-   Nano        : constant := 1_000_000_000;
 begin
 
    Status := Libc.Stat.Fstat (FD, Stat_Result);
@@ -48,9 +46,7 @@ begin
       Result.Symbolic_Link := (Stat_Result.Mode and S_IFMT) = S_IFLNK;
       Result.Regular       := (Stat_Result.Mode and S_IFMT) = S_IFREG;
       Result.Directory     := (Stat_Result.Mode and S_IFMT) = S_IFDIR;
-      Result.Stamp         := To_Ada_Time
-         (Interfaces.C.long (Stat_Result.Mtime / Nano)) +
-         Duration (Stat_Result.Mtime mod Nano) / Nano;
+      Result.Stamp         := Stat_Result.Mtime;
       Result.Length        := Long_Long_Integer (Stat_Result.Size);
    end if;
 
