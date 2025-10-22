@@ -13,7 +13,13 @@ variables:
   HOST: x86_64-linux
 
 stages:
+- check
 - build
+
+include:
+
+  # Issue check
+  - component: $CI_SERVER_FQDN/eng/gitlab-templates/check-issue@~latest
 
 default:
   before_script: |
