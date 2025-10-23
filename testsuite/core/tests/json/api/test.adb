@@ -82,7 +82,11 @@ function Test return Integer is
 
    Int_0       : JSON_Value := Create (Integer'(0));
    Int_1       : constant JSON_Value := Create (Integer'(1));
+   Int_2       : constant JSON_Value := Create (Integer'(2));
+   Int_3       : constant JSON_Value := Create (Integer'(3));
+
    Hello_World : constant JSON_Value := Create ("Hello world!");
+   Hi_World    : constant JSON_Value := Create ("Hi world!");
 
    Float_0 : constant JSON_Value := Create (Float'(0.0));
    Float_1 : constant JSON_Value := Create (Float'(1.0));
@@ -99,6 +103,7 @@ begin
 
    declare
       Arr   : JSON_Array := Int_0 & Int_1 & Hello_World;
+      Arr2  : constant JSON_Array := Int_2 & Int_3 & Hi_World;
       Empty : constant JSON_Array := Empty_Array;
    begin
       --  Inspect an empty array
@@ -142,6 +147,26 @@ begin
 
       Clear (Arr);
       A.Assert (Length (Arr) = 0);
+
+      Arr := Hello_World & Int_0 & Int_1;
+      Append (Arr, Arr2);
+      A.Assert (Length (Arr) = 6);
+      A.Assert (Get (Arr, 1) = Hello_World);
+      A.Assert (Get (Arr, 2) = Int_0);
+      A.Assert (Get (Arr, 3) = Int_1);
+      A.Assert (Get (Arr, 4) = Int_2);
+      A.Assert (Get (Arr, 5) = Int_3);
+      A.Assert (Get (Arr, 6) = Hi_World);
+
+      Arr := Hello_World & Int_0 & Int_1;
+      Prepend (Arr, Arr2);
+      A.Assert (Length (Arr) = 6);
+      A.Assert (Get (Arr, 1) = Int_2);
+      A.Assert (Get (Arr, 2) = Int_3);
+      A.Assert (Get (Arr, 3) = Hi_World);
+      A.Assert (Get (Arr, 4) = Hello_World);
+      A.Assert (Get (Arr, 5) = Int_0);
+      A.Assert (Get (Arr, 6) = Int_1);
 
       Arr := Hello_World & Int_0 & Int_1 & Int_0;
       Sort (Arr, Less'Access);
