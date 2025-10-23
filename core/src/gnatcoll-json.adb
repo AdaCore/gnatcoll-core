@@ -953,13 +953,6 @@ package body GNATCOLL.JSON is
       Arr.Vals.Append (Val);
    end Append;
 
-   procedure Append (Arr : in out JSON_Array; Val : JSON_Array) is
-   begin
-      for Value of Val.Vals loop
-         Arr.Vals.Append (Value);
-      end loop;
-   end Append;
-
    -------------
    -- Prepend --
    -------------
@@ -967,13 +960,6 @@ package body GNATCOLL.JSON is
    procedure Prepend (Arr : in out JSON_Array; Val : JSON_Value) is
    begin
       Arr.Vals.Prepend (Val);
-   end Prepend;
-
-   procedure Prepend (Arr : in out JSON_Array; Val : JSON_Array) is
-   begin
-      for Value of reverse Val.Vals loop
-         Arr.Vals.Prepend (Value);
-      end loop;
    end Prepend;
 
    ---------
