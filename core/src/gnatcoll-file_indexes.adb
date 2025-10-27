@@ -40,7 +40,7 @@ package body GNATCOLL.File_Indexes is
       Attrs           : Stat.File_Attributes;
       State           : out Entry_State;
       Digest          : out File_Index_Digest;
-      Trust_Cache     : Boolean := False);
+      Force_Cache     : Boolean := False);
 
    -----------------
    -- Clear_Cache --
@@ -59,7 +59,7 @@ package body GNATCOLL.File_Indexes is
    function Hash
      (Self        : in out File_Index;
       Path        : UTF8.UTF_8_String;
-      Trust_Cache : Boolean := False)
+      Force_Cache : Boolean := False)
       return File_Index_Digest
    is
       State : Entry_State;
@@ -70,7 +70,7 @@ package body GNATCOLL.File_Indexes is
          Path        => Path,
          State       => State,
          Digest      => Digest,
-         Trust_Cache => Trust_Cache);
+         Force_Cache => Force_Cache);
       return Digest;
    end Hash;
 
@@ -79,7 +79,7 @@ package body GNATCOLL.File_Indexes is
        Path   : UTF8.UTF_8_String;
        State  : out Entry_State;
        Digest : out File_Index_Digest;
-       Trust_Cache : Boolean := False)
+       Force_Cache : Boolean := False)
    is
       Normalized_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
          (Path, Resolve_Links => False);
@@ -90,7 +90,7 @@ package body GNATCOLL.File_Indexes is
          Stat.Stat (Normalized_Path),
          State,
          Digest,
-         Trust_Cache);
+         Force_Cache);
    end Hash;
 
    procedure Hash
@@ -99,7 +99,7 @@ package body GNATCOLL.File_Indexes is
       Attrs       : Stat.File_Attributes;
       State       : out Entry_State;
       Digest      : out File_Index_Digest;
-      Trust_Cache : Boolean := False)
+      Force_Cache : Boolean := False)
    is
    begin
       Internal_Hash
@@ -108,7 +108,7 @@ package body GNATCOLL.File_Indexes is
           Attrs,
           State,
           Digest,
-          Trust_Cache);
+          Force_Cache);
    end Hash;
 
    -------------------
@@ -121,7 +121,7 @@ package body GNATCOLL.File_Indexes is
       Attrs           : Stat.File_Attributes;
       State           : out Entry_State;
       Digest          : out File_Index_Digest;
-      Trust_Cache     : Boolean := False)
+      Force_Cache     : Boolean := False)
    is
       use File_Maps;
       use type Stat.File_Attributes;
@@ -138,7 +138,15 @@ package body GNATCOLL.File_Indexes is
       if Prev_Cursor /= No_Element then
          Prev := Element (Prev_Cursor);
 
-         if Prev.Trust_Hash and then Attrs = Prev.Attrs then
+         --  If Force_Cache is set, we want to ensure the recomputation of the
+         --  checksum. This allows to force the update of the cache even though
+         --  the previous checksum was tagged as trusted. The file could have
+         --  been modified without Stat picking up the change if the file
+         --  systems do not have the sufficient time resolution.
+         if not Force_Cache
+           and then Prev.Trust_Hash
+           and then Attrs = Prev.Attrs
+         then
             State := UNCHANGED_FILE;
             Digest := Prev.Hash_Digest;
 
@@ -196,7 +204,7 @@ package body GNATCOLL.File_Indexes is
       --  the File_Index DB. In those cases don't trust the hash (i.e: always
       --  recompute it in the next query), unless the caller explicitly specify
       --  that the value is to be trusted.
-      Trust_New_Hash := Trust_Cache
+      Trust_New_Hash := Force_Cache
         or else (Ada.Calendar.Clock - Stat.Modification_Time (Attrs)) > 1.0;
 
       --  Add the new entry
