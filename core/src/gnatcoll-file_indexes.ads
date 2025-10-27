@@ -66,7 +66,7 @@ package GNATCOLL.File_Indexes is
       Attrs       : Stat.File_Attributes;
       State       : out Entry_State;
       Digest      : out File_Index_Digest;
-      Trust_Cache : Boolean := False)
+      Force_Cache : Boolean := False)
    with Inline => True;
    --  Get the hash digest for the file located at Path and with file
    --  attributes Attrs (obtained with a call to GNATCOLL.OS.Stat). See
@@ -75,27 +75,27 @@ package GNATCOLL.File_Indexes is
    --  iterating on a directory using GNATCOLL.OS.Dir. Indeed the Dir_Entry
    --  already contains the stat information for the given and thus this avoid
    --  calling stat a second time (specially efficient on Windows platform).
-   --  If Trust_Cache is not set, then checksums savec in the index are
-   --  considered not trustworthy until 1 second elapsed since its modification
-   --  time, to prevent potential race conditions. Set it to true to mark it
-   --  trustworthy.
+   --  If Force_Cache is set, then we force the recomputation of the checksum
+   --  and we consider it trustworthy.
+   --  If Force_Cache is not set, then we rely on the trust we have in the
+   --  file index checksum up until 1 second elapsed since its modification
+   --  time, to prevent potential race conditions.
 
    procedure Hash
      (Self        : in out File_Index;
       Path        : UTF8.UTF_8_String;
       State       : out Entry_State;
       Digest      : out File_Index_Digest;
-      Trust_Cache : Boolean := False);
+      Force_Cache : Boolean := False);
    --  Same as previous function except that a call to Stat is done
    --  automatically to get file attributes.
 
    function Hash
      (Self        : in out File_Index;
       Path        : UTF8.UTF_8_String;
-      Trust_Cache : Boolean := False)
+      Force_Cache : Boolean := False)
       return File_Index_Digest;
    --  Same as previous function without State as output.
-   --  If Trust
 
    procedure Save_Index (Self : File_Index; Filename : UTF8.UTF_8_String);
    --  Dump File_Index Self in file Filename
