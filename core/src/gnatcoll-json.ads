@@ -219,8 +219,14 @@ package GNATCOLL.JSON is
    procedure Append (Arr : in out JSON_Array; Val : JSON_Value);
    --  Append Val as a new element at the end of the Arr array
 
+   procedure Append (Arr : in out JSON_Array; Val : JSON_Array);
+   --  Append all values of Val at the end of the Arr array
+
    procedure Prepend (Arr : in out JSON_Array; Val : JSON_Value);
    --  Insert Val as the first element of the Arr array
+
+   procedure Prepend (Arr : in out JSON_Array; Val : JSON_Array);
+   --  Insert all values of Val at the beginning of the Arr array
 
    procedure Clear (Arr : in out JSON_Array);
    --  Remove all elements in Arr
