@@ -173,7 +173,13 @@ class GPRTool:
 
         # Handle basic parameters such out of tree build
         if self.source_dir != self.object_dir:
-            cmd.append("--relocate-build-tree")
+            
+            # gnatcov does not recognize --relocate-build-tree alone, it always
+            # expects an argument to this switch.
+            if args[0] == "gnatcov":
+                cmd.append(f"--relocate-build-tree={os.getcwd()}")
+            else:
+                cmd.append("--relocate-build-tree")
             cmd.append(f"-P{os.path.join(self.source_dir, self.project_file)}")
         else:
             cmd.append(f"-P{self.project_file}")
