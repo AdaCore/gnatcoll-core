@@ -116,6 +116,7 @@ add_timeval (struct timeval *result, const struct timeval *a,
 int
 __gnatcoll_wait_for_sigchld (int fd, struct timeval *timeout)
 {
+   sigset_t oldmask, tmpmask;
    fd_set fd_list;
    int retval = 0;
    char buf[1];
@@ -128,6 +129,24 @@ __gnatcoll_wait_for_sigchld (int fd, struct timeval *timeout)
          add_timeval (&end_time, &now, timeout);
       }
 
+   // We need to ensure that SIGCHLD is not block in the current signal mask.
+
+   // Get the current signal mask
+   if (sigprocmask (SIG_SETMASK, NULL, &oldmask) == -1)
+      {
+         return -2;
+      }
+
+   // Make a temporary copy and ensure SIGCHLD is unblocked
+   tmpmask = oldmask;
+   sigdelset (&tmpmask, SIGCHLD);
+
+   // Apply the modified mask
+   if (sigprocmask (SIG_SETMASK, &tmpmask, NULL) == -1)
+      {
+         return -3;
+      }
+
    FD_ZERO (&fd_list);
    FD_SET (fd, &fd_list);
 
@@ -138,6 +157,12 @@ __gnatcoll_wait_for_sigchld (int fd, struct timeval *timeout)
          if (retval > 0)
             {
                read (fd, buf, 1);
+
+               // Restore the old signal mask
+               if (sigprocmask (SIG_SETMASK, &oldmask, NULL) == -1)
+                  {
+                     return -4;
+                  }
                return 0;
             }
 
@@ -151,6 +176,12 @@ __gnatcoll_wait_for_sigchld (int fd, struct timeval *timeout)
 
                subtract_timeval (timeout, &end_time, &now);
             }
+      }
+
+   // Restore the old signal mask
+   if (sigprocmask (SIG_SETMASK, &oldmask, NULL) == -1)
+      {
+         return -5;
       }
    return -1;
 }
