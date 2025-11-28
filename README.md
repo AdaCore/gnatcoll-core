@@ -105,7 +105,7 @@ This will generate in `OBJ_DIR` the file called `gnatcoll_minimal.json`:
   "integrated": false,
   "variables": {
     "GNATCOLL_BUILD_MODE": "PROD",
-    "GNATCOLL_VERSION": "25.0",
+    "GNATCOLL_VERSION": "26.0",
     "GNATCOLL_OS": "unix"
   },
   "jobs": "0",
@@ -128,7 +128,7 @@ context of `gnatcoll_minimal.gpr` the project is located in
 
 ```
 abstract project GNATCOLL_Minimal_Constants is
-    GNATCOLL_VERSION_DEFAULT     := "25.0";
+    GNATCOLL_VERSION_DEFAULT     := "26.0";
     GNATCOLL_BUILD_MODE_DEFAULT  := "PROD";
     GNATCOLL_OS_DEFAULT          := "unix";
 end GNATCOLL_Minimal_Constants;
