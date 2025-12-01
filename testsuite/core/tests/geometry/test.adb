@@ -238,7 +238,7 @@ function Test return Integer is
       procedure Assert_Area
          (P : G.Polygon; D : Coordinate; Error : String) is
       begin
-         Assert (G.Area (P), abs (D), Error & " (poly test)");
+         Assert (G.Area (P), abs D, Error & " (poly test)");
          if P'Length = 3 then
             Assert (G.Area (G.Triangle (P)), D,
                     Error & " (triangle test)");
