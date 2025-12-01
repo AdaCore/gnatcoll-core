@@ -25,7 +25,7 @@ class BuildAndRunDriver(ClassicTestDriver):
         if self.test_env.get('no-coverage'):
             gpr_project_path = self.env.gnatcoll_debug_gpr_dir
         else:
-            gpr_project_path = self.env.gnatcoll_gpr_dir
+            gpr_project_path = None
         gprbuild(
             self,
             project_file="test.gpr",
