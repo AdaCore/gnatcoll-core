@@ -57,6 +57,10 @@ class BuildRunDiffDriver(DiffTestDriver):
             result.append(ToLower())
         if self.test_env.get("canonicalize_backslashes", False):
             result.append(Substitute("\\", "/"))
+
+
+        # Standardize Windows executable names in output
+        result.append(Substitute(".exe", ""))
         return result
 
     def run(self):
