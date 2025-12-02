@@ -62,6 +62,7 @@ class LibTestsuite(Testsuite):
     def set_up(self) -> None:
         # Initialize if necessary gnatcov traces directory
         if self.main.args.gnatcov:
+            self.env.gnatcov = True
             self.env.gnatcov_dir = os.path.join(
                 os.path.abspath(self.output_dir), "gnatcov-traces"
             )
@@ -69,6 +70,7 @@ class LibTestsuite(Testsuite):
             rm(self.env.gnatcov_dir, recursive=True)
             mkdir(self.env.gnatcov_dir)
         else:
+            self.env.gnatcov = False
             self.env.gnatcov_dir = None
 
         # Whether valgrind should be used or not

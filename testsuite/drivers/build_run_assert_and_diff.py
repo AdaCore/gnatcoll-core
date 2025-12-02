@@ -79,6 +79,9 @@ class BuildRunAssertAndDiffDriver(DiffTestDriver):
             result.append(ToLower())
         if self.test_env.get("canonicalize_backslashes", False):
             result.append(Substitute("\\", "/"))
+
+        # Standardize Windows executable names in output
+        result.append(Substitute(".exe", ""))
         return result
 
     def run(self):
@@ -86,7 +89,7 @@ class BuildRunAssertAndDiffDriver(DiffTestDriver):
         if self.test_env.get("no-coverage"):
             gpr_project_path = self.env.gnatcoll_debug_gpr_dir
         else:
-            gpr_project_path = self.env.gnatcoll_gpr_dir
+            gpr_project_path = None
 
         scenario = {}
         for source_dir in self.test_env.get("source_dirs", []):

@@ -79,7 +79,6 @@ class MyTestsuite(Testsuite):
                 )
             )
 
-        self.env.gnatcoll_gpr_dir = None
         if self.env.gnatcov:
             if self.main.args.recompile:
                 print(

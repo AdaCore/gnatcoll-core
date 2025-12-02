@@ -57,6 +57,10 @@ class BuildRunDiffDriver(DiffTestDriver):
             result.append(ToLower())
         if self.test_env.get("canonicalize_backslashes", False):
             result.append(Substitute("\\", "/"))
+
+
+        # Standardize Windows executable names in output
+        result.append(Substitute(".exe", ""))
         return result
 
     def run(self):
@@ -64,30 +68,17 @@ class BuildRunDiffDriver(DiffTestDriver):
         if self.test_env.get('no-coverage'):
             gpr_project_path = self.env.gnatcoll_debug_gpr_dir
         else:
-            gpr_project_path = self.env.gnatcoll_gpr_dir
-        gprbuild(
-            self,
-            project_file="test.gpr",
-            gpr_project_path=gpr_project_path
-        )
+            gpr_project_path = None
+        gprbuild(self, gpr_project_path=gpr_project_path)
+        test_exe = self.test_env.get("test_exe", "obj/test")
 
-        # Run the test program
-        if self.env.is_cross:
-            p = run_test_program(
-                self,
-                [self.working_dir("test")],
-                self.slot,
-                timeout=self.default_process_timeout
-            )
-        else:
-            p = run_test_program(
-                self,
-                ["bash", self.working_dir("test.sh")],
-                self.slot,
-                timeout=self.default_process_timeout,
-            )
-            # Output explicitly to be compared with the expected output.
-            self.output += p.out.decode('utf-8')
+        p = run_test_program(
+            self,
+            [self.working_dir(test_exe)],
+            self.slot,
+            timeout=self.default_process_timeout
+        )
+        self.output += p.out.decode('utf-8')
 
         if p.status:
             self.output += ">>>program returned status code {}\n".format(

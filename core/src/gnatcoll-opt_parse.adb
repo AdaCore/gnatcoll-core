@@ -724,7 +724,10 @@ package body GNATCOLL.Opt_Parse is
          Last : Parser_Return := Error_Return;
       begin
          for I in Pos .. Args'Last loop
-            if Args (I).Starts_With ("--") or Args (I).Starts_With ("-") then
+            --  The positional argument '-' is often used to represent stdin
+            if Args (I).Starts_With ("--")
+              or (Args (I).Starts_With ("-") and then Args (I).Length > 1)
+            then
                exit;
             end if;
 
@@ -838,7 +841,12 @@ package body GNATCOLL.Opt_Parse is
          Result : in out Parsed_Arguments) return Parser_Return
       is
       begin
-         if Args (Pos).Starts_With ("--") or Args (Pos).Starts_With ("-") then
+         --  The positional argument '-' is often used to represent stdin
+
+         if Args (Pos).Starts_With ("--")
+           or else (Args (Pos).Starts_With ("-")
+                    and then Args (Pos).Length > 1)
+         then
             return Error_Return;
          end if;
 
@@ -1585,24 +1593,27 @@ package body GNATCOLL.Opt_Parse is
       Ret.Append_Line;
       Ret.Append_Line;
 
-      Ret.Append_Line ("positional arguments:", Col_After => 3);
+      if Natural (Self.Data.Positional_Args_Parsers.Length) > 0 then
+         Ret.Append_Line ("positional arguments:", Col_After => 3);
 
-      for Parser of Self.Data.Positional_Args_Parsers loop
-         Ret.Append_Text (Parser.Help_Name);
-         Ret.Set_Column (Pos_Arg_Col);
+         for Parser of Self.Data.Positional_Args_Parsers loop
+            Ret.Append_Text (Parser.Help_Name);
+            Ret.Set_Column (Pos_Arg_Col);
 
-         Ret.Append_Line (+Parser.Help, Col_After => 3);
-      end loop;
+            Ret.Append_Line (+Parser.Help, Col_After => 3);
+         end loop;
+         Ret.Append_Line (Col_After => 0);
+      end if;
 
-      Ret.Append_Line (Col_After => 0);
-      Ret.Append_Line ("optional arguments:", Col_After => 3);
+      if Natural (Self.Data.Opts_Parsers.Length) > 0 then
+         Ret.Append_Line ("optional arguments:", Col_After => 3);
+         for Parser of Self.Data.Opts_Parsers loop
+            Ret.Append_Text (Parser.Help_Name);
+            Ret.Set_Column (Opt_Arg_Col);
 
-      for Parser of Self.Data.Opts_Parsers loop
-         Ret.Append_Text (Parser.Help_Name);
-         Ret.Set_Column (Opt_Arg_Col);
-
-         Ret.Append_Line (+Parser.Help, Col_After => 3);
-      end loop;
+            Ret.Append_Line (+Parser.Help, Col_After => 3);
+         end loop;
+      end if;
 
       return Ret.Render;
    end Help;
