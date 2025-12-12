@@ -3,28 +3,14 @@ from __future__ import annotations
 import sys
 import os
 
+
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(ROOT_DIR))
 sys.path.insert(0, os.path.dirname(os.path.dirname(ROOT_DIR)))
 
 from gprproject.testsuite import LibTestsuite
-from gprproject.testsuite.drivers.basic import BasicTestDriver
-from drivers.build_and_run import BuildAndRunDriver
-from drivers.build_run_diff import BuildRunDiffDriver
-from drivers.build_run_assert_and_diff import BuildRunAssertAndDiffDriver
-from drivers.json_validation import JSONValidationDriver
-from drivers.data_validation import DataValidationDriver
 
 class GNATCOLLCoreTestsuite(LibTestsuite):
-    test_driver_map = {
-        'json_validation': JSONValidationDriver,
-        'data_validation': DataValidationDriver,
-        'default': BasicTestDriver,
-        'build_and_run': BuildAndRunDriver,
-        'build_run_diff': BuildRunDiffDriver,
-        'build_run_assert_and_diff': BuildRunAssertAndDiffDriver
-    }
-
     @property
     def default_withed_projects(self) -> list[str]:
         return ["gnatcoll_core"]

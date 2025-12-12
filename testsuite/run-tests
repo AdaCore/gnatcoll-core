@@ -1,115 +1,15 @@
 #!/usr/bin/env python
-from drivers import make_gnatcoll, TESTSUITE_ROOT_DIR
-from drivers.basic import BasicTestDriver
-from drivers.build_and_run import BuildAndRunDriver
-from drivers.build_run_diff import BuildRunDiffDriver
-from drivers.build_run_assert_and_diff import BuildRunAssertAndDiffDriver
-from drivers.json_validation import JSONValidationDriver
-from drivers.data_validation import DataValidationDriver
-from drivers.gnatcov import produce_report
-from e3.testsuite import Testsuite
-from e3.fs import rm, mkdir, sync_tree, cp
+from common.drivers import TESTSUITE_ROOT_DIR
+from common.common_testsuite import CommonTestsuite
+from e3.fs import mkdir, sync_tree
 import sys
 import os
 
 
-class MyTestsuite(Testsuite):
-    enable_cross_support = True
-    tests_subdir = "tests"
-    test_driver_map = {
-        "json_validation": JSONValidationDriver,
-        "data_validation": DataValidationDriver,
-        "default": BasicTestDriver,
-        "build_and_run": BuildAndRunDriver,
-        "build_run_diff": BuildRunDiffDriver,
-        "build_run_assert_and_diff": BuildRunAssertAndDiffDriver,
-    }
-
-    def add_options(self, parser):
-        parser.add_argument(
-            "--gnatcov",
-            help="compute code coverage of GNATcoll with GNATcoverage."
-            + " Not compatible with the --recompile option."
-            + " If both are specified, only --recompile is used",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--source-root",
-            help="Option specific to the GNATcoverage Cobertura coverage"
-            + " report: remove the specified prefix from the filenames in"
-            + " the report. Must be used with the --gnatcov option.",
-            default=None,
-            action="store",
-        )
-        parser.add_argument(
-            "--valgrind",
-            help="check memory usage with Valgrind (memcheck tool)",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--recompile",
-            help="recompile debug version of gnatcoll for testing."
-            + " Not compatible with the --gnatcov option."
-            + " If both are specified, only --recompile is used.",
-            default=False,
-            action="store_true",
-        )
-        parser.add_argument(
-            "--llvm",
-            help="assume that an LLVM-based toolchain is used.",
-            default=False,
-            action="store_true",
-        )
-
-    def set_up(self):
-        self.env.gnatcov = self.main.args.gnatcov
-        self.env.valgrind = self.main.args.valgrind
-        self.env.source_root = self.main.args.source_root
-        self.env.llvm = self.main.args.llvm
-
-        # Reject incompatible options
-        incompatible = [
-            name for name in ("gnatcov", "valgrind") if getattr(self.env, name)
-        ]
-        if len(incompatible) > 1:
-            raise RuntimeError(
-                "The following options are incompatible: {}".format(
-                    " ".join(incompatible)
-                )
-            )
-
-        if self.env.gnatcov:
-            if self.main.args.recompile:
-                print(
-                    "WARNING: --gnatcov option is not compatible with the"
-                    + " --recompile option. --gnatcov is ignored."
-                )
-                self.env.gnatcov = False
-            else:
-                self.env.gnatcov_traces = os.path.join(
-                    TESTSUITE_ROOT_DIR, "gnatcov", "traces"
-                )
-                rm(self.env.gnatcov_traces, recursive=True)
-                mkdir(self.env.gnatcov_traces)
-
-        if self.main.args.recompile:
-            work_dir = os.path.join(TESTSUITE_ROOT_DIR, "debug")
-            gpr_dir, _, _ = make_gnatcoll(work_dir, debug=True)
-            self.env.gnatcoll_debug_gpr_dir = gpr_dir
-
-    def tear_down(self):
-        wd = TESTSUITE_ROOT_DIR
-
-        # If requested, produce coverage reports
-        if self.env.gnatcov:
-            produce_report(self, self.output_dir, self.env.source_root)
-        super(MyTestsuite, self).tear_down()
-
+class AllTestsuites (CommonTestsuite):
     @property
-    def default_driver(self):
-        return "default"
-
+    def default_withed_projects(self) -> list[str]:
+        return ["gnatcoll_minimal", "gnatcoll_core", "gnatcoll_projects"]
 
 if __name__ == "__main__":
     # Export location of Python used to run the testsuite. Some tests need
@@ -119,21 +19,11 @@ if __name__ == "__main__":
     # Sync tests from the new location
     mkdir(os.path.join(TESTSUITE_ROOT_DIR, "tests"))
     for project in ("minimal", "core", "projects"):
+        run_tests_path = os.path.join(TESTSUITE_ROOT_DIR, project, "run-tests")
         sync_tree(
             os.path.join(TESTSUITE_ROOT_DIR, project, "tests"),
             os.path.join(TESTSUITE_ROOT_DIR, "tests", project),
             delete=True,
         )
-    # Ensure we have the gnatcoll.gpr abstract project file in the GPR_PROJECT_PATH
-    # mkdir(os.path.join(TESTSUITE_ROOT_DIR, "gpr"))
-    # cp(
-    #    os.path.join(TESTSUITE_ROOT_DIR, "..", "gnatcoll.gpr"),
-    #    os.path.join(TESTSUITE_ROOT_DIR, "gpr"),
-    # )
-    # os.environ["GPR_PROJECT_PATH"] = (
-    #    os.path.join(TESTSUITE_ROOT_DIR, "gpr")
-    #    + os.pathsep
-    #    + os.environ["GPR_PROJECT_PATH"]
-    #)
-    suite = MyTestsuite(os.path.dirname(__file__))
+    suite = AllTestsuites(os.path.dirname(__file__))
     sys.exit(suite.testsuite_main())

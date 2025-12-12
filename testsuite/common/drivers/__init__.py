@@ -6,7 +6,6 @@ import subprocess
 from e3.fs import mkdir
 from e3.os.process import Run, get_rlimit
 from e3.testsuite import TestAbort
-from e3.testsuite.driver import TestDriver
 from e3.testsuite.driver.classic import (
     ClassicTestDriver,
     ProcessResult,
@@ -16,7 +15,7 @@ from e3.testsuite.result import Log, TestStatus
 
 # Root directory of respectively the testsuite and the gnatcoll
 # repository.
-TESTSUITE_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+TESTSUITE_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GNATCOLL_ROOT_DIR = os.path.dirname(TESTSUITE_ROOT_DIR)
 
 DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
@@ -139,7 +138,7 @@ def gprbuild(
     ] + scenario_cmd
 
     if driver.env.gnatcov:
-        from drivers.gnatcov import COVERAGE_LEVEL
+        from gprproject.testsuite.drivers.gnatcov import COVERAGE_LEVEL
 
         gnatcov_cmd = (
             [
@@ -331,8 +330,8 @@ def run_test_program(driver, cmd, slot, test_name=None, result=None, **kwargs):
     Run a test program. This dispatches to running it under Valgrind or
     "gnatcov run", depending on the testsuite options.
     """
-    from drivers.gnatcov import gnatcov_call
-    from drivers.valgrind import check_call_valgrind
+    from gprproject.testsuite.drivers.gnatcov import gnatcov_call
+    from gprproject.testsuite.drivers.valgrind import check_call_valgrind
 
     if driver.env.valgrind:
         wrapper = check_call_valgrind
@@ -344,7 +343,7 @@ def run_test_program(driver, cmd, slot, test_name=None, result=None, **kwargs):
     return wrapper(driver, cmd, slot, test_name, result, **kwargs)
 
 
-class GNATcollTestDriver(TestDriver):
+class GNATcollTestDriver(ClassicTestDriver):
     """Abstract class to share some common facilities."""
 
     DEFAULT_TIMEOUT = 5 * 60  # 5 minutes

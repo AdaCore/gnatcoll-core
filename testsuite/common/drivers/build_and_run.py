@@ -1,11 +1,11 @@
 import os
 
-from e3.testsuite.driver.classic import ClassicTestDriver, TestAbortWithFailure
+from e3.testsuite.driver.classic import TestAbortWithFailure
 
-from drivers import gprbuild, run_test_program
+from drivers import GNATcollTestDriver, gprbuild, run_test_program
 
 
-class BuildAndRunDriver(ClassicTestDriver):
+class BuildAndRunDriver(GNATcollTestDriver):
     """Build and run a project using GNATCOLL.
 
     Put project and source files in the test directory, in particular
