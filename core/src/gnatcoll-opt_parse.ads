@@ -445,6 +445,9 @@ package GNATCOLL.Opt_Parse is
       Help : String := "";
       --  Help string for the argument.
 
+      Hidden : Boolean := False;
+      --  Whether this argument parser should be hidden from the help text.
+
       Enabled : Boolean := True;
       --  Whether to add this argument parser
 
@@ -504,6 +507,9 @@ package GNATCOLL.Opt_Parse is
 
       Default_Val : Arg_Type;
       --  Default value if the option is not passed.
+
+      Hidden : Boolean := False;
+      --  Whether this argument parser should be hidden from the help text.
 
       Enabled : Boolean := True;
       --  Whether to add this argument parser
@@ -570,6 +576,9 @@ package GNATCOLL.Opt_Parse is
       Default_Val : Arg_Type;
       --  Default value if the option is not passed.
 
+      Hidden : Boolean := False;
+      --  Whether this argument parser should be hidden from the help text.
+
       Enabled : Boolean := True;
       --  Whether to add this argument parser
 
@@ -630,6 +639,9 @@ package GNATCOLL.Opt_Parse is
       with function Convert (Arg : String) return Arg_Type is <>;
       --  Conversion function to convert from a raw string argument to the
       --  argument type.
+
+      Hidden : Boolean := False;
+      --  Whether this argument parser should be hidden from the help text.
 
       Enabled : Boolean := True;
       --  Whether to add this argument parser
@@ -766,6 +778,11 @@ private
      (Self : Subparser_Type) return String is abstract;
    --  Return a usage string for this parser. Abstract method that must be
    --  overloaded.
+
+   function Is_Hidden
+     (Self : Subparser_Type) return Boolean is abstract;
+   --  True if this parser is hidden and should not be printed on help.
+   --  Abstract method that must be overloaded.
 
    function JSON_Kind (Self : Subparser_Type) return String is abstract;
    --  Return the kind of the parser, for JSON introspection purposes.

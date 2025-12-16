@@ -33,6 +33,10 @@ package body GNATCOLL.Opt_Parse.Misc_Parsers is
       overriding function Usage
         (Self : Option_Parser) return String;
 
+      overriding function Is_Hidden
+        (Self : Option_Parser) return Boolean
+      is (Hidden);
+
       overriding function Help_Name
         (Dummy : Option_Parser) return String;
 

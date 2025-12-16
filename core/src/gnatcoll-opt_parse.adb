@@ -108,6 +108,8 @@ package body GNATCOLL.Opt_Parse is
 
    type Flag_Parser is new Subparser_Type with record
       Short, Long : XString;
+      Hidden      : Boolean := False;
+      --  By default, flag options are visible
    end record;
 
    type Flag_Parser_Result is new Parser_Result with record
@@ -116,6 +118,9 @@ package body GNATCOLL.Opt_Parse is
 
    overriding function Usage
      (Self : Flag_Parser) return String;
+
+   overriding function Is_Hidden
+     (Self : Flag_Parser) return Boolean is (Self.Hidden);
 
    overriding function Help_Name
      (Self : Flag_Parser) return String;
@@ -672,6 +677,11 @@ package body GNATCOLL.Opt_Parse is
         (Self : Positional_Arg_List_Parser) return String
       is (Name & " [" & Name & " ...]");
 
+      overriding function Is_Hidden
+        (Self : Positional_Arg_List_Parser) return Boolean
+      is (False);
+      --  Positional arguments can't be hidden
+
       overriding function JSON_Kind
         (Self : Positional_Arg_List_Parser) return String
       is ("positional_list");
@@ -795,6 +805,11 @@ package body GNATCOLL.Opt_Parse is
       overriding function Usage
         (Self : Positional_Arg_Parser) return String
       is (Name);
+
+      overriding function Is_Hidden
+        (Self : Positional_Arg_Parser) return Boolean
+      is (False);
+      --  Positional arguments can't be hidden
 
       overriding function JSON_Kind
         (Self : Positional_Arg_Parser) return String
@@ -937,6 +952,7 @@ package body GNATCOLL.Opt_Parse is
          Short  => +Short,
          Parser => Parser.Data,
          Opt    => True,
+         Hidden => Hidden,
          others => <>);
 
       Self : constant Subparser := Self_Val'Unchecked_Access;
@@ -987,6 +1003,10 @@ package body GNATCOLL.Opt_Parse is
 
       overriding function Usage
         (Self : Option_Parser) return String;
+
+      overriding function Is_Hidden
+        (Self : Option_Parser) return Boolean
+      is (Hidden);
 
       overriding function Help_Name
         (Dummy : Option_Parser) return String;
@@ -1185,6 +1205,7 @@ package body GNATCOLL.Opt_Parse is
          Arg_Type    => Arg_Type,
          Default_Val => Default_Val,
          Convert     => Convert,
+         Hidden      => Hidden,
          Enabled     => Enabled,
          Usage_Text  => Usage_Text,
          Name        => Name);
@@ -1214,6 +1235,10 @@ package body GNATCOLL.Opt_Parse is
 
       overriding function Usage
         (Self : Option_List_Parser) return String;
+
+      overriding function Is_Hidden
+        (Self : Option_List_Parser) return Boolean
+      is (Hidden);
 
       overriding function Help_Name
         (Dummy : Option_List_Parser) return String;
@@ -1551,9 +1576,11 @@ package body GNATCOLL.Opt_Parse is
       end loop;
 
       for Parser of Self.Data.Opts_Parsers loop
-         Length := Parser.Help_Name'Length;
-         if Length > Opt_Arg_Col then
-            Opt_Arg_Col := Length;
+         if not Parser.Is_Hidden then
+            Length := Parser.Help_Name'Length;
+            if Length > Opt_Arg_Col then
+               Opt_Arg_Col := Length;
+            end if;
          end if;
       end loop;
 
@@ -1581,8 +1608,10 @@ package body GNATCOLL.Opt_Parse is
       Ret.Append_Text (" ");
 
       for Parser of Self.Data.All_Parsers loop
-         Ret.Append_Text (Parser.Usage);
-         Ret.Append_Text (" ");
+         if not Parser.Is_Hidden then
+            Ret.Append_Text (Parser.Usage);
+            Ret.Append_Text (" ");
+         end if;
       end loop;
 
       Ret.Append_Line (Col_After => 0);
@@ -1608,10 +1637,12 @@ package body GNATCOLL.Opt_Parse is
       if Natural (Self.Data.Opts_Parsers.Length) > 0 then
          Ret.Append_Line ("optional arguments:", Col_After => 3);
          for Parser of Self.Data.Opts_Parsers loop
-            Ret.Append_Text (Parser.Help_Name);
-            Ret.Set_Column (Opt_Arg_Col);
+            if not Parser.Is_Hidden then
+               Ret.Append_Text (Parser.Help_Name);
+               Ret.Set_Column (Opt_Arg_Col);
 
-            Ret.Append_Line (+Parser.Help, Col_After => 3);
+               Ret.Append_Line (+Parser.Help, Col_After => 3);
+            end if;
          end loop;
       end if;
 
