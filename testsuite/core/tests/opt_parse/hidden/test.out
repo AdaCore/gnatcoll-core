@@ -1,0 +1,9 @@
+usage: test [--help|-h] [--json-help] 
+
+Test program
+
+optional arguments:
+   --help, -h   Show this help message
+   --json-help  Output the help for this command as JSON, and exit
+   
+

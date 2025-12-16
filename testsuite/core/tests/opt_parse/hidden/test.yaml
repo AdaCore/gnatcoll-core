@@ -1,0 +1,3 @@
+driver: build_run_diff
+description:
+    Test the effect of the `Hidden => True` argument parser.
