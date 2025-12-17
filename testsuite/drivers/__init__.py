@@ -147,7 +147,7 @@ def gprbuild(
                 "instrument",
                 "--level",
                 COVERAGE_LEVEL,
-                "--relocate-build-tree",
+                f"--relocate-build-tree={cwd}",
                 "--dump-trigger=atexit",
                 "--externally-built-projects",
                 "--restricted-to-languages=Ada",
