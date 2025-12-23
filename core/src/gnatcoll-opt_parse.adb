@@ -937,13 +937,25 @@ package body GNATCOLL.Opt_Parse is
       then
 
          declare
-            Res : constant Parser_Result_Access := new Flag_Parser_Result'
-              (Start_Pos => Pos,
-               End_Pos   => Pos,
-               Result    =>  True,
-               others    => <>);
+            Res : Parser_Result_Access :=
+              Result.Ref.Get.Results (Self.Position);
          begin
-            Result.Ref.Get.Results (Self.Position) := Res;
+            if Res /= null then
+               Flag_Parser_Result (Res.all) :=
+                 (Start_Pos => Pos,
+                  End_Pos   => Pos,
+                  Result    => True,
+                  others    => <>);
+            else
+               Res :=
+                 new Flag_Parser_Result'
+                   (Start_Pos => Pos,
+                    End_Pos   => Pos,
+                    Result    => True,
+                    others    => <>);
+               Result.Ref.Get.Results (Self.Position) :=
+                 Res.all'Unchecked_Access;
+            end if;
          end;
 
          return Parser_Return (Pos + 1);
@@ -1136,14 +1148,26 @@ package body GNATCOLL.Opt_Parse is
          if New_Pos /= Error_Return then
             declare
                Res     : constant Arg_Type := Convert (+Raw);
-               Int_Res : constant Internal_Result_Access :=
-                 new Internal_Result'(Start_Pos => Pos,
-                                      End_Pos   => Pos,
-                                      Result    => Res,
-                                      others    => <>);
+               Int_Res : Internal_Result_Access :=
+                 Internal_Result_Access
+                   (Result.Ref.Get.Results (Self.Position));
             begin
-               Result.Ref.Get.Results (Self.Position) :=
-                  Int_Res.all'Unchecked_Access;
+               if Int_Res /= null then
+                  Int_Res.all :=
+                    (Start_Pos => Pos,
+                     End_Pos   => Pos,
+                     Result    => Res,
+                     others    => <>);
+               else
+                  Int_Res :=
+                    new Internal_Result'
+                      (Start_Pos => Pos,
+                       End_Pos   => Pos,
+                       Result    => Res,
+                       others    => <>);
+                  Result.Ref.Get.Results (Self.Position) :=
+                    Int_Res.all'Unchecked_Access;
+               end if;
             end;
          end if;
 
