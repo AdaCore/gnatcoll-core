@@ -33,6 +33,9 @@ package GNATCOLL.Opt_Parse.Misc_Parsers is
       --  Conversion function to convert from a raw string argument to the
       --  argument type.
 
+      Hidden : Boolean := False;
+      --  Whether this argument parser should be hidden from the help text.
+
       Enabled : Boolean := True;
       --  Whether to add this argument parser
 
