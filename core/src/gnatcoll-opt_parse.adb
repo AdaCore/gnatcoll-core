@@ -376,6 +376,7 @@ package body GNATCOLL.Opt_Parse is
    function Parse_Impl
      (Self         : in out Argument_Parser;
       Arguments    : XString_Array := No_Arguments;
+      Fallback_On_Command_Line : Boolean;
       Result       : out Parsed_Arguments;
       Unknown_Args : XString_Vector_Access := null) return Boolean;
    --  Shared implementation for all the ``Parse`` public overloads
@@ -385,11 +386,16 @@ package body GNATCOLL.Opt_Parse is
    -----------
 
    function Parse
-     (Self         : in out Argument_Parser;
-      Arguments    : XString_Array := No_Arguments) return Boolean
+     (Self                     : in out Argument_Parser;
+      Arguments                : XString_Array := No_Arguments;
+      Fallback_On_Command_Line : Boolean := True) return Boolean
    is
    begin
-      return Self.Parse_Impl (Arguments, Self.Data.Default_Result, null);
+      return Self.Parse_Impl
+        (Arguments,
+         Fallback_On_Command_Line,
+         Self.Data.Default_Result,
+         null);
    end Parse;
 
    -----------
@@ -397,13 +403,15 @@ package body GNATCOLL.Opt_Parse is
    -----------
 
    function Parse
-     (Self         : in out Argument_Parser;
-      Arguments    : XString_Array := No_Arguments;
-      Unknown_Arguments : out XString_Vector) return Boolean
+     (Self                     : in out Argument_Parser;
+      Arguments                : XString_Array := No_Arguments;
+      Unknown_Arguments        : out XString_Vector;
+      Fallback_On_Command_Line : Boolean := True) return Boolean
    is
    begin
       return Self.Parse_Impl
         (Arguments,
+         Fallback_On_Command_Line,
          Self.Data.Default_Result,
          Unknown_Arguments'Unchecked_Access);
    end Parse;
@@ -413,12 +421,17 @@ package body GNATCOLL.Opt_Parse is
    -----------
 
    function Parse
-     (Self         : in out Argument_Parser;
-      Arguments    : XString_Array := No_Arguments;
-      Result       : out Parsed_Arguments) return Boolean
+     (Self                     : in out Argument_Parser;
+      Arguments                : XString_Array := No_Arguments;
+      Result                   : out Parsed_Arguments;
+      Fallback_On_Command_Line : Boolean := True) return Boolean
    is
    begin
-      return Self.Parse_Impl (Arguments, Result, null);
+      return Self.Parse_Impl
+        (Arguments,
+         Fallback_On_Command_Line,
+         Result,
+         null);
    end Parse;
 
    ----------------
@@ -426,10 +439,11 @@ package body GNATCOLL.Opt_Parse is
    ----------------
 
    function Parse_Impl
-     (Self         : in out Argument_Parser;
-      Arguments    : XString_Array := No_Arguments;
-      Result       : out Parsed_Arguments;
-      Unknown_Args : XString_Vector_Access := null) return Boolean
+     (Self                     : in out Argument_Parser;
+      Arguments                : XString_Array := No_Arguments;
+      Fallback_On_Command_Line : Boolean;
+      Result                   : out Parsed_Arguments;
+      Unknown_Args             : XString_Vector_Access := null) return Boolean
    is
       Exit_Parsing : exception;
       --  Raised when aborting arguments parsing for --help. We cannot call
@@ -440,7 +454,10 @@ package body GNATCOLL.Opt_Parse is
       --  avoid this situation.
 
       Current_Arg   : Positive := 1;
-      Cmd_Line_Args : constant XString_Array := Get_Arguments (Arguments);
+      Cmd_Line_Args : constant XString_Array :=
+        (if Fallback_On_Command_Line
+         then Get_Arguments (Arguments)
+         else Arguments);
 
       procedure Handle_Failure (Error_Msg : String);
       function Internal return Boolean;
