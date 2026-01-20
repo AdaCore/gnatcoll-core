@@ -263,7 +263,8 @@ package GNATCOLL.Opt_Parse is
    --  on a set of command line arguments.
    --
    --  In every case, Arguments can be an explicit argument array. If not
-   --  passed, arguments will be parsed from the application's command line.
+   --  passed, arguments will be parsed from the application's command line
+   --  if the ``Fallback_On_Command_Line`` argument is set to ``True``.
    --
    --  Those functions will return ``False`` if there is an error during
    --  parsing, after printing the error on stdout.
@@ -276,22 +277,25 @@ package GNATCOLL.Opt_Parse is
    --  parsed result.
 
    function Parse
-     (Self         : in out Argument_Parser;
-      Arguments    : XString_Array := No_Arguments) return Boolean;
+     (Self                     : in out Argument_Parser;
+      Arguments                : XString_Array := No_Arguments;
+      Fallback_On_Command_Line : Boolean := True) return Boolean;
    --  Parse the command line arguments for Self.
 
    function Parse
-     (Self         : in out Argument_Parser;
-      Arguments    : XString_Array := No_Arguments;
-      Unknown_Arguments : out XString_Vector) return Boolean;
+     (Self                     : in out Argument_Parser;
+      Arguments                : XString_Array := No_Arguments;
+      Unknown_Arguments        : out XString_Vector;
+      Fallback_On_Command_Line : Boolean := True) return Boolean;
    --  Parse the command line arguments for Self.
    --  Unknown arguments will be put in ``Unknown_Arguments``, and no error
    --  will be raised.
 
    function Parse
-     (Self         : in out Argument_Parser;
-      Arguments    : XString_Array := No_Arguments;
-      Result       : out Parsed_Arguments) return Boolean;
+     (Self                     : in out Argument_Parser;
+      Arguments                : XString_Array := No_Arguments;
+      Result                   : out Parsed_Arguments;
+      Fallback_On_Command_Line : Boolean := True) return Boolean;
    --  Parse command line arguments for Self. Return arguments explicitly in
    --  ``Result``.
 
