@@ -3,15 +3,13 @@ import re
 import subprocess
 
 from e3.fs import mkdir
-from e3.os.process import Run, get_rlimit
 from e3.testsuite import TestAbort
-from e3.testsuite.driver import TestDriver
+from e3.os.process import Run, get_rlimit
 from e3.testsuite.driver.classic import (
     ClassicTestDriver,
     ProcessResult,
     TestAbortWithFailure,
 )
-from e3.testsuite.process import check_call
 from e3.testsuite.result import Log, TestStatus
 from random import getrandbits
 
@@ -19,12 +17,13 @@ DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
 
 def gprbuild(
-    driver,
+    driver: ClassicTestDriver,
     project_file=None,
     cwd=None,
     scenario=None,
     gpr_project_path: list[str] | None = None,
     timeout=DEFAULT_TIMEOUT,
+    quiet=True,
     **kwargs,
 ) -> None:
     """Launch gprbuild.
@@ -40,6 +39,10 @@ def gprbuild(
     :type scenario: dict
     :param gpr_project_path: if not None prepent this value to GPR_PROJECT_PATH
     :type gpr_project_path: None | str
+    :timeout: timeout for the gprbuild process
+    :type timeout: int
+    :param quiet: if True, do not display gprbuild output
+    :type quiet: bool
     :param kwargs: additional keyword arguements are passed to
         e3.testsuite.process.check_call function
     """
@@ -104,7 +107,8 @@ def gprbuild(
             "-P",
             project_file,
         ] + scenario_cmd
-        check_call(driver, gnatcov_cmd, cwd=cwd, timeout=timeout, **kwargs)
+
+        driver.shell(gnatcov_cmd, cwd=cwd, timeout=timeout, analyze_output=not quiet)
 
     # Determine the gprbuild command line
     gprbuild_cmd = [
@@ -132,14 +136,7 @@ def gprbuild(
             "--target={target}".format(target=driver.env.target.triplet)
         )
 
-    check_call(
-        driver,
-        gprbuild_cmd,
-        cwd=cwd,
-        timeout=timeout,
-        **kwargs,
-    )
-
+    driver.shell(gprbuild_cmd, cwd=cwd, timeout=timeout, analyze_output=not quiet)
 
 def bin_check_call(
     driver,

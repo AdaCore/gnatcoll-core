@@ -196,6 +196,21 @@ library project GNATCOLL_Core is
             for Switches ("C") use ("-O2", "-Wunreachable-code");
       end case;
 
+      case Library_Type is
+          --  Hack to force PIC code for static libraries, which is required
+          --  to allow gnatcoll to be embedded in shared encapsulated
+          --  libraries. TLS variables present in gnatcoll require PIC code to
+          --  be linked correctly. Currently, the GNAT compiler compiles by
+          --  default with PIE enabled, which is not sufficient in our case.
+         when "static" =>
+            for Switches ("Ada") use Compiler'Switches ("Ada") &
+              Compiler'PIC_Option ("Ada");
+            for Switches ("C") use Compiler'Switches ("C") &
+              Compiler'PIC_Option ("C");
+         when others =>
+            null;
+      end case;
+
       --  Give user flags the last word.
       for Switches ("Ada") use Compiler'Switches ("Ada")
         & External_As_List ("ADAFLAGS", " ");
