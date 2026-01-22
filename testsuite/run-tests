@@ -91,5 +91,9 @@ if __name__ == '__main__':
     # Export location of Python used to run the testsuite. Some tests need
     # to easily locate it.
     os.environ["PYTHON_EXEC_PATH"] = os.path.abspath(sys.executable)
+    import e3.testsuite
+    print("#" * 80)
+    print(e3.testsuite.__file__)
+    print("#" * 80)
     suite = MyTestsuite(os.path.dirname(__file__))
     sys.exit(suite.testsuite_main())

@@ -9,7 +9,6 @@ from e3.testsuite.driver import TestDriver
 from e3.testsuite.driver.classic import (
     ClassicTestDriver, ProcessResult, TestAbortWithFailure
 )
-from e3.testsuite.process import check_call
 from e3.testsuite.result import Log, TestStatus
 
 # Root directory of respectively the testsuite and the gnatcoll
@@ -82,7 +81,7 @@ def gprbuild(driver,
     :param gpr_project_path: if not None prepent this value to GPR_PROJECT_PATH
     :type gpr_project_path: None | str
     :param kwargs: additional keyword arguements are passed to
-        e3.testsuite.process.check_call function
+        e3.os.process.Run.
     :return: True on successful completion
     :rtype: bool
     """
@@ -135,26 +134,27 @@ def gprbuild(driver,
             "--no-subprojects",
             "-P", project_file] + scenario_cmd
 
-        check_call(driver, gnatcov_cmd,
-                   cwd=cwd,
-                   env=env,
-                   ignore_environ=ignore_environ,
-                   timeout=timeout,
-                   **kwargs)
+        p = Run(driver, gnatcov_cmd,
+                cwd=cwd,
+                env=env,
+                ignore_environ=ignore_environ,
+                timeout=timeout,
+                **kwargs)
+        assert p.status == 0, "gnatcov instrument failed:\n %s" % p.out
         gprbuild_cmd += [
             "-margs", "-v", "-g", "-O0", "--src-subdirs=gnatcov-instr", "--implicit-with=gnatcov_rts", "-XLIBRARY_TYPE=static", "-XEXTERNALLY_BUILT=true"]
 
     if driver.env.is_cross:
         gprbuild_cmd.append("--target={target}".format(target=driver.env.target.triplet))
 
-    check_call(
-        driver,
+    p = Run(
         gprbuild_cmd,
         cwd=cwd,
         env=env,
         ignore_environ=ignore_environ,
         timeout=timeout,
         **kwargs)
+    assert p.status == 0, "gprbuild failed:\n %s" % p.out
     # If we get there it means the build succeeded.
     return True
 
