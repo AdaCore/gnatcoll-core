@@ -9,6 +9,8 @@ import os
 class AllTestsuites (CommonTestsuite):
     @property
     def default_withed_projects(self) -> list[str]:
+        if self.env.is_cross:
+            return ["gnatcoll_minimal", "gnatcoll_core"]
         return ["gnatcoll_minimal", "gnatcoll_core", "gnatcoll_projects"]
 
 if __name__ == "__main__":
