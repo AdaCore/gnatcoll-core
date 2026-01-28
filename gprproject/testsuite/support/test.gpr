@@ -1,5 +1,5 @@
---  Default project use for tests
---  Note that the testsuite may add some with statemenets at the
+--  Default project used for tests
+--  Note that the testsuite may add some 'with' statements at the
 --  beginning of that file.
 
 project Test is
