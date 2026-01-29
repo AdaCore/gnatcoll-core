@@ -36,6 +36,7 @@ library project GNATCOLL_Minimal is
 
    type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type := External ("LIBRARY_TYPE", "static");
+   for Run_Path_Option use ();
 
    type OS_Kind is ("windows", "unix", "osx");
    OS : OS_Kind := External
