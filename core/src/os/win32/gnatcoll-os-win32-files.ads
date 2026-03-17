@@ -334,7 +334,8 @@ package GNATCOLL.OS.Win32.Files is
         CallbackReason         : DWORD;
         SourceFile             : HANDLE;
         DestinationFile        : HANDLE;
-        Data                   : LPVOID := NULL_LPVOID) return DWORD;
+        Data                   : LPVOID := NULL_LPVOID) return DWORD
+     with Convention => Stdcall;
 
    NULL_LPPROGRESS_ROUTINE : constant LPPROGRESS_ROUTINE := null;
 
