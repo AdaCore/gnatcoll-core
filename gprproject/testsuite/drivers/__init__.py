@@ -61,9 +61,22 @@ def gprbuild(
                         fd.write(f'with "{project}";\n')
                     fd.write(gpr_project)
 
+        # Source dir should at least have the test_dir
+        test_support_dirs = [driver.test_env["test_dir"]]
+
+        # And potentially all the support subdirs upto to the testsuite
+        # tests root dir
+        start_dir = os.path.dirname(driver.test_env["test_dir"])
+        while os.path.relpath(start_dir, driver.env.test_dir) != ".":
+            support_dir = os.path.join(start_dir, "support")
+            if os.path.isdir(support_dir):
+                test_support_dirs.append(support_dir)
+
+            start_dir = os.path.dirname(start_dir)
+
         scenario = {
             "TEST_SOURCES": ",".join(
-                driver.env.default_source_dirs + [driver.test_env["test_dir"]]
+                driver.env.default_source_dirs + test_support_dirs
             )
         }
 

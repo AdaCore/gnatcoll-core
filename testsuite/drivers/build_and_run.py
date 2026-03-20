@@ -2,7 +2,7 @@ import os
 
 from e3.testsuite.driver.classic import ClassicTestDriver, TestAbortWithFailure
 
-from drivers import gprbuild, run_test_program
+from gprproject.testsuite.drivers import gprbuild, run_test_program
 
 
 class BuildAndRunDriver(ClassicTestDriver):
@@ -22,14 +22,9 @@ class BuildAndRunDriver(ClassicTestDriver):
 
     def run(self):
         # Build the test project
-        if self.test_env.get('no-coverage'):
-            gpr_project_path = self.env.gnatcoll_debug_gpr_dir
-        else:
-            gpr_project_path = None
         gprbuild(
             self,
             project_file="test.gpr",
-            gpr_project_path=gpr_project_path
         )
 
         # Run the test program

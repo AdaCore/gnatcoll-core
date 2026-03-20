@@ -1,7 +1,8 @@
 from e3.fs import rm
 from e3.testsuite.result import TestStatus, TestResult
 from e3.testsuite.utils import CleanupMode
-from drivers import GNATcollTestDriver, gprbuild
+from gprproject.testsuite.drivers import gprbuild
+from drivers import GNATcollTestDriver
 import os
 
 

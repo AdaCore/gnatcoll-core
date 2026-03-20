@@ -37,6 +37,10 @@ class LibTestsuite(Testsuite):
     def default_withed_projects(self) -> list[str]:
         return []
 
+    def test_name(self, test_dir: str) -> str:
+        result = super().test_name(test_dir)
+        return result.replace("__", ".")
+
     def add_options(self, parser):
         group = parser.add_mutually_exclusive_group()
         group.add_argument(

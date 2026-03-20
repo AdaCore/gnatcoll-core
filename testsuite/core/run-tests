@@ -4,7 +4,10 @@ import sys
 import os
 
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Contains the gprproject library
 sys.path.insert(0, os.path.dirname(os.path.dirname(ROOT_DIR)))
+# Contains the drivers
+sys.path.insert(0, os.path.dirname(ROOT_DIR))
 
 from gprproject.testsuite import LibTestsuite
 from gprproject.testsuite.drivers.basic import BasicTestDriver
