@@ -3,9 +3,9 @@ import os
 from e3.sys import interpreter
 from e3.fs import cp, mkdir
 from e3.os.fs import df
+from e3.os.process import Run
 from e3.testsuite.driver.classic import ClassicTestDriver
 from e3.testsuite.control import YAMLTestControlCreator
-from e3.testsuite.process import check_call
 from . import gprbuild, run_test_program
 
 
@@ -98,8 +98,7 @@ class BasicTestDriver(ClassicTestDriver):
 
         pre_test_py = os.path.join(self.test_env["test_dir"], "pre_test.py")
         if os.path.isfile(pre_test_py):
-            check_call(
-                self,
+            Run(
                 [interpreter(), pre_test_py],
                 cwd=self.test_env["working_dir"],
                 timeout=self.default_process_timeout,
@@ -127,13 +126,16 @@ class BasicTestDriver(ClassicTestDriver):
 
         post_test_py = os.path.join(self.test_env["test_dir"], "post_test.py")
         if os.path.isfile(post_test_py):
-            check_call(
-                self,
+            p = Run(
                 [interpreter(), post_test_py],
                 cwd=self.test_env["working_dir"],
                 timeout=self.default_process_timeout,
                 input=f"|{self.output}"
             )
+            # Append post_test.py output to the expected test log. It can be
+            # useful for adding the success marker for instance.
+            self.result.log.log += p.out
+            self.result.log.log += p.out
 
     def compute_failures(self):
         return (

@@ -1,7 +1,7 @@
-from e3.testsuite.driver import TestDriver
+from e3.testsuite.driver.classic import ClassicTestDriver
 from gprproject.testsuite.drivers import run_test_program
 
-class GNATcollTestDriver(TestDriver):
+class GNATcollTestDriver(ClassicTestDriver):
     """Abstract class to share some common facilities."""
 
     DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
