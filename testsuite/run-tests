@@ -30,6 +30,10 @@ class GNATCOLLCoreTestsuite(LibTestsuite):
 
     tests_subdir = "."
 
+    def add_options(self, parser):
+        super().add_options(parser)
+        parser.add_argument("--llvm", help="obsolete flag", action="store_true")
+
     def test_name(self, test_dir: str) -> str:
         result = super().test_name(test_dir)
         return (
