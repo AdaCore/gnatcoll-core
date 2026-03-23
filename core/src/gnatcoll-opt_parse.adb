@@ -1,4 +1,4 @@
---  Copyright (C) 2024, AdaCore
+--  Copyright (C) 2024-2026, AdaCore
 --
 --  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
 
@@ -8,8 +8,6 @@ with Ada.Characters.Handling; use Ada.Characters.Handling;
 with Ada.Exceptions;
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Unchecked_Deallocation;
-
-with GNAT.OS_Lib;
 
 with GNATCOLL.VFS;
 
@@ -460,7 +458,11 @@ package body GNATCOLL.Opt_Parse is
          else Arguments);
 
       procedure Handle_Failure (Error_Msg : String);
-      function Internal return Boolean;
+      function Internal (Help_Printed : out Boolean) return Boolean;
+      --  Parse all arguments in Cmd_Line_Args using all available parsers.
+      --  Sets Help_Printed to True if the --help flag was encountered,
+      --  preventing duplicate help output.
+      --  Returns True if parsing succeeded and the help flag was not invoked.
 
       --------------------
       -- Handle_Failure --
@@ -480,9 +482,11 @@ package body GNATCOLL.Opt_Parse is
 
       end Handle_Failure;
 
-      function Internal return Boolean is
+      function Internal (Help_Printed : out Boolean) return Boolean is
          use type Parsed_Arguments_Shared_Ptrs.Element_Access;
       begin
+         Help_Printed := False;
+
          --  If we're not in incremental mode, then reset the results.
          if not
            (Self.Data.Incremental
@@ -587,16 +591,19 @@ package body GNATCOLL.Opt_Parse is
          when E : Opt_Parse_Error =>
             Handle_Failure (Ada.Exceptions.Exception_Message (E));
             return False;
-
          when Exit_Parsing =>
-            GNAT.OS_Lib.OS_Exit (0);
+            Help_Printed := True;
             return False;
       end Internal;
 
+      Help_Printed : Boolean := False;
    begin
-      return Ret : constant Boolean := Internal do
-         if not Ret and then Self.Data.Print_Help_On_Error then
-            --  Print help if parsing has failed
+      return Ret : constant Boolean := Internal (Help_Printed) do
+         if not Help_Printed
+           and then not Ret
+           and then Self.Data.Print_Help_On_Error
+         then
+            --  Print help if parsing failed
             Put_Line (Standard_Error, Help (Self));
          end if;
       end return;
