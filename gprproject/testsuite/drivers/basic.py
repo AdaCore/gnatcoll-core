@@ -3,10 +3,10 @@ import os
 from e3.sys import interpreter
 from e3.fs import cp, mkdir
 from e3.os.fs import df
+from e3.os.process import Run
 from e3.testsuite.driver.classic import ClassicTestDriver
 from e3.testsuite.control import YAMLTestControlCreator
 from . import gprbuild, run_test_program
-import subprocess
 
 
 class BasicTestDriver(ClassicTestDriver):
@@ -61,9 +61,22 @@ class BasicTestDriver(ClassicTestDriver):
                         fd.write(f'with "{project}";\n')
                     fd.write(gpr_project)
 
+        # Source dir should at least have the test_dir
+        test_support_dirs = [self.test_env["test_dir"]]
+
+        # And potentially all the support subdirs upto to the testsuite
+        # tests root dir
+        start_dir = os.path.dirname(self.test_env["test_dir"])
+        while os.path.relpath(start_dir, self.env.test_dir) != ".":
+            support_dir = os.path.join(start_dir, "support")
+            if os.path.isdir(support_dir):
+                test_support_dirs.append(support_dir)
+
+            start_dir = os.path.dirname(start_dir)
+
         scenario = {
             "TEST_SOURCES": ",".join(
-                self.env.default_source_dirs + [self.test_env["test_dir"]]
+                self.env.default_source_dirs + test_support_dirs
             )
         }
 
@@ -85,12 +98,10 @@ class BasicTestDriver(ClassicTestDriver):
 
         pre_test_py = os.path.join(self.test_env["test_dir"], "pre_test.py")
         if os.path.isfile(pre_test_py):
-            proc = subprocess.run(
+            Run(
                 [interpreter(), pre_test_py],
                 cwd=self.test_env["working_dir"],
                 timeout=self.default_process_timeout,
-                text=True,
-                capture_output=True
             )
 
         # Run the test program
@@ -106,21 +117,25 @@ class BasicTestDriver(ClassicTestDriver):
             )
             self.output += process.out.decode("utf-8")
 
+        # Store result output, so the python post test can access it if needed.
+        result_file = open(
+            os.path.join(self.test_env["working_dir"], "test_results.out"), "w"
+        )
+        result_file.write(self.output.__str__())
+        result_file.close()
+
         post_test_py = os.path.join(self.test_env["test_dir"], "post_test.py")
         if os.path.isfile(post_test_py):
-            proc = subprocess.run(
+            p = Run(
                 [interpreter(), post_test_py],
                 cwd=self.test_env["working_dir"],
                 timeout=self.default_process_timeout,
-                input=self.output.log.encode("utf-8"),
-                text=False,
-                capture_output=True
+                input=f"|{self.output}"
             )
-
             # Append post_test.py output to the expected test log. It can be
             # useful for adding the success marker for instance.
-            self.result.log.log += proc.stdout.decode("utf-8")
-            self.result.log.log += proc.stderr.decode("utf-8")
+            self.result.log.log += p.out
+            self.result.log.log += p.out
 
     def compute_failures(self):
         return (

@@ -3,7 +3,7 @@ import os
 from e3.testsuite.driver.classic import TestAbortWithError
 from e3.testsuite.driver.diff import DiffTestDriver, OutputRefiner, Substitute
 
-from drivers import gprbuild, run_test_program
+from gprproject.testsuite.drivers import gprbuild, run_test_program
 
 
 class ToLower(OutputRefiner):
@@ -57,28 +57,32 @@ class BuildRunDiffDriver(DiffTestDriver):
             result.append(ToLower())
         if self.test_env.get("canonicalize_backslashes", False):
             result.append(Substitute("\\", "/"))
-
-
-        # Standardize Windows executable names in output
-        result.append(Substitute(".exe", ""))
         return result
 
     def run(self):
         # Build the test project
-        if self.test_env.get('no-coverage'):
-            gpr_project_path = self.env.gnatcoll_debug_gpr_dir
-        else:
-            gpr_project_path = None
-        gprbuild(self, gpr_project_path=gpr_project_path)
-        test_exe = self.test_env.get("test_exe", "obj/test")
-
-        p = run_test_program(
+        gprbuild(
             self,
-            [self.working_dir(test_exe)],
-            self.slot,
-            timeout=self.default_process_timeout
+            project_file="test.gpr",
         )
-        self.output += p.out.decode('utf-8')
+
+        # Run the test program
+        if self.env.is_cross:
+            p = run_test_program(
+                self,
+                [self.working_dir("test")],
+                self.slot,
+                timeout=self.default_process_timeout
+            )
+        else:
+            p = run_test_program(
+                self,
+                ["bash", self.working_dir("test.sh")],
+                self.slot,
+                timeout=self.default_process_timeout,
+            )
+            # Output explicitly to be compared with the expected output.
+            self.output += p.out.decode('utf-8')
 
         if p.status:
             self.output += ">>>program returned status code {}\n".format(

@@ -54,33 +54,39 @@ def produce_report(
 ):
     "Produce a coverage reports."
 
-    main_project = driver.env.default_withed_projects[0] + ".gpr"
-    traces_list = os.path.join(driver.env.gnatcov_dir, "traces.txt")
-    with open(traces_list, "w") as fp:
-        for t in glob.glob(os.path.join(driver.env.gnatcov_dir, "*.strace")):
-            fp.write(f"{t}\n")
-    # Produce a checkpoint from them
-    checkpoint_file = os.path.join(driver.env.gnatcov_dir, "report.ckpt")
-    args = [
-        "gnatcov",
-        "coverage",
-        "--level",
-        COVERAGE_LEVEL,
-        "-P",
-        main_project,
-        "--externally-built-projects",
-        "--save-checkpoint",
-        checkpoint_file,
-        f"@{traces_list}",
-    ]
-    if source_root:
-        args.append("--source-root=" + source_root)
-    p = Run(args)
-    if p.status:
-        logging.error(
-            f"error creating gnatcov checkpoint:\n$ {' '.join(args)}\n{p.out}"
-        )
-        return
+    checkpoint_files = []
+    for idx, p in enumerate(driver.env.default_withed_projects):
+
+        main_project = p + ".gpr"
+        # main_project = os.path.join(driver.env.gnatcov_dir, "coverage_project.gpr")
+        traces_list = os.path.join(driver.env.gnatcov_dir, "traces.txt")
+        with open(traces_list, "w") as fp:
+            for t in glob.glob(os.path.join(driver.env.gnatcov_dir, "*.strace")):
+                fp.write(f"{t}\n")
+        # Produce a checkpoint from them
+        checkpoint_file = os.path.join(driver.env.gnatcov_dir, f"report{idx}.ckpt")
+        checkpoint_files.append(checkpoint_file)
+        args = [
+            "gnatcov",
+            "coverage",
+            "--level",
+            COVERAGE_LEVEL,
+            "-P",
+            main_project,
+            "--externally-built-projects",
+            "--save-checkpoint",
+            checkpoint_file,
+            f"@{traces_list}",
+        ]
+
+        if source_root:
+            args.append("--source-root=" + source_root)
+        p = Run(args)
+        if p.status:
+            logging.error(
+                f"error creating gnatcov checkpoint:\n$ {' '.join(args)}\n{p.out}"
+            )
+            return
 
     # Finally produce the reports
     for fmt in formats:
@@ -95,12 +101,15 @@ def produce_report(
             "--level={}".format(COVERAGE_LEVEL),
             "--output-dir",
             report_dir,
-            "-P",
-            main_project,
-            "--externally-built-projects",
-            "--checkpoint",
-            checkpoint_file,
+            # "-P",
+            # main_project,
+            # "--externally-built-projects",
         ]
+        for ck_file in checkpoint_files:
+            args += [
+                "--checkpoint",
+                ck_file,
+            ]
         if source_root:
             args.append("--source-root=" + source_root)
         p = Run(args, output=None)

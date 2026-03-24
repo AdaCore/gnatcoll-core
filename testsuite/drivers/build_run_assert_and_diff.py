@@ -5,7 +5,7 @@ from e3.testsuite.driver.classic import TestAbortWithFailure
 from e3.testsuite.driver.diff import DiffTestDriver, OutputRefiner, Substitute
 from e3.sys import interpreter
 
-from drivers import gprbuild, run_test_program
+from gprproject.testsuite.drivers import gprbuild, run_test_program
 
 
 class ToLower(OutputRefiner):
@@ -79,18 +79,10 @@ class BuildRunAssertAndDiffDriver(DiffTestDriver):
             result.append(ToLower())
         if self.test_env.get("canonicalize_backslashes", False):
             result.append(Substitute("\\", "/"))
-
-        # Standardize Windows executable names in output
-        result.append(Substitute(".exe", ""))
         return result
 
     def run(self):
         # Build the test project
-        if self.test_env.get("no-coverage"):
-            gpr_project_path = self.env.gnatcoll_debug_gpr_dir
-        else:
-            gpr_project_path = None
-
         scenario = {}
         for source_dir in self.test_env.get("source_dirs", []):
             # Ensure that relative path given in the YAML are relative from the
@@ -106,7 +98,7 @@ class BuildRunAssertAndDiffDriver(DiffTestDriver):
 
         # We do not specify a gpr project file, so the testsuite's default one
         # is used.
-        gprbuild(self, scenario=scenario, gpr_project_path=gpr_project_path)
+        gprbuild(self, scenario=scenario)
 
         pre_test_py = os.path.join(self.test_env["test_dir"], "pre_test.py")
         if os.path.isfile(pre_test_py):

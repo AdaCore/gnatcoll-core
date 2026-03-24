@@ -1,31 +1,54 @@
 #!/usr/bin/env python
-from common.drivers import TESTSUITE_ROOT_DIR
-from common.common_testsuite import CommonTestsuite
-from e3.fs import mkdir, sync_tree
+from __future__ import annotations
 import sys
 import os
 
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+# Contains the gprproject library
+sys.path.insert(0, os.path.dirname(ROOT_DIR))
+# Contains the drivers
+sys.path.insert(0, ROOT_DIR)
 
-class AllTestsuites (CommonTestsuite):
+from gprproject.testsuite import LibTestsuite
+from gprproject.testsuite.drivers.basic import BasicTestDriver
+from drivers.build_and_run import BuildAndRunDriver
+from drivers.build_run_diff import BuildRunDiffDriver
+from drivers.build_run_assert_and_diff import BuildRunAssertAndDiffDriver
+from drivers.json_validation import JSONValidationDriver
+from drivers.data_validation import DataValidationDriver
+
+
+class GNATCOLLCoreTestsuite(LibTestsuite):
+    test_driver_map = {
+        "json_validation": JSONValidationDriver,
+        "data_validation": DataValidationDriver,
+        "default": BasicTestDriver,
+        "build_and_run": BuildAndRunDriver,
+        "build_run_diff": BuildRunDiffDriver,
+        "build_run_assert_and_diff": BuildRunAssertAndDiffDriver,
+    }
+
+    tests_subdir = "."
+
+    def add_options(self, parser):
+        super().add_options(parser)
+        parser.add_argument("--llvm", help="obsolete flag", action="store_true")
+
+    def test_name(self, test_dir: str) -> str:
+        result = super().test_name(test_dir)
+        return (
+            result.replace("core.tests.", "core.", 1)
+            .replace("minimal.tests.", "minimal.", 1)
+            .replace("projects.tests.", "projects.", 1)
+        )
+
     @property
     def default_withed_projects(self) -> list[str]:
         if self.env.is_cross:
-            return ["gnatcoll_minimal", "gnatcoll_core"]
-        return ["gnatcoll_minimal", "gnatcoll_core", "gnatcoll_projects"]
+            return ["gnatcoll_core", "gnatcoll_minimal"]
+        else:
+            return ["gnatcoll_projects", "gnatcoll_core", "gnatcoll_minimal"]
+
 
 if __name__ == "__main__":
-    # Export location of Python used to run the testsuite. Some tests need
-    # to easily locate it.
-    os.environ["PYTHON_EXEC_PATH"] = os.path.abspath(sys.executable)
-
-    # Sync tests from the new location
-    mkdir(os.path.join(TESTSUITE_ROOT_DIR, "tests"))
-    for project in ("minimal", "core", "projects"):
-        run_tests_path = os.path.join(TESTSUITE_ROOT_DIR, project, "run-tests")
-        sync_tree(
-            os.path.join(TESTSUITE_ROOT_DIR, project, "tests"),
-            os.path.join(TESTSUITE_ROOT_DIR, "tests", project),
-            delete=True,
-        )
-    suite = AllTestsuites(os.path.dirname(__file__))
-    sys.exit(suite.testsuite_main())
+    GNATCOLLCoreTestsuite.main(os.path.dirname(__file__))

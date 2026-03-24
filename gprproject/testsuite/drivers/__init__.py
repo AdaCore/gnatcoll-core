@@ -3,8 +3,8 @@ import re
 import subprocess
 
 from e3.fs import mkdir
+from e3.os.process import get_rlimit
 from e3.testsuite import TestAbort
-from e3.os.process import Run, get_rlimit
 from e3.testsuite.driver.classic import (
     ClassicTestDriver,
     ProcessResult,
@@ -17,14 +17,12 @@ DEFAULT_TIMEOUT = 5 * 60  # 5 minutes
 
 
 def gprbuild(
-    driver: ClassicTestDriver,
+    driver,
     project_file=None,
     cwd=None,
     scenario=None,
-    gpr_project_path: list[str] | None = None,
     timeout=DEFAULT_TIMEOUT,
     quiet=True,
-    **kwargs,
 ) -> None:
     """Launch gprbuild.
 
@@ -43,8 +41,6 @@ def gprbuild(
     :type timeout: int
     :param quiet: if True, do not display gprbuild output
     :type quiet: bool
-    :param kwargs: additional keyword arguements are passed to
-        e3.testsuite.process.check_call function
     """
     if scenario is None:
         scenario = {}
@@ -64,10 +60,21 @@ def gprbuild(
                         fd.write(f'with "{project}";\n')
                     fd.write(gpr_project)
 
+        # Source dir should at least have the test_dir
+        test_support_dirs = [driver.test_env["test_dir"]]
+
+        # And potentially all the support subdirs upto to the testsuite
+        # tests root dir
+        start_dir = os.path.dirname(driver.test_env["test_dir"])
+        while os.path.relpath(start_dir, driver.env.test_dir) != ".":
+            support_dir = os.path.join(start_dir, "support")
+            if os.path.isdir(support_dir):
+                test_support_dirs.append(support_dir)
+
+            start_dir = os.path.dirname(start_dir)
+
         scenario = {
-            "TEST_SOURCES": ",".join(
-                driver.env.default_source_dirs + [driver.test_env["test_dir"]]
-            )
+            "TEST_SOURCES": ",".join(driver.env.default_source_dirs + test_support_dirs)
         }
 
     scenario_cmd = []
@@ -78,16 +85,6 @@ def gprbuild(
         cwd = driver.test_env["working_dir"]
     mkdir(cwd)
 
-    # Adjust process environment
-    if gpr_project_path:
-        new_gpr_project_path = os.path.pathsep.join(gpr_project_path)
-        if "GPR_PROJECT_PATH" in os.environ:
-            new_gpr_project_path += os.path.pathsep + os.environ["GPR_PROJECT_PATH"]
-        kwargs["env"] = kwargs.get("env", {}).update(
-            {"GPR_PROJECT_PATH", new_gpr_project_path}
-        )
-        kwargs["ignore_env"] = False
-
     if driver.env.gnatcov_dir:
         # In gnatcov mode instrument the project
         gnatcov_cmd = [
@@ -97,8 +94,10 @@ def gprbuild(
             "stmt+decision",
             "--relocate-build-tree",
             "--dump-trigger=atexit",
-            "--projects",
-            driver.env.default_withed_projects[0],
+        ]
+        for p in driver.env.default_withed_projects:
+            gnatcov_cmd += ["--projects", p]
+        gnatcov_cmd += [
             "--restricted-to-languages=Ada",
             "--full-slugs",
             "--externally-built-projects",
@@ -107,7 +106,6 @@ def gprbuild(
             "-P",
             project_file,
         ] + scenario_cmd
-
         driver.shell(gnatcov_cmd, cwd=cwd, timeout=timeout, analyze_output=not quiet)
 
     # Determine the gprbuild command line
@@ -136,7 +134,13 @@ def gprbuild(
             "--target={target}".format(target=driver.env.target.triplet)
         )
 
-    driver.shell(gprbuild_cmd, cwd=cwd, timeout=timeout, analyze_output=not quiet)
+    driver.shell(
+        gprbuild_cmd,
+        cwd=cwd,
+        timeout=timeout,
+        analyze_output=not quiet
+    )
+
 
 def bin_check_call(
     driver,
