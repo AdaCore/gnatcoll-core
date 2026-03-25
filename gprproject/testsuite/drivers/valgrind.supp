@@ -1,0 +1,9 @@
+# GNAT's implementation of Ada.Environment_Variables.Set creates memory leaks
+{
+   gnat_setenv_memory_leak
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:__gnat_setenv
+   fun:ada__environment_variables__set
+}
