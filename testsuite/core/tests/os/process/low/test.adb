@@ -78,6 +78,7 @@ begin
       A.Assert (Status, 0);
       A.Assert (To_String (Output), "ERROR");
       OS.Process_Types.Deallocate (Args);
+      OS.Process_Types.Deallocate (Env);
    end;
    return A.Report;
 end Test;

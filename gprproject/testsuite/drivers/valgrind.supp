@@ -7,3 +7,15 @@
    fun:__gnat_setenv
    fun:ada__environment_variables__set
 }
+
+# GPR's memory leak that pollute gnatcoll valgrind tests
+{
+   gnat_setenv_memory_leak
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:malloc
+   fun:__gnat_malloc
+   fun:system__pool_global__allocate
+   fun:gpr__nmsc__add_source
+   fun:gpr__nmsc__check_file
+}

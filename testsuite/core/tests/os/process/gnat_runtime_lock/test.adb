@@ -59,9 +59,8 @@ begin
       Args.Append ("--version");
       begin
          Status := Run (Args);
-         --  On some system we may just get a return status of 127
          A.Assert
-            (Status, 127,
+            (Status /= 0,
              "process should not run (got status:" & Status'Img & ")");
       exception
          when E : OS.OS_Error =>

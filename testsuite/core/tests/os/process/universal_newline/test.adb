@@ -54,6 +54,7 @@ function Test return Integer is
          (Args, Env, Status => Status, Universal_Newline => True);
       A.Assert (Status, 0, Msg => "program should return 0 as status");
       A.Assert (To_String (Output), Filtered_Out, "check_output un=True");
+      PT.Deallocate (Args);
    end Test_IO;
 
 begin

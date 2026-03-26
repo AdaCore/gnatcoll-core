@@ -88,12 +88,13 @@ begin
              Universal_Newline => True);
          A.Assert
             (To_String (Output), "arg_value" & ASCII.LF & "arg_value2");
-
+         Env_Vars.Clear;
       end;
       return A.Report;
    else
       IO.Put_Line (Env_Vars.Value ("VAR1", "<novalue>"));
       IO.Put_Line (Env_Vars.Value ("VAR2", "<novalue>"));
+      --  Env_Vars.Clear; --  ??? Timeout on windows
       return 0;
    end if;
 end Test;

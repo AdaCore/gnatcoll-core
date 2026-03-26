@@ -39,6 +39,5 @@ begin
    String_Pools.Header_Of (Str).all.Refcount := 1;
 
    A.Assert (Hdr.all.Refcount = 1, "unexpected ref count from extra header");
-
    return A.Report;
 end Test;
