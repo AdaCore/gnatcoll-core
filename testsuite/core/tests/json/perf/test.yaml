@@ -1,2 +1,4 @@
 description: Some JSON parsing performance tests
-data: ["json/*.json"]
+data: [ "json/*.json" ]
+control:
+- [ SKIP, "env.valgrind", "Performance tests are not designed to run with valgrind" ]
