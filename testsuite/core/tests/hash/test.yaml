@@ -1,5 +1,4 @@
 description: Basic GNATCOLL.Hash test
-timeout: 500 # Default time is not enough for the valgrind run
 control:
-    - [SKIP, "env.target.machine == 'qemu'",
-       "Not enough disk space on cross qemu configuration"]
+  - [ SKIP, "env.valgrind", "Test is too long for valgrind" ]
+  - [ SKIP, "env.target.machine == 'qemu'", "Not enough disk space on cross qemu configuration" ]
