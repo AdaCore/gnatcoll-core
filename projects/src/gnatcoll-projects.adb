@@ -11899,7 +11899,6 @@ package body GNATCOLL.Projects is
 
       KB : GPR.Knowledge.Knowledge_Base;
 
-      use GPR.Knowledge;
       use GPR.Knowledge.String_Lists;
 
       TS_Id         : GPR.Knowledge.Targets_Set_Id;
