@@ -1639,7 +1639,9 @@ package body GNATCOLL.Projects is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (File_Info, File_Info_Access);
    begin
-      Unchecked_Free (Self);
+      if Self /= null then
+         Unchecked_Free (Self);
+      end if;
    end Free;
 
    ----------
@@ -1649,8 +1651,14 @@ package body GNATCOLL.Projects is
    procedure Free (Self : in out Library_Info) is
    begin
       Free (Self.Source);
-      Unchecked_Free (Self.LI_Project);
-      Unchecked_Free (Self.Non_Aggregate_Root_Project);
+
+      if Self.LI_Project /= null then
+         Unchecked_Free (Self.LI_Project);
+      end if;
+
+      if Self.Non_Aggregate_Root_Project /= null then
+         Unchecked_Free (Self.Non_Aggregate_Root_Project);
+      end if;
    end Free;
 
    --------------
