@@ -7379,7 +7379,6 @@ package body GNATCOLL.Projects is
          then
             On_Free (Data.all);
             Unchecked_Free (Data);
-            Data := null;
          end if;
       end if;
    end Finalize;
