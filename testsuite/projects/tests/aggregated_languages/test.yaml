@@ -6,3 +6,4 @@ data:
     - "aggr.gpr"
 control:
     - [SKIP, "env.is_cross", "Libutil missing from cross-linux sysroots, see T616-039"]
+    - [XFAIL, "env.valgrind", "Known memory leak: see S912-003"]
