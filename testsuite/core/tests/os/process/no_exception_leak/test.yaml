@@ -1,1 +1,3 @@
 description: GNATCOLL.OS.Process Run & Start (no memory leak on exception)
+control:
+- [ SKIP, "env.valgrind", "Debug pool is being used, so real deallocation are not systematically done" ]

@@ -4,6 +4,7 @@ with GNATCOLL.OS.Stat;
 with Test_Assert;
 with Ada.Directories;
 with GNATCOLL.OS;
+with Ada.Unchecked_Deallocation;
 with Ada.Strings.UTF_Encoding;
 with Ada.Environment_Variables;
 
@@ -16,6 +17,10 @@ is
    package Stat renames GNATCOLL.OS.Stat;
 
    type UTF_8_String_Access is access all UTF8.UTF_8_String;
+
+   procedure Free is new Ada.Unchecked_Deallocation
+     (UTF8.UTF_8_String, UTF_8_String_Access);
+
 begin
    --  Checks on invalid Temp_File_Handle
    declare
@@ -97,6 +102,7 @@ begin
 
       A.Assert (not Stat.Is_Directory (Stat.Stat (Temp_Dir_Path.all)),
                 "directory should have been deleted");
+      Free (Temp_Dir_Path);
    end;
 
    declare
@@ -113,6 +119,7 @@ begin
 
       A.Assert (Stat.Is_Directory (Stat.Stat (Temp_Dir_Path.all)),
                 "directory should not have been deleted");
+      Free (Temp_Dir_Path);
    end;
 
    begin
@@ -152,6 +159,7 @@ begin
 
       A.Assert (Stat.Is_File (Stat.Stat (Temp_File_Path.all)),
                 "file should not have been deleted");
+      Free (Temp_File_Path);
    end;
 
    declare
@@ -171,6 +179,7 @@ begin
       A.Assert (Stat.Is_File (Stat.Stat (Temp_File_Path.all)),
                 "file should not have been deleted");
       FS.Write (Fd, "Hello");
+      Free (Temp_File_Path);
    end;
 
    declare
@@ -186,6 +195,7 @@ begin
 
       A.Assert (not Stat.Is_File (Stat.Stat (Temp_File_Path.all)),
                 "file should have been deleted");
+      Free (Temp_File_Path);
    end;
 
    begin

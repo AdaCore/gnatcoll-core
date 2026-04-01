@@ -58,6 +58,7 @@ begin
 
       Assert (Index (Content, "Foobar_P") > 0);
    end;
+   Tree.Unload;
 
    return Report;
 end Test;

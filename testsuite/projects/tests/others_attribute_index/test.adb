@@ -4,6 +4,7 @@ with GNATCOLL.Traces; use GNATCOLL.Traces;
 with Test_Assert;
 with GNATCOLL.Projects; use GNATCOLL.Projects;
 with GNATCOLL.VFS;      use GNATCOLL.VFS;
+with GNATCOLL.Utils;
 
 function Test return Integer is
    Tree                  : Project_Tree;
@@ -16,14 +17,18 @@ begin
      (Create ("tree.gpr"), Errors => Silent_Report'Unrestricted_Access);
 
    declare
-      Indexes : constant GNAT.Strings.String_List :=
+      Indexes : GNAT.Strings.String_List :=
         Attribute_Indexes (Tree.Root_Project, Builder_Switches_Impl);
    begin
       Test_Assert.Assert (Indexes'Length = 1);
       for S of Indexes loop
          Test_Assert.Assert (S.all = Others_Index_Name);
       end loop;
+
+      GNATCOLL.Utils.Free (Indexes);
    end;
+
+   Tree.Unload;
 
    return Test_Assert.Report;
 end Test;

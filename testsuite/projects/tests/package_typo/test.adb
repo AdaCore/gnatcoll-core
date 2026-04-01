@@ -44,6 +44,7 @@ begin
 
    Test_Assert.Assert (Err_Idx = 3);
 
+   Tree.Unload;
    Free (Env);
 
    return Test_Assert.Report;

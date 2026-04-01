@@ -25,6 +25,7 @@ begin
    GNATCOLL.Projects.Aux.Delete_All_Temp_Files (Prj_Tree.Root_Project);
    Unload (Prj_Tree);
    Free (Env);
+   LI_Infos.Clear;
 
    return Test_Assert.Report;
 end Test;

@@ -204,7 +204,11 @@ package body GNATCOLL.Projects is
    use Directory_Statuses;
 
    type Project_Tree_Data (Is_Aggregated : Boolean) is record
-      Env       : Project_Environment_Access;
+      Env         : Project_Environment_Access;
+      Owns_Env    : Boolean := False;
+      --  Indicates whether the environment was allocated during internal
+      --  loading and therefore needs to be cleaned up when unloading the
+      --  project.
 
       Tree      : GPR.Project_Node_Tree_Ref;
       View      : GPR.Project_Tree_Ref;
@@ -775,7 +779,13 @@ package body GNATCOLL.Projects is
                   Include_Externally_Built => Include_Externally_Built));
             Aggregated := Aggregated.Next;
          end loop;
-         return Aggregated_Dirs.all;
+
+         declare
+            Result : constant File_Array := Aggregated_Dirs.all;
+         begin
+            Unchecked_Free (Aggregated_Dirs);
+            return Result;
+         end;
       end if;
 
       Iter := Start (Project, Recursive);
@@ -1629,7 +1639,9 @@ package body GNATCOLL.Projects is
       procedure Unchecked_Free is new Ada.Unchecked_Deallocation
         (File_Info, File_Info_Access);
    begin
-      Unchecked_Free (Self);
+      if Self /= null then
+         Unchecked_Free (Self);
+      end if;
    end Free;
 
    ----------
@@ -1639,8 +1651,14 @@ package body GNATCOLL.Projects is
    procedure Free (Self : in out Library_Info) is
    begin
       Free (Self.Source);
-      Unchecked_Free (Self.LI_Project);
-      Unchecked_Free (Self.Non_Aggregate_Root_Project);
+
+      if Self.LI_Project /= null then
+         Unchecked_Free (Self.LI_Project);
+      end if;
+
+      if Self.Non_Aggregate_Root_Project /= null then
+         Unchecked_Free (Self.Non_Aggregate_Root_Project);
+      end if;
    end Free;
 
    --------------
@@ -7361,7 +7379,6 @@ package body GNATCOLL.Projects is
          then
             On_Free (Data.all);
             Unchecked_Free (Data);
-            Data := null;
          end if;
       end if;
    end Finalize;
@@ -7760,6 +7777,7 @@ package body GNATCOLL.Projects is
       if Env = null then
          if Self.Data = null or else Self.Data.Env = null then
             Initialize (Tmp.Data.Env);
+            Tmp.Data.Owns_Env := True;
          else
             Tmp.Data.Env := Self.Data.Env;
          end if;
@@ -8130,6 +8148,8 @@ package body GNATCOLL.Projects is
         or else not Self.Config_File.Is_Regular_File
       then
          Trace (Me, "Config file not found");
+         Free (Project_Tree);
+         Free (Project_Node_Tree);
          return;
       end if;
       GPR.Snames.Initialize;
@@ -8147,6 +8167,8 @@ package body GNATCOLL.Projects is
 
       if not Present (Config_Project_Node) then
          Trace (Me, "Cannot parse config project");
+         Free (Project_Tree);
+         Free (Project_Node_Tree);
          return;
       end if;
 
@@ -8163,6 +8185,8 @@ package body GNATCOLL.Projects is
 
       if not Success then
          Trace (Me, "Cannot process config project");
+         Free (Project_Tree);
+         Free (Project_Node_Tree);
          return;
       end if;
 
@@ -10313,10 +10337,12 @@ package body GNATCOLL.Projects is
 
       while Has_Element (Iter) loop
          Data := Element (Iter).Data;
-         if Data.Tree.Tree /= Self.Data.Tree then
+         if Data.Tree /= Self.Data then
             Free (Data.Tree.Tree);
          end if;
          Data.Tree := null;
+
+
          Reset_View (Data.all);
          Data.Node := Empty_Project_Node;
          Next (Iter);
@@ -10355,8 +10381,14 @@ package body GNATCOLL.Projects is
       --  Do not reset the tree node, since it also contains the environment
       --  variables, which we want to preserve in case the user has changed
       --  them before loading the project.
-
+      Free (Self.Data.Tree);
       Free (Self.Data.View);
+
+      if Self.Data.Owns_Env then
+         Free (Self.Data.Env);
+      end if;
+
+      Free (Self.Data);
    end Unload;
 
    ---------------------
@@ -11781,7 +11813,9 @@ package body GNATCOLL.Projects is
         (Project_Tree'Class, Project_Tree_Access);
    begin
       if Self /= null then
-         Free (Self.Data);
+         if Self.Data /= null then
+            Free (Self.Data);
+         end if;
          Unchecked_Free (Self);
       end if;
    end Free;
@@ -11865,7 +11899,6 @@ package body GNATCOLL.Projects is
 
       KB : GPR.Knowledge.Knowledge_Base;
 
-      use GPR.Knowledge;
       use GPR.Knowledge.String_Lists;
 
       TS_Id         : GPR.Knowledge.Targets_Set_Id;
