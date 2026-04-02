@@ -38,7 +38,9 @@
     {
       "help": "Scenario variables",
       "kind": "list_option_accumulate",
-      "name": "SCENARIO-VARIABLE"
+      "long_flag": "--scenario-variable",
+      "name": "SCENARIO-VARIABLE",
+      "short_flag": "-X"
     },
     {
       "help": "Enum option. Possible alternatives: foo, bar, baz. Default: foo",
