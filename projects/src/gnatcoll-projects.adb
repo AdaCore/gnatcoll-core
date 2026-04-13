@@ -7822,16 +7822,13 @@ package body GNATCOLL.Projects is
       --  the processing (we can't reuse the previous parsing, because we need
       --  to Unload first.
 
-      if Self.Data = null then
-         Self.Data := Tmp.Data;
-      else
+      if Self.Data /= null then
          Project_Tree'Class (Self).Unload;
-         Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
-         Self.Data.Env := Tmp.Data.Env;
-
-         Free (Tmp.Data.View);
-         Free (Tmp.Data);
       end if;
+
+      Self.Data := Tmp.Data;
+      Self.Data.Timestamp := GNATCOLL.Utils.No_Time;
+      Self.Data.Env := Tmp.Data.Env;
 
       Trace (Me, "Parsing again, now that we know the syntax is correct");
       Internal_Load
