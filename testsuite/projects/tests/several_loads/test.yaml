@@ -1,0 +1,5 @@
+description: >
+  Check two consecutive loading on the same project
+data:
+- "prj.gpr"
+- "main.adb"
