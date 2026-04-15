@@ -3,3 +3,5 @@ description: >
 data:
 - "prj.gpr"
 - "main.adb"
+control:
+- [ SKIP, "env.is_cross", "GNATCOLL.Projects is not available on cross targets" ]
