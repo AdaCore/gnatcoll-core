@@ -1304,6 +1304,9 @@ package body GNATCOLL.Opt_Parse is
         (Self : Option_List_Parser) return String
       is ("list_option" & (if Accumulate then "_accumulate" else ""));
 
+      overriding procedure Init_JSON_Help
+        (Self : Option_List_Parser; Val : JSON_Value);
+
       type Internal_Result is new Parser_Result with record
          Results : Result_Vectors.Vector;
       end record;
@@ -1361,6 +1364,22 @@ package body GNATCOLL.Opt_Parse is
          end if;
          return Short;
       end Help_Name;
+
+      --------------------
+      -- Init_JSON_Help --
+      --------------------
+
+      overriding procedure Init_JSON_Help
+        (Self : Option_List_Parser; Val : JSON_Value) is
+      begin
+         if Short /= "" then
+            Val.Set_Field ("short_flag", Short);
+         end if;
+
+         if Long /= "" then
+            Val.Set_Field ("long_flag", Long);
+         end if;
+      end Init_JSON_Help;
 
       ---------
       -- Get --
