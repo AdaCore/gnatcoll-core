@@ -30,7 +30,7 @@ begin
    else
       A.Assert
         (Arg.Parser.Last_Error,
-         "for option quiet - Disabled", "Wrong exception message");
+         "for option [--quiet|-q] - Disabled", "Wrong exception message");
    end if;
 
    Allow (Arg.Quiet.This);
