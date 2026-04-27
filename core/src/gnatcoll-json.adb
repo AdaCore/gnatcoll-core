@@ -715,9 +715,18 @@ package body GNATCOLL.JSON is
    function Read_File (Path : UTF8.UTF_8_String) return Read_Result
    is
       use GNATCOLL.Buffer;
-      Data : Reader := Open (Path);
    begin
-      return Read (Data => Data);
+      declare
+         Data : Reader := Open (Path);
+      begin
+         return Read (Data => Data);
+      end;
+   exception
+      when E : Invalid_Reader =>
+         return (Success => False,
+                 Error   => (0, 0,
+                 To_Unbounded_String
+                    (Ada.Exceptions.Exception_Message (E))));
    end Read_File;
 
    -----------

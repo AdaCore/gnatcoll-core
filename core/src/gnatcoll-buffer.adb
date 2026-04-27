@@ -266,6 +266,10 @@ package body GNATCOLL.Buffer is
       FD_Size    : constant Long_Long_Integer := Stat.Length (FD_Info);
       Read_Bytes : Integer;
    begin
+      if not Stat.Exists (FD_Info) then
+         raise Invalid_Reader with "Invalid file descriptor";
+      end if;
+
       return Result : Reader do
          if not Stat.Is_File (FD_Info) or else FD_Size > 64 * 1024
          then
@@ -300,6 +304,11 @@ package body GNATCOLL.Buffer is
       FD_Info    : constant Stat.File_Attributes := Stat.Stat (Path);
       FD_Size    : constant Long_Long_Integer := Stat.Length (FD_Info);
    begin
+
+      if not Stat.Exists (FD_Info) then
+         raise Invalid_Reader with "File " & Path & " does not exist";
+      end if;
+
       return Result : Reader do
          if not Stat.Is_File (FD_Info) or else
             FD_Size > Long_Long_Integer (Integer'Last) or else
