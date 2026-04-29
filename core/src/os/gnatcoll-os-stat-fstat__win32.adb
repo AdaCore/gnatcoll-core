@@ -50,7 +50,14 @@ begin
       Result.Regular :=
          not (Result.Directory or Result.Symbolic_Link);
 
-      Result.Stamp := To_Unix_Nanoseconds (Info.BasicInformation.LastWriteTime);
+      --  It is the case for pipes. Because To_Unix_Nanoseconds is a
+      --  subtraction, this would result in an overflow.
+      if Info.BasicInformation.LastWriteTime = 0 then
+         Result.Stamp := 0;
+      else
+         Result.Stamp :=
+            To_Unix_Nanoseconds (Info.BasicInformation.LastWriteTime);
+      end if;
       Result.Length := Info.StandardInformation.EndOfFile;
       Result.Executable := True;
       Result.Readable   := True;

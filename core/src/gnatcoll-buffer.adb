@@ -266,12 +266,18 @@ package body GNATCOLL.Buffer is
       FD_Size    : constant Long_Long_Integer := Stat.Length (FD_Info);
       Read_Bytes : Integer;
    begin
+      if not Stat.Exists (FD_Info) then
+         raise Invalid_Reader with "Invalid file descriptor";
+      end if;
+
       return Result : Reader do
          if not Stat.Is_File (FD_Info) or else FD_Size > 64 * 1024
+            or else FD_Size = 0
          then
-            --  Use stream mode whenever the file is not a regular file or the
-            --  file is bigger than 64k. When creating from a buffer we cannot
-            --  use mmap.
+            --  Use stream mode whenever the file is not a regular file, the
+            --  file is bigger than 64k, or the reported size is 0 (which is
+            --  the case for pipes on Windows: pipes are reported as files of
+            --  size 0). When creating from a buffer we cannot use mmap.
             Result.Auto_Close_FD := False;
             Result.FD := FD;
             Result.Buffer_Str := new String (1 .. 64 * 1024);
@@ -300,6 +306,11 @@ package body GNATCOLL.Buffer is
       FD_Info    : constant Stat.File_Attributes := Stat.Stat (Path);
       FD_Size    : constant Long_Long_Integer := Stat.Length (FD_Info);
    begin
+
+      if not Stat.Exists (FD_Info) then
+         raise Invalid_Reader with "File " & Path & " does not exist";
+      end if;
+
       return Result : Reader do
          if not Stat.Is_File (FD_Info) or else
             FD_Size > Long_Long_Integer (Integer'Last) or else

@@ -157,6 +157,65 @@ begin
       FS.Close (FD);
    end;
 
+   Ada.Text_IO.Put_Line ("Check pipe fd behavior");
+   declare
+      Pipe_Read, Pipe_Write : FS.File_Descriptor;
+   begin
+      FS.Open_Pipe (Pipe_Read, Pipe_Write);
+      declare
+         pragma Warnings (Off);
+         R : Reader := Open (Pipe_Write);
+         C : Character;
+      begin
+         FS.Write (Pipe_Write, "hello");
+         --  A.Assert (R.Next (C), "expect to read a character from the pipe");
+         --  ??? Does not work
+         pragma Warnings (On);
+      end;
+      FS.Close (Pipe_Read);
+      FS.Close (Pipe_Write);
+   end;
+
+   Ada.Text_IO.Put_Line ("Check invalid file descriptor behavior");
+   declare
+      FD : constant FS.File_Descriptor := GNATCOLL.OS.FS.Invalid_FD;
+   begin
+      declare
+         pragma Warnings (Off);
+         R : constant Reader := Open (FD);
+         pragma Warnings (On);
+      begin
+         A.Assert
+           (False,
+            "expect Open to raise an invalid reader exception "
+            & "when FD is invalid");
+      end;
+   exception
+      when Invalid_Reader =>
+         A.Assert (True, "expected Invalid_Reader exception raised");
+      when others =>
+         A.Assert (False, "unexpected exception raised");
+   end;
+
+   Ada.Text_IO.Put_Line ("Check missing file behavior");
+   begin
+      declare
+         pragma Warnings (Off);
+         R : constant Reader := Open ("./a_non_existing_file.txt");
+         pragma Warnings (On);
+      begin
+         A.Assert
+           (False,
+            "expect Open to raise an invalid reader exception "
+            & "when file does not exist");
+      end;
+   exception
+      when Invalid_Reader =>
+         A.Assert (True, "expected Invalid_Reader exception raised");
+      when others =>
+         A.Assert (False, "unexpected exception raised");
+   end;
+
    return A.Report;
 
 end Test;

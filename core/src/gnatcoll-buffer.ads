@@ -77,11 +77,15 @@ package GNATCOLL.Buffer is
    type Reader is tagged limited private;
    --  Object used to read character-by-character a file, stream or string
 
+   Invalid_Reader : exception;
+
    function Open (FD : FS.File_Descriptor) return Reader;
    --  Open a Reader base on a file descriptor.
+   --  Returns an invalid reader if the file descriptor is not valid.
 
    function Open (Path : UTF8.UTF_8_String) return Reader;
    --  Open a Reader on the content of file located at Path.
+   --  Returns an invalid reader if the file does not exist.
 
    function Open_String (Str : UTF8.UTF_8_String) return Reader;
    --  Create Reader object based on UTF-8 string
