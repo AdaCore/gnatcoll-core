@@ -272,10 +272,12 @@ package body GNATCOLL.Buffer is
 
       return Result : Reader do
          if not Stat.Is_File (FD_Info) or else FD_Size > 64 * 1024
+            or else FD_Size = 0
          then
-            --  Use stream mode whenever the file is not a regular file or the
-            --  file is bigger than 64k. When creating from a buffer we cannot
-            --  use mmap.
+            --  Use stream mode whenever the file is not a regular file, the
+            --  file is bigger than 64k, or the reported size is 0 (which is
+            --  the case for pipes on Windows: pipes are reported as files of
+            --  size 0). When creating from a buffer we cannot use mmap.
             Result.Auto_Close_FD := False;
             Result.FD := FD;
             Result.Buffer_Str := new String (1 .. 64 * 1024);
