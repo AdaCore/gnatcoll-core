@@ -67,6 +67,13 @@ function Test return Integer is
          Arg_Type    => User_Enum,
          Default_Val => Foo,
          Help        => "Enum option");
+
+      package Debug_Mode is new Parse_Flag
+        (Parser => Parser,
+         Short  => "-d",
+         Long   => "--debug",
+         Hidden => True,
+         Help   => "Whether the tool is run in debug mode or not");
    end Args;
 
    Dummy : constant Boolean := Args.Parser.Parse

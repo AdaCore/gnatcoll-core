@@ -622,6 +622,9 @@ package body GNATCOLL.Opt_Parse is
       Ret.Set_Field ("help", +Self.Help);
       Ret.Set_Field ("kind", Subparser_Type'Class (Self).JSON_Kind);
       Subparser_Type'Class (Self).Init_JSON_Help (Ret);
+      if Subparser_Type'Class (Self).Is_Hidden then
+         Ret.Set_Field ("hidden", True);
+      end if;
       return Ret;
    end JSON_Help;
 
