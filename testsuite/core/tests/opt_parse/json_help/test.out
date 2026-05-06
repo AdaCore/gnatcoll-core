@@ -48,6 +48,14 @@
       "long_flag": "--enum-opt",
       "name": "enum-opt",
       "short_flag": "-E"
+    },
+    {
+      "help": "Whether the tool is run in debug mode or not",
+      "hidden": true,
+      "kind": "flag",
+      "long_flag": "--debug",
+      "name": "debug",
+      "short_flag": "-d"
     }
   ],
   "positional_parsers": [
