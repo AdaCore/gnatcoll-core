@@ -118,7 +118,8 @@ begin
    else
       A.Assert
         (Arg.Parser.Last_Error,
-         "for option enum-opt - Invalid input value for enum: ""Boz""",
+         "for option [--enum-opt|-E ENUM-OPT] "
+         & "- Invalid input value for enum: ""Boz""",
          "Wrong error message");
    end if;
 
@@ -127,7 +128,7 @@ begin
    else
       A.Assert
         (Arg.Parser.Last_Error,
-         "for option jobs - wrong value for Integer: ""wrong""",
+         "for option [--jobs|-j JOBS] - wrong value for Integer: ""wrong""",
          "Wrong error message");
    end if;
 
@@ -136,7 +137,7 @@ begin
    else
       A.Assert
         (Arg.Parser.Last_Error,
-         "for option jobs - Incomplete option",
+         "for option [--jobs|-j JOBS] - Incomplete option",
          "Wrong error message");
    end if;
 

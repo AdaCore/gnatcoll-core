@@ -528,7 +528,7 @@ package body GNATCOLL.Opt_Parse is
                exception
                   when E : Opt_Parse_Error =>
                      Handle_Failure
-                       ("for option " & (+Opt_Parser.Name) & " - "
+                       ("for option " & Opt_Parser.Usage & " - "
                         & Ada.Exceptions.Exception_Message (E));
                      return False;
                end;
@@ -575,7 +575,7 @@ package body GNATCOLL.Opt_Parse is
             --  Check that all mandatory parameters have been provided
             if not Parser.Opt and then not Parser.Has_Result (Result)
             then
-               Handle_Failure ("Missing value for " & (+Parser.Name));
+               Handle_Failure ("Missing value for " & Parser.Usage);
                return False;
 
             elsif Parser.Has_Result (Result) then
