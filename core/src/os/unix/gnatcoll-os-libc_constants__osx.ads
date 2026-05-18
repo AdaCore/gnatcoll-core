@@ -24,7 +24,7 @@
 package GNATCOLL.OS.Libc_Constants is
 
    O_RDONLY   : constant := 16#0000#;
-   O_WRONLY   : constant := 16#0000#;
+   O_WRONLY   : constant := 16#0001#;
    O_RDWR     : constant := 16#0002#;
    O_NONBLOCK : constant := 16#0004#;
    O_APPEND   : constant := 16#0008#;
