@@ -1,98 +1,192 @@
-.. _Building_GNATColl:
+Building GNATColl Core Libraries
+********************************
 
-*****************
-Building GNATColl
-*****************
+Build Requirements
+==================
 
-In the instructions detailed below, it is assumed that you have
-unpacked the GNATColl package in a temporary directory and that
-`installdir` is the directory in which you
-would like to install the selected components.
+* A recent GNAT compiler
+* GPRBuild
+* Python (>=3.8) to configure, build and install
+* (optional) LIBGPR library if you are building the ``gnatcoll_project.gpr``
+* (optional) GNU Make to use the legacy Makefile
+* (optional) Alire use Alire as build tool
 
-It is further assumed that you have recent functional GNAT compiler, as well
-as gprbuild.
+As stated in the introduction, GNATColl Core has been split into three distinct
+libraries in order to improve overall architecture: ``gnatcoll_minimal``,
+``gnatcoll_core`` and ``gnatcoll_projects``. Each library is located in a separate
+sub-directory of the GNATColl sources.
 
-.. _Configuring_the_build_environment:
+In the instructions detailed below, it is assumed that ``SRC_DIR`` is the location
+of the GNATColl sources, ``BUILD_DIR`` the directory in which a library build is
+done and ``INSTALL_DIR`` the final location in which a library is installed. Note
+that ``BUILD_DIR`` may be equal to ``SRC_DIR``.
 
-Configuring the build environment
-=================================
+Configure and Build using Python helper scripts
+===============================================
 
-The first step is to configure the build environment. This is done by
-running the `make setup` command in the root directory of the
-GNATColl tree. This step is optional if you are satisfied with default values.
+The simplest way to build one of the libraries part of GNATColl Core is to do:
 
-On Windows, this requires a properly setup Unix-like environment, to provide
-Unix-like tools.
+.. code-block:: console
 
-The following variables can be used to configure the build process:
+    $ cd $BUILD_DIR
+    $ $SRC_DIR/minimal/gnatcoll_minimal.gpr.py build --prefix=$INSTALL_DIR --install
 
-General:
+This configures the library using default options and install it in
+``INSTALL_DIR``. By default both shared and static version of the libraries are
+built and installed. To debug how a given library was configured by the helper
+script, check the JSON file generated in the ``BUILD_DIR``. For example for
+``gnatcoll_minimal.gpr`` project the JSON is ``BUILD_DIR/gnatcoll_core.json``.
 
-*prefix*
-  Location of the installation, the default is the running GNAT installation root.
+The helper scripts provide various options that impact the way the library is
+configured. The list of option can easily be retrieved by calling
+``PROJECT.py build --help``. For example for the ``gnatcoll_minimal.gpr`` project do:
 
-*INTEGRATED*
-  Treat prefix as compiler installation: yes or no (default). This is so that installed gnatcoll project can later be referenced as a predefined project of this compiler; this adds a normalized target subdir to prefix.
+.. code-block:: console
 
-*BUILD*
-  Controls the build options : PROD (default) or DEBUG
+    $ SRC_DIR/minimal/gnatcoll_minimal.gpr.py build --help
 
-*PROCESSORS*
-  Parallel compilation (default is 0, which uses all available cores)
+    usage: gnatcoll_minimal.gpr.py build [-h] [--gpr-opts ...]
+                                         [--add-gpr-path ADD_GPR_PATH]
+                                         [--jobs JOBS]
+                                         [--target TARGET] [--prefix PREFIX]
+                                         [--integrated] [--install]
+                                         [--gnatcov | --symcc]
+                                         [--configure-only]
+                                         [--enable-constant-updates]
+                                         [--build {DEBUG,PROD}]
+                                         [--enable-shared {yes,no}]
 
-*TARGET*
-  For cross-compilation, auto-detected for native platforms
+    options:
+      -h, --help            show this help message and exit
+      --gpr-opts ...        pass remaining arguments to gprbuild
+      --add-gpr-path ADD_GPR_PATH
+                            prepend a path to look for GPR files
+      --jobs, -j JOBS       gprbuild parallelism
+      --target TARGET       target
+      --prefix PREFIX       installation prefix
+      --integrated          installation in platform specific subdir
+      --install             proceed with install automatically after the build
+      --gnatcov             build project with gnatcov instrumentation
+      --symcc               build project with symcc intrumentation (works only
+                            with LLVM)
+      --configure-only      only perform configuration (i.e: update of project
+                            constants and creation of json file).
+                            Can be used to integrate with Alire
+      --enable-constant-updates
+                            Update constants in GPR files in order to pass conviently
+                            the result of the
+                            configuration to tools such as IDE and Alire.
 
-*SOURCE_DIR*
-  For out-of-tree build
+    project specific options:
+      --build {DEBUG,PROD}
+      --enable-shared {yes,no}
 
-*ENABLE_SHARED*
-  Controls whether shared and static-pic library variants should be built: yes (default) or no. If you only intend to use static libraries, specify 'no'.
+To build and install the three libraries do:
 
-Module-specific:
+.. code-block:: console
 
-*GNATCOLL_MMAP*
-  Whether MMAP is supported: yes (default) or no; this has no effect on Windows where embedded MMAP implementation is always provided.
+    $ cd $BUILD_DIR
+    $ $SRC_DIR/minimal/gnatcoll_minimal.gpr.py build --prefix=$INSTALL_DIR --install
+    $ $SRC_DIR/core/gnatcoll_core.gpr.py build --prefix=$INSTALL_DIR --install
+    $ $SRC_DIR/projects/gnatcoll_projects.gpr.py build --prefix=$INSTALL_DIR --install
 
-*GNATCOLL_MADVISE*
-  Whether MADVISE: yes (default) or no; this has no effect on Windows where MADVISE functionality is unavailable
+Note that order matters because of the dependencies between each libraries
 
+Once built, you can make the libraries visible by adding ``INSTALL_DIR/share/gpr``
+to your ``GPR_PROJECT_PATH`` environment variable.
 
-.. _Building_GNATColl:
+Note that if you still rely on the ``gnatcoll.gpr`` project file you can find it
+in ``SRC_DIR/gnatcoll.gpr``. The project is there for backward compatibility and just
+do a with of the three GNATColl libraries. To make it available in your installation
+just do:
 
-Building GNATColl
-=================
+.. code-block:: console
 
-GNATCOLL Core Module can be built using a GPR project file, to build it is as
-simple as:
+    $ cp $SRC_DIR/gnatcoll.gpr $INSTALL_DIR/share/gpr
 
-  $ gprbuild gnatcoll.gpr
+Configure and Build using Makefile
+==================================
 
-Though, to build all versions of the library (static, relocatable and
-static-pic) it is simpler to use the provided Makefile:
+For backward compatibility purpose, a ``Makefile`` is still provided.
 
-  $ make
+To perform an in-place build, run:
 
+.. code-block:: console
 
-.. _Installing_GNATColl:
+    $ cd $SRC_DIR
+    $ make
+    $ make install prefix=$INSTALL_DIR
 
-Installing GNATColl
-===================
+To build outside the source tree, run:
 
-Installing the library is done with the following command::
+.. code-block:: console
 
-  make install
-  
-Note that this command does not try to recompile GNATColl, so you must build
-it first. This command will install all library variants that were built.
+    $ cd $BUILD_DIR
+    $ make -f $SRC_DIR/Makefile
+    $ make -f $SRC_DIR/Makefile install prefix=$INSTALL_DIR
 
-Your application can now use the GNATColl code through a project file, by
-adding a ``with`` clause to :file:`gnatcoll.gpr`.
+Aside for the ``prefix`` Makefile variable, a few other variables are available. Check
+the headers of ``SRC_DIR/Makefile`` to get the full documentation.
 
-If you wish to install in a different location than was specified at
-configure time, you can override the "prefix" variable from the command line,
-for instance::
+Advanced Configuration and Build Topics
+=======================================
 
-    make prefix=/alternate/directory install
+Building Manually
+-----------------
 
-This does not require any recompilation.
+All the libraries part of GNATColl Core can be built manually using directly GPRBuild.
+When doing so we will lost the auto-configuration part performed by the Python
+scripts. As a consequence, the value of those variables should be passed manually in
+order to have the adequate build. Check the distinct project files in order to have a
+list of available scenario variables.
+
+Updating scenario variables default values
+------------------------------------------
+
+The python helper scripts provided with each library include an option
+``--enable-constant-update``, which updates the default values for the project
+scenario variables. The default scenario variables values are contained in
+subprojects (one for each library) located in the respective ``config``
+subdirectories.
+
+For example for ``gnatcoll_core.gpr`` libraries in ``core`` subdirectories, there
+is a subproject ``config/gnatcoll_core_constants.gpr``::
+
+    abstract project GNATCOLL_Core_Constants is
+       GNATCOLL_VERSION_DEFAULT     := "0.0";
+       GNATCOLL_MMAP_DEFAULT        := "yes";
+       GNATCOLL_MADVISE_DEFAULT     := "yes";
+       GNATCOLL_BLAKE3_ARCH_DEFAULT := "generic";
+       GNATCOLL_XXHASH_ARCH_DEFAULT := "generic";
+       GNATCOLL_BUILD_MODE_DEFAULT  := "PROD";
+       GNATCOLL_OS_DEFAULT          := "unix";
+    end GNATCOLL_Core_Constants;
+
+If on an ARM64 Linux platform, you launch from ``SRC_DIR/core`` directory:
+
+.. code-block:: console
+
+    $ ./gnatcoll_core.gpr.py build --configure-only --enable-constant-update
+
+Then the ``config/gnatcoll_core_constants.gpr`` project is updated to::
+
+    abstract project GNATCOLL_Core_Constants is
+       GNATCOLL_VERSION_DEFAULT     := "25.0";
+       GNATCOLL_MMAP_DEFAULT        := "yes";
+       GNATCOLL_MADVISE_DEFAULT     := "yes";
+       GNATCOLL_BLAKE3_ARCH_DEFAULT := "aarch64-linux";
+       GNATCOLL_XXHASH_ARCH_DEFAULT := "generic";
+       GNATCOLL_BUILD_MODE_DEFAULT  := "PROD";
+       GNATCOLL_OS_DEFAULT          := "unix";
+    end GNATCOLL_Core_Constants;
+
+The consequence on ``gnatcoll_core.gpr`` is that for example the scenario variable
+GNATCOLL_BLAKE3_ARCH will now have a default value of ``aarch64-linux`` rather then
+``generic``.
+
+This system can be useful in some contexts such as:
+
+* Integration with other build systems such as Alire (as a prebuild stage)
+* Easier loading of the project in IDEs (which usually set the scenario variables
+  to their default values)
+
