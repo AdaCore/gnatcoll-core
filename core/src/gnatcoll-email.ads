@@ -84,6 +84,11 @@ package GNATCOLL.Email is
    overriding function "=" (Addr1, Addr2 : Email_Address) return Boolean;
    --  Whether Addr1 and Addr2 have the same address, even if real name differs
 
+   Forbidden_Character : exception;
+   --  Raised when a CR, LF, or NUL character is found in a user-supplied
+   --  header value or email address. CR/LF allow injecting arbitrary headers;
+   --  NUL causes string truncation in C-based MTAs, enabling filter evasion.
+
    -------------
    -- Headers --
    -------------

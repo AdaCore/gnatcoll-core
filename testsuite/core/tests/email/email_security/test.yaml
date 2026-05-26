@@ -1,0 +1,1 @@
+description: Security tests for CRLF injection prevention in email headers and envelope.
