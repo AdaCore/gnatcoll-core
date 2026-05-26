@@ -88,6 +88,16 @@ package body GNATCOLL.Email is
    function Clone_Headers (Ref : Header_List.List) return Header_List.List;
    --  Return a deep copy of the given list of headers.
 
+   function Strip_Forbidden (S : String) return String;
+   --  Return S with all CR, LF and NUL characters removed.
+   --  Used only as a safety net in To_String header flattening for content
+   --  that arrived via the Charset_String_List overload of Create (e.g. from
+   --  the parser, which never goes through Assert_No_Forbidden).
+
+   procedure Assert_No_Forbidden (S : String);
+   --  Raise Forbidden_Character if S contains CR, LF, or NUL.
+   --  NUL truncates strings in C-based MTAs, enabling filter evasion.
+
    type Constant_String_Access is access constant String;
 
    Encoding_Names : constant array (Encoding_Type) of Constant_String_Access :=
@@ -147,6 +157,46 @@ package body GNATCOLL.Email is
          return Other_Header;
       end if;
    end Identify_Header;
+
+   ----------------
+   -- Strip_Forbidden --
+   ----------------
+
+   function Strip_Forbidden (S : String) return String is
+      Result : String (1 .. S'Length);
+      Last   : Natural := 0;
+   begin
+      for J in S'Range loop
+         --  Take only the good characters and put them in Result
+         if S (J) /= ASCII.CR
+           and then S (J) /= ASCII.LF
+           and then S (J) /= ASCII.NUL
+         then
+            Last := Last + 1;
+            Result (Last) := S (J);
+         end if;
+      end loop;
+      return Result (1 .. Last);
+   end Strip_Forbidden;
+
+   --------------------
+   -- Assert_No_Forbidden --
+   --------------------
+
+   procedure Assert_No_Forbidden (S : String) is
+   begin
+      for J in S'Range loop
+         if S (J) = ASCII.CR
+           or else S (J) = ASCII.LF
+           or else S (J) = ASCII.NUL
+         then
+            raise Forbidden_Character with
+              "CR, LF, or NUL character at position"
+              & Integer'Image (J)
+              & " would allow header injection or filter evasion";
+         end if;
+      end loop;
+   end Assert_No_Forbidden;
 
    -------------------
    -- Is_Whitespace --
@@ -471,6 +521,7 @@ package body GNATCOLL.Email is
 
    procedure Set_Envelope_From (Msg : in out Message'Class; From : String) is
    begin
+      Assert_No_Forbidden (From);
       Msg.Contents.Envelope_From := To_Unbounded_String (From);
    end Set_Envelope_From;
 
@@ -484,6 +535,7 @@ package body GNATCOLL.Email is
       Local_Date : Ada.Calendar.Time)
    is
    begin
+      Assert_No_Forbidden (Email);
       Msg.Contents.Envelope_From := To_Unbounded_String
         ("From " & Email & " " & Format_Date (Local_Date, From_Line => True));
    end Set_Envelope_From;
@@ -555,6 +607,7 @@ package body GNATCOLL.Email is
    is
       V : Charset_String_List.List;
    begin
+      Assert_No_Forbidden (Value);
       Decode_Header (Value,
         Default_Charset => Charset,
         Result          => V,
@@ -586,6 +639,7 @@ package body GNATCOLL.Email is
    is
       L : Charset_String_List.List;
    begin
+      Assert_No_Forbidden (Value);
       Decode_Header (Value,
         Default_Charset => Charset,
         Result          => L,
@@ -672,42 +726,27 @@ package body GNATCOLL.Email is
          --  Fold continuation lines
 
          declare
-            Str    : String := To_String (Encoded);
-            Last   : Natural;
+            --  Strip CR, LF and NUL as a safety net for content from parsing.
+            Str           : constant String :=
+                              Strip_Forbidden (To_String (Encoded));
             Index, Index2 : Integer;
 
-            Offset : Integer := 0;
-            --  Count of LF characters skipped so far
-
          begin
-            --  Flatten the header on a single line, eliminating newline
-            --  characters.
-
-            for J in Str'Range loop
-               if Str (J) = ASCII.LF then
-                  Offset := Offset + 1;
-               elsif Offset > 0 then
-                  Str (J - Offset) := Str (J);
-               end if;
-            end loop;
-
-            Last := Str'Last - Offset;
-
-            if Show_Header_Name and then Last <= Max then
-               if Last = 0 then  --  Empty header
+            if Show_Header_Name and then Str'Length <= Max then
+               if Str'Length = 0 then  --  Empty header
                   Result := To_Unbounded_String (N & ": ");
-               elsif Element (Encoded, 1) = ' ' then
-                  Result := To_Unbounded_String (N & ':' & Str (1 .. Last));
+               elsif Str (Str'First) = ' ' then
+                  Result := To_Unbounded_String (N & ':' & Str);
                else
-                  Result := To_Unbounded_String (N & ": " & Str (1 .. Last));
+                  Result := To_Unbounded_String (N & ": " & Str);
                end if;
                return;
 
-            elsif not Show_Header_Name and then Last <= Max_Line_Len then
-               if Offset = 0 then
-                  Result := Encoded;  --  Save a string copy
+            elsif not Show_Header_Name and then Str'Length <= Max_Line_Len then
+               if Str'Length = Length (Encoded) then
+                  Result := Encoded;  --  Save a string copy (nothing stripped)
                else
-                  Result := To_Unbounded_String (Str (1 .. Last));
+                  Result := To_Unbounded_String (Str);
                end if;
                return;
             end if;
@@ -715,15 +754,15 @@ package body GNATCOLL.Email is
             Result := Null_Unbounded_String;
             Index  := Str'First;
 
-            while Index <= Last loop
+            while Index <= Str'Last loop
                --  Only split on spaces. To keep Content-Type headers as much
                --  as possible on a single line, we split on the first blank
                --  space after the theoretical split point.
 
-               Index2 := Integer'Min (Index + Max - 1, Last);
+               Index2 := Integer'Min (Index + Max - 1, Str'Last);
                loop
                   Index2 := Index2 + 1;
-                  exit when Index2 > Last or else Str (Index2) = ' ';
+                  exit when Index2 > Str'Last or else Str (Index2) = ' ';
                end loop;
 
                --  Index2 points right after last non-blank character
@@ -733,7 +772,7 @@ package body GNATCOLL.Email is
                --  Do not print a last line containing only white spaces, this
                --  might confuse mailers.
 
-               if Index2 < Last then
+               if Index2 < Str'Last then
                   Append (Result, ASCII.LF & ' ');
                end if;
 
@@ -1904,6 +1943,7 @@ package body GNATCOLL.Email is
       Semicolon, Name_Start, Name_End, Val_End : Integer;
       Str : constant String := "; " & Param_Name & "=""" & Param_Value & '"';
    begin
+      Assert_No_Forbidden (Param_Value);
       Get_Param_Index
         (H, Param_Name, C, Semicolon, Name_Start, Name_End, Val_End);
 
