@@ -166,7 +166,7 @@ package body GNATCOLL.Email.Parser is
         and then Str (Index .. Index + 4) = "From "
       then
          Eol := Next_Occurrence (Str (Index .. Stop), ASCII.LF);
-         Set_Envelope_From (Msg, Str (Index .. Eol - 1));
+         Set_Envelope_From (Msg, RTrim_CR (Str (Index .. Eol - 1)));
          Index := Eol + 1;
       end if;
 
