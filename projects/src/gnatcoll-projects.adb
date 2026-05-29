@@ -3839,6 +3839,18 @@ package body GNATCOLL.Projects is
          end if;
       end;
 
+      --  Also look, similarly, at the gnatls attribute, expecting something
+      --  of the form "arm-eabi-gnatls"
+
+      declare
+         G : constant String := Extract_From_Attribute
+           (Gnatlist_Attribute, "-gnatls");
+      begin
+         if G /= "" then
+            return G;
+         end if;
+      end;
+
       --  Nothing? The target is not defined.
 
       if Default_To_Host then
@@ -8215,6 +8227,8 @@ package body GNATCOLL.Projects is
       Errors          : Error_Report := null)
       return Boolean
    is
+      P       : Package_Id;
+      Value   : Variable_Value;
       GNAT_Version : GNAT.Strings.String_Access;
 
       Shared : constant Shared_Project_Tree_Data_Access :=
@@ -8342,7 +8356,40 @@ package body GNATCOLL.Projects is
       end Process_Gnatls;
 
    begin
-      return Process_Gnatls (Default_Gnatls);
+      P := Value_Of
+        (Name_Ide,
+         In_Packages => Project.Decl.Packages,
+         Shared      => Shared);
+      if P = No_Package then
+         Trace (Me, "No package IDE, no gnatlist attribute");
+         return Process_Gnatls (Default_Gnatls);
+      else
+         --  Do we have a gnatlist attribute ?
+         Value := Value_Of
+           (Get_String ("gnatlist"),
+            Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes, Shared);
+
+         if Value = Nil_Variable_Value then
+            Trace (Me, "No attribute IDE'gnatlist");
+            return Process_Gnatls (Default_Gnatls);
+         else
+            declare
+               Gnatls : constant String := Get_Name_String (Value.Value);
+            begin
+               if Gnatls = "" then
+                  return Process_Gnatls (Default_Gnatls);
+               else
+                  if Runtime /= Unset or else Target /= Unset then
+                     Trace (Me, "Error, IDE'Gnatlist attribute cannot be set"
+                        & " when Runtime or Target is also set");
+                     return Process_Gnatls (Default_Gnatls);
+                  end if;
+
+                  return Process_Gnatls (Gnatls);
+               end if;
+            end;
+         end if;
+      end if;
    end Set_Path_From_Gnatls_Attribute;
 
    ------------------
@@ -8819,31 +8866,67 @@ package body GNATCOLL.Projects is
         and then Tree.Data.Tree.Incomplete_With
       then
          Trace (Me, "Could not find some with-ed projects");
-         Project := Empty_Project_Node;
 
-         --  Perform a second parting to surface error messages.
-         Override_Flags
-           (Tree.Data.Env.Env,
-            Create_Flags
-              (On_Error'Unrestricted_Access,
-               Report_Missing_Dirs => Report_Missing_Dirs,
-               Ignore_Missing_With => False));
-         Internal_Load
-           (Tree                   => Tree,
-            Root_Project_Path      => Root_Project_Path,
-            Errors                 => Errors,
-            Report_Syntax_Errors   => Report_Syntax_Errors,
-            Project                => Project,
-            Recompute_View         => Recompute_View,
-            Packages_To_Check      => Packages_To_Check,
-            Test_With_Missing_With => False,
-            Report_Missing_Dirs    => Report_Missing_Dirs,
-            Implicit_Project       => Implicit_Project);
+         --  Some "with" were found that could not be resolved. Check whether
+         --  the user has specified a "gnatlist" switch. For this, we need to
+         --  do phase1 of the processing (i.e. not look for sources).
 
-         GPR.Com.Fail := null;
-         GPR.Output.Cancel_Special_Output;
+         declare
+            Success : Boolean;
+            Tmp_Prj : Project_Id;
+            Dummy   : Boolean;
+         begin
+            Tree.Data.Projects.Clear;
+            GPR.Proc.Process_Project_Tree_Phase_1
+              (In_Tree                => Tree.Data.View,
+               Project                => Tmp_Prj,
+               Packages_To_Check      => Packages_To_Check,
+               Success                => Success,
+               From_Project_Node      => Project,
+               From_Project_Node_Tree => Tree.Data.Tree,
+               Env                    => Tree.Data.Env.Env,
+               Reset_Tree             => True,
+               On_New_Tree_Loaded     =>
+                 Clean_Up_Node_Tree'Unrestricted_Access);
 
-         return;
+            if not Success or else Tmp_Prj = null then
+               Trace (Me, "Processing phase 1 failed");
+               Project := Empty_Project_Node;
+            else
+               Trace (Me, "Looking for IDE'gnatlist attribute");
+               Dummy := Set_Path_From_Gnatls_Attribute
+                 (Tmp_Prj, Tree, Fail'Unrestricted_Access);
+            end if;
+
+            --  Reparse the tree so that errors are reported as usual
+            --  (or not if the new project path solves the issue).
+
+            Override_Flags
+              (Tree.Data.Env.Env,
+               Create_Flags
+                 (On_Error'Unrestricted_Access,
+                  Report_Missing_Dirs => Report_Missing_Dirs,
+                  Ignore_Missing_With => False));
+
+            Trace (Me, "Parsing project tree a second time");
+
+            Internal_Load
+              (Tree                   => Tree,
+               Root_Project_Path      => Root_Project_Path,
+               Errors                 => Errors,
+               Report_Syntax_Errors   => Report_Syntax_Errors,
+               Project                => Project,
+               Recompute_View         => Recompute_View,
+               Packages_To_Check      => Packages_To_Check,
+               Test_With_Missing_With => False,
+               Report_Missing_Dirs    => Report_Missing_Dirs,
+               Implicit_Project       => Implicit_Project);
+
+            GPR.Com.Fail := null;
+            GPR.Output.Cancel_Special_Output;
+
+            return;
+         end;
 
       elsif Project = Empty_Project_Node
         and then Test_With_Missing_With
@@ -10002,6 +10085,9 @@ package body GNATCOLL.Projects is
 
       use Virtual_File_List;
 
+      Gnatls           : constant String :=
+                           Self.Root_Project.Attribute_Value
+                             (Gnatlist_Attribute);
       Iter             : Project_Iterator;
       Sources          : String_List_Id;
       P                : Project_Type;
@@ -10018,6 +10104,22 @@ package body GNATCOLL.Projects is
       loop
          P := Current (Iter);
          exit when P = No_Project;
+
+         declare
+            Ls : constant String := P.Attribute_Value (Gnatlist_Attribute);
+         begin
+            if Ls /= "" and then Ls /= Gnatls then
+               --  We do not want to mark the project as incomplete for this
+               --  warning, so we do not need to pass an actual Error_Handler
+               GPR.Err.Error_Msg
+                 (Flags => Create_Flags (null),
+                  Msg   =>
+                   "?the project attribute IDE.gnatlist doesn't have"
+                  & " the same value as in the root project."
+                  & " The value """ & Gnatls & """ will be used",
+                  Project => Get_View (P));
+            end if;
+         end;
 
          --  Reset the list of source files for this project. We must not
          --  Free it, since it is now stored in the previous project's instance
