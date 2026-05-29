@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2024, AdaCore                     --
+--                     Copyright (C) 2002-2026, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -400,9 +400,7 @@ package GNATCOLL.Projects is
       Gnatls       : String);
    No_Gnatls : constant String;
    --  Set the default gnatls to run (before a project is loaded).
-   --  This impacts the default path on which projects are looked for, but
-   --  will be overridden if the user has specified an IDE.Gnatlist attribute
-   --  in his project.
+   --  This impacts the default path on which projects are looked for.
    --  This procedure is now deprecated, and we recommend that project use the
    --  Runtime and Target attributes instead. See Set_Target_And_Runtime below.
    --  When No_Gnatls is set no attempts to invoke gnatls are made when loading
@@ -1627,7 +1625,6 @@ package GNATCOLL.Projects is
    Ide_Package      : constant String;
 
    GNAT_Attribute                  : constant Attribute_Pkg_String;
-   Gnatlist_Attribute              : constant Attribute_Pkg_String;
    Compiler_Command_Attribute      : constant Attribute_Pkg_String;
    Debugger_Command_Attribute      : constant Attribute_Pkg_String;
    Program_Host_Attribute          : constant Attribute_Pkg_String;
@@ -2321,7 +2318,6 @@ private
    Excluded_Source_List_File_Attribute : constant Attribute_Pkg_String :=
                                            "excluded_source_list_file";
    GNAT_Attribute            : constant Attribute_Pkg_String := "ide#gnat";
-   Gnatlist_Attribute        : constant Attribute_Pkg_String := "ide#gnatlist";
    Compiler_Command_Attribute : constant Attribute_Pkg_String :=
                                   "ide#compiler_command";
    Debugger_Command_Attribute : constant Attribute_Pkg_String :=
