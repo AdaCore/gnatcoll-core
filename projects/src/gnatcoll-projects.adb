@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 --                             G N A T C O L L                              --
 --                                                                          --
---                     Copyright (C) 2002-2024, AdaCore                     --
+--                     Copyright (C) 2002-2026, AdaCore                     --
 --                                                                          --
 -- This library is free software;  you can redistribute it and/or modify it --
 -- under terms of the  GNU General Public License  as published by the Free --
@@ -8222,9 +8222,22 @@ package body GNATCOLL.Projects is
 
       Unset : constant String := "";
 
+      function Get_Value_Of_Runtime (Project : Project_Id) return String;
+      --  Look for the value of Runtime attribute in given project or projects
+      --  extended by it recursively.
+
       function Get_Value_Of_Target (Project : Project_Id) return String;
       --  Look for the value of Target attribute in given project or projects
       --  extended by it recursively.
+
+      function Default_Gnatls return String;
+      --  Compute the default 'gnatls' command to spawn
+
+      function Process_Gnatls (Gnatls : String) return Boolean;
+
+      -------------------------
+      -- Get_Value_Of_Target --
+      -------------------------
 
       function Get_Value_Of_Target (Project : Project_Id) return String is
          Elem : constant Variable_Value :=
@@ -8252,9 +8265,9 @@ package body GNATCOLL.Projects is
 
       N_Target : constant String := Normalize_Target_Name (Target);
 
-      function Get_Value_Of_Runtime (Project : Project_Id) return String;
-      --  Look for the value of Runtime attribute in given project or projects
-      --  extended by it recursively.
+      --------------------------
+      -- Get_Value_Of_Runtime --
+      --------------------------
 
       function Get_Value_Of_Runtime (Project : Project_Id) return String is
          Elem : constant Array_Element_Id := Value_Of
@@ -8288,8 +8301,9 @@ package body GNATCOLL.Projects is
           else
             Get_Value_Of_Runtime (Project));
 
-      function Default_Gnatls return String;
-      --  Compute the default 'gnatls' command to spawn
+      --------------------
+      -- Default_Gnatls --
+      --------------------
 
       function Default_Gnatls return String is
          No_Prefix : Boolean := False;
@@ -8324,7 +8338,10 @@ package body GNATCOLL.Projects is
          end if;
       end Default_Gnatls;
 
-      function Process_Gnatls (Gnatls : String) return Boolean;
+      --------------------
+      -- Process_Gnatls --
+      --------------------
+
       function Process_Gnatls (Gnatls : String) return Boolean is
       begin
          if Tree.Data.Env.Gnatls = null or else
@@ -8819,31 +8836,67 @@ package body GNATCOLL.Projects is
         and then Tree.Data.Tree.Incomplete_With
       then
          Trace (Me, "Could not find some with-ed projects");
-         Project := Empty_Project_Node;
 
-         --  Perform a second parting to surface error messages.
-         Override_Flags
-           (Tree.Data.Env.Env,
-            Create_Flags
-              (On_Error'Unrestricted_Access,
-               Report_Missing_Dirs => Report_Missing_Dirs,
-               Ignore_Missing_With => False));
-         Internal_Load
-           (Tree                   => Tree,
-            Root_Project_Path      => Root_Project_Path,
-            Errors                 => Errors,
-            Report_Syntax_Errors   => Report_Syntax_Errors,
-            Project                => Project,
-            Recompute_View         => Recompute_View,
-            Packages_To_Check      => Packages_To_Check,
-            Test_With_Missing_With => False,
-            Report_Missing_Dirs    => Report_Missing_Dirs,
-            Implicit_Project       => Implicit_Project);
+         --  Some "with" were found that could not be resolved. Check whether
+         --  the user has specified a "gnatlist" switch. For this, we need to
+         --  do phase1 of the processing (i.e. not look for sources).
 
-         GPR.Com.Fail := null;
-         GPR.Output.Cancel_Special_Output;
+         declare
+            Success : Boolean;
+            Tmp_Prj : Project_Id;
+            Dummy   : Boolean;
+         begin
+            Tree.Data.Projects.Clear;
+            GPR.Proc.Process_Project_Tree_Phase_1
+              (In_Tree                => Tree.Data.View,
+               Project                => Tmp_Prj,
+               Packages_To_Check      => Packages_To_Check,
+               Success                => Success,
+               From_Project_Node      => Project,
+               From_Project_Node_Tree => Tree.Data.Tree,
+               Env                    => Tree.Data.Env.Env,
+               Reset_Tree             => True,
+               On_New_Tree_Loaded     =>
+                 Clean_Up_Node_Tree'Unrestricted_Access);
 
-         return;
+            if not Success or else Tmp_Prj = null then
+               Trace (Me, "Processing phase 1 failed");
+               Project := Empty_Project_Node;
+            else
+               Trace (Me, "Looking for gnatls attribute");
+               Dummy := Set_Path_From_Gnatls_Attribute
+                 (Tmp_Prj, Tree, Fail'Unrestricted_Access);
+            end if;
+
+            --  Reparse the tree so that errors are reported as usual
+            --  (or not if the new project path solves the issue).
+
+            Override_Flags
+              (Tree.Data.Env.Env,
+               Create_Flags
+                 (On_Error'Unrestricted_Access,
+                  Report_Missing_Dirs => Report_Missing_Dirs,
+                  Ignore_Missing_With => False));
+
+            Trace (Me, "Parsing project tree a second time");
+
+            Internal_Load
+              (Tree                   => Tree,
+               Root_Project_Path      => Root_Project_Path,
+               Errors                 => Errors,
+               Report_Syntax_Errors   => Report_Syntax_Errors,
+               Project                => Project,
+               Recompute_View         => Recompute_View,
+               Packages_To_Check      => Packages_To_Check,
+               Test_With_Missing_With => False,
+               Report_Missing_Dirs    => Report_Missing_Dirs,
+               Implicit_Project       => Implicit_Project);
+
+            GPR.Com.Fail := null;
+            GPR.Output.Cancel_Special_Output;
+
+            return;
+         end;
 
       elsif Project = Empty_Project_Node
         and then Test_With_Missing_With
