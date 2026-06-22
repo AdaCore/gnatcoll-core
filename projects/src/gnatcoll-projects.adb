@@ -3821,18 +3821,6 @@ package body GNATCOLL.Projects is
          end if;
       end;
 
-      --  Also look, similarly, at the gnatls attribute, expecting something
-      --  of the form "arm-eabi-gnatls"
-
-      declare
-         G : constant String := Extract_From_Attribute
-           (Gnatlist_Attribute, "-gnatls");
-      begin
-         if G /= "" then
-            return G;
-         end if;
-      end;
-
       --  Nothing? The target is not defined.
 
       if Default_To_Host then
@@ -8206,8 +8194,6 @@ package body GNATCOLL.Projects is
       Errors          : Error_Report := null)
       return Boolean
    is
-      P       : Package_Id;
-      Value   : Variable_Value;
       GNAT_Version : GNAT.Strings.String_Access;
 
       Shared : constant Shared_Project_Tree_Data_Access :=
@@ -8335,40 +8321,7 @@ package body GNATCOLL.Projects is
       end Process_Gnatls;
 
    begin
-      P := Value_Of
-        (Name_Ide,
-         In_Packages => Project.Decl.Packages,
-         Shared      => Shared);
-      if P = No_Package then
-         Trace (Me, "No package IDE, no gnatlist attribute");
-         return Process_Gnatls (Default_Gnatls);
-      else
-         --  Do we have a gnatlist attribute ?
-         Value := Value_Of
-           (Get_String ("gnatlist"),
-            Tree.Data.View.Shared.Packages.Table (P).Decl.Attributes, Shared);
-
-         if Value = Nil_Variable_Value then
-            Trace (Me, "No attribute IDE'gnatlist");
-            return Process_Gnatls (Default_Gnatls);
-         else
-            declare
-               Gnatls : constant String := Get_Name_String (Value.Value);
-            begin
-               if Gnatls = "" then
-                  return Process_Gnatls (Default_Gnatls);
-               else
-                  if Runtime /= Unset or else Target /= Unset then
-                     Trace (Me, "Error, IDE'Gnatlist attribute cannot be set"
-                        & " when Runtime or Target is also set");
-                     return Process_Gnatls (Default_Gnatls);
-                  end if;
-
-                  return Process_Gnatls (Gnatls);
-               end if;
-            end;
-         end if;
-      end if;
+      return Process_Gnatls (Default_Gnatls);
    end Set_Path_From_Gnatls_Attribute;
 
    ------------------
@@ -8872,7 +8825,7 @@ package body GNATCOLL.Projects is
                Trace (Me, "Processing phase 1 failed");
                Project := Empty_Project_Node;
             else
-               Trace (Me, "Looking for IDE'gnatlist attribute");
+               Trace (Me, "Looking for gnatls attribute");
                Dummy := Set_Path_From_Gnatls_Attribute
                  (Tmp_Prj, Tree, Fail'Unrestricted_Access);
             end if;
@@ -10064,9 +10017,6 @@ package body GNATCOLL.Projects is
 
       use Virtual_File_List;
 
-      Gnatls           : constant String :=
-                           Self.Root_Project.Attribute_Value
-                             (Gnatlist_Attribute);
       Iter             : Project_Iterator;
       Sources          : String_List_Id;
       P                : Project_Type;
@@ -10083,22 +10033,6 @@ package body GNATCOLL.Projects is
       loop
          P := Current (Iter);
          exit when P = No_Project;
-
-         declare
-            Ls : constant String := P.Attribute_Value (Gnatlist_Attribute);
-         begin
-            if Ls /= "" and then Ls /= Gnatls then
-               --  We do not want to mark the project as incomplete for this
-               --  warning, so we do not need to pass an actual Error_Handler
-               GPR.Err.Error_Msg
-                 (Flags => Create_Flags (null),
-                  Msg   =>
-                   "?the project attribute IDE.gnatlist doesn't have"
-                  & " the same value as in the root project."
-                  & " The value """ & Gnatls & """ will be used",
-                  Project => Get_View (P));
-            end if;
-         end;
 
          --  Reset the list of source files for this project. We must not
          --  Free it, since it is now stored in the previous project's instance
