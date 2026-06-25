@@ -386,6 +386,48 @@ package GNATCOLL.OS.Win32.Files is
         Convention    => C,
         External_Name => "_open_osfhandle";
 
+   --  Modes for Locking
+   subtype Locking_Mode is int;
+   LK_UNLCK  : constant Locking_Mode := 0;  --  release a locked region
+   LK_LOCK   : constant Locking_Mode := 1;  --  lock, blocking (retries ~10s)
+   LK_NBLCK  : constant Locking_Mode := 2;  --  lock, fail if already locked
+   LK_RLCK   : constant Locking_Mode := 3;  --  alias of LK_LOCK
+   LK_NBRLCK : constant Locking_Mode := 4;  --  alias of LK_NBLCK
+
+   function Locking
+      (FD     : FS.File_Descriptor;
+       Mode   : Locking_Mode;
+       Length : LONG)
+      return int
+   with Import        => True,
+        Convention    => C,
+        External_Name => "_locking";
+
+   EACCES : constant := 13;
+   --  errno reported by _locking with LK_NBLCK when the region is already
+   --  locked through another handle
+
+   function Errno return int
+   with Import        => True,
+        Convention    => C,
+        External_Name => "__gnatcoll_errno";
+   --  Current C runtime errno (how _locking reports failures)
+
+   --  Origins for Lseek (the SEEK_* values from <stdio.h>)
+   subtype Seek_Origin is int;
+   SEEK_SET : constant Seek_Origin := 0;  --  relative to start of file
+   SEEK_CUR : constant Seek_Origin := 1;  --  relative to current position
+   SEEK_END : constant Seek_Origin := 2;  --  relative to end of file
+
+   function Lseek
+      (FD     : FS.File_Descriptor;
+       Offset : LONG;
+       Origin : Seek_Origin)
+      return LONG
+   with Import        => True,
+        Convention    => C,
+        External_Name => "_lseek";
+
    type Handle_Flag is new DWORD;
 
    HANDLE_FLAG_INHERIT            : constant Handle_Flag := 16#01#;

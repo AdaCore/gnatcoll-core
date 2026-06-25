@@ -22,6 +22,7 @@
 -----------------------------------------------------------------------------*/
 #include "windows.h"
 #include "winternl.h"
+#include <errno.h>
 
 NTSTATUS
 __gnatcoll_ntopenfile (HANDLE *handle,
@@ -42,6 +43,14 @@ __gnatcoll_ntopenfile (HANDLE *handle,
                        access,
                        options);
   return status;
+}
+
+/* Return the C runtime errno. _locking reports failures through errno rather
+   than GetLastError, so the Ada side reads it through this wrapper. */
+int
+__gnatcoll_errno (void)
+{
+  return errno;
 }
 
 /* Implement a simplified wait_for_multiple_objects that can wait for more

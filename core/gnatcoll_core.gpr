@@ -322,6 +322,10 @@ library project GNATCOLL_Core is
               use "gnatcoll-os-random__unix.adb";
             for Implementation ("GNATCOLL.OS.Temp.Init")
               use "gnatcoll-os-temp-init__unix.adb";
+            for Implementation ("GNATCOLL.OS.Lock.Lock_FD")
+              use "gnatcoll-os-lock-lock_fd__unix.adb";
+            for Implementation ("GNATCOLL.OS.Lock.Unlock_FD")
+              use "gnatcoll-os-lock-unlock_fd__unix.adb";
          when "windows" =>
             for Specification  ("GNATCOLL.Mmap.System")
               use "gnatcoll-mmap-system__win32.ads";
@@ -385,6 +389,10 @@ library project GNATCOLL_Core is
               use "gnatcoll-os-random__win32.adb";
             for Implementation ("GNATCOLL.OS.Temp.Init")
               use "gnatcoll-os-temp-init__win32.adb";
+            for Implementation ("GNATCOLL.OS.Lock.Lock_FD")
+              use "gnatcoll-os-lock-lock_fd__win32.adb";
+            for Implementation ("GNATCOLL.OS.Lock.Unlock_FD")
+              use "gnatcoll-os-lock-unlock_fd__win32.adb";
       end case;
 
       case OS is

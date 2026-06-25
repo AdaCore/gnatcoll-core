@@ -146,6 +146,23 @@ package GNATCOLL.OS.Libc is
         External_Name => "fcntl";
    --  See Posix fcntl
 
+   --  Operations for Flock
+   type Flock_Operation is new Uint_32;
+   LOCK_SH : constant Flock_Operation := 1;  --  Shared lock
+   LOCK_EX : constant Flock_Operation := 2;  --  Exclusive lock
+   LOCK_UN : constant Flock_Operation := 8;  --  Unlock
+
+   --  Can or'ed with one of the above
+   LOCK_NB : constant Flock_Operation := 4;  --  Don't block when locking
+
+   function Flock
+      (Fd        : FS.File_Descriptor;
+       Operation : Flock_Operation)
+      return Libc_Status
+   with Import        => True,
+        Convention    => C,
+        External_Name => "flock";
+
    function Pipe (Fds : not null access Pipe_Type) return Libc_Status
    with Import        => True,
         Convention    => C,
@@ -249,8 +266,13 @@ package GNATCOLL.OS.Libc is
    EPERM : constant Integer := 1;
    --  EPERM is set to 1 on all supported system
 
+   EINTR  : constant Integer := 4;  --  Interrupted system call
    EINVAL : constant Integer := 22;
    ENOSYS : constant Integer := 38;
+
+   EWOULDBLOCK : constant Integer := 11;
+   --  Linux value (same as EAGAIN). Differs on macOS/BSD (35), so this assumes
+   --  a Linux target, like the errno constants above.
 
    function Errno return Integer
    with Import        => True,

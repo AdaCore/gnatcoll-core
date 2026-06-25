@@ -1,0 +1,3 @@
+title: GNATCOLL.OS.Lock cross-process lock
+control:
+  - [SKIP, "env.is_cross", "Test spawns a child process, unavailable when cross-compiling"]
