@@ -4,11 +4,11 @@ with GNATCOLL.OS.FS;
 with Test_Assert;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Command_Line;
-with GNAT.IO;
+with Ada.Text_IO;
 
 function Test return Integer is
    package A renames Test_Assert;
-   package IO renames GNAT.IO;
+   package IO renames Ada.Text_IO;
    package OS renames GNATCOLL.OS;
    package PT renames GNATCOLL.OS.Process_Types;
    package FS renames GNATCOLL.OS.FS;
