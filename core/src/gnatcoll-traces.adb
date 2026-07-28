@@ -1671,6 +1671,18 @@ package body GNATCOLL.Traces is
          --  Could not write to file, disk may be full ?
          null;
       end if;
+
+      --  Performance is not a concern for gnatcoll traces. We want to ensure
+      --  that all traces are displayed in the correct order across all
+      --  streams.
+
+      if fflush (Stream.File) /= 0 then
+
+         --  Flush error can be ignored safely, it can only impact the
+         --  traces ordering.
+
+         null;
+      end if;
    end Put;
 
    -----------
