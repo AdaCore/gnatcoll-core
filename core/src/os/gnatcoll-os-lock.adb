@@ -112,7 +112,11 @@ package body GNATCOLL.OS.Lock is
       loop
          exit when Attempt_Lock (Self, Path, Blocking => True);
          Next := Next + Wait_Span;
-         delay until Next;
+
+         --  Skip delays whose deadline has passed
+         if Clock < Next then
+            delay until Next;
+         end if;
       end loop;
    end Lock;
 
@@ -142,7 +146,11 @@ package body GNATCOLL.OS.Lock is
 
       for J in 1 .. Retries loop
          Next := Next + Wait_Span;
-         delay until Next;
+
+         --  Skip delays whose deadline has passed
+         if Clock < Next then
+            delay until Next;
+         end if;
 
          if Attempt_Lock (Self, Path) then
             return True;
