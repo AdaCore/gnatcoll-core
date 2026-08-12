@@ -58,7 +58,7 @@ package GNATCOLL.OS.Lock is
    --  One attempt is made immediately. If the lock is held elsewhere, Try_Lock
    --  retries every Retry_Delay seconds, up to Retries times (so for up to
    --  Retry_Delay * Retries seconds). The default Retries => 0 makes a single,
-   --  non-blocking attempt.
+   --  non-blocking attempt. A non-positive Retry_Delay retries without delay.
    --
    --  Return True if the lock was acquired, False otherwise.
    --  Raises OS_Error if the lock file cannot be created or opened.
