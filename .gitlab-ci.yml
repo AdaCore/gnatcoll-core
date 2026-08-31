@@ -100,8 +100,8 @@ build_and_test_windows:
   script:
   - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
   - anod build --latest gnatcoll-core
-  - anod test --latest gnatcoll-core -Qexternal
-  - working_dir=$(anod info test gnatcoll-core --show working_dir -Qexternal)
+  - anod test --latest gnatcoll-core -Qstandalone
+  - working_dir=$(anod info test gnatcoll-core --show working_dir -Qstandalone)
   - results_dir=$working_dir/results/new
   - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $results_dir || FAILED=true
 
@@ -125,8 +125,8 @@ build_and_test_aarch64_linux:
   script:
   - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
   - anod build --latest gnatcoll-core
-  - anod test --latest gnatcoll-core -Qexternal
-  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $ANOD_DEFAULT_SANDBOX_DIR/aarch64-linux/gnatcoll-core_external_test/results/new/ || FAILED=true
+  - anod test --latest gnatcoll-core -Qstandalone
+  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $ANOD_DEFAULT_SANDBOX_DIR/aarch64-linux/gnatcoll-core_standalone_test/results/new/ || FAILED=true
 
   # We previously prevented the pipeline from halting if a test failed, to make
   # sure all tests were run. If a test failed now we exit with a non-zero code
@@ -154,8 +154,8 @@ build_and_test_x86_linux:
   - cp $E3_OS_DATA_DIR/rlimit-x86_64-linux $E3_OS_DATA_DIR/rlimit-x86-linux
   - anod vcs --add-repo gnatcoll-core $CI_PROJECT_DIR
   - anod build --latest --build=x86-linux gnatcoll-core
-  - anod test --latest --build=x86-linux gnatcoll-core -Qexternal
-  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $ANOD_DEFAULT_SANDBOX_DIR/x86-linux/gnatcoll-core_external_test/results/new/ || FAILED=true
+  - anod test --latest --build=x86-linux gnatcoll-core -Qstandalone
+  - e3-testsuite-report --failure-exit-code 1 --xunit-output $CI_PROJECT_DIR/test.xml --xunit-name gnatcoll-core $ANOD_DEFAULT_SANDBOX_DIR/x86-linux/gnatcoll-core_standalone_test/results/new/ || FAILED=true
 
   # We previously prevented the pipeline from halting if a test failed, to make
   # sure all tests were run. If a test failed now we exit with a non-zero code
@@ -192,13 +192,13 @@ build_and_test_x86_64_linux:
   extends: .build_and_test_x86_64_linux_template
   variables:
     BUILD_ARGS: ""
-    TEST_ARGS: -Qexternal
+    TEST_ARGS: -Qstandalone
 
 build_and_test_x86_64_linux_llvm:
   extends: .build_and_test_x86_64_linux_template
   variables:
     BUILD_ARGS: -Qcompiler=gnat-llvm
-    TEST_ARGS: -Qcompiler=gnat-llvm
+    TEST_ARGS: -Qcompiler=gnat-llvm -Qstandalone
 
 build_x86_64_linux_vx7r2_21.07:
   extends: .job_template
