@@ -394,26 +394,41 @@ package body GNATCOLL.Directed_Graph is
 
       --  Check if new predecessors were added on existing nodes
       if Self.Graph_Update_List_Last < Graph.Update_List.Length then
-         for Idx in Self.Graph_Update_List_Last + 1 .. Graph.Update_List.Length
-         loop
-            declare
-               N : constant Node_Id := Graph.Update_List (Integer (Idx));
-               Visited_Pred : Integer := 0;
-            begin
-               --  Update the number of visited predecessors for the updated
-               --  nodes by checking whether any of the predecessors has been
-               --  visited
-               for Pred of Graph.Predecessors (Integer (N)) loop
-                  if not Self.Non_Visited.Contains (Pred) and then
-                     not Self.Visiting.Contains (Pred)
-                  then
-                     Visited_Pred := Visited_Pred + 1;
-                  end if;
-               end loop;
+         declare
+            Updated : Node_Set := Empty_Node_Set;
+            --  The nodes already recomputed during this pass. Update_List
+            --  holds one entry per added predecessor, so a node that received
+            --  several of them appears several times; recomputing it once per
+            --  entry would cost O(N**2) in its number of predecessors.
+         begin
+            for Idx in
+              Self.Graph_Update_List_Last + 1 .. Graph.Update_List.Length
+            loop
+               declare
+                  N : constant Node_Id := Graph.Update_List (Integer (Idx));
+                  Visited_Pred : Integer := 0;
+                  Position     : Node_Sets.Cursor;
+                  Inserted     : Boolean;
+               begin
+                  Updated.Insert (N, Position, Inserted);
 
-               Self.Visited_Predecessors (Integer (N)) := Visited_Pred;
-            end;
-         end loop;
+                  if Inserted then
+                     --  Update the number of visited predecessors for the
+                     --  updated nodes by checking whether any of the
+                     --  predecessors has been visited
+                     for Pred of Graph.Predecessors (Integer (N)) loop
+                        if not Self.Non_Visited.Contains (Pred) and then
+                           not Self.Visiting.Contains (Pred)
+                        then
+                           Visited_Pred := Visited_Pred + 1;
+                        end if;
+                     end loop;
+
+                     Self.Visited_Predecessors (Integer (N)) := Visited_Pred;
+                  end if;
+               end;
+            end loop;
+         end;
 
          --  Update marker
          Self.Graph_Update_List_Last := Graph.Update_List.Length;
@@ -673,6 +688,16 @@ package body GNATCOLL.Directed_Graph is
       Self.Graph_Next_Free_Node := Graph.Next_Free_Node;
       Self.Enable_Visiting_State := Enable_Visiting_State;
       Self.Started := True;
+
+      --  The state above was computed from scratch: no node has been visited,
+      --  so every node has zero visited predecessors whatever predecessors
+      --  were added to the graph so far. The entries accumulated in the
+      --  graph's update list are therefore already accounted for, and
+      --  replaying them on the first call to Next would only recompute those
+      --  same zeros -- once per added predecessor, which is quadratic in the
+      --  number of predecessors of a node.
+
+      Self.Graph_Update_List_Last := Graph.Update_List.Length;
    end Start_Iterator;
 
    procedure Start_Iterator
