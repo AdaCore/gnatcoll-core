@@ -50,7 +50,10 @@ library project GNATCOLL_Core is
           ("BUILD", GNATCOLL_Core_Constants.GNATCOLL_BUILD_MODE_DEFAULT));
 
    type Library_Type_Type is ("relocatable", "static", "static-pic");
-   Library_Type : Library_Type_Type := External ("LIBRARY_TYPE", "static");
+   Library_Type : Library_Type_Type :=
+     External ("GNATCOLL_CORE_LIBRARY_TYPE",
+       External ("GNATCOLL_LIBRARY_TYPE",
+         External ("LIBRARY_TYPE", "static")));
    for Run_Path_Option use ();
 
    type OS_Kind is ("windows", "unix", "osx");
