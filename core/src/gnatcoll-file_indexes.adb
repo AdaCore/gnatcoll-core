@@ -52,63 +52,116 @@ package body GNATCOLL.File_Indexes is
       Self.Total_Size := 0;
    end Clear_Cache;
 
+   ----------------------
+   -- Start_Generation --
+   ----------------------
+
+   procedure Start_Generation (Self : in out File_Index) is
+   begin
+      Self.Generation := Self.Generation + 1;
+   end Start_Generation;
+
    ----------
    -- Hash --
    ----------
 
    function Hash
-     (Self        : in out File_Index;
-      Path        : UTF8.UTF_8_String;
-      Force_Cache : Boolean := False)
+     (Self                : in out File_Index;
+      Path                : UTF8.UTF_8_String;
+      Force_Cache         : Boolean := False;
+      Path_Is_Normalized  : Boolean := False)
       return File_Index_Digest
    is
       State : Entry_State;
       Digest : File_Index_Digest;
    begin
       Hash
-        (Self        => Self,
-         Path        => Path,
-         State       => State,
-         Digest      => Digest,
-         Force_Cache => Force_Cache);
+        (Self                => Self,
+         Path                => Path,
+         State               => State,
+         Digest              => Digest,
+         Force_Cache         => Force_Cache,
+         Path_Is_Normalized  => Path_Is_Normalized);
       return Digest;
    end Hash;
 
    procedure Hash
-      (Self   : in out File_Index;
-       Path   : UTF8.UTF_8_String;
-       State  : out Entry_State;
-       Digest : out File_Index_Digest;
-       Force_Cache : Boolean := False)
+      (Self                : in out File_Index;
+       Path                : UTF8.UTF_8_String;
+       State               : out Entry_State;
+       Digest              : out File_Index_Digest;
+       Force_Cache         : Boolean := False;
+       Path_Is_Normalized  : Boolean := False)
    is
-      Normalized_Path : constant String := GNAT.OS_Lib.Normalize_Pathname
-         (Path, Resolve_Links => False);
+      procedure Hash_Normalized (Normalized_Path : UTF8.UTF_8_String);
+      --  Takes Path by reference, so the normalized case copies nothing
+
+      ---------------------
+      -- Hash_Normalized --
+      ---------------------
+
+      procedure Hash_Normalized (Normalized_Path : UTF8.UTF_8_String) is
+      begin
+         --  The lookup has to precede the stat, hence not in Internal_Hash
+
+         if not Force_Cache and then Self.Generation /= No_Generation then
+            declare
+               use File_Maps;
+               Cur : constant Cursor := Find (Self.DB, Normalized_Path);
+            begin
+               if Cur /= No_Element
+                 and then Element (Cur).Validated_At = Self.Generation
+                 and then Element (Cur).Trust_Hash
+               then
+                  --  An untrusted digest is recomputed on every query
+
+                  State  := UNCHANGED_FILE;
+                  Digest := Element (Cur).Hash_Digest;
+
+                  return;
+               end if;
+            end;
+         end if;
+
+         Internal_Hash
+           (Self,
+            Normalized_Path,
+            Stat.Stat (Normalized_Path),
+            State,
+            Digest,
+            Force_Cache);
+      end Hash_Normalized;
+
    begin
-      Internal_Hash
-        (Self,
-         Normalized_Path,
-         Stat.Stat (Normalized_Path),
-         State,
-         Digest,
-         Force_Cache);
+      if Path_Is_Normalized then
+         Hash_Normalized (Path);
+      else
+         Hash_Normalized
+           (GNAT.OS_Lib.Normalize_Pathname (Path, Resolve_Links => False));
+      end if;
    end Hash;
 
    procedure Hash
-     (Self        : in out File_Index;
-      Path        : UTF8.UTF_8_String;
-      Attrs       : Stat.File_Attributes;
-      State       : out Entry_State;
-      Digest      : out File_Index_Digest;
-      Force_Cache : Boolean := False)
+     (Self                : in out File_Index;
+      Path                : UTF8.UTF_8_String;
+      Attrs               : Stat.File_Attributes;
+      State               : out Entry_State;
+      Digest              : out File_Index_Digest;
+      Force_Cache         : Boolean := False;
+      Path_Is_Normalized  : Boolean := False)
    is
    begin
-      Internal_Hash
-         (Self,
-          GNAT.OS_Lib.Normalize_Pathname (Path, Resolve_Links => False),
-          Attrs,
-          State,
-          Digest,
-          Force_Cache);
+      if Path_Is_Normalized then
+         Internal_Hash (Self, Path, Attrs, State, Digest, Force_Cache);
+      else
+         Internal_Hash
+            (Self,
+             GNAT.OS_Lib.Normalize_Pathname (Path, Resolve_Links => False),
+             Attrs,
+             State,
+             Digest,
+             Force_Cache);
+      end if;
    end Hash;
 
    -------------------
@@ -151,10 +204,14 @@ package body GNATCOLL.File_Indexes is
             Digest := Prev.Hash_Digest;
 
             --  Using a pre-existing element, so mark it as still in use so
-            --  requiring to be saved on disk.
+            --  requiring to be saved on disk. Attrs have just been read, so
+            --  no further stat is needed in this generation.
 
-            if not Prev.Save_On_Disk then
+            if not Prev.Save_On_Disk
+              or else Prev.Validated_At /= Self.Generation
+            then
                Prev.Save_On_Disk := True;
+               Prev.Validated_At := Self.Generation;
                Self.DB.Replace_Element (Prev_Cursor, Prev);
             end if;
 
@@ -214,7 +271,8 @@ package body GNATCOLL.File_Indexes is
           (Attrs        => Attrs,
            Hash_Digest  => New_Hash,
            Trust_Hash   => Trust_New_Hash,
-           Save_On_Disk => True));
+           Save_On_Disk => True,
+           Validated_At => Self.Generation));
       Self.Total_Size := Self.Total_Size + Stat.Length (Attrs);
 
       --  If the hash has not changed set State to UNCHANGED_FILE
@@ -342,7 +400,8 @@ package body GNATCOLL.File_Indexes is
                Length        => JSON.Get (JSON.Get (JSON_Stat, 9))),
             Hash_Digest  => JSON.Get (Value, "hash"),
             Trust_Hash   => JSON.Get (Value, "trust"),
-            Save_On_Disk => False);
+            Save_On_Disk => False,
+            Validated_At => No_Generation);
          Result.DB.Include (Name, V);
       end Process_Entry;
 

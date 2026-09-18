@@ -61,12 +61,13 @@ package GNATCOLL.File_Indexes is
    --  Return the total number of bytes that have been indexed
 
    procedure Hash
-     (Self        : in out File_Index;
-      Path        : UTF8.UTF_8_String;
-      Attrs       : Stat.File_Attributes;
-      State       : out Entry_State;
-      Digest      : out File_Index_Digest;
-      Force_Cache : Boolean := False)
+     (Self                : in out File_Index;
+      Path                : UTF8.UTF_8_String;
+      Attrs               : Stat.File_Attributes;
+      State               : out Entry_State;
+      Digest              : out File_Index_Digest;
+      Force_Cache         : Boolean := False;
+      Path_Is_Normalized  : Boolean := False)
    with Inline => True;
    --  Get the hash digest for the file located at Path and with file
    --  attributes Attrs (obtained with a call to GNATCOLL.OS.Stat). See
@@ -80,20 +81,24 @@ package GNATCOLL.File_Indexes is
    --  If Force_Cache is not set, then we rely on the trust we have in the
    --  file index checksum up until 1 second elapsed since its modification
    --  time, to prevent potential race conditions.
+   --  If Path_Is_Normalized is not set, then Path is normalized before being
+   --  used.
 
    procedure Hash
-     (Self        : in out File_Index;
-      Path        : UTF8.UTF_8_String;
-      State       : out Entry_State;
-      Digest      : out File_Index_Digest;
-      Force_Cache : Boolean := False);
+     (Self                : in out File_Index;
+      Path                : UTF8.UTF_8_String;
+      State               : out Entry_State;
+      Digest              : out File_Index_Digest;
+      Force_Cache         : Boolean := False;
+      Path_Is_Normalized  : Boolean := False);
    --  Same as previous function except that a call to Stat is done
    --  automatically to get file attributes.
 
    function Hash
-     (Self        : in out File_Index;
-      Path        : UTF8.UTF_8_String;
-      Force_Cache : Boolean := False)
+     (Self                : in out File_Index;
+      Path                : UTF8.UTF_8_String;
+      Force_Cache         : Boolean := False;
+      Path_Is_Normalized  : Boolean := False)
       return File_Index_Digest;
    --  Same as previous function without State as output.
 
@@ -109,13 +114,30 @@ package GNATCOLL.File_Indexes is
    procedure Clear_Cache (Self : in out File_Index);
    --  Clear the index content.
 
+   procedure Start_Generation (Self : in out File_Index);
+   --  Open a new generation. In it, a path whose digest is trusted is stat'ed
+   --  once: later queries return that digest without calling Stat again.
+   --
+   --  In exchange, a file the caller modifies during a generation must be
+   --  passed to Hash with Force_Cache, or a new generation opened. Changes
+   --  made by anything else are seen only in the next generation.
+   --
+   --  Until this is called the index stats on every query.
+
 private
+
+   type Generation_Number is range 0 .. Long_Long_Integer'Last;
+   No_Generation : constant Generation_Number := 0;
+   --  Zero is never a valid generation, so neither a fresh index nor an entry
+   --  loaded from disk is taken for validated.
 
    type Index_Element is record
       Attrs        : Stat.File_Attributes;
       Hash_Digest  : File_Index_Digest;
       Trust_Hash   : Boolean;
       Save_On_Disk : Boolean;
+      Validated_At : Generation_Number := No_Generation;
+      --  Generation in which Attrs were last read from the file system
    end record;
 
    package File_Maps is new Ada.Containers.Indefinite_Hashed_Maps
@@ -127,6 +149,7 @@ private
    type File_Index is record
       Total_Size       : Long_Long_Integer := 0;
       DB               : File_Maps.Map;
+      Generation       : Generation_Number := No_Generation;
    end record;
 
 end GNATCOLL.File_Indexes;
