@@ -15,6 +15,8 @@ function Test return Integer is
    Digest : File_Index_Digest;
    Total_Size : Integer := 0;
    File_1_Length : Integer;
+   D1, D2, D3 : File_Index_Digest;
+   Length     : Integer;
 
 begin
    IO.Put_Line ("GNATCOLL.OS.File_Indexes test");
@@ -152,6 +154,82 @@ begin
    Close (FD);
    File_Index := Load_Index ("invalid-db.json");
    Assert (Integer (Indexed_Content_Size (File_Index)), 0);
+
+   --  Generations
+
+   FD := Open ("gen_1", Mode => Write_Mode);
+   Write (FD, "one");
+   Close (FD);
+
+   --  A digest computed within a second of the file's modification time is
+   --  not trusted, and only a trusted one is kept across a generation
+
+   delay 1.5;
+
+   D1 := Hash (File_Index, "gen_1");
+
+   FD := Open ("gen_1", Mode => Append_Mode);
+   Write (FD, " two");
+   Close (FD);
+
+   D2 := Hash (File_Index, "gen_1");
+   Assert (D2 /= D1, "a change is seen when no generation is open");
+
+   --  Force_Cache trusts the digest it computes, so the entry is trusted
+   --  again without waiting out the modification time
+
+   D2 := Hash (File_Index, "gen_1", Force_Cache => True);
+
+   Start_Generation (File_Index);
+   Assert (Hash (File_Index, "gen_1"), D2, "unchanged file in a generation");
+
+   FD := Open ("gen_1", Mode => Append_Mode);
+   Write (FD, " three");
+   Close (FD);
+
+   Assert
+     (Hash (File_Index, "gen_1"), D2,
+      "a change during a generation is not seen without Force_Cache");
+
+   D3 := Hash (File_Index, "gen_1", Force_Cache => True);
+   Assert (D3 /= D2, "Force_Cache sees a change made during a generation");
+
+   FD := Open ("gen_1", Mode => Append_Mode);
+   Write (FD, " four");
+   Close (FD);
+
+   Assert
+     (Hash (File_Index, "gen_1"), D3, "still cached in the same generation");
+
+   Start_Generation (File_Index);
+   Assert
+     (Hash (File_Index, "gen_1") /= D3, "a new generation sees the change");
+
+   --  Path_Is_Normalized
+
+   Clear_Cache (File_Index);
+
+   FD := Open ("norm_1", Mode => Write_Mode);
+   Write (FD, "normalized");
+   Close (FD);
+
+   D1 := Hash (File_Index, "norm_1");
+   Length := Integer (St.Length (St.Stat ("norm_1")));
+   Assert (Integer (Indexed_Content_Size (File_Index)), Length);
+
+   --  Left unset, the path is normalized first, so this is the same entry
+
+   Assert (Hash (File_Index, "./norm_1"), D1);
+   Assert
+     (Integer (Indexed_Content_Size (File_Index)), Length,
+      "a path normalizing to a known one reuses its entry");
+
+   --  Set, the path is taken as it comes: the same file, indexed twice
+
+   Assert (Hash (File_Index, "./norm_1", Path_Is_Normalized => True), D1);
+   Assert
+     (Integer (Indexed_Content_Size (File_Index)), 2 * Length,
+      "an unnormalized path taken as-is gets its own entry");
 
    return Report;
 end Test;
