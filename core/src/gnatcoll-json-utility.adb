@@ -30,6 +30,7 @@ with GNAT.Encode_UTF8_String;
 with GNAT.Decode_UTF8_String;
 
 with GNATCOLL.Strings;
+with GNATCOLL.Strings_Impl;
 
 package body GNATCOLL.JSON.Utility is
 
@@ -179,6 +180,12 @@ package body GNATCOLL.JSON.Utility is
          Last := Last - 1;
       end if;
 
+      --  Every escape shrinks, so the span is an upper bound on the result
+
+      if Last >= First then
+         Unb.Reserve (GNATCOLL.Strings_Impl.String_Size (Last - First + 1));
+      end if;
+
       Idx := First;
       while Idx <= Last loop
          if Text (Idx) = '\' then
@@ -250,7 +257,18 @@ package body GNATCOLL.JSON.Utility is
             end case;
 
          else
-            Unb.Append (Text (Idx));
+            --  Append the run at once: one character at a time costs a
+            --  copy-on-write check per character
+
+            declare
+               Run_First : constant Natural := Idx;
+            begin
+               while Idx < Last and then Text (Idx + 1) /= '\' loop
+                  Idx := Idx + 1;
+               end loop;
+
+               Unb.Append (Text (Run_First .. Idx));
+            end;
          end if;
 
          Idx := Idx + 1;
