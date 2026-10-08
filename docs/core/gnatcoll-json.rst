@@ -112,3 +112,38 @@ The above is all that is needed for most uses of ``GNATCOLL.JSON``. To know
 more about its API, please refer to the `gnatcoll-json.ads
 <https://github.com/AdaCore/gnatcoll-core/blob/master/src/gnatcoll-json.ads>`_
 source file.
+
+Streaming output
+================
+
+``GNATCOLL.JSON.Writers`` writes compact JSON without constructing a
+``JSON_Value`` tree. Instantiate it with an ``Append`` procedure that consumes
+UTF-8 strings. The sink can buffer the fragments or write them to a stream::
+
+   procedure Emit (Text : GNATCOLL.JSON.UTF8_String) is
+   begin
+      Ada.Strings.Unbounded.Append (Output, Text);
+   end Emit;
+
+   package Writers is new GNATCOLL.JSON.Writers (Emit);
+   W : Writers.Writer;
+
+   --  In the statement sequence:
+   W.Start_Object;
+   W.Name ("sources");
+   W.Start_Array;
+   W.Value ("main.adb");
+   W.End_Array;
+   W.End_Object;
+   W.Finish;
+
+The writer supplies punctuation and uses the same string escaping as
+``JSON_Value.Write``. Its storage grows with nesting depth, rather than with
+the size of the document. Numeric values use ``Long_Long_Integer`` and
+``Long_Float``; ``Null_Value`` writes JSON null.
+
+``Name`` must precede each object member's value. ``Finish`` checks that the
+single root value is complete; it does not flush the sink. Invalid call
+sequences and non-finite numbers raise ``Writer_Error``. ``Reset`` allows a
+new document and does not clear the sink. If the sink raises an exception,
+discard or reset the writer before using it again.

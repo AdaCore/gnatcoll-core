@@ -27,6 +27,11 @@ private package GNATCOLL.JSON.Utility is
 
    function Escape_Non_Print_Character (C : Wide_Wide_Character) return String;
 
+   generic
+      with procedure Append (Text : UTF8_String);
+   procedure Emit_String (Text : UTF8_String);
+   --  Emit a quoted string using the serializer's escaping rules.
+
    function Escape_String (Text : UTF8_XString)
       return Ada.Strings.Unbounded.Unbounded_String;
    --  Translates an UTF-8 encoded unbounded string into a JSON-escaped string

@@ -81,6 +81,61 @@ package body GNATCOLL.JSON.Utility is
       return Buf (Buf'First .. Last);
    end Escape_Non_Print_Character;
 
+   -----------------
+   -- Emit_String --
+   -----------------
+
+   procedure Emit_String (Text : UTF8_String) is
+      Low   : Natural := Text'First;
+      First : Natural := Low;
+      W_Chr : Wide_Wide_Character;
+   begin
+      Append ("""");
+      while Low <= Text'Last loop
+         if Text (Low) in ' ' .. '~'
+           and then Text (Low) /= '"' and then Text (Low) /= '\'
+         then
+            Low := Low + 1;
+         else
+            if First < Low then
+               Append (Text (First .. Low - 1));
+            end if;
+            begin
+               GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
+                 (Text (Low .. Natural'Min (Text'Last, Low + 3)), Low, W_Chr);
+            exception
+               when Constraint_Error =>
+                  Low := Low + 1;
+                  W_Chr := NUL;
+            end;
+            case W_Chr is
+               when NUL => Append ("\u0000");
+               when '"' => Append ("\""");
+               when '\' => Append ("\\");
+               when BS => Append ("\b");
+               when FF => Append ("\f");
+               when LF => Append ("\n");
+               when CR => Append ("\r");
+               when HT => Append ("\t");
+               when others =>
+                  if Wide_Wide_Character'Pos (W_Chr) < 32
+                    or else Wide_Wide_Character'Pos (W_Chr) >= 16#80#
+                  then
+                     Append (Escape_Non_Print_Character (W_Chr));
+                  else
+                     Append ("" & Character'Val
+                       (Wide_Wide_Character'Pos (W_Chr)));
+                  end if;
+            end case;
+            First := Low;
+         end if;
+      end loop;
+      if First <= Text'Last then
+         Append (Text (First .. Text'Last));
+      end if;
+      Append ("""");
+   end Emit_String;
+
    -------------------
    -- Escape_String --
    -------------------
@@ -89,60 +144,18 @@ package body GNATCOLL.JSON.Utility is
       Str         : GNATCOLL.Strings.Char_Array;
       Text_Length : Natural;
       Ret         : Unbounded_String;
-      Low         : Natural;
-      W_Chr       : Wide_Wide_Character;
 
+      procedure Emit (Text : UTF8_String);
+
+      procedure Emit (Text : UTF8_String) is
+      begin
+         Append (Ret, Text);
+      end Emit;
+
+      procedure Quote is new Emit_String (Emit);
    begin
       Text.Get_String (Str, Text_Length);
-
-      Append (Ret, '"');
-      Low := 1;
-
-      while Low <= Text_Length loop
-         --  UTF-8 sequence is maximum 4 characters long according to RFC3629
-
-         begin
-            GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
-              (String (Str (Low .. Natural'Min (Text_Length, Low + 3))),
-               Low, W_Chr);
-         exception
-            when Constraint_Error =>
-               --  Skip the character even if it is invalid.
-               Low := Low + 1;
-               W_Chr := NUL;
-         end;
-
-         case W_Chr is
-            when NUL =>
-               Append (Ret, "\u0000");
-            when '"' =>
-               Append (Ret, "\""");
-            when '\' =>
-               Append (Ret, "\\");
-            when BS =>
-               Append (Ret, "\b");
-            when FF =>
-               Append (Ret, "\f");
-            when LF =>
-               Append (Ret, "\n");
-            when CR =>
-               Append (Ret, "\r");
-            when HT =>
-               Append (Ret, "\t");
-            when others =>
-               if Wide_Wide_Character'Pos (W_Chr) < 32 then
-                  Append (Ret, Escape_Non_Print_Character (W_Chr));
-               elsif Wide_Wide_Character'Pos (W_Chr) >= 16#80# then
-                  Append (Ret, Escape_Non_Print_Character (W_Chr));
-               else
-                  Append
-                    (Ret,
-                     "" & Character'Val (Wide_Wide_Character'Pos (W_Chr)));
-               end if;
-         end case;
-      end loop;
-
-      Append (Ret, '"');
+      Quote (String (Str (1 .. Text_Length)));
       return Ret;
    end Escape_String;
 
