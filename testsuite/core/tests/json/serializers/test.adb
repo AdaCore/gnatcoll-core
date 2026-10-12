@@ -90,6 +90,10 @@ begin
    W.Start_Array;
    W.Encode_Number (Long_Long_Integer'First);
    W.Encode_Number (Long_Long_Integer'Last);
+   W.Encode_Number (Long_Integer'First);
+   W.Encode_Number (Long_Integer'Last);
+   W.Encode_Number (Integer'First);
+   W.Encode_Number (Integer'Last);
    W.Encode_Number (Long_Float'(1.25));
    W.Encode_Boolean (True);
    W.Encode_Boolean (False);
