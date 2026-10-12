@@ -1,6 +1,6 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with GNATCOLL.JSON; use GNATCOLL.JSON;
-with GNATCOLL.JSON.Writers;
+with GNATCOLL.JSON.Serializers;
 with GNATCOLL.Strings;
 with Test_Assert;
 
@@ -9,18 +9,19 @@ function Test return Integer is
    Fail_Sink : Boolean := False;
    Sink_Error : exception;
 
-   procedure Emit (Text : UTF8_String);
+   type JSON_Writer is new Serializers.Serializer with null record;
 
-   procedure Emit (Text : UTF8_String) is
+   overriding procedure Write (Self : in out JSON_Writer; Content : String);
+
+   overriding procedure Write (Self : in out JSON_Writer; Content : String) is
    begin
       if Fail_Sink then
          raise Sink_Error;
       end if;
-      Append (Output, Text);
-   end Emit;
+      Append (Output, Content);
+   end Write;
 
-   package Writers is new GNATCOLL.JSON.Writers (Emit);
-   W : Writers.Writer;
+   W : JSON_Writer;
 
    type Operation is
      (Finish_Empty, Name_Outside, Close_Outside, Value_Without_Name,
@@ -38,28 +39,29 @@ function Test return Integer is
          when Value_Without_Name | Double_Name | Close_With_Name =>
             W.Start_Object;
             if Op /= Value_Without_Name then
-               W.Name ("key");
+               W.Encode_Name ("key");
             end if;
          when Wrong_Close | Name_In_Array | Finish_Open =>
             W.Start_Array;
          when Second_Root | After_Finish =>
-            W.Null_Value;
+            W.Encode_Null;
             if Op = After_Finish then
-               W.Finish;
+               W.Close;
             end if;
          when others => null;
       end case;
       Before := Output;
       begin
          case Op is
-            when Finish_Empty | Finish_Open => W.Finish;
-            when Name_Outside | Double_Name | Name_In_Array => W.Name ("x");
+            when Finish_Empty | Finish_Open => W.Close;
+            when Name_Outside | Double_Name | Name_In_Array =>
+               W.Encode_Name ("x");
             when Close_Outside | Close_With_Name | Wrong_Close => W.End_Object;
-            when others => W.Null_Value;
+            when others => W.Encode_Null;
          end case;
          Test_Assert.Assert (False, "missing error: " & Op'Image);
       exception
-         when Writers.Writer_Error =>
+         when Serializers.JSON_Serialization_Error =>
             Test_Assert.Assert (Output = Before, "error changed output");
       end;
    end Check_Error;
@@ -70,8 +72,8 @@ function Test return Integer is
    begin
       W.Reset;
       Output := Null_Unbounded_String;
-      W.Value (Text);
-      W.Finish;
+      W.Encode_String (Text);
+      W.Close;
       Test_Assert.Assert
         (To_String (Output), Create (Text).Write (Compact => True),
          "same escaping as DOM writer");
@@ -84,25 +86,25 @@ function Test return Integer is
      Character'Val (16#98#) & Character'Val (16#80#);
 begin
    W.Start_Object;
-   W.Name ("");
+   W.Encode_Name ("");
    W.Start_Array;
-   W.Value (Long_Long_Integer'First);
-   W.Value (Long_Long_Integer'Last);
-   W.Value (Long_Float'(1.25));
-   W.Value (True);
-   W.Value (False);
-   W.Null_Value;
-   W.Value (To_Unbounded_String ("hello"));
-   W.Value (GNATCOLL.Strings.To_XString ("world"));
+   W.Encode_Number (Long_Long_Integer'First);
+   W.Encode_Number (Long_Long_Integer'Last);
+   W.Encode_Number (Long_Float'(1.25));
+   W.Encode_Boolean (True);
+   W.Encode_Boolean (False);
+   W.Encode_Null;
+   W.Encode_String (To_Unbounded_String ("hello"));
+   W.Encode_String (GNATCOLL.Strings.To_XString ("world"));
    W.Start_Object;
    W.End_Object;
    W.Start_Array;
    W.End_Array;
    W.End_Array;
-   W.Name ("quoted""key");
-   W.Value (UTF8);
+   W.Encode_Name ("quoted""key");
+   W.Encode_String (UTF8);
    W.End_Object;
-   W.Finish;
+   W.Close;
    Test_Assert.Assert
      (Read (To_String (Output)).Write (Compact => True), To_String (Output),
       "nested document round trip");
@@ -140,11 +142,11 @@ begin
    for I in 1 .. 1000 loop
       W.Start_Array;
    end loop;
-   W.Null_Value;
+   W.Encode_Null;
    for I in 1 .. 1000 loop
       W.End_Array;
    end loop;
-   W.Finish;
+   W.Close;
    Test_Assert.Assert (Length (Output) = 2004, "deep nesting");
    return Test_Assert.Report;
 end Test;

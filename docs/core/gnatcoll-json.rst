@@ -116,34 +116,67 @@ source file.
 Streaming output
 ================
 
-``GNATCOLL.JSON.Writers`` writes compact JSON without constructing a
-``JSON_Value`` tree. Instantiate it with an ``Append`` procedure that consumes
-UTF-8 strings. The sink can buffer the fragments or write them to a stream::
+``GNATCOLL.JSON.Serializers`` emits compact JSON without constructing a
+``JSON_Value`` tree. Extend the abstract limited type ``Serializer`` and
+override
+its ``Write`` primitive to consume UTF-8 output fragments. The sink can buffer
+these fragments or write them to a stream. This complete example buffers a
+nested object and array::
 
-   procedure Emit (Text : GNATCOLL.JSON.UTF8_String) is
+   with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+   with Ada.Text_IO;
+   with GNATCOLL.JSON.Serializers;
+
+   procedure JSON_Stream is
+      package JSON renames GNATCOLL.JSON.Serializers;
+
+      type Buffer_Serializer is new JSON.Serializer with record
+         Output : Unbounded_String;
+      end record;
+
+      overriding procedure Write
+        (Self : in out Buffer_Serializer; Content : String);
+
+      overriding procedure Write
+        (Self : in out Buffer_Serializer; Content : String) is
+      begin
+         Append (Self.Output, Content);
+      end Write;
+
+      W : Buffer_Serializer;
    begin
-      Ada.Strings.Unbounded.Append (Output, Text);
-   end Emit;
+      W.Start_Object;
+      W.Encode_Name ("sources");
+      W.Start_Array;
+      W.Encode_String ("main.adb");
+      W.Encode_String ("foo.ads");
+      W.End_Array;
+      W.End_Object;
+      W.Close;
+      Ada.Text_IO.Put_Line (To_String (W.Output));
+      --  {"sources":["main.adb","foo.ads"]}
+   end JSON_Stream;
 
-   package Writers is new GNATCOLL.JSON.Writers (Emit);
-   W : Writers.Writer;
+The serializer supplies punctuation and uses the same string escaping as
+``JSON_Value.Write``. Its internal storage grows with nesting depth, rather
+than
+with the size of the document. A buffering sink, such as the example above,
+still stores the complete output.
 
-   --  In the statement sequence:
-   W.Start_Object;
-   W.Name ("sources");
-   W.Start_Array;
-   W.Value ("main.adb");
-   W.End_Array;
-   W.End_Object;
-   W.Finish;
+Use ``Encode_String`` for UTF-8 strings, ``Encode_Boolean`` for booleans,
+``Encode_Number`` for integers or ``Long_Float`` values, and ``Encode_Null``
+for
+JSON null. ``Encode_String`` also accepts ``UTF8_Unbounded_String`` and
+``UTF8_XString``. ``Encode_Number`` accepts ``Integer``, ``Long_Integer``, and
+``Long_Long_Integer`` as well as ``Long_Float``.
 
-The writer supplies punctuation and uses the same string escaping as
-``JSON_Value.Write``. Its storage grows with nesting depth, rather than with
-the size of the document. Numeric values use ``Long_Long_Integer`` and
-``Long_Float``; ``Null_Value`` writes JSON null.
+``Encode_Name`` must precede each object member's value. Array elements are
+written directly, without a name. Close each container with its matching
+``End_Object`` or ``End_Array``. ``Close`` checks that the single root value is
+complete; it does not close unfinished containers or flush the sink. Invalid
+call sequences and non-finite numbers raise ``JSON_Serialization_Error``.
 
-``Name`` must precede each object member's value. ``Finish`` checks that the
-single root value is complete; it does not flush the sink. Invalid call
-sequences and non-finite numbers raise ``Writer_Error``. ``Reset`` allows a
-new document and does not clear the sink. If the sink raises an exception,
-discard or reset the writer before using it again.
+``Reset`` prepares the serializer for a new document and does not clear the
+sink. Exceptions from ``Write`` propagate to the caller. If the sink raises an
+exception, discard or reset the serializer before using it again, and handle
+any partial output in the sink.
