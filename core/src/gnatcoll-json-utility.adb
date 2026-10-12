@@ -23,12 +23,11 @@
 
 pragma Ada_2012;
 
-with Ada.Characters.Wide_Wide_Latin_1; use Ada.Characters.Wide_Wide_Latin_1;
 with Interfaces;                       use Interfaces;
 
 with GNAT.Encode_UTF8_String;
-with GNAT.Decode_UTF8_String;
 
+with GNATCOLL.JSON.Serializers;
 with GNATCOLL.Strings;
 with GNATCOLL.Strings_Impl;
 
@@ -36,127 +35,28 @@ package body GNATCOLL.JSON.Utility is
 
    use Ada.Strings.Unbounded;
 
-   To_Hex : constant array (Unsigned_16 range 0 .. 15) of Character :=
-     "0123456789ABCDEF";
-
-   --------------------------------
-   -- Escape_Non_Print_Character --
-   --------------------------------
-
-   function Escape_Non_Print_Character
-     (C : Wide_Wide_Character) return String
-   is
-      Code  : constant Unsigned_32 := Wide_Wide_Character'Pos (C);
-      Buf   : String (1 .. 12);
-      Last  : Natural := Buf'First - 1;
-
-      procedure Append_Escaped (Code : Unsigned_16);
-
-      --------------------
-      -- Append_Escaped --
-      --------------------
-
-      procedure Append_Escaped (Code : Unsigned_16) is
-      begin
-         Last := Last + 6;
-         Buf (Last - 5 .. Last - 4) := "\u";
-         Buf (Last - 3) := To_Hex ((Code / 16#1000#) mod 16#10#);
-         Buf (Last - 2) := To_Hex ((Code / 16#100#) mod 16#10#);
-         Buf (Last - 1) := To_Hex ((Code / 16#10#) mod 16#10#);
-         Buf (Last) := To_Hex (Code mod 16#10#);
-      end Append_Escaped;
-
-   begin
-      if Code <= 16#FFFF# then
-         Append_Escaped (Unsigned_16 (Code));
-
-      else
-         --  Represent character as surrogate pair
-
-         Append_Escaped
-           (16#D800# + Unsigned_16 ((Code - 16#1_0000#) / 16#400#));
-         Append_Escaped (16#DC00# + Unsigned_16 (Code mod 16#400#));
-      end if;
-
-      return Buf (Buf'First .. Last);
-   end Escape_Non_Print_Character;
-
-   -----------------
-   -- Emit_String --
-   -----------------
-
-   procedure Emit_String (Text : UTF8_String) is
-      Low   : Natural := Text'First;
-      First : Natural := Low;
-      W_Chr : Wide_Wide_Character;
-   begin
-      Append ("""");
-      while Low <= Text'Last loop
-         if Text (Low) in ' ' .. '~'
-           and then Text (Low) /= '"' and then Text (Low) /= '\'
-         then
-            Low := Low + 1;
-         else
-            if First < Low then
-               Append (Text (First .. Low - 1));
-            end if;
-            begin
-               GNAT.Decode_UTF8_String.Decode_Wide_Wide_Character
-                 (Text (Low .. Natural'Min (Text'Last, Low + 3)), Low, W_Chr);
-            exception
-               when Constraint_Error =>
-                  Low := Low + 1;
-                  W_Chr := NUL;
-            end;
-            case W_Chr is
-               when NUL => Append ("\u0000");
-               when '"' => Append ("\""");
-               when '\' => Append ("\\");
-               when BS => Append ("\b");
-               when FF => Append ("\f");
-               when LF => Append ("\n");
-               when CR => Append ("\r");
-               when HT => Append ("\t");
-               when others =>
-                  if Wide_Wide_Character'Pos (W_Chr) < 32
-                    or else Wide_Wide_Character'Pos (W_Chr) >= 16#80#
-                  then
-                     Append (Escape_Non_Print_Character (W_Chr));
-                  else
-                     Append ("" & Character'Val
-                       (Wide_Wide_Character'Pos (W_Chr)));
-                  end if;
-            end case;
-            First := Low;
-         end if;
-      end loop;
-      if First <= Text'Last then
-         Append (Text (First .. Text'Last));
-      end if;
-      Append ("""");
-   end Emit_String;
-
    -------------------
    -- Escape_String --
    -------------------
 
    function Escape_String (Text : UTF8_XString) return Unbounded_String is
-      Str         : GNATCOLL.Strings.Char_Array;
-      Text_Length : Natural;
-      Ret         : Unbounded_String;
 
-      procedure Emit (Text : UTF8_String);
+      type Encoder is new Serializers.Serializer with record
+         Ret : Unbounded_String;
+      end record;
 
-      procedure Emit (Text : UTF8_String) is
+      overriding procedure Write (Self : in out Encoder; Text : String);
+
+      overriding procedure Write (Self : in out Encoder; Text : String) is
       begin
-         Append (Ret, Text);
-      end Emit;
+         Append (Self.Ret, Text);
+      end Write;
 
-      procedure Quote is new Emit_String (Emit);
+      Enc : Encoder;
    begin
-      Text.Get_String (Str, Text_Length);
-      Quote (String (Str (1 .. Text_Length)));
-      return Ret;
+      Enc.Encode_String (Text);
+      Enc.Close;
+      return Enc.Ret;
    end Escape_String;
 
    ----------------------
