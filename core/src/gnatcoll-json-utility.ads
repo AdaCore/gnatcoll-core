@@ -25,6 +25,8 @@ private package GNATCOLL.JSON.Utility is
 
    JsonMimeType           : constant String := "application/json";
 
+   function Escape_Non_Print_Character (C : Wide_Wide_Character) return String;
+
    function Escape_String (Text : UTF8_XString)
       return Ada.Strings.Unbounded.Unbounded_String;
    --  Translates an UTF-8 encoded unbounded string into a JSON-escaped string
