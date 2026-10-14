@@ -112,3 +112,71 @@ The above is all that is needed for most uses of ``GNATCOLL.JSON``. To know
 more about its API, please refer to the `gnatcoll-json.ads
 <https://github.com/AdaCore/gnatcoll-core/blob/master/src/gnatcoll-json.ads>`_
 source file.
+
+Streaming output
+================
+
+``GNATCOLL.JSON.Serializers`` emits compact JSON without constructing a
+``JSON_Value`` tree. Extend the abstract limited type ``Serializer`` and
+override
+its ``Write`` primitive to consume UTF-8 output fragments. The sink can buffer
+these fragments or write them to a stream. This complete example buffers a
+nested object and array::
+
+   with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+   with Ada.Text_IO;
+   with GNATCOLL.JSON.Serializers;
+
+   procedure JSON_Stream is
+      package JSON renames GNATCOLL.JSON.Serializers;
+
+      type Buffer_Serializer is new JSON.Serializer with record
+         Output : Unbounded_String;
+      end record;
+
+      overriding procedure Write
+        (Self : in out Buffer_Serializer; Content : String);
+
+      overriding procedure Write
+        (Self : in out Buffer_Serializer; Content : String) is
+      begin
+         Append (Self.Output, Content);
+      end Write;
+
+      W : Buffer_Serializer;
+   begin
+      W.Start_Object;
+      W.Encode_Name ("sources");
+      W.Start_Array;
+      W.Encode_String ("main.adb");
+      W.Encode_String ("foo.ads");
+      W.End_Array;
+      W.End_Object;
+      W.Close;
+      Ada.Text_IO.Put_Line (To_String (W.Output));
+      --  {"sources":["main.adb","foo.ads"]}
+   end JSON_Stream;
+
+The serializer supplies punctuation and uses the same string escaping as
+``JSON_Value.Write``. Its internal storage grows with nesting depth, rather
+than
+with the size of the document. A buffering sink, such as the example above,
+still stores the complete output.
+
+Use ``Encode_String`` for UTF-8 strings, ``Encode_Boolean`` for booleans,
+``Encode_Number`` for integers or ``Long_Float`` values, and ``Encode_Null``
+for
+JSON null. ``Encode_String`` also accepts ``UTF8_Unbounded_String`` and
+``UTF8_XString``. ``Encode_Number`` accepts ``Integer``, ``Long_Integer``, and
+``Long_Long_Integer`` as well as ``Long_Float``.
+
+``Encode_Name`` must precede each object member's value. Array elements are
+written directly, without a name. Close each container with its matching
+``End_Object`` or ``End_Array``. ``Close`` checks that the single root value is
+complete; it does not close unfinished containers or flush the sink. Invalid
+call sequences and non-finite numbers raise ``JSON_Serialization_Error``.
+
+``Reset`` prepares the serializer for a new document and does not clear the
+sink. Exceptions from ``Write`` propagate to the caller. If the sink raises an
+exception, discard or reset the serializer before using it again, and handle
+any partial output in the sink.
