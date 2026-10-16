@@ -4,15 +4,11 @@
 --  SPDX-License-Identifier: GPL-3.0-or-later WITH GCC-exception-3.1
 --
 
-with Interfaces; use Interfaces;
-
 with Ada.Characters.Wide_Wide_Latin_1; use Ada.Characters.Wide_Wide_Latin_1;
 
 with GNAT.Decode_UTF8_String;
 
--------------------------------
--- GNATCOLL.JSON.Serializers --
--------------------------------
+with GNATCOLL.JSON.Utility;
 
 package body GNATCOLL.JSON.Serializers is
 
@@ -21,9 +17,6 @@ package body GNATCOLL.JSON.Serializers is
 
    procedure End_Container (Self : in out Serializer; Kind : Container_Kind);
    --  Ensures that the top-stack containers has the proper kind
-
-   function Escape_Non_Print_Character (C : Wide_Wide_Character) return String;
-   --  Escapes a non-printable character
 
    procedure Escape_String (Self : in out Serializer; Text : UTF8_String);
    --  Escapes an UTF8_String as a JSON string
@@ -218,54 +211,9 @@ package body GNATCOLL.JSON.Serializers is
       End_Container (Self, Object_Kind);
    end End_Object;
 
-   --------------------------------
-   -- Escape_Non_Print_Character --
-   --------------------------------
-
-   function Escape_Non_Print_Character
-     (C : Wide_Wide_Character) return String
-   is
-      To_Hex : constant array (Unsigned_16 range 0 .. 15) of Character :=
-        "0123456789ABCDEF";
-
-      Code  : constant Unsigned_32 := Wide_Wide_Character'Pos (C);
-      Buf   : String (1 .. 12);
-      Last  : Natural := Buf'First - 1;
-
-      procedure Append_Escaped (Code : Unsigned_16);
-
-      --------------------
-      -- Append_Escaped --
-      --------------------
-
-      procedure Append_Escaped (Code : Unsigned_16) is
-      begin
-         Last := Last + 6;
-         Buf (Last - 5 .. Last - 4) := "\u";
-         Buf (Last - 3) := To_Hex ((Code / 16#1000#) mod 16#10#);
-         Buf (Last - 2) := To_Hex ((Code / 16#100#) mod 16#10#);
-         Buf (Last - 1) := To_Hex ((Code / 16#10#) mod 16#10#);
-         Buf (Last) := To_Hex (Code mod 16#10#);
-      end Append_Escaped;
-
-   begin
-      if Code <= 16#FFFF# then
-         Append_Escaped (Unsigned_16 (Code));
-
-      else
-         --  Represent character as surrogate pair
-
-         Append_Escaped
-           (16#D800# + Unsigned_16 ((Code - 16#1_0000#) / 16#400#));
-         Append_Escaped (16#DC00# + Unsigned_16 (Code mod 16#400#));
-      end if;
-
-      return Buf (Buf'First .. Last);
-   end Escape_Non_Print_Character;
-
-   -----------------
-   -- Emit_String --
-   -----------------
+   -------------------
+   -- Escape_String --
+   -------------------
 
    procedure Escape_String (Self : in out Serializer; Text : UTF8_String) is
       Low   : Natural := Text'First;
@@ -305,7 +253,7 @@ package body GNATCOLL.JSON.Serializers is
                     or else Wide_Wide_Character'Pos (W_Chr) >= 16#80#
                   then
                      Serializer'Class (Self).Write
-                       (Escape_Non_Print_Character (W_Chr));
+                       (Utility.Escape_Non_Print_Character (W_Chr));
                   else
                      Serializer'Class (Self).Write ("" & Character'Val
                        (Wide_Wide_Character'Pos (W_Chr)));
