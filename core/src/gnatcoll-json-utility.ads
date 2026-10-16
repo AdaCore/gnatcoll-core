@@ -38,4 +38,7 @@ private package GNATCOLL.JSON.Utility is
    --  Low represents the lower bound of the JSON string in Text
    --  High represents the higher bound of the JSON string in Text
 
+   function Escape_Non_Print_Character (C : Wide_Wide_Character) return String;
+   --  Escapes a non-printable character.
+
 end GNATCOLL.JSON.Utility;
