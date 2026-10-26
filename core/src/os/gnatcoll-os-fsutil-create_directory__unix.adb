@@ -32,9 +32,8 @@ function Create_Directory (Path : UTF8.UTF_8_String) return Boolean is
    use all type SB.Static_String_Builder;
 
    C_Path : SB.Static_String_Builder (Path'Length + 1);
-   --  All rights for the owner, and rw rights for groups and others.
-   Perm   : constant Libc.File_Mode :=
-     S_IRWXU or S_IRGRP or S_IWGRP or S_IROTH or S_IWOTH;
+   --  Provide full permissions like Ada.Directories.Create_Directory
+   Perm   : constant Libc.File_Mode := S_IRWXU or S_IRWXG or S_IRWXO;
    Status : Libc.Libc_Status;
 
 begin
