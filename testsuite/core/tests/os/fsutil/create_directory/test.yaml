@@ -1,0 +1,3 @@
+title: GNATCOLL.OS.FSUtil.Create_Directory permissions
+control:
+  - [ SKIP, "env.target.os.name == 'windows'", "Unix test only, permissions are checked" ]
