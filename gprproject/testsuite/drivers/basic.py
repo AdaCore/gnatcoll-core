@@ -105,7 +105,7 @@ class BasicTestDriver(ClassicTestDriver):
             )
 
         # Run the test program
-        test_exe = self.test_env.get("test_exe", "obj/test")
+        test_exe = self.test_env.get("test_exe", "obj/test" + self.env.target.os.exeext)
         for run_args in self.test_env.get("run_args", [[]]):
             process = run_test_program(
                 self,
